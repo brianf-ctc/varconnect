@@ -12,7 +12,8 @@ define([
     'N/log', 
     'N/https', 
     './CTC_VC_Lib_Log.js',
-    './CTC_VC_Constants.js'
+    './CTC_VC_Constants.js',
+    './Bill Creator/Libraries/moment',
   ],
   function(
     search, 
@@ -21,7 +22,8 @@ define([
     log, 
     https, 
     vcLog,
-    constants
+        constants, 
+        moment
   ) {
     'use strict';
     /**
@@ -161,10 +163,22 @@ define([
         	poId: obj.poId
     	});
         
+                /// PRICE & AVAILABILITY /////
+                if (responseBody) {
+                    _getItemAvailability({
+                        responseBody: responseBody,
+                        token: token,
+                        vendorConfig: obj.vendorConfig,
+                        poId: obj.poId || obj.poNum,
+                        poNum: obj.poNum
+                    });
+                }
+
         log.debug({
           title: 'Return Response Body',
           details: responseBody
         });
+
         return responseBody;
       }
     }
@@ -232,6 +246,157 @@ define([
     	return responseBody;
     }
 
+        function _getItemAvailability(options) {
+
+            var responseBody = options.responseBody,
+                vendorConfig = options.vendorConfig,
+                token = options.token,
+                poId = options.poId,
+                poNum = options.poNum,
+                logTitle = '::getItemAvailability::';
+
+            var orderLines = responseBody.lines;
+            log.debug(logTitle, 'orderLines : ' + JSON.stringify(orderLines));
+
+            /// update the default ETA ///
+            var ingramOrderDate = responseBody.ingramOrderDate;
+            var defaultETA = {
+                  date: moment(ingramOrderDate).add(1, 'day').toDate(),
+                  text: moment(ingramOrderDate).add(1, 'day').format('YYYY-DD-MM'),
+            };
+            log.debug(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
+
+            var arrItems = [],
+                shipLocation = {},
+                i, ii, j, jj, orderLine;
+
+            for (i = 0, j = orderLines.length; i < j; i++) {
+                orderLine = orderLines[i];
+                log.debug(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
+
+                var lineData = {
+                    ingramPartNumber: orderLine.ingramPartNumber,
+                    customerPartNumber: orderLine.ingramPartNumber,
+                    vendorPartNumber: orderLine.vendorPartNumber,
+                    upc: orderLine.upcCode,
+                    quantityRequested: orderLine.quantityOrdered
+                };
+
+                if (orderLine.shipmentDetails) {
+                    if (!shipLocation[lineData.ingramPartNumber]) {
+                        shipLocation[lineData.ingramPartNumber] = [];
+                    }
+
+                    for (ii = 0, jj = orderLine.shipmentDetails.length; ii < jj; ii++) {
+                        shipLocation[lineData.ingramPartNumber].push({
+                            warehouseId: orderLine.shipmentDetails[ii].shipFromWarehouseId,
+                            warehouseLocation: orderLine.shipmentDetails[ii].shipFromLocation
+                        });
+
+                        // set the default ETA
+                        orderLine.shipmentDetails[ii].estimatedDeliveryDate = defaultETA.text;
+                    }
+                }
+
+                log.debug(logTitle, '>>>> lineData: ' + JSON.stringify(lineData));
+                arrItems.push(lineData);
+            }
+
+            log.debug(logTitle, '>> arrItems: ' + JSON.stringify(arrItems));
+            log.debug(logTitle, '>> shipLocation: ' + JSON.stringify(shipLocation));
+
+
+            // send the call
+            var requestOption = {};
+            requestOption.headers = {
+                'Authorization': 'Bearer ' + token,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'IM-CustomerNumber': vendorConfig.customerNo,
+                'IM-CountryCode': (runtime.country == 'CA') ? 'CA' : 'US',
+                'IM-CustomerOrderNumber': poNum,
+                'IM-CorrelationID': poId
+            };
+
+            requestOption.body = {
+                "showAvailableDiscounts": true,
+                "showReserveInventoryDetails": true,
+                "specialBidNumber": '',
+                "products": arrItems
+            };
+
+            var url = vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
+                'includeAvailability=true&includePricing=true&includeProductAttributes=true';
+
+            log.debug(logTitle, 'requestUrl: ' + url);
+            log.debug(logTitle, 'requestOption ' + JSON.stringify(requestOption));
+
+            vcLog.recordLog({
+                header: 'Ingram V6 Item Availability (Request)',
+                body: JSON.stringify(requestOption),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.INFO
+            });
+
+            requestOption.url = url;
+            requestOption.body = JSON.stringify(requestOption.body);
+
+            var responseETA = https.post(requestOption);
+
+            vcLog.recordLog({
+                header: 'Ingram V6 Item Availability (Response)',
+                body: JSON.stringify(responseETA),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.SUCCESS
+            });
+
+            if (responseETA.body) {
+                var responseBodyETA = JSON.parse(responseETA.body);
+
+
+                for (i = 0, j = orderLines.length; i < j; i++) {
+                    orderLine = orderLines[i];
+
+                    for (ii = 0, jj = responseBodyETA.length; ii < jj; ii++) {
+                        var respLine = responseBodyETA[i];
+                        log.debug(logTitle, '>> respLine: ' + JSON.stringify(respLine));
+
+                        if (respLine.ingramPartNumber != orderLine.ingramPartNumber ||
+                            respLine.upc != orderLine.upcCode ||
+                            respLine.vendorPartNumber != orderLine.vendorPartNumber) continue;
+
+                        // search for location
+                        if (!respLine.availability) continue;
+
+                        var locationList = respLine.availability ?
+                            respLine.availability.availabilityByWarehouse || false : false;
+
+                        log.debug(logTitle, '>> locationList: ' + JSON.stringify(locationList));
+
+                        var arrDates = [];
+                        for (var iii = 0, jjj = locationList.length; iii < jjj; iii++) {
+                            var dateStr = locationList[iii].quantityBackorderedEta;
+                            if (!dateStr) continue;
+                            // arrDates.push( new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$2/$3/$1")) );
+                            arrDates.push({
+                                dateStr: dateStr,
+                                dateObj: new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$2/$3/$1"))
+                            });
+                        }
+                        log.debug(logTitle, '>> arrDates: ' + JSON.stringify(arrDates));
+                        if (arrDates.length) {
+                            var nearestDate = arrDates.sort(function (a, b) { return a.dateObj - b.dateObj; })[0];
+                            for (var shipLine = 0; shipLine < responseBody.lines[i].shipmentDetails.length; shipLine++) {
+                                responseBody.lines[i].shipmentDetails[shipLine].estimatedDeliveryDate = nearestDate.dateStr;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return responseBody;
+        }
+
     /**
      * @memberOf CTC_VC_Lib_Ingram_v1
      * @param {object} obj
@@ -256,7 +421,7 @@ define([
 	    		  var orderLine = objBody.lines[i];
 	    		  log.debug('line ' + i, JSON.stringify(orderLine));
 	    		  
-	    		  if (['Shipped', 'Delivered', 'Backordered'].indexOf(orderLine.lineStatus)>=0) {
+                        if (['Shipped','In Progress','Delivered','Backordered'].indexOf(orderLine.lineStatus) >= 0) {
 		    		  var outputObj = {};
 
 		              // get line details from order lines
@@ -274,18 +439,16 @@ define([
 			              outputObj.order_num = shipment.invoiceNumber;
 		            	  outputObj.order_date = shipment.invoiceDate;
 		            	  outputObj.ship_date = shipment.shippedDate;
-		            	  outputObj.order_eta = shipment.estimatedShipDate;	//not being populated right now
-//		            	  outputObj.order_eta = orderLine.promisedDeliveryDate;
+                                outputObj.order_eta = shipment.estimatedDeliveryDate || '';
 		            	  
 		            	  //add carrier details
-//		            	  for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
-		            		  var carrier = shipment.carrierDetails;
+                                for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
+                                    var carrier = shipment.carrierDetails[carrierLine];
 		            		  
 		            		  if (!outputObj.carrier)
 		            			  outputObj.carrier = carrier.carrierName;
 		            		  
 		            		  //add tracking details
-		            		  if(carrier.trackingDetails) {
 			            		  for (var trackingLine = 0; trackingLine < carrier.trackingDetails.length; trackingLine++) {
 			            			  var tracking = carrier.trackingDetails[trackingLine];
 			            			  
@@ -293,16 +456,14 @@ define([
 			            				  trackingNum.push(tracking.trackingNumber);
 			            			  
 			            			  //add serials
-			            			  if (tracking.SerialNumbers)
 			            			  for (var serialLine=0; serialLine < tracking.SerialNumbers.length; serialLine++) {
 			            				  var serial = tracking.SerialNumbers[serialLine];
 			            				  
 			            				  if (serial.serialNumber)
-			            					  serials.push(serial.serialNumber);
+                                                serialNumbers.push(serial.serialNumber);
 			            			  }
 			            		  }
 		            		  }
-//		            	  }
 		              }
 		              outputObj.tracking_num = trackingNum.join(',');
 		              outputObj.serial_num = serials.join(',');
