@@ -61,6 +61,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                 var params = JSON.parse(JSON.stringify(context.request.parameters));
 
                 log.debug('custpage_action', params.custpage_action);
+                log.debug('params', JSON.stringify(params));
 
                 // first treat every submission as a "Save"
 

@@ -12,7 +12,7 @@
                     // since we would have to update this code anyway to support a new vendor config the nsid's
                     // are hard coded here instead of doing a search
 
-                    return [2, 4]; //[DH, WF, SYNNEX]
+                    return [2, 5, 6]; //[DH, WF, SYNNEX]
 
                     // return [2, 5];
 

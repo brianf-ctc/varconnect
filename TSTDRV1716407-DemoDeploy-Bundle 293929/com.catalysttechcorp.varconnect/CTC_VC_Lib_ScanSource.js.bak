@@ -194,8 +194,27 @@ define([
       // }
 
       obj.responseBody.forEach(function(order) {
+    	var itemArray = [],
+    		deliveryArray = [];
+    	
+    	//create original item array which contains correct ship qty
+    	order.SalesOrderLines.forEach(function(itemLine) {
+    		var vendorSKU = itemLine.ItemNumber,
+    			itemNum = itemLine.ProductMfrPart,
+    			shippedQty = parseInt(itemLine.Shipped);
+    		//only include shipped items
+    		if (shippedQty > 0)
+    			itemArray.push({
+    	            order_date: order.DateEntered,
+    	            order_num: order.SalesOrderNumber,
+    				vendorSKU: vendorSKU,
+    				item_num: itemNum,
+    				ship_qty: shippedQty
+    			});
+    	});
 
         order.Deliveries.forEach(function(delivery) {
+    	  log.debug('delivery', JSON.stringify(delivery));
 
           var p = {};
           p.tracking = [];
@@ -217,7 +236,7 @@ define([
             o.order_date = order.DateEntered;
             o.order_num = order.SalesOrderNumber;
             o.line_num = Math.floor(delivery.DeliveryDocumentNumber + '.' + line.DeliveryDocumentLineNumber) * 1;
-            o.item_num = line.ItemNumber;
+            o.vendorSKU = line.ItemNumber;
             o.ship_qty = parseInt(line.QuantityShipped);
 
             // change date format
@@ -239,9 +258,33 @@ define([
 
             o.serials = s.join(',');
 
-            outputArray.push(o);
+            deliveryArray.push(o);
           })
         })
+        
+        //match item array with delivery array
+        itemArray.forEach(function(item) {
+
+      	  var itemNum = item.item_num,
+      	  		vendorSKU = item.vendorSKU,
+      	  		shipQty = item.ship_qty,
+      	  		outputObj = item;
+
+      	  deliveryArray.some(function(d) {
+      		  if (d.vendorSKU != vendorSKU)
+      			  return false;
+      		  else {
+      			  //if match, use delivery array for complete info but get ship qty
+      			  outputObj = d;
+      			  outputObj.ship_qty = shipQty;
+      			  outputObj.item_num = itemNum;
+      			  return true;
+      		  }
+      	  });
+      	  log.debug('outputObj', outputObj);
+      	  
+      	  outputArray.push(outputObj);
+        });
       });
 
       log.audit({

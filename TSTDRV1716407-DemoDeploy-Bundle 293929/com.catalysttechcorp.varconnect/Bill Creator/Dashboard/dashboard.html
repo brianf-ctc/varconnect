@@ -80,9 +80,9 @@
                                     <li class="has_submenu">
                                         <a href="#"><i class="fa fa-cog"></i>Setup  <span class="nav-caret fa fa-caret-down"></span></a>
                                         <ul class="list-unstyled">
-                                            <li><a href="/app/common/custom/custrecordentrylist.nl?rectype=109" target="_blank"><i class="fa fa-angle-double-right"></i> Vendor Configs</a></li><!-- change this id after deployment -->
-                                            <li><a href="/app/common/custom/custlist.nl?id=105&e=T&ord=T" target="_blank"><i class="fa fa-angle-double-right"></i> Bill Hold Reasons</a></li><!-- change this id after deployment -->
-                                            <li><a href="/app/crm/common/crmgroup.nl?id=774669" target="_blank"><i class="fa fa-angle-double-right"></i> Access Group</a></li><!-- change this id after deployment -->
+                                            <li><a href="/app/common/custom/custrecordentrylist.nl?rectype=455" target="_blank"><i class="fa fa-angle-double-right"></i> Vendor Configs</a></li><!-- change this id after deployment -->
+                                            <li><a href="/app/common/custom/custlist.nl?id=611&ord=T" target="_blank"><i class="fa fa-angle-double-right"></i> Bill Hold Reasons</a></li><!-- change this id after deployment -->
+                                            <!-- <li><a href="/app/crm/common/crmgroup.nl?id=774669" target="_blank"><i class="fa fa-angle-double-right"></i> Access Group</a></li><!-- change this id after deployment --> -->
                                             <li><a href="/app/site/hosting/scriptlet.nl?script=customscript_sftp_helper_tool&deploy=customdeploy_ctc_vc_bc_sftp_helper" target="_blank"><i class="fa fa-angle-double-right"></i> SFTP Helper Tool</a></li><!-- change this id after deployment -->
                                         </ul>
                                     </li>
@@ -327,34 +327,34 @@
                                                                                 'rgba(153, 5, 255, 1)',
                                                                                 'rgba(255, 159, 64, 1)'
                                                                             ],
-                                                                            datalabels: {
-
-                                                                                listeners: {
-                                                                                    click: function(context) {
-                                                                                        switch (context.dataIndex) {
-                                                                                            case 0:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=1');
-                                                                                                break;
-                                                                                            case 1:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=2');
-                                                                                                break;
-                                                                                            case 2:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=3');
-                                                                                                break;
-                                                                                            case 3:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=4');
-                                                                                                break;
-                                                                                            case 4:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=5');
-                                                                                                break;
-                                                                                            case 5:
-                                                                                                window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=6');
-                                                                                                break;
-
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
+                                                                            // datalabels: {
+                                                                            //
+                                                                            //     listeners: {
+                                                                            //         click: function(context) {
+                                                                            //             switch (context.dataIndex) {
+                                                                            //                 case 0:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=1');
+                                                                            //                     break;
+                                                                            //                 case 1:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=2');
+                                                                            //                     break;
+                                                                            //                 case 2:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=3');
+                                                                            //                     break;
+                                                                            //                 case 3:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=4');
+                                                                            //                     break;
+                                                                            //                 case 4:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=5');
+                                                                            //                     break;
+                                                                            //                 case 5:
+                                                                            //                     window.open('/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=6');
+                                                                            //                     break;
+                                                                            //
+                                                                            //             }
+                                                                            //         }
+                                                                            //     }
+                                                                            // }
                                                                         }]
                                                                     },
                                                                     options: {

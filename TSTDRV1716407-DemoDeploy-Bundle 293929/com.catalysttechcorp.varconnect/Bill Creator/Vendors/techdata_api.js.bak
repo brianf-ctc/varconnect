@@ -141,6 +141,8 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'],
 
         if (!rawDate)
         	rawDate = new Date();
+        else
+          	rawDate = rawDate.textContent;
 
         log.debug('td: rawDate', input + ': ' + rawDate);
 

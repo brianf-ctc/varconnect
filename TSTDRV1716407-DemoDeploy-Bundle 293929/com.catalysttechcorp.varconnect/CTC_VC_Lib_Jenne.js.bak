@@ -257,12 +257,6 @@ function(
             	}
             }
         }
-        })
-
-        log.audit({
-            title: 'outputArray',
-            details: outputArray
-        });
     	
     	return outputArray;
     }
