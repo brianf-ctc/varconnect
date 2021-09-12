@@ -1,0 +1,103 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType ScheduledScript
+ */
+define(['N/task', 'N/runtime', 'N/record', 'N/search'], function(task, runtime, r, search) {
+
+    //Reschedules the current script
+    function rescheduleCurrentScript(serials, po, item, so) {
+		log.audit("rescheduleCurrentScript");
+		var scheduledScriptTask = task.create({
+            taskType: task.TaskType.SCHEDULED_SCRIPT
+        });
+        scheduledScriptTask.scriptId = runtime.getCurrentScript().id;
+        scheduledScriptTask.deploymentId = runtime.getCurrentScript().deploymentId;
+        scheduledScriptTask.params = {	custscriptserials : serials,
+										custscriptpoid : po,
+										custscriptitemid : item,
+										custscriptsoid : so
+									};
+        
+		log.debug("Resceduling script with serials", serials)
+        return scheduledScriptTask.submit();
+    }
+
+	//Save the current serial number
+	function saveSerial(serial, po, item, so) {
+		log.audit("saveSerial", serial);
+		var rec = r.create({
+					type: 'customrecordserialnum'
+				})
+				rec.setValue({
+					fieldId: 'name',
+					value: serial
+				})
+				rec.setValue({
+					fieldId: 'custrecordserialpurchase',
+					value: po
+				})
+				rec.setValue({
+					fieldId: 'custrecordserialitem',
+					value: item
+				})
+				rec.setValue({
+					fieldId: 'custrecordserialsales',
+					value: so
+				})
+				
+		return rec.save();
+	}
+	
+	//Loop through the remaining serials numbers
+	//For each, check it doesn't exist then create
+    function execute(context) {
+		log.audit("saveserials - execute");
+		
+		//Grab params from runtime
+		var script = runtime.getCurrentScript()
+		var serialStr = script.getParameter({name: 'custscriptserials'}) 	|| "Error";
+		var poId = 		script.getParameter({name: 'custscriptpoid'}) 		|| "Error";
+		var itemId = 	script.getParameter({name: 'custscriptitemid'}) 	|| "";
+		var soId = 		script.getParameter({name: 'custscriptsoid'}) 		|| "";
+
+		if ((serialStr == "Error") || (poId == "Error") || (itemId == "Error") ) {
+			log.error("Missing parameters in save serials script")
+			return;
+		}
+		var serialArr = serialStr.split(',');
+		var i = 0, len = serialArr.length
+		log.debug("Starting script")
+		
+		//Process serials until usage limit
+		while (i < len) {
+			var serial = serialArr[i];
+			log.debug("Entry: "+i, serial);
+
+			i++;	
+			var rs = search.global({ keywords: serial});
+			
+			log.debug("Global search result", rs);
+			
+			if (rs.length == 0) {
+				var sc = saveSerial(serial, poId, itemId, soId);
+				
+				log.debug("New serial id",sc);
+			
+			}
+
+			//If nearly out of usage, slice off processed serial numbers and reschedule
+			if (script.getRemainingUsage() < 100) {
+				log.debug("Rescheduling script");
+				var serialsRemaining = serialArr.slice(i).join(',');
+				rescheduleCurrentScript(serialsRemaining, poId, itemId, soId);
+				return;
+			}
+		}
+		
+        return;
+    }
+
+    return {
+        execute: execute
+    };
+});
