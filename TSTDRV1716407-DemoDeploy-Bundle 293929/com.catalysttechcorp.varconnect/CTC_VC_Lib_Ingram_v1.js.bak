@@ -129,16 +129,12 @@ define([
         details: headers
       });
 
-          try {
       vcLog.recordLog({
         header: 'Ingram V1 (Cisco) Search PO Request',
         body: 'header ' + JSON.stringify(headers),
         transaction: obj.poId,
         status: constants.Lists.VC_LOG_STATUS.INFO
       });
-          } catch(e) {
-            log.error('Error logging', e);
-          }
 
       var response = https.get({
         url: url,
@@ -146,16 +142,12 @@ define([
         headers: headers
       });
 
-          try {
       vcLog.recordLog({
         header: 'Ingram V1 (Cisco) Search PO Response',
         body: JSON.stringify(response),
         transaction: obj.poId,
         status: constants.Lists.VC_LOG_STATUS.SUCCESS
       });
-          } catch(e) {
-            log.error('Error logging', e);
-          }
 
       if (response) {
         log.debug({
@@ -238,33 +230,24 @@ define([
     	    
     	    log.debug('requestUrl: ' + url, 'headers ' + JSON.stringify(headers));
 
-              try {
 	        vcLog.recordLog({
 	          header: 'Ingram V6 PO Details Request',
 	          body: JSON.stringify(headers),
 	          transaction: poId,
 	          status: constants.Lists.VC_LOG_STATUS.INFO
 	        });
-              } catch(e) {
-                log.error('Error logging', e);
-              }
 
 	        var response = https.get({
 	          url: url,
 	          headers: headers
 	        });
 
-              try {  
 	        vcLog.recordLog({
 	          header: 'Ingram V6 PO Details Response',
 	          body: JSON.stringify(response),
 	          transaction: poId,
 	          status: constants.Lists.VC_LOG_STATUS.SUCCESS
 	        });
-              } catch(e) {
-                log.error('Error logging', e);
-              }
-
 
 	        if (response) {
 	            log.debug({
@@ -363,35 +346,24 @@ define([
             log.debug(logTitle, 'requestUrl: ' + url);
             log.debug(logTitle, 'requestOption ' + JSON.stringify(requestOption));
 
-          try {
             vcLog.recordLog({
                 header: 'Ingram V6 Item Availability (Request)',
                 body: JSON.stringify(requestOption),
                 transaction: poId,
                 status: constants.Lists.VC_LOG_STATUS.INFO
             });
-          } catch(e) {
-            log.error('Error logging', e);
-          }
-
 
             requestOption.url = url;
             requestOption.body = JSON.stringify(requestOption.body);
 
             var responseETA = https.post(requestOption);
 
-            
-          try {
             vcLog.recordLog({
                 header: 'Ingram V6 Item Availability (Response)',
                 body: JSON.stringify(responseETA),
                 transaction: poId,
                 status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
-          } catch(e) {
-            log.error('Error logging', e);
-          }
-
 
             if (responseETA.body) {
                 var responseBodyETA = JSON.parse(responseETA.body);

@@ -334,7 +334,7 @@ function(
 												'custid':custID, 
 												'orderNum': fulfillmentNum, 
 												'receiptNum': receiptNum, 
-												'linenum': lineData[i].line_num});
+												'line': lineData[i].line_num});
 								}
 							}
 			        	}

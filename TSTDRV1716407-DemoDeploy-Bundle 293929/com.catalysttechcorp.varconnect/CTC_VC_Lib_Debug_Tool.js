@@ -23,46 +23,45 @@ function(
 		libVendorConfig,
 		libWebService,
 		vcGlobals) {
+
 	function _getPODetails(poNum) {
-		var columns = [nsSearch.createColumn({name: "entity"})];
-		if (vcGlobals.ENABLE_SUBSIDIARIES)
-			columns.push(nsSearch.createColumn({name: "subsidiary"}));
-		
+        var columns = [nsSearch.createColumn({ name: "entity" })];
+        if (vcGlobals.ENABLE_SUBSIDIARIES)
+            columns.push(nsSearch.createColumn({ name: "subsidiary" }));
+
         var poObj = {},
-        	purchaseorderSearchObj = nsSearch.create({
-            type: "purchaseorder",
-            filters:
-            [
-            ["type","anyof","PurchOrd"], 
-            "AND", 
-            ["numbertext","is",poNum],
-            "AND",
-            ["mainline", "is", true ]
-            ],
-            columns: columns
-        });
+            purchaseorderSearchObj = nsSearch.create({
+                type: "purchaseorder",
+                filters: [
+                    ["type", "anyof", "PurchOrd"],
+                    "AND",
+                    ["numbertext", "is", poNum],
+                    "AND",
+                    ["mainline", "is", true],
+                ],
+                columns: columns,
+            });
         var searchResultCount = purchaseorderSearchObj.runPaged().count;
-        log.debug("purchaseorderSearchObj result count",searchResultCount);
-        purchaseorderSearchObj.run().each(function(result){
-        	if (vcGlobals.ENABLE_SUBSIDIARIES)
-            	poObj['subsidiary'] = result.getValue('subsidiary');
-            poObj['vendor'] = result.getValue('entity');
-            // ?
-//            if (vcGlobals.ENABLE_SUBSIDIARIES)
-//            	poObj['subsidiary'] = result.getValue('subsidiary');
-        
+
+        log.debug("purchaseorderSearchObj result count", searchResultCount);
+        purchaseorderSearchObj.run().each(function (result) {
+            if (vcGlobals.ENABLE_SUBSIDIARIES) {
+                poObj.subsidiary = result.getValue("subsidiary");
+            }
+            poObj.vendor = result.getValue("entity");
+
             return false;
         });
 
-		return poObj;
-	}
+        return poObj;
+    }
 	
 	function _loadDebugVendorConfig(options) {
 		var xmlVendor = options.xmlVendor,
 			vendorConfig = libVendorConfig.getDebugVendorConfiguration({
 				xmlVendor: xmlVendor
 			});
-		
+                
 		if (!vendorConfig) {
 			log.debug('No configuration set up for xml vendor ' + xmlVendor);
 		} else return vendorConfig;
@@ -79,8 +78,79 @@ function(
 		} else return vendorConfig;
 	}
 
-
     function showVendorName(){
+        var logTitle = 'showVendorName';
+        
+        var currRec = currentRecord.get(), outputObj = {}, outputMsg = '', 
+            msgBox = document.getElementById("xml_msgbox");
+
+        // currRec.setValue({fieldId: 'messagebox', value: '...' });
+        msgBox.innerHTML  = '...';
+        try {
+            var values = {
+                vendor: currRec.getValue({ fieldId: "vendors" }), 
+                poNum: currRec.getValue({ fieldId: "ponum" }), 
+                country: currRec.getValue({ fieldId: "country" }), 
+            };
+            console.log(logTitle, 'values = ', values);
+
+            if (! values.poNum ) throw 'PO Num is required';
+            if (! values.vendor ) throw 'Select an Vendor XML';
+
+            var poData = _getPODetails(values.poNum);
+            console.log(logTitle, 'PO Data = ', poData);
+        
+            if (! poData.vendor) throw 'Invalid/Missing PO';
+
+            var vendorConfig = _loadDebugVendorConfig({ xmlVendor: values.vendor });
+            console.log(logTitle, 'vendorConfig = ', vendorConfig);
+
+            if (!vendorConfig) throw 'Invalid Vendor';
+
+
+            outputObj = libWebService.handleRequest({
+                vendorConfig: vendorConfig,
+                poNum: values.poNum,
+                country: values.country,
+            });
+            console.log(logTitle, 'outputObj = ', outputObj);
+
+            if ( vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO )
+
+                outputMsg = "Retrieved XML:\n" +
+                    vkbeautify.xml(outputObj.detailxml, 4) +
+                    "\nTracking XML:\n" +
+                    vkbeautify.xml(outputObj.trackxml, 4);
+
+            else if ( vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
+                vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
+                vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.SYNNEX_API ||
+                vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
+                vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE )
+
+                outputMsg = "Retrieved JSON:\n" + vkbeautify.json(outputObj, 4);
+            else
+                outputMsg = "Retrieved XML:\n" + vkbeautify.xml(outputObj, 4);
+
+        } catch (error) {
+
+            var errorMessage = util.isString(error) ? error : 
+                                error.message && util.isString(error.message) ? error.message : 
+                                JSON.stringify(error);
+            console.log('showVendorName', errorMessage);
+            outputMsg = ['ERROR: ', errorMessage].join('');
+
+        } finally {
+            // currRec.setValue({fieldId: 'messagebox', value: outputMsg });
+            console.log(logTitle, '>>> message: ' + outputMsg);
+            msgBox.innerText = outputMsg;
+        }
+    	
+    }
+
+
+
+    function showVendorName_orig(){
     	var currRec = currentRecord.get();
     	var xmlVendor = currRec.getValue({ fieldId: 'vendors' });
     	
