@@ -292,7 +292,9 @@ function(
 			        for (var i = 0; i < lineData.length; i++) {
 			        	if (lineData) {
 							var serialStr = lineData[i].serial_num;
+                          log.debug('lineData'+i, lineData[i]);
 							var serialArray = serialStr;
+                          log.debug('serialStr', serialStr);
 							if (typeof serialArray == 'string' && serialArray.length>0)
 								serialArray = serialStr.split(',');
 							log.debug("xml app v2: serial array", serialArray);
@@ -334,7 +336,7 @@ function(
 												'custid':custID, 
 												'orderNum': fulfillmentNum, 
 												'receiptNum': receiptNum, 
-												'line': lineData[i].line_num});
+												'linenum': lineData[i].line_num});
 								}
 							}
 			        	}
