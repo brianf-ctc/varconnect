@@ -59,11 +59,11 @@ function(record,
 		});
 		recLog.setValue({
 			fieldId: logFields.HEADER,
-			value: header
+			value: header || ''
 		});
 		recLog.setValue({
 			fieldId: logFields.BODY,
-			value: body
+			value: body || ''
 		});
 		if (transaction)
 			recLog.setValue({
@@ -72,7 +72,7 @@ function(record,
 			});
 		recLog.setValue({
 			fieldId: logFields.STATUS,
-			value: status
+			value: status || constants.Lists.VC_LOG_STATUS.INFO
 		});
 		recLog.setValue({
 			fieldId: logFields.DATE,
