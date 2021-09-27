@@ -37,6 +37,7 @@ function(search,
 		vcLog) {
 	function processRequest(options) {
 		var poNum = options.poNum,
+            poId = options.poId,
 			vendorConfig = options.vendorConfig,
 			requestURL = vendorConfig.endPoint,
 			userName = vendorConfig.user,
@@ -62,6 +63,13 @@ function(search,
             'Content-Type': 'text/xml; charset=utf-8',
             'Content-Length': 'length'
         };
+
+        vcLog.recordLog({
+            header: "Synnex Request",
+            body: xmlorderStatus,
+            transaction: poId,
+        });
+
         
         var responseXML;
         log.debug('prerequest ' + poNum);
