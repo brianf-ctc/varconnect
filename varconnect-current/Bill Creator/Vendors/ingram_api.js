@@ -70,8 +70,10 @@ define(['N/log',
       log.debug('im: token', input + ': ' + authJson.access_token);
 
       var countryCode = 'US';
-      if (runtime.country == 'CA')
-    	  conutryCode = 'CA';
+      if (runtime.country == 'CA') countryCode = 'CA';
+
+      log.debug('runtime.country', JSON.stringify([runtime.country, countryCode, runtime.country == 'CA']));
+
 
       headers['Content-Type'] = 'application/json';
       headers['Accept'] = 'application/json';
