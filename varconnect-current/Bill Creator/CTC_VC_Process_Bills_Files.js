@@ -7,6 +7,25 @@
         define(['N/search', 'N/record', 'N/runtime', 'N/error', 'N/log', 'N/https', './Libraries/moment', 'N/runtime'],
             function(search, record, runtime, error, log, https, moment, runtime) {
 
+                var BILL_FILE_STATUS = {
+                    PENDING: 1,
+                    ERROR: 2,
+                    PROCESSED: 3,
+                    REPROCESS: 4,
+                    CLOSED: 5,
+                    HOLD: 6,
+                    VARIANCE: 7
+                };
+                var MESSAGE_CODE = {
+                    PO_IS_MISSING: 'Purchase Order Required',
+                    PO_NOT_BILLABLE: 'Purchase Order not Ready to Bill',
+                    NOT_FULLY_PROCESS: 'Could not fully process Bill File',
+                    ALREADY_BILLED: 'Item are already billed',
+                    LINK_EXISTING_BILLS: 'Linked to existing Vendor Bill',
+                    HAS_VARIANCE: 'One or More Variances in Vendor Bill',
+                    BILL_CREATED: 'Created Vendor Bill',
+                    BILL_NOT_CREATED: 'Failed to create the Vendor Bill'
+                };
                
                 function getInputData() {
 
@@ -34,6 +53,12 @@
                         // only include statuses that have been received and are ready to be billed
                         filters.push("AND");
                         filters.push(["custrecord_ctc_vc_bill_linked_po.status", "anyof", "PurchOrd:E", "PurchOrd:F", "PurchOrd:G"])
+                    }
+
+                    var billFileId = runtime.getCurrentScript().getParameter({name:'custscript_ctc_vc_bc_bill_fileid'});
+                    if (billFileId) {
+                            filters.push("AND");
+                            filters.push(["internalid", "anyof", billFileId]);
                     }
 
                     return search.create({
@@ -180,48 +205,46 @@
 
                         log.debug('createBillResponse', createBillResponse.body);
 
-                        if (r.hasOwnProperty('id') == true) {
-
+                        if (r.billStatus) {
+                                updateValues.custrecord_ctc_vc_bill_proc_status = r.billStatus;
+                        }
+                        if (r.msg) {
+                                var currentMessages = rec.custrecord_ctc_vc_bill_log;
+                                var newMessage = moment().format('MM-DD-YY') + ' - ' + r.msg;
+                                updateValues.custrecord_ctc_vc_bill_log = currentMessages + '\r\n' + newMessage;
+                        }
+                        if (r.id) {
                             updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
+                        }
 
+                        /*
+                        if (r.hasOwnProperty('id') == true) {
+                            updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
                             if (r.hasOwnProperty('close')) {
-
                                 updateValues.custrecord_ctc_vc_bill_proc_status = 5; //closed
-
                             } else {
-
                                 updateValues.custrecord_ctc_vc_bill_proc_status = 3; //processed
                             }
 
                         } else {
-
                             var currentStatus = rec.custrecord_ctc_vc_bill_proc_status[0].value;
-
                             if (r.msg == 'Purchase Order not Ready to Bill') {
-
                                 updateValues.custrecord_ctc_vc_bill_proc_status = 1; //pending
-
                             } else if (r.msg == 'One or More Variances in Vendor Bill') {
-
                                 updateValues.custrecord_ctc_vc_bill_proc_status = 7; //variance
-
                             } else if (currentStatus == '4' || currentStatus == '1') {
-
                                 updateValues.custrecord_ctc_vc_bill_proc_status = 2; //error
                             }
                         }
 
                         if (r.hasOwnProperty('msg') == true) {
-
                             if (r.msg !== 'Purchase Order not Ready to Bill') {
-
                                 var currentMessages = rec.custrecord_ctc_vc_bill_log;
-
                                 var newMessage = moment().format('MM-DD-YY') + ' - ' + r.msg;
-
                                 updateValues.custrecord_ctc_vc_bill_log = currentMessages + '\r\n' + newMessage;
                             }
                         }
+                        */
 
                         //if the updateValues object isn't empty update the record
                         if (JSON.stringify(updateValues).length > 2) {
