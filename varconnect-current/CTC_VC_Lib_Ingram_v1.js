@@ -209,6 +209,7 @@ define([
                     for (var i = 0, j = orders.length; i < j; i++) {
                         if (orders[i].orderStatus != 'CANCELLED') {
                           validOrder = orders[i];
+                          break;
                         }
                     }
                 }
@@ -290,11 +291,13 @@ define([
             var orderLines = responseBody.lines;
             log.debug(logTitle, 'orderLines : ' + JSON.stringify(orderLines));
 
+            if (!orderLines || !orderLines.length) return;
+
             /// update the default ETA ///
             var ingramOrderDate = responseBody.ingramOrderDate;
             var defaultETA = {
                 date: moment(ingramOrderDate).add(1, 'day').toDate(),
-                text: moment(ingramOrderDate).add(1, 'day').format('YYYY-DD-MM'),
+                text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD'),
             };
             log.debug(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
 
@@ -423,7 +426,7 @@ define([
                             // arrDates.push( new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$2/$3/$1")) );
                             arrDates.push({
                                 dateStr: dateStr,
-                                dateObj: new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$3/$2/$1"))
+                                dateObj: moment(dateStr).toDate() //new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$3/$2/$1"))
                             });
                         }
                         log.debug(logTitle, '>> arrDates: ' + JSON.stringify(arrDates));
