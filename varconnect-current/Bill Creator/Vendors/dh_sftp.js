@@ -62,7 +62,8 @@ define(['N/log', '../Libraries/papa', 'N/sftp'],
                     var lineObj = {};
 
                     lineObj.processed = false;
-                    lineObj.ITEMNO = trimPadding(xmlObj[i][9], ' ');
+                    // lineObj.ITEMNO = trimPadding(xmlObj[i][9], ' ');
+                    lineObj.ITEMNO = trimPadding(xmlObj[i][10], ' ');
                     lineObj.PRICE = trimPadding(xmlObj[i][5], ' ').match(/\d|\./g).join('') * 1;
                     lineObj.QUANTITY = trimPadding(xmlObj[i][3], ' ').match(/\d|\./g).join('') * 1;
                     lineObj.DESCRIPTION = trimPadding(xmlObj[i][13], ' ');
