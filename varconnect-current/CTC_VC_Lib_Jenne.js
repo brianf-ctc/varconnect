@@ -160,54 +160,57 @@ function(
             if (util.isArray(carton)) {
 
                 carton.forEach(function(cartonDetail) {
-
-                    var cartonDetails = cartonDetail.ASNcartonDetails.ASNcartonDetail_v2;
-
-                    log.debug('entered', 'cartonDetails - carton array')
-
-                    var o = {};
-
-                    // change date format
-                    // from YYYY-MM-DD to MM/DD/YYYY
-                    log.debug('mapping', 'odate')
-                    var odate = asn.OrderDate["#text"];
-                    o.ship_date = odate.slice(5, 7) + '/' + odate.slice(8, 10) + '/' + odate.slice(0, 4);
-
-                    log.debug('mapping', 'order_num')
-                    o.order_num = asn.OrderNumber["#text"];
-                    log.debug('mapping', 'line_num')
-                    o.line_num = cartonDetail.CartonNo["#text"];
-                    log.debug('mapping', 'item_num')
-                    o.item_num = cartonDetails.PartNumber["#text"];
-                    log.debug('mapping', 'ship_qty')
-                    o.ship_qty = parseInt(cartonDetails.QtyShipped["#text"]);
-
-                    // change date format
-                    // from YYYY-MM-DD to MM/DD/YYYY
-                    log.debug('mapping', 'sdate')
-                    var sdate = cartonDetail.DateShipped["#text"];
-                    o.ship_date = sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
-
-                    o.order_eta = '';
-                    log.debug('mapping', 'carrier')
-                    o.carrier = cartonDetail.ShipVia["#text"];
-                    log.debug('mapping', 'tracking')
-                    o.tracking_num = cartonDetail.TrackingNo["#text"];
-                    log.debug('mapping', 'serial')
-                    o.serials = cartonDetails.SerialNumber["#text"];
-
-                    outputArray.push(o);
-                });
-
+                	_processCarton({
+                		asn: asn,
+                		carton: cartonDetail,
+                		outputArray: outputArray
+                	});
+            	});
             } else {
+            	var cartonDetail = carton.ASNcartonDetails.ASNcartonDetail_v2;
+            	_processCarton({
+            		asn: asn,
+            		carton: carton,
+            		outputArray: outputArray
+            	});
+            }
+        }
+
+    	return outputArray;
+    }
+
+    function _processCarton(options) {
+    	var asn = options.asn,
+			carton = options.carton,
+			outputArray = options.outputArray;
             	
             	var cartonDetail = carton.ASNcartonDetails.ASNcartonDetail_v2;
             	
             	if (util.isArray(cartonDetail)) {
 
             		cartonDetail.forEach(function(cartonDetails) {
+    			_processCartonDetails({
+    				asn: asn,
+    				carton: carton,
+    				cartonDetails: cartonDetails,
+    				outputArray: outputArray
+    			});
+    		});
+    	} else {
+    		_processCartonDetails({
+				asn: asn,
+				carton: carton,
+				cartonDetails: cartonDetail,
+				outputArray: outputArray
+			});
+    	}
+    }
 
-                        log.debug('entered', 'cartonDetails - carton single detail array')
+    function _processCartonDetails(options) {
+    	var asn = options.asn,
+    		carton = options.carton,
+    		cartonDetails = options.cartonDetails,
+    		outputArray = options.outputArray;
 
                         var o = {};
 
@@ -238,50 +241,9 @@ function(
                         log.debug('mapping', 'tracking')
                         o.tracking_num = carton.TrackingNo["#text"];
                         log.debug('mapping', 'serial')
-                        o.serials = cartonDetails.SerialNumber["#text"];
-
-                        outputArray.push(o);
-                    });
-            	} else {
-            		log.debug('entered', 'cartonDetails - carton single detail single')
-
-                    var o = {};
-
-                    // change date format
-                    // from YYYY-MM-DD to MM/DD/YYYY
-                    log.debug('mapping', 'odate')
-                    var odate = asn.OrderDate["#text"];
-                    o.ship_date = odate.slice(5, 7) + '/' + odate.slice(8, 10) + '/' + odate.slice(0, 4);
-
-                    log.debug('mapping', 'order_num')
-                    o.order_num = asn.OrderNumber["#text"];
-                    log.debug('mapping', 'line_num')
-                    o.line_num = carton.CartonNo["#text"];
-                    log.debug('mapping', 'item_num')
-                    o.item_num = cartonDetail.PartNumber["#text"];
-                    log.debug('mapping', 'ship_qty')
-                    o.ship_qty = parseInt(cartonDetail.QtyShipped["#text"]);
-
-                    // change date format
-                    // from YYYY-MM-DD to MM/DD/YYYY
-                    log.debug('mapping', 'sdate')
-                    var sdate = carton.DateShipped["#text"];
-                    o.ship_date = sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
-
-                    o.order_eta = '';
-                    log.debug('mapping', 'carrier')
-                    o.carrier = carton.ShipVia["#text"];
-                    log.debug('mapping', 'tracking')
-                    o.tracking_num = carton.TrackingNo["#text"];
-                    log.debug('mapping', 'serial')
-                    o.serials = cartonDetail.SerialNumber["#text"];
+        o.serial_num = cartonDetails.SerialNumber["#text"];
 
                     outputArray.push(o);
-            	}
-            }
-        }
-    	
-    	return outputArray;
     }
 
     function xmlToJson(xmlNode) {
