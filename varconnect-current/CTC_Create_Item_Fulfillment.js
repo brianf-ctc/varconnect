@@ -251,7 +251,12 @@ function(search,
 										fieldId: 'poline',
 										line: cnt
 									}); 
-									if (!itemInLineData(tempItemNum, fulfillmentLines, tempVendorSKU, mainConfig.ingramHashSpace, vendorConfig.xmlVendor, tempItemLine)){
+									var tempDAndH = objRecord.getSublistText({
+										sublistId: 'item',
+										fieldId: constants.Columns.DH_MPN,
+										line: cnt
+									}); 
+									if (!itemInLineData(tempItemNum, fulfillmentLines, tempVendorSKU, mainConfig.ingramHashSpace, vendorConfig.xmlVendor, tempItemLine, tempDAndH)){
 										// remove line from item fulfillment not in current fulfillmentLines
 										log.debug({
 											title: 'item not in fulfillment line, removing line from item fulfillment',
@@ -298,7 +303,7 @@ function(search,
 //										log.audit('WARN', 'poline not available');
 //									}
 									
-									if (!itemInLineData(fulfillmentLines[itemCnt].item_num, uniqueItems, "", mainConfig.ingramHashSpace, vendorConfig.xmlVendor, tempItemLine)){
+									if (!itemInLineData(fulfillmentLines[itemCnt].item_num, uniqueItems, "", mainConfig.ingramHashSpace, vendorConfig.xmlVendor, tempItemLine, tempDAndH)){
 										el.item_num = fulfillmentLines[itemCnt].item_num;
 										el.totalShipped = parseInt(fulfillmentLines[itemCnt].ship_qty);
 										el.order_num = fulfillmentOrders[j]
@@ -763,7 +768,7 @@ function(search,
 				return found;
 			}
 
-			function itemInLineData(tempItemNum, lineData, tempVendorSKU, hashSpace, xmlVendor, tempItemLine){
+			function itemInLineData(tempItemNum, lineData, tempVendorSKU, hashSpace, xmlVendor, tempItemLine, tempDAndH){
 				log.debug('tempItemNum ' + tempItemNum + ' |tempVendorSKU ' + tempVendorSKU, lineData);
 				var vendorList = constants.Lists.XML_VENDOR;
 				var isInData = false;
@@ -808,6 +813,13 @@ function(search,
 								isInData = true;
 								break;
 							}
+						}
+						
+						//D&H Item replacement
+						if (tempDAndH == lineData[i].item_num &&
+								xmlVendor == vendorList.DandH) {
+							isInData = true;
+							break;
 						}
 					}
 				}
