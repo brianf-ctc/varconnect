@@ -7,11 +7,21 @@
 define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
     function(search, record, log, format, moment, Fuse) {
 
+        var LogTitle = 'LIB::BillFiles'
+
         function process(configObj, myArr, name) { 
+            var logTitle = [LogTitle, 'process'].join('::');
+
+            log.audit(logTitle, '**** START process ****  ');
+            log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
+            log.audit(logTitle, '>> myArr: ' + JSON.stringify(myArr));
+            log.audit(logTitle, '>> name: ' + JSON.stringify(name));
 
             for (var i = 0; i < myArr.length; i++) {
 
-                log.audit(i, myArr[i].ordObj);
+                log.audit( logTitle, '>>>> logfile: ' +
+                        JSON.stringify({ idx: i, data: myArr[i] })
+                );
 
                 var billFileSearchObj = search.create({
                     type: "customrecord_ctc_vc_bills",
@@ -37,7 +47,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
 
                 if (billFileSearch.length > 0) {
                     // this bill already exists so skip it
-                    log.audit(i, 'Already exists, skipping');
+                    log.audit(logTitle, 'Already exists, skipping');
                     continue;
                 }
 
@@ -46,11 +56,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                     isDynamic: true,
                 });
 
-                objRecord.setValue({
-                    fieldId: 'name',
-                    value: name
-                });
-
+                var billFileNotes = [];
+                objRecord.setValue({fieldId: 'name',value: name});
                 objRecord.setValue({
                     fieldId: 'custrecord_ctc_vc_bill_file_position',
                     value: i + 1
@@ -61,10 +68,15 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                     value: myArr[i].ordObj.po
                 });
 
+
+                var poName = myArr[i].ordObj.po.trim();
+                log.audit(logTitle, '>>>> PO search: ' +
+                    JSON.stringify([poName, myArr[i].ordObj.po ]));
+
                 var purchaseorderSearchObj = search.create({
                     type: "purchaseorder",
                     filters: [
-                        ["numbertext", "is", myArr[i].ordObj.po],
+                        ["numbertext", "is", poName],
                         "AND", ["mainline", "is", "T"],
                         "AND", ["type", "anyof", "PurchOrd"]
                     ],
@@ -79,13 +91,11 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                     ]
                 });
 
-                var poSearch = purchaseorderSearchObj.run().getRange({
-                    start: 0,
-                    end: 1
-                });
+                var poSearch = purchaseorderSearchObj.run()
+                                .getRange({start: 0, end: 1});
+                log.audit(logTitle, '>>>> PO Search Results: ' + poSearch.length);
 
-                var poId;
-                var entityId;
+                var poId, entityId, poTranId;
 
                 var dueDate = null;
                 var manualDueDate = false;
@@ -102,11 +112,19 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
 
                     poId = poSearch[0].getValue("internalid");
                     entityId = poSearch[0].getValue("entity");
+                    poTranId = poSearch[0].getValue("tranid");
+
+                    log.audit(logTitle, '>>>> PO Data : ' +
+                        JSON.stringify({
+                        poId: poId, 
+                        entityId: entityId
+                    }) );
 
                     objRecord.setValue({
                         fieldId: 'custrecord_ctc_vc_bill_linked_po',
                         value: poId
                     });
+                    billFileNotes.push('Linking to PO: ' + poTranId + ' (' + poId + ') ');
 
                     // if (entityId == '75' || entityId == '203' || entityId == '216' || entityId == '371' || entityId == '496') { // Cisco, Dell, EMC, Scansource, Westcon
 
@@ -140,6 +158,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                         dueDate = moment(myArr[i].ordObj.date).add(parseInt(daysToPay), 'days').format('MM/DD/YYYY');
 
                     }
+                } else {
+                    billFileNotes.push('PO Link is not found : ['+ myArr[i].ordObj.po +']');
                 }
 
                 if (dueDate !== null) {
@@ -182,8 +202,6 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                 if (poId) {
 
                     // match payload items to transaction items
-                    //
-
                     var availableSkus = [];
 
                     var transactionSearchObj = search.create({
@@ -200,7 +218,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                         ]
                     });
                     var searchResultCount = transactionSearchObj.runPaged().count;
-                    log.debug("transactionSearchObj result count", searchResultCount);
+
                     transactionSearchObj.run().each(function(result) {
                         var skuObj = {};
 
@@ -219,21 +237,18 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                         return true;
                     });
 
-                    log.debug('availableSkus', availableSkus);
-
+                    log.audit(logTitle, '>>>> availableSkus: ' + JSON.stringify(availableSkus) );
 
                     for (var l = 0; l < myArr[i].ordObj.lines.length; l++) {
 
-                        log.debug('initial SKU', myArr[i].ordObj.lines[l].ITEMNO);
+                        log.audit(logTitle, '>>>>>> initial SKU: ' + JSON.stringify(myArr[i].ordObj.lines[l].ITEMNO) );
 
                         // try to autoselect item using fuse;
 
                         const options = {
                             includeScore: true,
                             threshold: 0.4,
-                            keys: [
-                                "text"
-                            ]
+                            keys: ["text"]
                         };
 
                         var fuse = new Fuse(availableSkus, options);
@@ -244,10 +259,14 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
 
                             var matchedSku = fuseOutput[0].item.value;
 
-                            log.debug('Matched SKUs', myArr[i].ordObj.lines[l].ITEMNO + ':' + matchedSku);
+                            log.audit(logTitle, '>>>>>> Matched SKUs: ' + JSON.stringify({
+                                item: myArr[i].ordObj.lines[l].ITEMNO, 
+                                matchedSku: matchedSku
+                            }) );
 
                             myArr[i].ordObj.lines[l].NSITEM = matchedSku;
 
+                            billFileNotes.push('Matched SKU: ' + matchedSku);
                         }
 
                     }
@@ -277,11 +296,18 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                     value: configObj.id
                 });
 
+                objRecord.setValue({
+                    fieldId: 'custrecord_ctc_vc_bill_log',
+                    value: moment().format('MM-DD-YY') + ' - ' + billFileNotes.join(" | ")
+                });
+
                 var record_id = objRecord.save();
 
-                log.audit(i, 'created: ' + record_id);
-
+                log.audit(logTitle, '>> Bill File created: ' + record_id);
             }
+
+
+            log.audit(logTitle, '**** END process ****  ');
 
             return null;
         }

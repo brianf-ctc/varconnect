@@ -68,6 +68,7 @@ function(search,
             header: "Synnex Request",
             body: xmlorderStatus,
             transaction: poId,
+            status: constants.Lists.VC_LOG_STATUS.INFO
         });
 
         

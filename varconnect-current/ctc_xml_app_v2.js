@@ -43,6 +43,8 @@ function(
 		constants,
 		vcLog) {
 	
+	var LogTitle = 'MR_OrderStatus';
+
 	function _validateLicense(options) {
 		var mainConfig = options.mainConfig,
 			license = mainConfig.license,
@@ -133,8 +135,10 @@ function(
 	}
 	
 	function getInputData() {
+		var logTitle = [LogTitle, 'getInputData'].join('::');
+		log.debug(logTitle, '### START ### ');
+
 		//return saved search for company to get list of purchase orders
-		log.audit("getInputData");
 		vcLog.recordLog({
 			header: 'VAR Connect START',
 			body: 'VAR Connect START',
@@ -144,12 +148,12 @@ function(
 		var vendor = runtime.getCurrentScript().getParameter("custscript_vendor2");
 		
 		var mainConfig = _loadMainConfig();
+		log.debug(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
 		
 		_validateLicense({ mainConfig: mainConfig });
-		
-		log.audit("input vendor", vendor);
-		log.audit("input searchId", searchId);
-		log.audit("mainConfig", JSON.stringify(mainConfig));
+		// log.audit("input vendor", vendor);
+		// log.audit("input searchId", searchId);
+		// log.audit("mainConfig", JSON.stringify(mainConfig));
 		
 		if (mainConfig.processDropships || mainConfig.processSpecialOrders)
 			if ((searchId != null)){
@@ -162,37 +166,42 @@ function(
 	} 
 
 	function map(contextM) {
+		var logTitle = [LogTitle, 'map'].join('::');
+
 		try {
 			// for each search result, the map function is called in parallel. It will handle the request write out the requestXML
-			log.debug("xml app v2: Map key: " + contextM.key, contextM.value);
+			log.debug(logTitle, '### START: map ## ' + JSON.stringify(contextM) );
 			
 			var searchResult = JSON.parse(contextM.value);
 			var docid = searchResult.id;
 			var docnum = searchResult.values.tranid;
 			var tranDate = searchResult.values.trandate;
 			var isDropPO = (searchResult.values.custbody_isdropshippo == 'F' || !searchResult.values.custbody_isdropshippo)? false : true;
-	//		var isDropPO = (searchResult.values.custbody_ctc_po_link_type == 'Drop Shipment')
+			var vendor = searchResult.values.entity.value;
+			
 			var outputObj = "";
 			var custID = "";
 			
-			log.debug("xml app v2: In map", "Doc Id = " + docid + " - " + "PO Num = " + docnum);
-			log.debug('xml app v2: tranDate', tranDate);
-	//		log.debug('xml app v2: custbody_ctc_po_link_type', searchResult.values.custbody_ctc_po_link_type);
-			log.debug('xml app v2: isDropPO', isDropPO);
+			log.debug(logTitle, '>> data: ' + JSON.stringify({
+				docid: docid,
+				docnum: docnum,
+				tranDate: tranDate,
+				isDropPO: isDropPO,
+				vendor: vendor
+			}) );
+
 			
 			var subsidiary = _getSubsidiary(docid);
-			
 			var mainConfig = _loadMainConfig();
-			
-			var vendor = searchResult.values.entity.value;
-			log.debug('xml app v2: vendor', vendor);
-	
 			var vendorConfig = _loadVendorConfig({
 				vendor: vendor,
 				subsidiary: subsidiary
 			});
 	
-			log.debug('xml app v2: has vendor config for ' + vendor, !!vendorConfig);
+			log.debug(logTitle, '>> subsidiary: ' + JSON.stringify(subsidiary));
+			log.debug(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+			log.debug(logTitle, '>> vendorConfig: ' + JSON.stringify(vendorConfig));
+
 			if (vendorConfig) {
 				var po_record = r.load({
 					type : "purchaseorder", 
@@ -202,7 +211,7 @@ function(
 				
 	//			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
 				
-				log.debug('xml app v2: Calling library webservice');
+				log.debug(logTitle, '>> Initiating library webservice ....');
 				outputObj = libWebService.process({
 					mainConfig: mainConfig,
 					vendorConfig: vendorConfig,
@@ -212,8 +221,8 @@ function(
 					tranDate: tranDate,
 					subsidiary: subsidiary
 				});
-				log.debug('xml app v2: webservice return', outputObj);
-	//			so_ID = libcode.updatepo(docid, outputObj.itemArray);
+				log.debug(logTitle, '>> outputObj: ' + JSON.stringify(outputObj));
+
 				so_ID = libcode.updatepo({
 					po_record: po_record,
 					poNum: docid,
@@ -221,8 +230,11 @@ function(
 					mainConfig: mainConfig,
 					vendorConfig: vendorConfig
 				});
-				if (so_ID != null &&
-						so_ID != undefined){
+
+				log.debug(logTitle, '>> so_ID: ' + JSON.stringify(so_ID));
+
+				if (so_ID != null && so_ID != undefined){
+
 					var so_rec = r.load({
 						type: r.Type.SALES_ORDER,
 						id: so_ID
@@ -292,9 +304,7 @@ function(
 			        for (var i = 0; i < lineData.length; i++) {
 			        	if (lineData) {
 							var serialStr = lineData[i].serial_num;
-                          log.debug('lineData'+i, lineData[i]);
 							var serialArray = serialStr;
-                          log.debug('serialStr', serialStr);
 							if (typeof serialArray == 'string' && serialArray.length>0)
 								serialArray = serialStr.split(',');
 							log.debug("xml app v2: serial array", serialArray);
@@ -658,7 +668,7 @@ function(
 	function logRowObjects(itemArray) {
 		//log.debug("logRowObjects");
 		if (itemArray == "") {log.debug("logRowObjects", "No array present"); return;}
-		log.debug("logRowObjects array =", itemArray);
+		log.debug("logRowObjects array =", JSON.stringify(itemArray));
 		
 	}
 	

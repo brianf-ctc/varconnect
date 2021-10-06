@@ -20,7 +20,7 @@
  *
  * Version	Date            Author		    		Remarks
  * 1.00		May 1, 2020	    paolodl@nscatalyst.com	Initial Build
- * 
+ *
  */
 
 /**
@@ -46,30 +46,30 @@ function(
 		libMainConfig,
 		libLicenseValidator,
 		Util) {
-	
+
 	function _validateLicense(options) {
 		var mainConfig = options.mainConfig,
 			license = mainConfig.license,
 			response = libLicenseValidator.callValidationSuitelet({ license: license,
 				external: true}),
 			result = true;
-		
+
 		if (response == 'invalid') {
 			log.error('License expired', 'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.');
 			result = false;
 		}
-		
+
 		return result;
 	}
-	
+
 	function _loadMainConfig() {
 		var mainConfig = libMainConfig.getMainConfiguration();
-		
+
 		if (!mainConfig) {
 			log.error('No VAR Connect Main Coniguration available');
 		} else return mainConfig;
 	}
-	
+
     /**
      * Function definition to be triggered before record is loaded.
      *
@@ -82,32 +82,32 @@ function(
     function beforeLoad(scriptContext) {
     	if (scriptContext.type !== scriptContext.UserEventType.DELETE) {
     		var mainConfig = _loadMainConfig();
-    		
+
     		//If Serial Scan and Update feature is disabled, hide the corresponding columns
-    		if (!mainConfig.serialScanUpdate || 
+    		if (!mainConfig.serialScanUpdate ||
     				!_validateLicense({ mainConfig: mainConfig })) {
     			var form = scriptContext.form,
     				sublist = form.getSublist({ id: 'item' });
-    				
+
 				if (sublist) {
     				var field = sublist.getField({
     					id: constants.Columns.SERIAL_NUMBER_UPDATE
     				});
-    			
+
 	    			//force check if field exists
 	    			if (field && JSON.stringify(field) != '{}') field.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
-	    			
+
 					field = sublist.getField({
 						id: constants.Columns.SERIAL_NUMBER_SCAN
 					});
-				
+
 	    			//force check if field exists
 					if (field && JSON.stringify(field) != '{}') field.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
 				}
     		}
     	}
     }
-	
+
     /**
      * Function definition to be triggered before record is loaded.
      *
@@ -121,9 +121,9 @@ function(
     	if (scriptContext.type !== scriptContext.UserEventType.DELETE &&
     			runtime.executionContext != runtime.ContextType.MAP_REDUCE) {
     		log.debug('afterSubmit');
-    		
+
     		var mainConfig = _loadMainConfig();
-    		
+
     		if (mainConfig) {
 		    	var cols = constants.Columns,
 		    		scripts = constants.Scripts.Script,
@@ -131,22 +131,22 @@ function(
 		    		hasNoSerials = false,
 		    		rec = scriptContext.newRecord,
 		    		itemLen = rec.getLineCount({ sublistId: 'item' });
-		    	
+
 		    	for (var itemCounter=0; itemCounter<itemLen; itemCounter++) {
 		    		var serialString = rec.getSublistValue({
 		        		sublistId: 'item',
 		        		fieldId: cols.SERIAL_NUMBER_SCAN,
 		        		line: itemCounter
 		        	});
-		    		
+
 		    		var serialStringUpdate = rec.getSublistValue({
 		        		sublistId: 'item',
 		        		fieldId: cols.SERIAL_NUMBER_UPDATE,
 		        		line: itemCounter
 		        	});
-		    		
-		    		
-		    		if ((serialString && serialString.trim()) || 
+
+
+		    		if ((serialString && serialString.trim()) ||
 		    				(serialStringUpdate && serialStringUpdate.trim())) {
 		    			hasSerials = true;
 		    		} else if ((rec.type == record.Type.ITEM_FULFILLMENT || rec.type == record.Type.INVOICE) &&
@@ -154,17 +154,17 @@ function(
 		    				(!serialStringUpdate || serialStringUpdate.trim().length == 0)) {
 		    			hasNoSerials = true;
 		    		}
-		    		
-		    		if (hasSerials && hasNoSerials) 
+
+		    		if (hasSerials && hasNoSerials)
 		    			break;
 		    	}
-		    	
+
 		    	//Also check if the corresponding features have been enabled before processing
 		    	if (hasNoSerials &&
 		    			(rec.type == record.Type.INVOICE && mainConfig.copySerialsInv)) {
 					var tranId = rec.getValue({ fieldId: 'tranid' });
 					log.debug(tranId + ' has no serials', true);
-					
+
 					Util.waitRandom(10000);
 
 					var taskOption = {
@@ -180,7 +180,7 @@ function(
 						mainConfig.serialScanUpdate) {
 					var tranId = rec.getValue({ fieldId: 'tranid' });
 					log.debug(tranId + ' has serials', true);
-					
+
 					Util.waitRandom(10000);
 
 					var taskOption = {
