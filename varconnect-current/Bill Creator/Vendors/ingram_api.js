@@ -4,19 +4,15 @@
  * @NModuleScope Public
  */
 
-
-define(['N/log', 
+define([
+    'N/log',
         'N/https', 
         '../Libraries/moment', 
         '../Libraries/lodash', 
         'N/search', 
-        'N/runtime'],
-  function(log, 
-		  https, 
-		  moment, 
-		  lodash, 
-		  search,
-		  runtime) {
+    'N/runtime',
+], function (log, https, moment, lodash, search, runtime) {
+    'use strict';
 
     function processXml(input, config) {
 
@@ -29,13 +25,13 @@ define(['N/log',
       var findDocumentNumber = search.lookupFields({
         type: search.Type.PURCHASE_ORDER,
         id: tranNsid,
-        columns: ['tranid']
+            columns: ['tranid'],
       });
 
       var docNum = findDocumentNumber.tranid;
 
       var headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
       };
 
       var baseUrl = config.url;
@@ -47,9 +43,9 @@ define(['N/log',
       log.debug('im: headers', input + ': ' + JSON.stringify(headers));
 
       var authBody = {
-        "grant_type": "client_credentials",
-        "client_id": config.user_id,
-        "client_secret": config.user_pass
+            grant_type: 'client_credentials',
+            client_id: config.user_id,
+            client_secret: config.user_pass,
       };
 
       log.debug('im: authBody', input + ': ' + JSON.stringify(authBody));
@@ -59,26 +55,28 @@ define(['N/log',
       var authResponse = https.post({
         url: baseUrl + authUrl,
         headers: headers,
-        body: convertToXWWW(authBody) 
+            body: convertToXWWW(authBody),
       });
 
-      
-      log.debug('im: authResponse', input + ': ' + JSON.stringify(authResponse));
+        log.debug('im: authResponse', input + ': ' + JSON.stringify(authResponse));
 
       var authJson = JSON.parse(authResponse.body);
 
       log.debug('im: token', input + ': ' + authJson.access_token);
 
       var countryCode = 'US';
-      if (runtime.country == 'CA') countryCode = 'CA';
+        if (runtime.country == 'CA') countryCode = 'CA';
 
-      log.debug('runtime.country', JSON.stringify([runtime.country, countryCode, runtime.country == 'CA']));
-
+        log.debug( 'runtime.country', JSON.stringify([
+                runtime.country,
+                countryCode,
+                runtime.country == 'CA',
+                                        ]) );
 
       headers['Content-Type'] = 'application/json';
       headers['Accept'] = 'application/json';
       headers['Authorization'] = 'Bearer ' + authJson.access_token;
-      headers['IM-CustomerNumber'] =  config.partner_id
+        headers['IM-CustomerNumber'] = config.partner_id;
       headers['customerNumber'] =  config.partner_id;
       headers['IM-CountryCode'] = countryCode;
       headers['IM-CorrelationID'] = tranNsid;
@@ -86,7 +84,9 @@ define(['N/log',
 
       //docNum = '81936560.0';
       
-      var searchUrl = '/resellers/v6/orders/search?customerNumber=' + config.partner_id + '&isoCountryCode='+countryCode+'&customerOrderNumber=' + docNum;
+        var searchUrl = '/resellers/v6/orders/search?customerNumber=' + config.partner_id +
+                            '&isoCountryCode=' + countryCode +
+                            '&customerOrderNumber=' + docNum;
       log.debug('im: searchRequest url', baseUrl + searchUrl);
 
       sleep(lastCall, 1050);
@@ -94,12 +94,14 @@ define(['N/log',
 
       var searchResponse = https.get({
         url: baseUrl + searchUrl,
-        headers: headers
+            headers: headers,
       });
 
       var myArr = [];
 
-      log.debug('im: searchResponse', input + ': ' + JSON.stringify(searchResponse.body));
+        log.debug( 'im: searchResponse',
+            input + ': ' + JSON.stringify(searchResponse.body)
+        );
 
       var searchBody = JSON.parse(searchResponse.body);
 
@@ -125,21 +127,20 @@ define(['N/log',
         }
       }
 
-      log.debug('im: Orders', input + ': ' + imOrders);
+        log.debug('im: Orders', input + ': ' + JSON.stringify(imOrders));
 
       for (var o = 0; o < imOrders.length; o++) {
 
     	  try {
-			var invoiceUrl = imOrders[o] + '?customerNumber=' + config.partner_id + '&isoCountryCode=CA';
+                var invoiceUrl = imOrders[o] + '?customerNumber=' + config.partner_id +
+                                    '&isoCountryCode=CA';
 			
 			var invoiceResponse = https.get({
 			  url: baseUrl + invoiceUrl,
-			  headers: headers 
+                    headers: headers,
 			});
 			
-			
 			var xmlObj = JSON.parse(invoiceResponse.body);
-			
 			log.debug('im: invoice response', input + ': ' + JSON.stringify(xmlObj));
 			
 			var myObj = {};
@@ -152,46 +153,48 @@ define(['N/log',
 			//using changed mapping to use orderdate instead. 
 			myObj.date = moment(invDetail.orderdate, 'YYYY-MM-DD').format('MM/DD/YYYY');
 			
-			myObj.invoice = invDetail.invoicenumber;
+                // myObj.invoice = invDetail.invoicenumber;
 			// changed invoice mapping per request on 12/9/20
 //			myObj.invoice = invDetail.globalorderid;
+                // changed back to globalorderid @bfeliciano 23Sept2021
+                myObj.invoice = invDetail.globalorderid;
 			myObj.total = invDetail.totalamount * 1;
 			
 			myObj.charges = {};
 			
 			myObj.charges.tax = invDetail.totaltaxamount * 1;
-			myObj.charges.shipping = (invDetail.customerfreightamount * 1) + (invDetail.customerforeignfrightamt * 1);
+                myObj.charges.shipping =
+                    invDetail.customerfreightamount * 1 +
+                    invDetail.customerforeignfrightamt * 1;
+
 			myObj.charges.other = invDetail.discountamount * 1;
 			
 			myObj.lines = [];
 			
 			for (var i = 0; i < invDetail.lines.length; i++) {
-			
 			  var item = invDetail.lines[i].vendorpartnumber;
 			
 			  if (!item || item == '' || item == null) {
-			
 			    continue;
-			
 			  }
 			
 			  var itemIdx = lodash.findIndex(myObj.lines, {
-			    ITEMNO: item
-			  })
+                        ITEMNO: item,
+                    });
 			
 			  if (itemIdx !== -1) {
-			
-			    myObj.lines[itemIdx].QUANTITY += invDetail.lines[i].shippedquantity * 1;
-			
+                        myObj.lines[itemIdx].QUANTITY +=
+                            invDetail.lines[i].shippedquantity * 1;
 			  } else {
-			
 			    var lineObj = {};
 			
-			    lineObj.processed = false
+                        lineObj.processed = false;
 			    lineObj.ITEMNO = item;
 			    lineObj.PRICE = invDetail.lines[i].unitprice * 1;
-			    lineObj.QUANTITY = invDetail.lines[i].shippedquantity * 1;
-			    lineObj.DESCRIPTION = invDetail.lines[i].partdescription;
+                        lineObj.QUANTITY =
+                            invDetail.lines[i].shippedquantity * 1;
+                        lineObj.DESCRIPTION =
+                            invDetail.lines[i].partdescription;
 			
 			    myObj.lines.push(lineObj);
 			  }
@@ -206,8 +209,6 @@ define(['N/log',
     	  } catch (e) {
     		  log.error('Error parsing invoice', e);
     	  }
-    	  
-
       }
 
       return myArr;
@@ -216,16 +217,15 @@ define(['N/log',
 
     function convertToXWWW(json) {
       //log.debug('convertToXWWW', JSON.stringify(json));
-      if (typeof json !== "object") {
+        if (typeof json !== 'object') {
         return null;
       }
       var u = encodeURIComponent;
-      var urljson = "";
+        var urljson = '';
       var keys = Object.keys(json);
       for (var i = 0; i < keys.length; i++) {
-        urljson += u(keys[i]) + "=" + u(json[keys[i]]);
-        if (i < (keys.length - 1))
-          urljson += "&";
+            urljson += u(keys[i]) + '=' + u(json[keys[i]]);
+            if (i < keys.length - 1) urljson += '&';
       }
       return urljson;
     }
@@ -235,7 +235,8 @@ define(['N/log',
 	    // don't get hit by ingrams 60 calls per minute governance.
 	
 	    https.get({
-	      url: 'https://us-east4-rapid-booking-320617.cloudfunctions.net/netsuite-sleep-function?delay=' + milliseconds
+            url: 'https://us-east4-rapid-booking-320617.cloudfunctions.net/netsuite-sleep-function?delay=' +
+                milliseconds,
 	    });
 	
 	    // for (var i = 0; i < 1e7; i++) {
@@ -249,7 +250,6 @@ define(['N/log',
 
     // Add the return statement that identifies the entry point function.
     return {
-      processXml: processXml
-    }
-  }
-);
+        processXml: processXml,
+    };
+});
