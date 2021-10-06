@@ -2,8 +2,8 @@
  * @NApiVersion 2.1
  * @NScriptType Suitelet
  */
-define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
-    function(serverWidget, record, log, redirect, search) {
+define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search', 'N/url'],
+    function(serverWidget, record, log, redirect, search, url) {
         function onRequest(context) {
 
             var record_id = context.request.parameters.record_id;
@@ -370,6 +370,21 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                     displayType: serverWidget.FieldDisplayType.INLINE
                 }).defaultValue = BOOLMAP[rec.getValue('custrecord_ctc_vc_bill_due_date_f_file')];
 
+                ///////////////
+                var billFileUrl = url.resolveRecord({
+                    recordType: 'customrecord_ctc_vc_bills',
+                    recordId: rec.id
+                });
+                form.addField({
+                    id: 'custpage_bill_file',
+                    type: serverWidget.FieldType.TEXT,
+                    label: 'Bill File'
+                }).updateDisplayType({
+                    displayType: serverWidget.FieldDisplayType.INLINE
+                }).defaultValue = '<a href="'+billFileUrl+'" target="_blank">'+ rec.getValue({fieldId: 'name'}) + '</a>';
+                ///////////////
+
+
                 form.addField({
                     id: 'custpage_total',
                     type: serverWidget.FieldType.CURRENCY,
@@ -469,8 +484,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                     displayType: serverWidget.FieldDisplayType.INLINE
                 }).defaultValue = rec.getValue('custrecord_ctc_vc_bill_log');
 
-                //
-                //
+
                 // Start Sublist
 
                 var lines = form.addSublist({
@@ -571,13 +585,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
 
                 var nsQty = lines.addField({
                     id: 'nsqty',
-                    type: serverWidget.FieldType.INTEGER,
+                    type: serverWidget.FieldType.TEXT,
                     label: 'NS QUANTITY'
                 });
 
                 var recvQty = lines.addField({
                     id: 'nsrcvd',
-                    type: serverWidget.FieldType.INTEGER,
+                    type: serverWidget.FieldType.TEXT,
                     label: 'NS RECEIVED'
                 });
 
@@ -718,7 +732,23 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                                         sublistId: 'item',
                                         fieldId: 'quantity',
                                         line: it
+                                    }) || '0', 10);
+                                    log.debug('>>> nsQty: ', JSON.stringify({
+                                        nsqty1: nsQty, 
+                                        parsedNsQty: parseInt(nsQty || '0', 10), 
+                                        parsedNsQty1: parseInt(nsQty), 
                                     }));
+
+                                    try {
+                                        lines.setSublistValue({
+                                            id: 'nsqty',
+                                            value: parseInt(nsQty || '0', 10),
+                                            line: i
+                                        });
+
+                                    } catch(lineerr) {}
+
+
 
                                     // lines.setSublistValue({
                                     //     id: 'nsqty',
@@ -726,11 +756,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                                     //     line: i
                                     // });
 
-                                    lines.setSublistValue({
-                                        id: 'nsqty',
-                                        value: nsQty,
-                                        line: i
-                                    });
 
                                     nsRcv += parseInt(poRec.getSublistValue({
                                         sublistId: 'item',
@@ -738,11 +763,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/log', 'N/redirect', 'N/search'],
                                         line: it
                                     }));
 
+                                    try {
                                     lines.setSublistValue({
                                         id: 'nsrcvd',
-                                        value: nsRcv,
+                                        value: parseInt(nsRcv || '0', 10),
                                         line: i
                                     });
+                                } catch(lineerr) {}
 
                                     // var lineRate = poRec.getSublistValue({
                                     //     sublistId: 'item',
