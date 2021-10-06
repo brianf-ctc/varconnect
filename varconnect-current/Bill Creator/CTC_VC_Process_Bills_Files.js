@@ -2,10 +2,20 @@
          * @NApiVersion 2.1
          * @NScriptType MapReduceScript
          */
+define(['N/search',
+        'N/record',
+        'N/runtime',
+        'N/error',
+        'N/https',
+        './Libraries/moment',
+    ], function (search, 
+        record, 
+        runtime, 
+        error, 
+        https, 
+        moment) {
 
-
-        define(['N/search', 'N/record', 'N/runtime', 'N/error', 'N/log', 'N/https', './Libraries/moment', 'N/runtime'],
-            function(search, record, runtime, error, log, https, moment, runtime) {
+    var LogTitle = 'MR_ProcBillFiles';
 
                 var BILL_FILE_STATUS = {
                     PENDING: 1,
@@ -14,7 +24,7 @@
                     REPROCESS: 4,
                     CLOSED: 5,
                     HOLD: 6,
-                    VARIANCE: 7
+        VARIANCE: 7,
                 };
                 var MESSAGE_CODE = {
                     PO_IS_MISSING: 'Purchase Order Required',
@@ -24,97 +34,224 @@
                     LINK_EXISTING_BILLS: 'Linked to existing Vendor Bill',
                     HAS_VARIANCE: 'One or More Variances in Vendor Bill',
                     BILL_CREATED: 'Created Vendor Bill',
-                    BILL_NOT_CREATED: 'Failed to create the Vendor Bill'
+        BILL_NOT_CREATED: 'Failed to create the Vendor Bill',
                 };
                
                 function getInputData() {
+        var logTitle = [LogTitle, 'getInputData'].join(':');
+
+        log.debug(logTitle, '*** START SCRIPT ***');
 
                     var billInAdvance = runtime.getCurrentScript().getParameter({
-                        name: 'custscript_ctc_vc_bc_bill_in_adv'
+            name: 'custscript_ctc_vc_bc_bill_in_adv',
                     });    
     
                     var filters = [
-                        ["custrecord_ctc_vc_bill_linked_bill", "anyof", "@NONE@"],
-                        "AND", ["custrecord_ctc_vc_bill_proc_status", "anyof", "1", "4"], // pending, reprocess
-                        "AND", ["custrecord_ctc_vc_bill_linked_po.mainline", "is", "T"]
+            ['custrecord_ctc_vc_bill_linked_bill', 'anyof', '@NONE@'], 'AND',
+            [
+                'custrecord_ctc_vc_bill_proc_status','anyof',
+                BILL_FILE_STATUS.PENDING,
+                BILL_FILE_STATUS.REPROCESS,
+            ],
+            'AND',
+            ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T'],
                     ];
-
-                    // B = Pending Receipt
-                    // D = Partially Received
-                    // E = Pending Billing/Partially Received
-                    // F = Pending Bill
-                    // G = Fully Billed
 
                     if (billInAdvance == true){
                         // include all applicable statuses
-                        filters.push("AND");
-                        filters.push(["custrecord_ctc_vc_bill_linked_po.status", "anyof", "PurchOrd:B", "PurchOrd:D", "PurchOrd:E", "PurchOrd:F", "PurchOrd:G"])
+            filters.push('AND');
+            filters.push([
+                'custrecord_ctc_vc_bill_linked_po.status',
+                'anyof',
+                'PurchOrd:B', // PendingReceipt
+                'PurchOrd:D', // PartiallyReceived
+                'PurchOrd:E', // PendingBilling_PartiallyReceived
+                'PurchOrd:F', // PendingBill
+                'PurchOrd:G', // FullyBilled
+            ]);
                     } else {
                         // only include statuses that have been received and are ready to be billed
-                        filters.push("AND");
-                        filters.push(["custrecord_ctc_vc_bill_linked_po.status", "anyof", "PurchOrd:E", "PurchOrd:F", "PurchOrd:G"])
+            filters.push('AND');
+            filters.push([
+                'custrecord_ctc_vc_bill_linked_po.status',
+                'anyof',
+                'PurchOrd:E', // PendingBilling_PartiallyReceived
+                'PurchOrd:F', // PendingBill
+                'PurchOrd:G', // FullyBilled
+            ]);
                     }
 
-                    var billFileId = runtime.getCurrentScript().getParameter({name:'custscript_ctc_vc_bc_bill_fileid'});
+                    // added isolate bill file id //
+                    // @bfeliciano
+        var billFileId = runtime.getCurrentScript().getParameter({
+                            name: 'custscript_ctc_vc_bc_bill_fileid' });
                     if (billFileId) {
-                            filters.push("AND");
-                            filters.push(["internalid", "anyof", billFileId]);
+            record.submitFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: billFileId,
+                values: { 'custrecord_ctc_vc_bill_proc_status': BILL_FILE_STATUS.REPROCESS },
+                options: {
+                    enablesourcing: true,
+                    ignoreMandatoryFields: true
                     }
+            })
+
+        log.debug(logTitle, '>> billFileId: ' + JSON.stringify(billFileId));
+            filters.push('AND');
+            filters.push(['internalid', 'anyof', billFileId]);
+        }
+                    // end 
+
+
+        log.debug(logTitle, '>> filters: ' + JSON.stringify(filters));
 
                     return search.create({
-                        type: "customrecord_ctc_vc_bills",
+            type: 'customrecord_ctc_vc_bills',
                         filters: filters,
                         columns: [
-                            "internalid",
-                            "custrecord_ctc_vc_bill_po",
-                            "custrecord_ctc_vc_bill_number",
-                            "custrecord_ctc_vc_bill_proc_status",
-                            "custrecord_ctc_vc_bill_log",
+                'internalid',
+                'custrecord_ctc_vc_bill_po',
+                'custrecord_ctc_vc_bill_number',
+                'custrecord_ctc_vc_bill_proc_status',
+                'custrecord_ctc_vc_bill_log',
                             search.createColumn({
-                                name: "statusref",
-                                join: "CUSTRECORD_CTC_VC_BILL_LINKED_PO",
-                                label: "Status"
-                            })
-                        ]
+                    name: 'statusref',
+                    join: 'CUSTRECORD_CTC_VC_BILL_LINKED_PO',
+                    label: 'Status',
+                }),
+            ],
                     });
 
 
                 }
 
                 function reduce(context) {
+        var logTitle = [LogTitle, 'reduce'].join(':');
 
                     var billInAdvance = runtime.getCurrentScript().getParameter({
-                        name: 'custscript_ctc_vc_bc_bill_in_adv'
+            name: 'custscript_ctc_vc_bc_bill_in_adv',
                     });    
 
-                    log.debug('context', context);
-
-                    var searchValues = JSON.parse(context.values);
-
-                    var record_id = searchValues.id;
+        log.debug(logTitle, '>> context: ' + JSON.stringify(context));
+        log.debug(logTitle, '>> total to process: ' + JSON.stringify(context.values.length) );
 
                     // var serialsToProcess = null;
 
-                    log.debug('values', searchValues);
-
-                    var parentSearchFields = ['custrecord_ctc_vc_bill_is_recievable', 'custrecord_ctc_vc_bill_log', 'custrecord_ctc_vc_bill_proc_status',
-                        'custrecord_ctc_vc_bill_proc_variance', 'custrecord_ctc_vc_bill_linked_po', 'custrecord_ctc_vc_bill_json'
+        var parentSearchFields = [
+            'custrecord_ctc_vc_bill_is_recievable',
+            'custrecord_ctc_vc_bill_log',
+            'custrecord_ctc_vc_bill_proc_status',
+            'custrecord_ctc_vc_bill_proc_variance',
+            'custrecord_ctc_vc_bill_linked_po',
+            'custrecord_ctc_vc_bill_json',
                     ];
+
+        for (var i=0, j=context.values.length; i<j; i++) {
+            var searchValues = JSON.parse(context.values[i]);
+
+            log.debug(logTitle, '>> searchValues: ' + JSON.stringify(searchValues));
+            var record_id = searchValues.id;
 
                     try {
 
                         var rec = search.lookupFields({
                             type: 'customrecord_ctc_vc_bills',
                             id: record_id,
-                            columns: parentSearchFields
-                        })
+                columns: parentSearchFields,
+            });
 
-                        log.debug('rec', rec);
+            log.debug(logTitle, '>> results: ' + JSON.stringify(rec));
 
                         var updateValues = {};
+            var restletHeaders = {
+                'Content-Type': 'application/json',
+            };
 
+            // get any updated values from the record
+            var requestObj = JSON.parse(JSON.stringify(rec));
+            log.debug(logTitle, '>> requestObj: ' + JSON.stringify(requestObj));
+
+            requestObj.billInAdvance = billInAdvance;
+
+            var createBillResponse = https.requestRestlet({
+                headers: restletHeaders,
+                scriptId: 'customscript_vc_bill_creator_restlet',
+                deploymentId: 'customdeploy1',
+                method: 'POST',
+                body: JSON.stringify(requestObj),
+            });
+
+            var r = JSON.parse(createBillResponse.body);
+            log.debug(
+                logTitle,
+                '>> responseBody: ' + JSON.stringify(createBillResponse.body)
+            );
+
+            if (r.billStatus) {
+                updateValues.custrecord_ctc_vc_bill_proc_status = r.billStatus;
+            }
+
+            if (r.msg) {
+                var currentMessages = rec.custrecord_ctc_vc_bill_log;
+                var newMessage = moment().format('MM-DD-YY') + ' - ' + r.msg;
+                updateValues.custrecord_ctc_vc_bill_log =
+                    currentMessages + '\r\n' + newMessage;
+            }
+            if (r.id) {
+                updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
+            }
+
+            //if the updateValues object isn't empty update the record
+            if (JSON.stringify(updateValues).length > 2) {
+                record.submitFields({
+                    type: 'customrecord_ctc_vc_bills',
+                    id: record_id,
+                    values: updateValues,
+                });
+            }
+        } catch (e) {
+            log.error(context.key + ': ' + 'Error encountered in reduce', e);
+        }
+    }
+    }
+
+    function reduce_old(context) {
+        var logTitle = [LogTitle, 'reduce'].join(':');
+
+        var billInAdvance = runtime.getCurrentScript().getParameter({
+            name: 'custscript_ctc_vc_bc_bill_in_adv',
+        });
+
+        log.debug(logTitle, '>> context: ' + JSON.stringify(context));
+        var searchValues = JSON.parse(context.values);
+
+        log.debug(logTitle, '>> searchValues: ' + JSON.stringify(searchValues));
+        var record_id = searchValues.id;
+
+        // var serialsToProcess = null;
+
+        var parentSearchFields = [
+            'custrecord_ctc_vc_bill_is_recievable',
+            'custrecord_ctc_vc_bill_log',
+            'custrecord_ctc_vc_bill_proc_status',
+            'custrecord_ctc_vc_bill_proc_variance',
+            'custrecord_ctc_vc_bill_linked_po',
+            'custrecord_ctc_vc_bill_po',
+            'custrecord_ctc_vc_bill_json',
+        ];
+
+        try {
+            var rec = search.lookupFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: record_id,
+                columns: parentSearchFields,
+            });
+
+            log.debug(logTitle, '>> results: ' + JSON.stringify(rec));
+
+            var updateValues = {};
                         var restletHeaders = {
-                            "Content-Type": 'application/json'
+                'Content-Type': 'application/json',
                         };
 
                         // var poStatus = searchValues.values['statusref.CUSTRECORD_CTC_VC_BILL_LINKED_PO'].text;
@@ -186,8 +323,8 @@
                         rec = search.lookupFields({
                             type: 'customrecord_ctc_vc_bills',
                             id: record_id,
-                            columns: parentSearchFields
-                        })
+                columns: parentSearchFields,
+            });
 
                         var requestObj = JSON.parse(JSON.stringify(rec));
 
@@ -198,7 +335,7 @@
                             scriptId: 'customscript_vc_bill_creator_restlet',
                             deploymentId: 'customdeploy1',
                             method: 'POST',
-                            body: JSON.stringify(requestObj)
+                body: JSON.stringify(requestObj),
                         });
 
                         var r = JSON.parse(createBillResponse.body);
@@ -211,7 +348,8 @@
                         if (r.msg) {
                                 var currentMessages = rec.custrecord_ctc_vc_bill_log;
                                 var newMessage = moment().format('MM-DD-YY') + ' - ' + r.msg;
-                                updateValues.custrecord_ctc_vc_bill_log = currentMessages + '\r\n' + newMessage;
+                updateValues.custrecord_ctc_vc_bill_log =
+                    currentMessages + '\r\n' + newMessage;
                         }
                         if (r.id) {
                             updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
@@ -252,7 +390,7 @@
                             record.submitFields({
                                 type: 'customrecord_ctc_vc_bills',
                                 id: record_id,
-                                values: updateValues
+                    values: updateValues,
                             });
 
                         }
@@ -299,7 +437,7 @@
                     if (inputSummary.error) {
                         var e = error.create({
                             name: 'INPUT_STAGE_FAILED',
-                            message: inputSummary.error
+                message: inputSummary.error,
                         });
                         log.error('Stage: getInputData failed', e);
                     }
@@ -322,7 +460,7 @@
                             script: runtime.getCurrentScript().id,
                             seconds: summary.seconds,
                             usage: summary.usage,
-                            yields: summary.yields
+                yields: summary.yields,
                         };
 
                         log.audit('summary', summaryJson);
@@ -335,6 +473,6 @@
                 return {
                     getInputData: getInputData,
                     reduce: reduce,
-                    summarize: summarize
+        summarize: summarize,
                 };
             });

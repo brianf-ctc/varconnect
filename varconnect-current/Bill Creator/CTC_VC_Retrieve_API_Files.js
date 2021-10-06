@@ -3,76 +3,87 @@
          * @NScriptType MapReduceScript
          */
 
+define([
+    'N/search',
+    'N/runtime',
+    'N/error',
+    'N/log',
+    './Libraries/moment',
+    './Libraries/CTC_VC_Lib_Create_Bill_Files',
+    './Libraries/CTC_VC_Lib_Vendor_Map',
+], function (search, runtime, error, log, moment, vp, vm) {
 
-        define(['N/search', 'N/runtime', 'N/error', 'N/log', './Libraries/moment', './Libraries/CTC_VC_Lib_Create_Bill_Files', './Libraries/CTC_VC_Lib_Vendor_Map'],
-            function(search, runtime, error, log, moment, vp, vm) {
+    var LogTitle = 'MR_BillFiles-API';
 
                 function getInputData() {
 
-                    // B = Pending Receipt
-                    // D = Partially Received
-                    // E = Pending Billing/Partially Received
-                    // F = Pending Bill
-                    // G = Fully Billed
+        var logTitle = [LogTitle, 'getInputData'].join(':');
 
                     return search.create({
-                        type: "purchaseorder",
+            type: 'purchaseorder',
                         filters: [
-                            ["vendor.custentity_vc_bill_config", "anyof", "1", "3", "4"], // Arrow, Ingram, TD
-                            "AND", ["type", "anyof", "PurchOrd"],
-                            "AND", ["status", "anyof", "PurchOrd:B", "PurchOrd:D", "PurchOrd:E", "PurchOrd:F"],
-                            "AND", ["mainline", "is", "T"]
+                ['vendor.custentity_vc_bill_config', 'anyof', '1', '3', '4'], // Arrow, Ingram, TD
+                'AND',
+                ['type', 'anyof', 'PurchOrd'],'AND',
+                [
+                    'status', 'anyof',
+                    'PurchOrd:B',   // PendingReceipt
+                    'PurchOrd:D',   // PartiallyReceived
+                    'PurchOrd:E',   // PendingBilling_PartiallyReceived
+                    'PurchOrd:F',   // PendingBill
+                ],
+                'AND',
+                ['mainline', 'is', 'T'],
                         ],
                         columns: [
-                            "internalid",
-                            "tranid",
+                'internalid', 'tranid',
                             search.createColumn({
-                                name: "custentity_vc_bill_config",
-                                join: "vendor"
-                            })
-                        ]
+                    name: 'custentity_vc_bill_config',
+                    join: 'vendor',
+                }),
+            ],
                     });
                 }
 
                 function reduce(context) {
-
+        var logTitle = [LogTitle, 'reduce'].join(':');
                     //var scriptObj = runtime.getCurrentScript();
 
                     var searchValues = JSON.parse(context.values);
 
                     //var record_id = searchValues.id;
-
-                    log.debug('values', searchValues);
+        log.audit(logTitle, '>> searchValues: ' + JSON.stringify(searchValues) );
 
                     var vendorConfig = search.lookupFields({
-                        type: "customrecord_vc_bill_vendor_config",
+            type: 'customrecord_vc_bill_vendor_config',
                         id: searchValues.values['custentity_vc_bill_config.vendor'].value,
                         columns: [
-                            "custrecord_vc_bc_ack",
-                            "custrecord_vc_bc_entry",
-                            "custrecord_vc_bc_user",
-                            "custrecord_vc_bc_pass",
-                            "custrecord_vc_bc_partner",
-                            "custrecord_vc_bc_connect_type",
-                            "custrecord_vc_bc_host_key",
-                            "custrecord_vc_bc_url",
-                            "custrecord_vc_bc_res_path",
-                            "custrecord_vc_bc_ack_path"
-                        ]
-                    })
+                'custrecord_vc_bc_ack',
+                'custrecord_vc_bc_entry',
+                'custrecord_vc_bc_user',
+                'custrecord_vc_bc_pass',
+                'custrecord_vc_bc_partner',
+                'custrecord_vc_bc_connect_type',
+                'custrecord_vc_bc_host_key',
+                'custrecord_vc_bc_url',
+                'custrecord_vc_bc_res_path',
+                'custrecord_vc_bc_ack_path',
+            ],
+        });
 
                     var configObj = {
-                        "id": searchValues.values['custentity_vc_bill_config.vendor'].value,
-                        "ack_function": vendorConfig.custrecord_vc_bc_ack,
-                        "entry_function": vendorConfig.custrecord_vc_bc_entry,
-                        "user_id": vendorConfig.custrecord_vc_bc_user,
-                        "user_pass": vendorConfig.custrecord_vc_bc_pass,
-                        "partner_id": vendorConfig.custrecord_vc_bc_partner,
-                        "host_key": vendorConfig.custrecord_vc_bc_host_key,
-                        "url": vendorConfig.custrecord_vc_bc_url,
-                        "res_path": vendorConfig.custrecord_vc_bc_res_path,
-                        "ack_path": vendorConfig.custrecord_vc_bc_ack_path
-                    }
+            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
+            ack_function: vendorConfig.custrecord_vc_bc_ack,
+            entry_function: vendorConfig.custrecord_vc_bc_entry,
+            user_id: vendorConfig.custrecord_vc_bc_user,
+            user_pass: vendorConfig.custrecord_vc_bc_pass,
+            partner_id: vendorConfig.custrecord_vc_bc_partner,
+            host_key: vendorConfig.custrecord_vc_bc_host_key,
+            url: vendorConfig.custrecord_vc_bc_url,
+            res_path: vendorConfig.custrecord_vc_bc_res_path,
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+        };
+        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj) );
 
                     try {
 
@@ -94,9 +105,7 @@
 
                         //log.debug(context.key, myArr);
 
-                        log.debug('myArr.length', myArr.length);
-
-                        log.debug('myArr', myArr);
+            log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr) );
 
                         vp.process(configObj, myArr, moment().unix());
 
@@ -119,7 +128,7 @@
                     if (inputSummary.error) {
                         var e = error.create({
                             name: 'INPUT_STAGE_FAILED',
-                            message: inputSummary.error
+                message: inputSummary.error,
                         });
                         log.error('Stage: getInputData failed', e);
                     }
@@ -142,7 +151,7 @@
                             script: runtime.getCurrentScript().id,
                             seconds: summary.seconds,
                             usage: summary.usage,
-                            yields: summary.yields
+                yields: summary.yields,
                         };
 
                         log.audit('summary', summaryJson);
@@ -155,6 +164,6 @@
                 return {
                     getInputData: getInputData,
                     reduce: reduce,
-                    summarize: summarize
+        summarize: summarize,
                 };
-            });
+});

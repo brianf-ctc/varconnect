@@ -3,9 +3,18 @@
          * @NScriptType MapReduceScript
          */
 
+define([
+    'N/search',
+    'N/runtime',
+    'N/error',
+    'N/log',
+    'N/sftp',
+    './Libraries/moment',
+    './Libraries/CTC_VC_Lib_Create_Bill_Files',
+    './Libraries/CTC_VC_Lib_Vendor_Map',
+], function (search, runtime, error, log, sftp, moment, vp, vm) {
 
-        define(['N/search', 'N/runtime', 'N/error', 'N/log', 'N/sftp', './Libraries/moment', './Libraries/CTC_VC_Lib_Create_Bill_Files', './Libraries/CTC_VC_Lib_Vendor_Map'],
-            function(search, runtime, error, log, sftp, moment, vp, vm) {
+    var LogTitle = 'MR_BillFiles-SFTP';
 
                 function getInputData() {
 
@@ -13,83 +22,73 @@
                     // are hard coded here instead of doing a search
 
                     return [2, 5, 6]; //[DH, WF, SYNNEX]
-
-                    // return [2, 5];
-
-                    //return [2];
-
                 }
 
                 function map(context) {
+        var logTitle = [LogTitle, 'map'].join(':');
 
                     //get the vendor config details
-
-                    log.debug('context.value', context.value);
+        log.audit(logTitle, '>> context.value: ' + JSON.stringify(context.value));
 
                     var vendorConfig = search.lookupFields({
-                        type: "customrecord_vc_bill_vendor_config",
+            type: 'customrecord_vc_bill_vendor_config',
                         id: context.value,
                         columns: [
-                            "custrecord_vc_bc_ack",
-                            "custrecord_vc_bc_entry",
-                            "custrecord_vc_bc_user",
-                            "custrecord_vc_bc_pass",
-                            "custrecord_vc_bc_partner",
-                            "custrecord_vc_bc_connect_type",
-                            "custrecord_vc_bc_host_key",
-                            "custrecord_vc_bc_url",
-                            "custrecord_vc_bc_res_path",
-                            "custrecord_vc_bc_ack_path"
-                        ]
+                'custrecord_vc_bc_ack',
+                'custrecord_vc_bc_entry',
+                'custrecord_vc_bc_user',
+                'custrecord_vc_bc_pass',
+                'custrecord_vc_bc_partner',
+                'custrecord_vc_bc_connect_type',
+                'custrecord_vc_bc_host_key',
+                'custrecord_vc_bc_url',
+                'custrecord_vc_bc_res_path',
+                'custrecord_vc_bc_ack_path',
+            ],
                     });
 
                     var configObj = {
-                        "id": context.value,
-                        "ack_function": vendorConfig.custrecord_vc_bc_ack,
-                        "entry_function": vendorConfig.custrecord_vc_bc_entry,
-                        "user_id": vendorConfig.custrecord_vc_bc_user,
-                        "user_pass": vendorConfig.custrecord_vc_bc_pass,
-                        "partner_id": vendorConfig.custrecord_vc_bc_partner,
-                        "host_key": vendorConfig.custrecord_vc_bc_host_key,
-                        "url": vendorConfig.custrecord_vc_bc_url,
-                        "res_path": vendorConfig.custrecord_vc_bc_res_path,
-                        "ack_path": vendorConfig.custrecord_vc_bc_ack_path
-                    }
-
-                    log.debug('configObj', configObj);
+            id: context.value,
+            ack_function: vendorConfig.custrecord_vc_bc_ack,
+            entry_function: vendorConfig.custrecord_vc_bc_entry,
+            user_id: vendorConfig.custrecord_vc_bc_user,
+            user_pass: vendorConfig.custrecord_vc_bc_pass,
+            partner_id: vendorConfig.custrecord_vc_bc_partner,
+            host_key: vendorConfig.custrecord_vc_bc_host_key,
+            url: vendorConfig.custrecord_vc_bc_url,
+            res_path: vendorConfig.custrecord_vc_bc_res_path,
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+        };
+        log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
 
                     var connection = sftp.createConnection({
                         username: configObj.user_id,
                         passwordGuid: configObj.user_pass,
                         url: configObj.url,
                         directory: configObj.res_path,
-                        hostKey: configObj.host_key
+            hostKey: configObj.host_key,
                     });
 
                     var list = connection.list();
-
+        log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));
                     
                     // create an array of files created in the last 90 days
                     // if we already know about the file we'll ignore it in
                     // the next step
 
                     var s = search.create({
-                        type: "customrecord_ctc_vc_bills",
-                        filters: [
-                            ["created", "onorafter", "daysago90"]
-                        ],
+            type: 'customrecord_ctc_vc_bills',
+            filters: [['created', 'onorafter', 'daysago90']],
                         columns: [
                             search.createColumn({
-                                name: "name",
-                                summary: "GROUP",
-                                sort: search.Sort.ASC
-                            })
-                        ]
+                    name: 'name',
+                    summary: 'GROUP',
+                    sort: search.Sort.ASC,
+                }),
+            ],
                     });
 
-                    var pagedData = s.runPaged({
-                        pageSize: 1000
-                    });
+        var pagedData = s.runPaged({pageSize: 1000});
 
                     var existingFiles = [];
 
@@ -99,74 +98,72 @@
                         var currentPage = pagedData.fetch(i);
 
                         currentPage.data.forEach(function(result) {
-
-                            existingFiles.push(result.getValue({
-                                name: "name",
-                                summary: "GROUP"
-                            }))
+                existingFiles.push(
+                    result.getValue({
+                        name: 'name',
+                        summary: 'GROUP',
+                    })
+                );
                         });
                     }
+        log.audit(logTitle, '>> ..existing Files: ' + JSON.stringify(existingFiles.length));
 
                     for (var i = 0; i < list.length; i++) {
 
-                        //for (var i = 0; i < 50; i++) {
+            log.audit(logTitle, '>>> Current File <<< ' + JSON.stringify(list[i]) );
 
-                        if (list[i].directory == false && moment(list[i].lastModified).isSameOrAfter(moment().subtract(90, 'days'), 'day')) {
-                            if (configObj.id == 2) {
-                                //D&H
-                                if (list[i].name == '..' || list[i].name.slice(-3) !== 'txt') {
+            if (list[i].directory) {
+                log.audit(logTitle, '>>> ...skipping directories. ');
                                     continue;
                                 }
 
-                            } else if (configObj.id == 5) {
+            var is90days = moment(list[i].lastModified).isSameOrAfter( moment().subtract(90, 'days'), 'day' );
+            log.audit(logTitle, '>>> is 90 days old? ' + JSON.stringify(is90days) );
 
-                                //Wells Fargo
-                                // process all files
+            if (!is90days) {
+                log.audit(logTitle, '>>> ...skipping older than 90 days. ');
+                continue;
+            }
 
-                            } else if (configObj.id == 6) {
-                                //Synnex
+            if ( configObj.entry_function == 'synnex_sftp') {
                                 if (list[i].name == '..' || list[i].name.slice(-3) !== 'xml') {
+                    log.audit(logTitle, '>>> ...skipping non xml files. ');
                                     continue;
                                 }
-
+            } else if ( configObj.entry_function == 'dh_sftp') {
+                if ( list[i].name == '..' || list[i].name.slice(-3) !== 'txt' ) {
+                    log.audit(logTitle, '>>> ...skipping non txt files. ');
+                    continue;
+                }
                             }
 
-                            // check to see if we've already downloaded this file and if so skip
-                            // loading it to the array so we don't download it again.
-
-                            var found = false;
-
+            var isAlreadyProcessed = false;
                             for (var e = 0; e < existingFiles.length; e++) {
                                 if (list[i].name == existingFiles[e]) {
-                                    found = true;
-                                    continue;
+                    isAlreadyProcessed = true;
+                    break;
                                 }
                             }
-
-                            if (found == true) {
+            if ( isAlreadyProcessed ) {
+                log.audit(logTitle, '... skipping, already processed. ' + JSON.stringify([list[i].name, existingFiles[e]] ));
                                 continue;
                             }
 
-                            // if we've made it through all the traps, then write the file to the
-                            // context so we can process it in the next step.
-
-                            log.debug('adding file', list[i].name);
-
+            log.audit(logTitle, '>>> adding file: ' + JSON.stringify(list[i].name));
                             context.write({
                                 key: list[i].name,
-                                value: JSON.stringify(configObj)
+                value: JSON.stringify(configObj),
                             });
 
                         }
-
-                    }
-
                 }
 
                 function reduce(context) {
+        var logTitle = [LogTitle, 'reduce'].join(':');
                     //log.debug(context.key, context.values[0]);
 
                     var configObj = JSON.parse(context.values[0]);
+        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj) );
 
                     try {
 
@@ -187,12 +184,9 @@
                         }
 
                         //log.debug(context.key, myArr);
-
-                        log.audit ('calling vp.process');
+            log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr) );
 
                         vp.process(configObj, myArr, context.key);
-
-                        log.audit ('vp.process finished');
 
                     } catch (e) {
                         log.error(context.key + ': ' + 'Error encountered in reduce', e);
@@ -213,7 +207,7 @@
                     if (inputSummary.error) {
                         var e = error.create({
                             name: 'INPUT_STAGE_FAILED',
-                            message: inputSummary.error
+                message: inputSummary.error,
                         });
                         log.error('Stage: getInputData failed', e);
                     }
@@ -236,7 +230,7 @@
                             script: runtime.getCurrentScript().id,
                             seconds: summary.seconds,
                             usage: summary.usage,
-                            yields: summary.yields
+                yields: summary.yields,
                         };
 
                         log.audit('summary', summaryJson);
@@ -250,6 +244,6 @@
                     getInputData: getInputData,
                     map: map,
                     reduce: reduce,
-                    summarize: summarize
+        summarize: summarize,
                 };
-            });
+});
