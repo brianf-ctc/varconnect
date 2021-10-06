@@ -122,7 +122,7 @@ define(['N/search',
 
 			try {
 				checkForDuplicateItems (po_record);
-				log.debug('netsuiteLibrary:afterCheckForDups', 'lineData.length = '+lineData.length);
+				log.debug('netsuiteLibrary:afterCheckForDups', 'lineData = '+ JSON.stringify(lineData));
 				
 				//4.01
 				if (!dateFormat) {
@@ -264,6 +264,7 @@ define(['N/search',
 								return (i);
 							}
 						}
+						
 					}
 
 					if (tempItemNum == itemNum)
@@ -276,6 +277,17 @@ define(['N/search',
 						if (itemNum.replace('#', ' ') == tempItemNum)
 							return (i);
 					}
+
+					//D&H Item replacement
+					var dAndhItem = po_record.getSublistValue({
+						sublistId: 'item',
+						fieldId: constants.Columns.DH_MPN,
+						line: i
+					});
+
+					if (dAndhItem == itemNum &&
+							xmlVendor == vendorList.DandH)
+						return (i);
 				}
 				return null;
 			}

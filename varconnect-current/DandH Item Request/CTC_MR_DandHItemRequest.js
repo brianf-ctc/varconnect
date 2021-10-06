@@ -149,7 +149,8 @@ function(search,
 			lookupType: 'DH'
 		});
 		
-		if (responseXML)
+      	log.debug('first response', responseXML);
+		if (responseXML && responseXML.indexOf('Invalid')<0)
 			itemNumbers = _processItemInquiryResponse({
 				responseXML: responseXML
 			});
@@ -161,11 +162,11 @@ function(search,
 				lookupType: 'MFR'
 			});
 			
+	      	log.debug('second response', responseXML);
 			if (responseXML)
 				itemNumbers = _processItemInquiryResponse({
 					responseXML: responseXML
 				});
-			
 		}
 
 		return itemNumbers;
