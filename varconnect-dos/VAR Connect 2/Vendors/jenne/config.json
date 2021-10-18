@@ -1,0 +1,15 @@
+{
+    "base_url": {
+        "help": "Base Resource URL",
+        "display_name": "Base URL",
+        "mandatory": true,
+        "field_type": {
+            "type": "URL",
+            "reference_field": null
+        },
+        "values": {
+            "string": "https://change.me",
+            "id": null
+        }
+    }
+}

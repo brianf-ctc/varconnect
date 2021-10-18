@@ -1,0 +1,13 @@
+{
+    "paths": {
+        "ctc": "SuiteScripts/VAR Connect 2/Libraries/ctc_libraries.js",
+        "lodash" : "SuiteScripts/VAR Connect 2/Libraries/lodash.js",
+        "moment" : "SuiteScripts/VAR Connect 2/Libraries/moment.js",
+        "papa" : "SuiteScripts/VAR Connect 2/Libraries/papaparse.min.js"
+    },
+    "shim":{
+        "ctc": {
+            "exports": "CTC"
+        }
+    }
+}

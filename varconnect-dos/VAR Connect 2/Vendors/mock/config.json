@@ -1,0 +1,213 @@
+{
+    "text": {
+        "help": "Default Help Text",
+        "display_name": "Text",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "Hello World",
+            "id": null
+        }
+    },
+    "longtext": {
+        "help": "Default Help Text",
+        "display_name": "Long Text",
+        "mandatory": false,
+        "field_type": {
+            "type": "LONGTEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            "id": null
+        }
+    },
+    "textarea": {
+        "help": "Default Help Text",
+        "display_name": "Text Area",
+        "mandatory": false,
+        "field_type": {
+            "type": "TEXTAREA",
+            "reference_field": null
+        },
+        "values": {
+            "string": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            "id": null
+        }
+    },
+    "integer": {
+        "help": "Default Help Text",
+        "display_name": "Integer",
+        "mandatory": true,
+        "field_type": {
+            "type": "INTEGER",
+            "reference_field": null
+        },
+        "values": {
+            "string": 123456789,
+            "id": null
+        }
+    },
+    "currency": {
+        "help": "Default Help Text",
+        "display_name": "Currency",
+        "mandatory": true,
+        "field_type": {
+            "type": "CURRENCY",
+            "reference_field": null
+        },
+        "values": {
+            "string": 1234567.89,
+            "id": null
+        }
+    },
+    "float": {
+        "help": "Default Help Text",
+        "display_name": "Floating Point Number",
+        "mandatory": true,
+        "field_type": {
+            "type": "FLOAT",
+            "reference_field": null
+        },
+        "values": {
+            "string": 1.23456789,
+            "id": null
+        }
+    },
+    "percent": {
+        "help": "Default Help Text",
+        "display_name": "Percent",
+        "mandatory": true,
+        "field_type": {
+            "type": "PERCENT",
+            "reference_field": null
+        },
+        "values": {
+            "string": 123.456789,
+            "id": null
+        }
+    },
+    "date": {
+        "help": "Default Help Text",
+        "display_name": "Date",
+        "mandatory": true,
+        "field_type": {
+            "type": "DATE",
+            "reference_field": null
+        },
+        "values": {
+            "string": "12/31/2020",
+            "id": null
+        }
+    },
+    "timeofday": {
+        "help": "Default Help Text",
+        "display_name": "Time Of Day",
+        "mandatory": true,
+        "field_type": {
+            "type": "TIMEOFDAY",
+            "reference_field": null
+        },
+        "values": {
+            "string": "11:59 pm",
+            "id": null
+        }
+    },
+    "checkbox": {
+        "help": "Default Help Text",
+        "display_name": "Checkbox",
+        "mandatory": true,
+        "field_type": {
+            "type": "CHECKBOX",
+            "reference_field": null
+        },
+        "values": {
+            "string": "T",
+            "id": null
+        }
+    },
+    "select": {
+        "help": "Default Help Text",
+        "display_name": "Select",
+        "mandatory": true,
+        "field_type": {
+            "type": "SELECT",
+            "reference_field": "account"
+        },
+        "values": {
+            "string": "Accounts Payable",
+            "id": 24
+        }
+    },
+    "multiselect": {
+        "help": "Default Help Text",
+        "display_name": "Multi-Select",
+        "mandatory": false,
+        "field_type": {
+            "type": "MULTISELECT",
+            "reference_field": "employee"
+        },
+        "values": [{
+            "string": "Shawn Blackburn",
+            "id": 5
+        }, {
+            "string": "Jeff Smith",
+            "id": -5
+        }]
+    },
+    "url": {
+        "help": "Default Help Text",
+        "display_name": "URL",
+        "mandatory": true,
+        "field_type": {
+            "type": "URL",
+            "reference_field": null
+        },
+        "values": {
+            "string": "https://system.netsuite.com",
+            "id": null
+        }
+    },
+    "email": {
+        "help": "Default Help Text",
+        "display_name": "E-Mail Adress",
+        "mandatory": true,
+        "field_type": {
+            "type": "EMAIL",
+            "reference_field": null
+        },
+        "values": {
+            "string": "shawnblackburn@gmail.com",
+            "id": null
+        }
+    },
+    "phone": {
+        "help": "Default Help Text",
+        "display_name": "Phone Number",
+        "mandatory": true,
+        "field_type": {
+            "type": "PHONE",
+            "reference_field": null
+        },
+        "values": {
+            "string": "1-919-267-3333",
+            "id": null
+        }
+    },
+    "password": {
+        "help": null,
+        "display_name": "Password",
+        "mandatory": true,
+        "field_type": {
+            "type": "PASSWORD",
+            "reference_field": null
+        },
+        "values": {
+            "string": "mypassword",
+            "id": null
+        }
+    }
+}

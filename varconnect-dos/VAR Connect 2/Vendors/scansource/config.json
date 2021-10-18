@@ -1,0 +1,112 @@
+{
+    "base_url": {
+        "help": "Base Resource URL",
+        "display_name": "Base URL",
+        "mandatory": true,
+        "field_type": {
+            "type": "URL",
+            "reference_field": null
+        },
+        "values": {
+            "string": "https://apitest.scansource.com/scsc",
+            "id": null
+        }
+    },"partner_number": {
+        "help": "ScanSource Customer Number",
+        "display_name": "Customer Number",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "1000009731",
+            "id": null
+        }
+    },"primary_key": {
+        "help": null,
+        "display_name": "Primary Key",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "fdd290c7-1e3c-4460-9975-3bea20b60eb9",
+            "id": null
+        }
+    },"secondary_key": {
+        "help": null,
+        "display_name": "Secondary Key",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "30fe6f70-611b-4316-870b-4c9e0a29b645",
+            "id": null
+        }
+    },"primary_subscription_key": {
+        "help": null,
+        "display_name": "Primary Subscription Key",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "c06e32ca-a8b4-4670-8b51-b1d957ef1e4a",
+            "id": null
+        }
+    },"secondary_subscription_key": {
+        "help": null,
+        "display_name": "Secondary Subscription Key",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "b55f55ec-5362-4fdd-906f-16e5c4bbc07c",
+            "id": null
+        }
+    },"client_id": {
+        "help": null,
+        "display_name": "Client ID",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "c8a2d583-63f0-43a4-a146-98eaa06e21b1",
+            "id": null
+        }
+    },"client_secret": {
+        "help": null,
+        "display_name": "Client Secret",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "yzkTf6.rD~16vF3_YM54XYA1lwgbabfO0-",
+            "id": null
+        }
+    },"ocp_apim_subscription_key": {
+        "help": null,
+        "display_name": "OCP APIM Subscription Key",
+        "mandatory": true,
+        "field_type": {
+            "type": "TEXT",
+            "reference_field": null
+        },
+        "values": {
+            "string": "fdd290c7-1e3c-4460-9975-3bea20b60eb9",
+            "id": null
+        }
+    }
+
+}
