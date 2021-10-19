@@ -432,7 +432,13 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 if (line.QUANTITY > 0) {
                     fileFullyProcessed = false;
 
-                    returnObj.details = ['line has remaining unprocessed qty: ', JSON.stringify(line)].join('');
+                    returnObj.details = [
+                        'Bill line quantity exceeds PO line quantity: ',
+                        JSON.stringify({
+                            item: line.ITEMNO,
+                            qty: line.QUANTITY
+                        })
+                    ].join('');
                     log.debug(logTitle, '// line has remaining unprocessed qty' + JSON.stringify(line));
                 }
             });
@@ -718,6 +724,7 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             returnObj.details = returnObj.details || Helper.extractError(error);
             returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
             returnObj.isError = true;
+            returnObj.msg = [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join('\r\n');
 
             log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
