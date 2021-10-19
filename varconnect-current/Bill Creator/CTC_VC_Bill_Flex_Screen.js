@@ -244,10 +244,7 @@ define([
             flexForm.addButton({
                 id: 'btnBillFile',
                 label: 'Go To Bill File Record',
-                functionName: "goToBillFile"
-                // functionName: ';(function (){alert(123);})();',
-                // functionName: '(function(url){console.log("URL", url);})("' + billFileUrl + '")'
-                // functionName: '(function(url){ alert(url);})("' + billFileUrl + '")'
+                functionName: 'goToBillFile'
             });
 
             ACT_Fields.push(
@@ -263,22 +260,6 @@ define([
                 //             ? serverWidget.FieldDisplayType.DISABLED
                 //             : false
                 // },
-                {
-                    id: 'custpage_hold',
-                    type: serverWidget.FieldType.SELECT,
-                    source: 'customlist_ctc_vc_bill_hold_rsns',
-                    container: 'fg_action',
-                    label: 'Hold Reason',
-                    defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_hold_rsn'),
-                    displayType: !fnIsActive() ? serverWidget.FieldDisplayType.INLINE : false
-                },
-                {
-                    id: 'custpage_processing_notes',
-                    type: serverWidget.FieldType.TEXTAREA,
-                    container: 'fg_action',
-                    label: 'Notes',
-                    defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_notes')
-                },
                 {
                     id: 'custpage_integration',
                     type: serverWidget.FieldType.SELECT,
@@ -304,22 +285,39 @@ define([
                     container: 'fg_action',
                     label: 'Bill File',
                     displayType: serverWidget.FieldDisplayType.HIDDEN,
-                    
+
                     defaultValue: billFileUrl
-                        // '<a href="' +
-                        // billFileUrl +
-                        // '" target="_blank">' +
-                        // recBillFile.getValue({ fieldId: 'name' }) +
-                        // '</a>'
+                    // '<a href="' +
+                    // billFileUrl +
+                    // '" target="_blank">' +
+                    // recBillFile.getValue({ fieldId: 'name' }) +
+                    // '</a>'
                 },
                 {
                     id: 'custpage_processing_logs',
                     type: serverWidget.FieldType.LONGTEXT,
                     container: 'fg_action',
                     label: 'Processing Logs',
-                    breakType: serverWidget.FieldBreakType.STARTCOL,
+                    // breakType: serverWidget.FieldBreakType.STARTCOL,
                     displayType: serverWidget.FieldDisplayType.INLINE,
                     defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_log')
+                },
+                {
+                    id: 'custpage_hold',
+                    type: serverWidget.FieldType.SELECT,
+                    source: 'customlist_ctc_vc_bill_hold_rsns',
+                    container: 'fg_action',
+                    label: 'Hold Reason',
+                    breakType: serverWidget.FieldBreakType.STARTCOL,
+                    defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_hold_rsn'),
+                    displayType: !fnIsActive() ? serverWidget.FieldDisplayType.INLINE : false
+                },
+                {
+                    id: 'custpage_processing_notes',
+                    type: serverWidget.FieldType.TEXTAREA,
+                    container: 'fg_action',
+                    label: 'Notes',
+                    defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_notes')
                 }
             );
 
@@ -822,7 +820,7 @@ define([
                         }
 
                         lineTaxTotal += lineValues.nstaxamt;
-                        lineAmountTotal += linePo.amount;
+                        lineAmountTotal += poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
                     }
                 }
                 //
@@ -830,6 +828,8 @@ define([
                 lineValues.fdesc = parsedBillData.lines[i].DESCRIPTION;
                 lineValues.frate = parsedBillData.lines[i].PRICE;
                 lineValues.famt = lineValues.frate * lineValues.fqty;
+
+
 
                 log.debug(logTitle, '>>>>> lineValues: ' + JSON.stringify(lineValues));
 
