@@ -20,8 +20,7 @@
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  */
-define(['N/record', 'N/format', './CTC_VC_Constants.js'], 
-function (record, format, constants) {
+define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, format, constants) {
     function _getCurrentTime() {
         var /*companyConfig = config.load(config.Type.COMPANY_INFORMATION),
 			timezone = companyConfig.getValue({ fieldId: 'timezone' }),*/
@@ -70,7 +69,6 @@ function (record, format, constants) {
             value: _getCurrentTime()
         });
 
-        // log.debug('liblog: save');
         recLog.save();
     }
 

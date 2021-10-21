@@ -36,7 +36,7 @@ define([
         '../CTC_VC_Constants.js',
         '../CTC_VC_Lib_MainConfiguration.js',
         '../CTC_VC_Lib_LicenseValidator',
-        '../Library/CTC_Util.js'],
+        '../CTC_Util.js'],
 function(
 		task,
 		ui,

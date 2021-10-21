@@ -1,44 +1,44 @@
 /**
  * Copyright (c) 2020 Catalyst Tech Corp All Rights Reserved.
- * 
+ *
  * This software is the confidential and proprietary information of Catalyst
  * Tech Corp. ("Confidential Information"). You shall not disclose such
  * Confidential Information and shall use it only in accordance with the terms
  * of the license agreement you entered into with Catalyst Tech.
- * 
+ *
  * Author: paolodl@nscatalyst.com
- * 
+ *
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  * @Description Contains the reusable functions for linking serials to the lines
- * 
+ *
  * CHANGELOGS
- * 
+ *
  * Version Date Author Remarks 1.00 May 13, 2020 paolodl@nscatalyst.com Initial
  * Build
- * 
+ *
  */
 define(['N/record',
         'N/search',
-        '../CTC_VC_Constants.js'],
+        './CTC_VC_Constants.js'],
 
 function(record,
 		search,
 		constants) {
 	var FIELDS = constants.Fields.Serials;
-	
+
 	function processSerials(options) {
 		var serialsToCreate = options.serialsToCreate,
 			serialsToUpdate = options.serialsToUpdate,
 			item = options.item,
 			txnList = options.txnList,	//['salesorder', 'purchaseorder', etc]
 			txnIds = options.txnIds;	//{salesorder: 1, purchaseorder: 2, etc}
-		
+
 		log.debug('lineSerials: processSerials', options);
 		if (serialsToCreate &&
 				serialsToCreate.length > 0) {
 			log.debug('Creating serials for transactions', txnList);
-			
+
 			processCreateSerialsList({
 				serialsToCreate: serialsToCreate,
 				item: item,
@@ -56,25 +56,25 @@ function(record,
 			});
 		}
 	}
-		
+
 	function processUpdateSerialsList(options) {
 		var serialsToUpdate = options.serialsToUpdate,
 			item = options.item,
 			txnList = options.txnList,	//['salesorder'];
 			txnIds = options.txnIds;	//{salesorder: 1}
-		
+
 		log.debug('lineSerials: processUpdateSerialsList', options);
-		
+
 		var txnType = txnList[0];	//Should only contain 1 txn type for update
 		var txnId = txnIds[txnType];
-		
+
 		var fields = _getSerialsTransactionFields({ txnType: txnType });
 		/* {
 		 * 		txnField: fieldId,
 		 *		txnLineField: lineFieldId
 		 *	}
 		 */
-		
+
 		//Trannsaction Line Id with quantities grouped per transaction type
 		var txnLineNumbers = _getItemLineNumbers({
 				item: item,
@@ -86,7 +86,7 @@ function(record,
 		 * 		lineId: qty
 		 * }
 		 */
-		
+
 		//Count of existing serials per Line Id grouped per transaction
 		var existingSerialCounts = _searchSerialsForTransactionItem({
 			item: item,
@@ -94,7 +94,7 @@ function(record,
 			txnType: txnType,
 			fields: fields
 		});
-		
+
 		var serialIds = _getSerialIdsToUpdate({ serials: serialsToUpdate });
 
 		var lineIdCounter = 0;
@@ -103,23 +103,23 @@ function(record,
 				var serialId = serialIds[i];
 				log.debug('Updating serial id ' + serialId);
 				var values = [];
-				
+
 				if (serialId) {
 					lineIdLoop:
 						for (; lineIdCounter<txnLineNumbers.idList.length; lineIdCounter++) {
 							var lineId = txnLineNumbers.idList[lineIdCounter],
 								qty = txnLineNumbers[lineId],
 								count = existingSerialCounts[lineId];
-							
+
 							//If serial count is met for the line (qty), continue to next line id
 							if (qty<=count) {
 								continue lineIdLoop;
 							}
-							
+
 							//Set values to proper fields
 							values[fields.txnField] = txnId;
 							values[fields.txnLineField] = lineId;
-							
+
 							//Increment serial count
 							existingSerialCounts[txnType][lineId]++;
 							break lineIdLoop;
@@ -129,7 +129,7 @@ function(record,
 				if (values && values.length > 0)
 	                record.submitFields({
 	                    type: constants.Records.SERIALS,
-	                    id: serialId, 
+	                    id: serialId,
 	                    values: values
 	                });
 			} catch (e) {
@@ -137,39 +137,39 @@ function(record,
 			}
 		}
 	}
-	
-	
+
+
 	function processCreateSerialsList(options) {
 		var serialsToCreate = options.serialsToCreate,
 			item = options.item,
 			txnList = options.txnList,	//['salesorder', 'purchaseorder', etc]
 			txnIds = options.txnIds,	//{salesorder: 1, purchaseorder: 2, etc}
-			txnLineNumbers = {},		//{salesorder: {idList: [line1, line2], line1: 1, line2: 2}, 
+			txnLineNumbers = {},		//{salesorder: {idList: [line1, line2], line1: 1, line2: 2},
 										//	purchaseorder: {idList: [line1, line2], line1: 1, line2: 2}}
-			existingSerialCounts = {},	//{salesorder: {line1: 1, line2: 2}, 
+			existingSerialCounts = {},	//{salesorder: {line1: 1, line2: 2},
 										//	purchaseorder: {line1: 1, line2: 2}}
-			allFields = {},				//{salesorder: {txnField: 'soField', txnLineField: 'soLineField'}, 
+			allFields = {},				//{salesorder: {txnField: 'soField', txnLineField: 'soLineField'},
 										//	purchaseorder: {txnField: 'poField', txnLineField: 'poLineField'}}
-			lineIdCounter = {};			//{salesorder: 0, 
+			lineIdCounter = {};			//{salesorder: 0,
 										//	purchaseorder: 0}
-		
+
 		log.debug('lineSerrials: processCreateSerialsList', options);
 
-		//Iterate through serials list, get the necessary fields, 
+		//Iterate through serials list, get the necessary fields,
 		//then create the serial with the proper fields populate with the correct values
 		for (var serialCount=0; serialCount<serialsToCreate.length; serialCount++) {
 			try {
 				var serial = serialsToCreate[serialCount];
-				
+
 				if (serial) {
 					log.debug('Creating serial ' + serial, 'START');
 					var logInfo = '';
-					
+
 					//Create serial record placeholder
 					var recSerial = record.create({
 						type: constants.Records.SERIALS
 					});
-					
+
 					recSerial.setValue({
 						fieldId: FIELDS.NAME,
 						value: serial
@@ -178,13 +178,13 @@ function(record,
 						fieldId: FIELDS.ITEM,
 						value: item
 					});
-					
+
 					//Get Field information per transaction type, line quantity, and serial count per line
 					for (var txnTypeCounter=0; txnTypeCounter<txnList.length; txnTypeCounter++) {
 						var txnType = txnList[txnTypeCounter],
 							txnId = txnIds[txnType];
 						log.debug('loop count ' + txnTypeCounter, 'txnType' + txnType + ' txnId' + txnId);
-						
+
 						//Transaction Field Ids on serial record grouped by transaction type
 						if (!allFields[txnType]) {
 							var fields = _getSerialsTransactionFields({ txnType: txnType });
@@ -196,7 +196,7 @@ function(record,
 						 *		txnLineField: lineFieldId
 						 *	}
 						 */
-						
+
 						//Trannsaction Line Id with quantities grouped per transaction type
 						if (!txnLineNumbers[txnType]) {
 							txnLineNumbers[txnType] = _getItemLineNumbers({
@@ -211,7 +211,7 @@ function(record,
 						 * 		lineId: qty
 						 * }
 						 */
-						
+
 						//Count of existing serials per Line Id grouped per transaction
 						if (!existingSerialCounts[txnType] && item) {
 							existingSerialCounts[txnType] = _searchSerialsForTransactionItem({
@@ -226,23 +226,23 @@ function(record,
 						 * 		lineId: count
 						 * }
 						 */
-						
+
 						if (txnLineNumbers[txnType] && txnLineNumbers[txnType].length > 0) {
 							//Iterate through transaction lines and check qty vs existing serial count
 							if (!lineIdCounter[txnType])
 								lineIdCounter[txnType] = 0;
-							
+
 							lineIdLoop:
 							for (; lineIdCounter[txnType]<txnLineNumbers[txnType].idList.length; lineIdCounter[txnType]++) {
 								var lineId = txnLineNumbers[txnType].idList[lineIdCounter[txnType]],
 									qty = txnLineNumbers[txnType][lineId],
 									count = existingSerialCounts[txnType][lineId];
-								
+
 								//If serial count is met for the line (qty), continue to next line id
 								if (qty<=count) {
 									continue lineIdLoop;
 								}
-								
+
 								//Set values to proper fields
 								recSerial.setValue({
 									fieldId: allFields[txnType].txnField,
@@ -252,12 +252,12 @@ function(record,
 									fieldId: allFields[txnType].txnLineField,
 									value: lineId
 								});
-								
+
 								if (logInfo.length > 0)
 									logInfo += ' | ';
-								logInfo += allFields[txnType].txnField + ' = ' + txnId + ', '; 
+								logInfo += allFields[txnType].txnField + ' = ' + txnId + ', ';
 								logInfo += allFields[txnType].txnLineField + ' = ' + lineId;
-								
+
 								//Increment serial count
 								existingSerialCounts[txnType][lineId]++;
 								break lineIdLoop;
@@ -269,7 +269,7 @@ function(record,
 							});
 						}
 					}
-					
+
 					log.debug('Creating serial ' + serial + ' - info', logInfo);
 					recSerial.save();
 				}
@@ -278,73 +278,73 @@ function(record,
 			}
 		}
 	}
-	
+
 	function _getSerialIdsToUpdate(options) {
 		var serials = options.serials,
 			serialIds = [];
-		
+
 		var filters = [],
 			columns = ['internalid'];
-		
+
 		for (var i=0; i<serial.length; i++) {
 			var serial = serials[i];
-			
+
 			if (i>0)
 				filters.push('or');
 			filters.push([FIELDS.NAME, 'is', serial]);
 		}
-		
+
 		var srch = search.create({
             type: constants.Records.SERIALS,
             filters: filters,
             columns: columns
         });
-		
+
 		srch.run().each(function(result) {
 			serialIds.push(result.id);
 			return true;
 		});
-		
+
 		return serialIds;
 	}
-	
+
 	function _getItemLineNumbers(options) {
 		var item = options.item,
 			txnId = options.txnId,
 			txnType = options.txnType,
 			lineIds = {}
 			lineIds.idList = [];
-		
+
 		var txn = record.load({
 			type: txnType,
 			id: txnId
 		});
-		
+
 		if (txn) {
 			var itemCount = txn.getLineCount({
 				sublistId: 'item'
 			});
-			
+
 			for (var i=0; i<itemCount; i++) {
 				var lineItem = txn.getSublistValue({
 					sublistId: 'item',
 					fieldId: 'item',
 					line: i
 				});
-				
+
 				if (lineItem == item) {
 					var qty = txn.getSublistValue({
 						sublistId: 'item',
 						fieldId: 'quantity',
 						line: i
 					});
-					
+
 					var lineId = txn.getSublistValue({
 						sublistId: 'item',
 						fieldId: 'id',
 						line: i
 					});
-					
+
 					// For IR and IF
 					if (!lineId) {
 						var orderDoc = txn.getSublistValue({
@@ -357,26 +357,26 @@ function(record,
 							fieldId: 'orderline',
 							line: i
 						});
-						
+
 						lineId = orderDoc + '_' + orderLine;
 					}
-					
+
 					lineIds.idList.push(lineId);
 					lineIds[lineId] = qty;
 				}
 			}
 		}
-		
+
 		return lineIds;
 	}
-	
+
 	function _searchSerialsForTransactionItem(options) {
 		var item = options.item,
 			txnId = options.txnId,
 			txnType = options.txnType,
 			fields = options.fields,
 			lineIdCount = [];
-		
+
 		log.debug('line serials : _searchSerialsForTransactionItem', options);
 
 		//Terminate if invalid transaction type
@@ -384,10 +384,10 @@ function(record,
 				!fields.txnField ||
 				!fields.txnLineField)
 			return;
-		
+
 		var filters = [],
 			columns = [];
-	
+
 		filters.push(search.createFilter({
             name: fields.txnField,
             operator: 'anyof',
@@ -398,7 +398,7 @@ function(record,
             operator: 'anyof',
             values: item
 		}));
-		
+
 		columns.push(search.createColumn({
 			name: fields.txnLineField,
 			summary: 'group'
@@ -407,7 +407,7 @@ function(record,
 			name: FIELDS.ID,
 			summary: 'count'
 		}));
-		
+
         var srch = search.create({
             type: constants.Records.SERIALS,
             filters: filters,
@@ -420,18 +420,18 @@ function(record,
         		result: result,
         		txnLineField: fields.txnLineField
         	});
-        	
+
         	lineIdCount[parsed.lineId] = parsed.count;
         	return true;
         });
 
         return lineIdCount;
 	}
-	
+
 	function _getSerialsTransactionFields(options) {
 		var txnType = options.txnType,
 			txnField, txnLineField;
-		
+
 		if (txnType == record.Type.SALES_ORDER) {
 			txnField = FIELDS.SALES_ORDER;
 			txnLineField = FIELDS.SO_LINE;
@@ -448,18 +448,18 @@ function(record,
 			txnField = FIELDS.INVOICE;
 			txnLineField = FIELDS.INV_LINE;
 		}
-		
+
 		return {
 			txnField: txnField,
 			txnLineField: txnLineField
 		};
 	}
-	
+
 	function _parseResults(options) {
 		var txnLineField = options.txnLineField,
 			result = options.result;
 		var objReturn = {};
-		
+
 		objReturn.lineId = result.getValue({
 			name: txnLineField,
 			summary: search.Summary.GROUP
@@ -468,10 +468,10 @@ function(record,
 			name: FIELDS.ID,
 			summary: search.Summary.COUNT
 		});
-			
+
 		return objReturn;
 	}
-	
+
     return {
     	processSerials: processSerials
     };
