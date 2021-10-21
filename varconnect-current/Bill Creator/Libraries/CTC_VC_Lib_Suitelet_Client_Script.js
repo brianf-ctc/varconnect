@@ -35,6 +35,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
             var taxValue = currRecord.getValue('custpage_variance_tax');
             var shipValue = currRecord.getValue('custpage_variance_shipping');
             var otherValue = currRecord.getValue('custpage_variance_other');
+            var adjValue = currRecord.getValue('custpage_variance_adjustment');
 
             // console.log('custpage_action', taxValue, shipValue, otherValue);
 
@@ -42,10 +43,13 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
                 currRecord.setValue({ fieldId: 'custpage_variance_tax_apply', value: !!taxValue });
                 currRecord.setValue({ fieldId: 'custpage_variance_ship_apply', value: !!shipValue });
                 currRecord.setValue({ fieldId: 'custpage_variance_other_apply', value: !!otherValue });
+                currRecord.setValue({ fieldId: 'custpage_variance_adjustment_apply', value: !!adjValue });
+
             } else if (currentValue == 'reprocess_novar') {
                 currRecord.setValue({ fieldId: 'custpage_variance_tax_apply', value: false });
                 currRecord.setValue({ fieldId: 'custpage_variance_ship_apply', value: false });
                 currRecord.setValue({ fieldId: 'custpage_variance_other_apply', value: false });
+                currRecord.setValue({ fieldId: 'custpage_variance_adjustment_apply', value: false });
             }
         }
 
@@ -62,6 +66,33 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
             fldAmount = context.currentRecord.getField('custpage_variance_other');
             fldAmount.isDisabled = !currentValue;
         }
+
+        if (context.fieldId == 'custpage_variance_adjustment_apply') {
+            fldAmount = context.currentRecord.getField('custpage_variance_adjustment');
+            fldAmount.isDisabled = !currentValue;
+
+            // var lineCount = context.currentRecord.getLineCount({
+            //     sublistId: 'sublist'
+            // });
+
+            // for (var line = 0; line < lineCount; line++) {
+            //     context.currentRecord.selectLine({
+            //         sublistId: 'sublist',line: line
+            //     })
+            //     var rateValue = context.currentRecord.getSublistValue({
+            //         sublistId: 'sublist',
+            //         fieldId: !currentValue ? 'billrate' : 'nsrate',
+            //         line: line
+            //     });
+
+            //     context.currentRecord.setCurrentSublistValue({
+            //         sublistId: 'sublist',
+            //         fieldId: 'frate',
+            //         value: rateValue
+            //     });
+            // }
+        }
+
     }
 
     function pageInit(context) {
@@ -78,6 +109,10 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
 
         var otherValueField = currRecord.getField('custpage_variance_other');
         otherValueField.isDisabled = !currRecord.getValue('custpage_variance_other_apply');
+
+        var adjustmentValueField = currRecord.getField('custpage_variance_adjustment');
+        adjustmentValueField.isDisabled = !currRecord.getValue('custpage_variance_adjustment_apply');
+
         // console.log('otherValueField', otherValueField, currRecord.getValue('custpage_variance_other_apply'));
 
         return true;

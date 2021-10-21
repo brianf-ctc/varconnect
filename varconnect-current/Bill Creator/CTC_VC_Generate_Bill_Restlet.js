@@ -615,6 +615,7 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             var taxVariance = { apply: false, amount: 0 };
             var shipVariance = { apply: false, amount: 0 };
             var otherVariance = { apply: false, amount: 0 };
+            var adjustmentVariance = { apply: false, amount: 0 };
 
             var ignoreVariance = billPayload.hasOwnProperty('ignoreVariance') && billPayload.ignoreVariance == 'T';
             log.debug(logTitle, '>> ignoreVariance: ' + JSON.stringify(ignoreVariance));
@@ -642,6 +643,13 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 otherVariance.amount = varianceValues.other;
             }
             log.debug(logTitle, '>> otherVariance: ' + JSON.stringify(otherVariance));
+
+            if (varianceValues.hasOwnProperty('applyAdjustment')) {
+                adjustmentVariance.apply = varianceValues.applyAdjustment == 'T';
+                adjustmentVariance.amount = varianceValues.adjustment;
+            }
+            log.debug(logTitle, '>> adjustmentVariance: ' + JSON.stringify(adjustmentVariance));
+
 
             if (!ignoreVariance && taxVariance.apply && taxVariance.amount) {
                 hasVariance = true;
@@ -681,14 +689,14 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
 
             if (!ignoreVariance && otherVariance.apply && otherVariance.amount) {
                 hasVariance = true;
-                listVariance.push('Tax');
+                listVariance.push('Other');
 
                 try {
                     Helper.addNewLine({
                         record: recBill,
                         qty: 1,
                         item: param.otherItem,
-                        description: 'VC: Other Charges/Adjustments',
+                        description: 'VC: Other Charges',
                         rate: otherVariance.amount
                     });
                 } catch (line_err) {
@@ -697,9 +705,38 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 }
             }
 
+            if (adjustmentVariance.apply && adjustmentVariance.amount) {
+                hasVariance = true;
+                listVariance.push('Adjustments');
+
+                try {
+                    Helper.addNewLine({
+                        record: recBill,
+                        qty: 1,
+                        item: param.otherItem,
+                        description: 'VC: Adjustments',
+                        rate: adjustmentVariance.amount
+                    });
+                } catch (line_err) {
+                    returnObj.details = Helper.extractError(line_err);
+                    throw 'Unable to add adjustments line';
+                }
+            }
+
             /////////////////////////////////
+            
             if (hasVariance && !currentData.processVariance) {
                 util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
+
+                // make listVariance unique
+                var objVariance = {}, tmpArray = [];
+                listVariance.forEach(function (varValue) {
+                    if (!objVariance.hasOwnProperty(varValue)) {
+                        objVariance[varValue] = 1;
+                        tmpArray.push(varValue);
+                    }
+                });
+                listVariance = tmpArray;
 
                 returnObj.details = listVariance.length ? ' -- ' + listVariance.join(', ') : '';
                 returnObj.msg += returnObj.details;

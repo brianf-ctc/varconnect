@@ -217,11 +217,11 @@ define([
                 } else if (dataBill.status == BILL_CREATOR.Status.VARIANCE) {
                     ACT_Fields[0].selectOptions.push(
                         {
-                            text: 'Reprocess & Allow Variance',
+                            text: 'Submit & Process Variance',
                             value: 'reprocess_hasvar'
                         },
                         {
-                            text: 'Reprocess & Ignore Variance',
+                            text: 'Submit & Ignore Variance',
                             value: 'reprocess_novar'
                         },
                         {
@@ -236,7 +236,7 @@ define([
                             value: 'close'
                         },
                         {
-                            text: 'Save & Reprocess',
+                            text: 'Submit & Reprocess',
                             value: 'reprocess'
                         }
                     );
@@ -413,14 +413,14 @@ define([
                     displayType: serverWidget.FieldDisplayType.INLINE,
                     defaultValue: 0 //parseFloat(recPO.getValue('tax2total') || '0') + parseFloat(recPO.getValue('taxtotal') || '0')
                 });
-                PO_Fields.push({
-                    id: 'custpage_calctotal',
-                    type: serverWidget.FieldType.CURRENCY,
-                    container: 'fg_po',
-                    label: 'PO Calculated Total',
-                    displayType: serverWidget.FieldDisplayType.INLINE,
-                    defaultValue: parsedBillData.total
-                });
+                // PO_Fields.push({
+                //     id: 'custpage_calctotal',
+                //     type: serverWidget.FieldType.CURRENCY,
+                //     container: 'fg_bill',
+                //     label: 'Calculated Total',
+                //     displayType: serverWidget.FieldDisplayType.INLINE,
+                //     defaultValue: parsedBillData.total
+                // });
             }
             PO_Fields.forEach(fnAddFields);
 
@@ -478,6 +478,14 @@ define([
                     defaultValue: parsedBillData.total
                 },
                 {
+                    id: 'custpage_calctotal',
+                    type: serverWidget.FieldType.CURRENCY,
+                    container: 'fg_bill',
+                    label: 'Calculated Total',
+                    displayType: serverWidget.FieldDisplayType.INLINE,
+                    defaultValue: parsedBillData.total
+                },
+                {
                     id: 'custpage_tax',
                     type: serverWidget.FieldType.CURRENCY,
                     container: 'fg_bill',
@@ -504,54 +512,35 @@ define([
             ];
             INV_Fields.forEach(fnAddFields);
 
-            var deltaAmount = {
-                tax: 0,
-                shipping: 0,
-                other: 0,
-                adjustment: 0
+
+            var varianceConfig = {
+                applyTax: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_tax_var' }),// ? 'T': 'F',
+                applyShip: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_ship_var' }),//? 'T': 'F',
+                applyOther: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_other_var' }) //? 'T': 'F'
+
             };
+            log.debug(logTitle, 'varianceConfig : ' + JSON.stringify(varianceConfig));
 
-            if (!Helper.isEmpty(recPO)) {
-                deltaAmount.tax = dataPO.totalTax - parseFloat(parsedBillData.charges.tax);
-                deltaAmount.shipping =
-                    dataPO.totalShipping - parseFloat(parsedBillData.charges.shipping);
-                deltaAmount.other = parseFloat(parsedBillData.charges.other);
-            }
+            var billDataVariance = parsedBillData.variance || {};
+            var varianceValues = {
+                applyTax: billDataVariance.hasOwnProperty('applyTax') && billDataVariance.applyTax == 'T',
+                tax: parseFloat(billDataVariance.tax || '0'), 
 
-            var varianceCfg = {
-                applyTax: runtime
-                    .getCurrentScript()
-                    .getParameter({ name: 'custscript_ctc_bc_tax_var' })
-                    ? 'T'
-                    : 'F',
-                applyShip: runtime
-                    .getCurrentScript()
-                    .getParameter({ name: 'custscript_ctc_bc_ship_var' })
-                    ? 'T'
-                    : 'F',
-                applyOther: runtime
-                    .getCurrentScript()
-                    .getParameter({ name: 'custscript_ctc_bc_other_var' })
-                    ? 'T'
-                    : 'F'
+                applyShip: billDataVariance.hasOwnProperty('applyShip') && billDataVariance.applyShip == 'T',
+                shipping: parseFloat(billDataVariance.shipping || '0'), 
+
+                applyOther: billDataVariance.hasOwnProperty('applyOther') && billDataVariance.applyOther == 'T',
+                other: parseFloat(billDataVariance.other || '0'), 
+
+                applyAdjustment: billDataVariance.hasOwnProperty('applyAdjustment') && billDataVariance.applyAdjustment == 'T',
+                adjustment: parseFloat(billDataVariance.adjustment || '0'), 
+
             };
-
-            log.debug(logTitle, 'varianceCfg : ' + JSON.stringify(varianceCfg));
             log.debug(logTitle, 'varianceValues : ' + JSON.stringify(parsedBillData.variance));
 
-            var varianceVals = parsedBillData.variance || {};
             var ignoreVariance =
                 parsedBillData.hasOwnProperty('ignoreVariance') &&
                 parsedBillData.ignoreVariance == 'T';
-            var applyTax = varianceCfg.applyTax == 'T';
-            if (varianceVals.hasOwnProperty('applyTax')) applyTax = varianceVals.applyTax == 'T';
-
-            var applyShip = varianceCfg.applyShip == 'T';
-            if (varianceVals.hasOwnProperty('applyShip')) applyShip = varianceVals.applyShip == 'T';
-
-            var applyOther = varianceCfg.applyOther == 'T';
-            if (varianceVals.hasOwnProperty('applyOther'))
-                applyOther = varianceVals.applyOther == 'T';
 
             var VAR_Fields = [
                 {
@@ -564,7 +553,7 @@ define([
                     ])
                         ? 'Applied Tax'
                         : 'Apply Tax',
-                    defaultValue: applyTax && (varianceVals.tax || deltaAmount.tax) ? 'T' : 'F',
+                    // defaultValue: applyTax && (varianceVals.tax || deltaAmount.tax) ? 'T' : 'F',                    
                     displayType: !fnIsActive()
                         ? serverWidget.FieldDisplayType.INLINE
                         : dataBill.status != BILL_CREATOR.Status.VARIANCE
@@ -580,7 +569,7 @@ define([
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
                             : false,
-                    defaultValue: varianceVals.tax || deltaAmount.tax
+                    // defaultValue: varianceVals.tax || deltaAmount.tax
                 },
                 {
                     id: 'custpage_variance_ship_apply',
@@ -593,8 +582,8 @@ define([
                         ? 'Applied Shipping'
                         : 'Apply Shipping',
 
-                    defaultValue:
-                        applyShip && (varianceVals.shipping || deltaAmount.shipping) ? 'T' : 'F',
+                    // defaultValue:
+                    //     applyShip && (varianceVals.shipping || deltaAmount.shipping) ? 'T' : 'F',
                     displayType: !fnIsActive()
                         ? serverWidget.FieldDisplayType.INLINE
                         : dataBill.status != BILL_CREATOR.Status.VARIANCE
@@ -610,7 +599,7 @@ define([
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
                             : false,
-                    defaultValue: varianceVals.shipping || deltaAmount.shipping || 0.0
+                    // defaultValue: varianceVals.shipping || deltaAmount.shipping || 0.0
                 },
 
                 {
@@ -621,11 +610,11 @@ define([
                         BILL_CREATOR.Status.CLOSED,
                         BILL_CREATOR.Status.PROCESSED
                     ])
-                        ? 'Applied Other Charge/Adjustment'
-                        : 'Apply Other Charge/Adjustment',
+                        ? 'Applied Other Charge'
+                        : 'Apply Other Charge',
 
-                    defaultValue:
-                        applyOther && (varianceVals.other || deltaAmount.other) ? 'T' : 'F',
+                    // defaultValue:
+                    //     applyOther && (varianceVals.other || deltaAmount.other) ? 'T' : 'F',
                     displayType: !fnIsActive()
                         ? serverWidget.FieldDisplayType.DISABLED
                         : dataBill.status != BILL_CREATOR.Status.VARIANCE
@@ -636,13 +625,45 @@ define([
                     id: 'custpage_variance_other',
                     type: serverWidget.FieldType.CURRENCY,
                     container: 'fg_variance',
-                    label: 'Other Charges / Adjustments',
+                    label: 'Other Charges',
                     displayType:
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
                             : false,
-                    defaultValue: varianceVals.other || deltaAmount.other || 0.0
+                    // defaultValue: varianceVals.other || deltaAmount.other || 0.0
+                },
+
+                {
+                    id: 'custpage_variance_adjustment_apply',
+                    type: serverWidget.FieldType.CHECKBOX,
+                    container: 'fg_variance',
+                    label: Helper.inArray(dataBill.status, [
+                        BILL_CREATOR.Status.CLOSED,
+                        BILL_CREATOR.Status.PROCESSED
+                    ])
+                        ? 'Applied Adjustment'
+                        : 'Apply Adjustment',
+
+                    // defaultValue:
+                    //     applyOther && (varianceVals.other || deltaAmount.other) ? 'T' : 'F',
+                    displayType: !fnIsActive()
+                        ? serverWidget.FieldDisplayType.DISABLED
+                        : dataBill.status != BILL_CREATOR.Status.VARIANCE
+                        ? serverWidget.FieldDisplayType.HIDDEN
+                        : false
+                },
+                {
+                    id: 'custpage_variance_adjustment',
+                    type: serverWidget.FieldType.CURRENCY,
+                    container: 'fg_variance',
+                    label: 'Adjustments',
+                    displayType:
+                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
+                            ? serverWidget.FieldDisplayType.INLINE
+                            : false,
+                    // defaultValue: varianceVals.other || deltaAmount.other || 0.0
                 }
+
             ];
             log.debug(logTitle, 'VAR_Fields: ' + JSON.stringify(VAR_Fields));
             VAR_Fields.forEach(fnAddFields);
@@ -727,6 +748,13 @@ define([
                             ? serverWidget.FieldDisplayType.ENTRY
                             : serverWidget.FieldDisplayType.INLINE
                 },
+                {
+                    id: 'billrate',
+                    type: serverWidget.FieldType.CURRENCY,
+                    label: 'Bill Rate', 
+                    displayType: serverWidget.FieldDisplayType.HIDDEN
+                },
+
                 {
                     id: 'nsrate',
                     type: serverWidget.FieldType.CURRENCY,
@@ -859,13 +887,17 @@ define([
 
                         lineTaxTotal += lineValues.nstaxamt;
                         lineAmountTotal +=
-                            poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
+                            parseFloat(parsedBillData.lines[i].PRICE) *
+                            parseFloat(parsedBillData.lines[i].QUANTITY);
+
+                            // poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
                     }
                 }
                 //
                 lineValues.fqty = parsedBillData.lines[i].QUANTITY;
                 lineValues.fdesc = parsedBillData.lines[i].DESCRIPTION;
                 lineValues.frate = parsedBillData.lines[i].PRICE;
+                lineValues.billrate = parsedBillData.lines[i].BILLRATE || parsedBillData.lines[i].PRICE;
                 lineValues.famt = lineValues.frate * lineValues.fqty;
 
                 log.debug(logTitle, '>>>>> lineValues: ' + JSON.stringify(lineValues));
@@ -887,6 +919,15 @@ define([
                     parsedBillData.charges.shipping +
                     parsedBillData.charges.other;
 
+                var deltaAmount = {
+                    tax: 0,
+                    shipping: 0,
+                    other: 0,
+                    adjustment: 0
+                };
+
+
+                // update the totals 
                 flexForm.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = lineTaxTotal;
                 flexForm.getField({ id: 'custpage_calctotal' }).defaultValue = totalInvoiceAmt;
 
@@ -896,49 +937,125 @@ define([
 
                 // calculate the adjustment
                 var totalBillAmount = parseFloat(parsedBillData.total);
-                deltaAmount.adjustment = Helper.roundOff(totalInvoiceAmt - totalBillAmount);
+                deltaAmount.adjustment = Helper.roundOff(totalBillAmount - totalInvoiceAmt);
 
-                if (fnIsActive() || !ignoreVariance) {
-                    if (deltaAmount.tax != 0) {
-                        flexForm.getField({ id: 'custpage_variance_tax' }).defaultValue =
-                            deltaAmount.tax;
-                        flexForm.getField({ id: 'custpage_variance_tax_apply' }).defaultValue = 'T';
+                var varianceFields = {
+                    tax: {
+                        apply: flexForm.getField({ id: 'custpage_variance_tax_apply' }),
+                        amount: flexForm.getField({ id: 'custpage_variance_tax' })
+                    },
+                    shipping: {
+                        apply: flexForm.getField({ id: 'custpage_variance_ship_apply' }),
+                        amount: flexForm.getField({ id: 'custpage_variance_shipping' })
+                    },
+                    other: {
+                        apply: flexForm.getField({ id: 'custpage_variance_other_apply' }),
+                        amount: flexForm.getField({ id: 'custpage_variance_other' })
+                    },
+                    adjustment: {
+                        apply: flexForm.getField({ id: 'custpage_variance_adjustment_apply' }),
+                        amount: flexForm.getField({ id: 'custpage_variance_adjustment' })
                     }
+                };
 
-                    if (deltaAmount.shipping != 0) {
-                        flexForm.getField({ id: 'custpage_variance_shipping' }).defaultValue =
-                            deltaAmount.tax;
-                        flexForm.getField({ id: 'custpage_variance_ship_apply' }).defaultValue =
-                            'T';
-                    }
+                var arrNoEditStatus = [
+                    BILL_CREATOR.Status.CLOSED,
+                    BILL_CREATOR.Status.PROCESSED,
+                    BILL_CREATOR.Status.PENDING,
+                    BILL_CREATOR.Status.REPROCESS
+                ];
 
-                    if (deltaAmount.adjustment != 0) {
-                        flexForm.getField({ id: 'custpage_variance_other' }).defaultValue =
-                            deltaAmount.adjustment + parsedBillData.charges.other;
-                        flexForm.getField({ id: 'custpage_variance_other_apply' }).defaultValue =
-                            'T';
-                    }
+                // apply the tax
+                if (!varianceConfig.applyTax) {
+                    varianceFields.tax.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    });
+                    varianceFields.tax.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    }).defaultValue = 0;
+                } else if (Helper.inArray(dataBill.status, arrNoEditStatus)) {
+                    varianceFields.tax.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.applyTax ? 'T' : 'F';
+
+                    varianceFields.tax.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.tax || deltaAmount.tax || 0; //varianceValues.tax;
+                    
+                } else {
+                    // variance can be edited //
+                    var amountTax = varianceValues.tax || deltaAmount.tax || 0;
+                    varianceFields.tax.apply.defaultValue =
+                        varianceValues.applyTax || amountTax != 0 ? 'T' : 'F';
+                    varianceFields.tax.amount.defaultValue = amountTax;
+                }
+
+                if (!varianceConfig.applyShip) {
+                    varianceFields.shipping.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    });
+                    varianceFields.shipping.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    }).defaultValue = 0;
+                } else if (Helper.inArray(dataBill.status, arrNoEditStatus)) {
+                    varianceFields.shipping.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.applyShip ? 'T' : 'F';
+
+                    varianceFields.shipping.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.shipping || deltaAmount.shipping || 0;//varianceValues.shipping;
+                } else {
+                    // variance can be edited //
+                    var amountShip = varianceValues.shipping || deltaAmount.shipping || 0;
+                    varianceFields.shipping.apply.defaultValue =
+                        varianceValues.applyShip || amountShip != 0 ? 'T' : 'F';
+                    varianceFields.shipping.amount.defaultValue = amountShip;
+                }
+
+                if (!varianceConfig.applyOther) {
+                    varianceFields.other.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    });
+                    varianceFields.other.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.HIDDEN
+                    }).defaultValue = 0;
+                } else if (Helper.inArray(dataBill.status, arrNoEditStatus)) {
+                    varianceFields.other.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.applyOther ? 'T' : 'F';
+
+                    varianceFields.other.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.other || deltaAmount.other || 0;//varianceValues.other;
+                } else {
+                    // variance can be edited //
+                    var amountOther = varianceValues.other || deltaAmount.other || 0;
+                    varianceFields.other.apply.defaultValue =
+                        varianceValues.applyOther || amountOther != 0 ? 'T' : 'F';
+                    varianceFields.other.amount.defaultValue = amountOther;
+                }
+
+                if (Helper.inArray(dataBill.status, arrNoEditStatus)) {
+
+                    varianceFields.adjustment.apply.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.applyAdjustment ? 'T' : 'F';
+    
+                    varianceFields.adjustment.amount.updateDisplayType({
+                        displayType: serverWidget.FieldDisplayType.INLINE
+                    }).defaultValue = varianceValues.adjustment || deltaAmount.adjustment || 0;//varianceValues.adjustment;
+
+                } else {
+                    // variance can be edited //
+                    var amountAdjustment = varianceValues.adjustment || deltaAmount.adjustment || 0;
+                    varianceFields.adjustment.apply.defaultValue =
+                        varianceValues.applyAdjustment || amountAdjustment!=0 ? 'T' : 'F';
+
+                    varianceFields.adjustment.amount.defaultValue = amountAdjustment;
                 }
             }
 
-            // if (!Helper.isEmpty(recPO) && (fnIsActive() || !ignoreVariance)) {
-            //     flexForm.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = lineTaxTotal;
-            //     flexForm.getField({ id: 'custpage_variance_tax' }).defaultValue = deltaAmount.tax;
-
-            //     log.debug(
-            //         logTitle,
-            //         '>> Total invoice amounts: ' +
-            //             JSON.stringify([
-            //                 parsedBillData.total,
-            //                 totalInvoiceAmt,
-            //                 '=',
-            //                 lineAmountTotal,
-            //                 lineTaxTotal,
-            //                 parsedBillData.charges
-            //             ])
-            //     );
-
-            // }
 
             context.response.writePage(flexForm);
             /////////////////////////////////////////////////////////
@@ -970,6 +1087,13 @@ define([
                         line: i
                     }) * 1;
 
+                parsedBillData.lines[i].BILLRATE =
+                    context.request.getSublistValue({
+                        group: 'sublist',
+                        name: 'billrate',
+                        line: i
+                    }) * 1;
+
                 parsedBillData.lines[i].QUANTITY =
                     context.request.getSublistValue({
                         group: 'sublist',
@@ -985,7 +1109,9 @@ define([
                 applyShip: params.custpage_variance_ship_apply,
                 shipping: params.custpage_variance_shipping,
                 applyOther: params.custpage_variance_other_apply,
-                other: params.custpage_variance_other
+                other: params.custpage_variance_other, 
+                applyAdjustment: params.custpage_variance_adjustment_apply,
+                adjustment: params.custpage_variance_adjustment, 
             };
             log.debug(logTitle, 'varianceValues = ' + JSON.stringify(varianceValues));
 
@@ -1021,6 +1147,8 @@ define([
                     varianceValues.applyTax = 'F';
                     varianceValues.applyShip = 'F';
                     varianceValues.applyOther = 'F';
+                    // varianceValues.applyAdjustment = 'F';
+
                     parsedBillData.ignoreVariance = 'T';
                     log.debug(logTitle, '>> reprocess_novar ' + JSON.stringify(updateValues));
                     break;

@@ -124,7 +124,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
                         fieldId: 'custrecord_ctc_vc_bill_linked_po',
                         value: poId
                     });
-                    billFileNotes.push('Linking to PO: ' + poTranId + ' (' + poId + ') ');
+                    billFileNotes.push('Linked to PO: ' + poTranId + ' (' + poId + ') ');
 
                     // if (entityId == '75' || entityId == '203' || entityId == '216' || entityId == '371' || entityId == '496') { // Cisco, Dell, EMC, Scansource, Westcon
 
@@ -253,7 +253,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
 
                         var fuse = new Fuse(availableSkus, options);
 
-                        var fuseOutput = fuse.search(myArr[i].ordObj.lines[l].ITEMNO)
+                        var fuseOutput = fuse.search(myArr[i].ordObj.lines[l].ITEMNO);
+                        var arrSKUs = [];
 
                         if (fuseOutput.length > 0) {
 
@@ -266,7 +267,11 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'],
 
                             myArr[i].ordObj.lines[l].NSITEM = matchedSku;
 
-                            billFileNotes.push('Matched SKU: ' + matchedSku);
+                            arrSKUs.push(matchedSku);
+                            // billFileNotes.push('Matched SKU: ' + matchedSku);
+                        }
+                        if (arrSKUs.length) {
+                            billFileNotes.push('Matched SKU: ' + arrSKUs.join(', '));
                         }
 
                     }
