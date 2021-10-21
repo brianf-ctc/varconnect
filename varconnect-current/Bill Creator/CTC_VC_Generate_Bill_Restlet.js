@@ -143,6 +143,12 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             });
             record.setCurrentSublistValue({
                 sublistId: 'item',
+                fieldId: 'description',
+                value: option.description || 'VC New Line'
+            });
+
+            record.setCurrentSublistValue({
+                sublistId: 'item',
                 fieldId: 'quantity',
                 value: option.qty || 1
             });
@@ -195,7 +201,10 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             }),
             hasOtherVariance: currScript.getParameter({
                 name: 'custscript_ctc_bc_other_var'
-            })
+            }), 
+            billDefaultStatus: currScript.getParameter({
+                name: 'custscript_ctc_bc_bill_status'
+            }), 
         };
 
         try {
@@ -642,6 +651,7 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                     Helper.addNewLine({
                         record: recBill,
                         qty: 1,
+                        description: 'VC: Tax Variance',
                         item: param.taxItem,
                         rate: taxVariance.amount
                     });
@@ -659,7 +669,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                     Helper.addNewLine({
                         record: recBill,
                         qty: 1,
-                        item: param.taxItem,
+                        description: 'VC: Ship Variance',
+                        item: param.shipItem,
                         rate: shipVariance.amount
                     });
                 } catch (line_err) {
@@ -676,7 +687,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                     Helper.addNewLine({
                         record: recBill,
                         qty: 1,
-                        item: param.taxItem,
+                        item: param.otherItem,
+                        description: 'VC: Other Charges/Adjustments',
                         rate: otherVariance.amount
                     });
                 } catch (line_err) {
@@ -699,7 +711,9 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             log.debug(logTitle, '** Saving the bill record ** ');
 
             // attempt to save the record ////
-            recBill.setValue({ fieldId: 'approvalstatus', value: 2 });
+            recBill.setValue({ fieldId: 'approvalstatus', value: param.billDefaultStatus || 1 }); // defaults to pending approval
+
+
             var newRecordId = recBill.save({
                 enableSourcing: true,
                 ignoreMandatoryFields: true
