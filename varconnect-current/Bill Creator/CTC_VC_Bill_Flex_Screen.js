@@ -10,8 +10,9 @@ define([
     'N/redirect',
     'N/search',
     'N/url',
-    'N/runtime'
-], function (VC_Constants, serverWidget, record, redirect, search, url, runtime) {
+    'N/runtime',
+    'N/task'
+], function (VC_Constants, serverWidget, record, redirect, search, url, runtime, task) {
     var LOG_TITLE = 'VC_FLEX_SL',
         BILL_CREATOR = VC_Constants.Bill_Creator;
 
@@ -94,6 +95,24 @@ define([
                 fieldId: 'custrecord_ctc_vc_bill_json'
             })
         );
+
+        var paramTask = context.request.parameters.taskact;
+        if (context.request.method === 'GET' && paramTask == 'processbill') {
+            var mrTask = task.create({
+                taskType: task.TaskType.MAP_REDUCE,
+                scriptId: 'customscript_ctc_vc_process_bills',
+                params: {
+                    custscript_ctc_vc_bc_bill_fileid: record_id
+                }
+            });
+            mrTask.submit();
+
+            redirect.redirect({
+                url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&scripttype='
+            });
+
+            return false;
+        }
 
         /////////////////////////////////////////////////////////
         if (context.request.method === 'GET') {
@@ -247,12 +266,33 @@ define([
                 recordType: 'customrecord_ctc_vc_bills',
                 recordId: recBillFile.id
             });
+            var suiteletUrl = url.resolveScript({
+                scriptId: runtime.getCurrentScript().id,
+                deploymentId: runtime.getCurrentScript().deploymentId,
+                params: {
+                    taskact: 'processbill',
+                    record_id: record_id
+                }
+            });
 
             flexForm.addButton({
                 id: 'btnBillFile',
                 label: 'Go To Bill File Record',
                 functionName: 'goToBillFile'
             });
+
+            if (
+                Helper.inArray(dataBill.status, [
+                    BILL_CREATOR.Status.PENDING,
+                    BILL_CREATOR.Status.REPROCESS
+                ])
+            ) {
+                flexForm.addButton({
+                    id: 'btnProcessBill',
+                    label: 'Process Bill File',
+                    functionName: 'goToProcessBill'
+                });
+            }
 
             ACT_Fields.push(
                 // {
@@ -299,6 +339,14 @@ define([
                     // '" target="_blank">' +
                     // recBillFile.getValue({ fieldId: 'name' }) +
                     // '</a>'
+                },
+                {
+                    id: 'custpage_suitelet_url',
+                    type: serverWidget.FieldType.TEXT,
+                    container: 'fg_action',
+                    label: 'Process Bill',
+                    displayType: serverWidget.FieldDisplayType.HIDDEN,
+                    defaultValue: suiteletUrl
                 },
                 {
                     id: 'custpage_hold',
@@ -405,6 +453,16 @@ define([
                         parseFloat(recPO.getValue('tax2total') || '0') +
                         parseFloat(recPO.getValue('taxtotal') || '0')
                 });
+
+                PO_Fields.push({
+                    id: 'custpage_poshiptotal',
+                    type: serverWidget.FieldType.CURRENCY,
+                    container: 'fg_po',
+                    label: 'Shipping Total (PO)',
+                    displayType: serverWidget.FieldDisplayType.INLINE,
+                    defaultValue: lineShipTotal
+                });
+
                 PO_Fields.push({
                     id: 'custpage_polinetaxtotal',
                     type: serverWidget.FieldType.CURRENCY,
@@ -512,29 +570,39 @@ define([
             ];
             INV_Fields.forEach(fnAddFields);
 
-
             var varianceConfig = {
-                applyTax: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_tax_var' }),// ? 'T': 'F',
-                applyShip: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_ship_var' }),//? 'T': 'F',
-                applyOther: runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_bc_other_var' }) //? 'T': 'F'
-
+                applyTax: runtime
+                    .getCurrentScript()
+                    .getParameter({ name: 'custscript_ctc_bc_tax_var' }), // ? 'T': 'F',
+                applyShip: runtime
+                    .getCurrentScript()
+                    .getParameter({ name: 'custscript_ctc_bc_ship_var' }), //? 'T': 'F',
+                applyOther: runtime
+                    .getCurrentScript()
+                    .getParameter({ name: 'custscript_ctc_bc_other_var' }) //? 'T': 'F'
             };
             log.debug(logTitle, 'varianceConfig : ' + JSON.stringify(varianceConfig));
 
             var billDataVariance = parsedBillData.variance || {};
             var varianceValues = {
-                applyTax: billDataVariance.hasOwnProperty('applyTax') && billDataVariance.applyTax == 'T',
-                tax: parseFloat(billDataVariance.tax || '0'), 
+                applyTax:
+                    billDataVariance.hasOwnProperty('applyTax') && billDataVariance.applyTax == 'T',
+                tax: parseFloat(billDataVariance.tax || '0'),
 
-                applyShip: billDataVariance.hasOwnProperty('applyShip') && billDataVariance.applyShip == 'T',
-                shipping: parseFloat(billDataVariance.shipping || '0'), 
+                applyShip:
+                    billDataVariance.hasOwnProperty('applyShip') &&
+                    billDataVariance.applyShip == 'T',
+                shipping: parseFloat(billDataVariance.shipping || '0'),
 
-                applyOther: billDataVariance.hasOwnProperty('applyOther') && billDataVariance.applyOther == 'T',
-                other: parseFloat(billDataVariance.other || '0'), 
+                applyOther:
+                    billDataVariance.hasOwnProperty('applyOther') &&
+                    billDataVariance.applyOther == 'T',
+                other: parseFloat(billDataVariance.other || '0'),
 
-                applyAdjustment: billDataVariance.hasOwnProperty('applyAdjustment') && billDataVariance.applyAdjustment == 'T',
-                adjustment: parseFloat(billDataVariance.adjustment || '0'), 
-
+                applyAdjustment:
+                    billDataVariance.hasOwnProperty('applyAdjustment') &&
+                    billDataVariance.applyAdjustment == 'T',
+                adjustment: parseFloat(billDataVariance.adjustment || '0')
             };
             log.debug(logTitle, 'varianceValues : ' + JSON.stringify(parsedBillData.variance));
 
@@ -553,7 +621,7 @@ define([
                     ])
                         ? 'Applied Tax'
                         : 'Apply Tax',
-                    // defaultValue: applyTax && (varianceVals.tax || deltaAmount.tax) ? 'T' : 'F',                    
+                    // defaultValue: applyTax && (varianceVals.tax || deltaAmount.tax) ? 'T' : 'F',
                     displayType: !fnIsActive()
                         ? serverWidget.FieldDisplayType.INLINE
                         : dataBill.status != BILL_CREATOR.Status.VARIANCE
@@ -568,7 +636,7 @@ define([
                     displayType:
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
-                            : false,
+                            : false
                     // defaultValue: varianceVals.tax || deltaAmount.tax
                 },
                 {
@@ -598,7 +666,7 @@ define([
                     displayType:
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
-                            : false,
+                            : false
                     // defaultValue: varianceVals.shipping || deltaAmount.shipping || 0.0
                 },
 
@@ -629,7 +697,7 @@ define([
                     displayType:
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
-                            : false,
+                            : false
                     // defaultValue: varianceVals.other || deltaAmount.other || 0.0
                 },
 
@@ -660,10 +728,9 @@ define([
                     displayType:
                         !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
                             ? serverWidget.FieldDisplayType.INLINE
-                            : false,
+                            : false
                     // defaultValue: varianceVals.other || deltaAmount.other || 0.0
                 }
-
             ];
             log.debug(logTitle, 'VAR_Fields: ' + JSON.stringify(VAR_Fields));
             VAR_Fields.forEach(fnAddFields);
@@ -675,6 +742,7 @@ define([
                 type: serverWidget.SublistType.LIST
             });
             var lineTaxTotal = 0,
+                lineShipTotal = 0,
                 lineAmountTotal = 0;
 
             var subListFields = [
@@ -751,7 +819,7 @@ define([
                 {
                     id: 'billrate',
                     type: serverWidget.FieldType.CURRENCY,
-                    label: 'Bill Rate', 
+                    label: 'Bill Rate',
                     displayType: serverWidget.FieldDisplayType.HIDDEN
                 },
 
@@ -822,6 +890,11 @@ define([
                                 fieldId: 'item',
                                 line: it
                             }),
+                            itemName: recPO.getSublistText({
+                                sublistId: 'item',
+                                fieldId: 'item',
+                                line: it
+                            }),
                             qty: recPO.getSublistValue({
                                 sublistId: 'item',
                                 fieldId: 'quantity',
@@ -853,7 +926,13 @@ define([
                                 line: it
                             })
                         };
+
+                        if (poLineData.itemName.match(/Shipping/gi)) {
+                            lineShipTotal += parseFloat(poLineData.amount);
+                        }
+
                         if (lineValues.nsitem != poLineData.item) continue;
+                        log.audit(logTitle, '>>> poLineData: ' + JSON.stringify(poLineData));
 
                         poLineData.rate = parseFloat(poLineData.rate);
                         poLineData.amount = parseFloat(poLineData.amount);
@@ -861,7 +940,6 @@ define([
                         poLineData.taxrate2 = parseFloat(poLineData.taxrate2);
                         poLineData.qty = parseInt(poLineData.qty, 10);
 
-                        log.audit(logTitle, '>>> poLineData: ' + JSON.stringify(poLineData));
 
                         linePo.qty += poLineData.qty;
                         lineValues.nsqty = parseInt(linePo.qty);
@@ -890,14 +968,15 @@ define([
                             parseFloat(parsedBillData.lines[i].PRICE) *
                             parseFloat(parsedBillData.lines[i].QUANTITY);
 
-                            // poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
+                        // poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
                     }
                 }
                 //
                 lineValues.fqty = parsedBillData.lines[i].QUANTITY;
                 lineValues.fdesc = parsedBillData.lines[i].DESCRIPTION;
                 lineValues.frate = parsedBillData.lines[i].PRICE;
-                lineValues.billrate = parsedBillData.lines[i].BILLRATE || parsedBillData.lines[i].PRICE;
+                lineValues.billrate =
+                    parsedBillData.lines[i].BILLRATE || parsedBillData.lines[i].PRICE;
                 lineValues.famt = lineValues.frate * lineValues.fqty;
 
                 log.debug(logTitle, '>>>>> lineValues: ' + JSON.stringify(lineValues));
@@ -915,7 +994,8 @@ define([
             if (!Helper.isEmpty(recPO)) {
                 var totalInvoiceAmt =
                     lineAmountTotal +
-                    lineTaxTotal +
+                    // lineTaxTotal +
+                    parsedBillData.charges.tax +
                     parsedBillData.charges.shipping +
                     parsedBillData.charges.other;
 
@@ -926,14 +1006,17 @@ define([
                     adjustment: 0
                 };
 
-
-                // update the totals 
+                // update the totals
                 flexForm.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = lineTaxTotal;
                 flexForm.getField({ id: 'custpage_calctotal' }).defaultValue = totalInvoiceAmt;
+                flexForm.getField({ id: 'custpage_poshiptotal' }).defaultValue = lineShipTotal;
 
                 deltaAmount.tax = Helper.roundOff(
                     parseFloat(parsedBillData.charges.tax) - lineTaxTotal
                 );
+
+                deltaAmount.shipping = parseFloat(parsedBillData.charges.shipping) - lineShipTotal;
+                deltaAmount.other = parseFloat(parsedBillData.charges.other);
 
                 // calculate the adjustment
                 var totalBillAmount = parseFloat(parsedBillData.total);
@@ -981,7 +1064,6 @@ define([
                     varianceFields.tax.amount.updateDisplayType({
                         displayType: serverWidget.FieldDisplayType.INLINE
                     }).defaultValue = varianceValues.tax || deltaAmount.tax || 0; //varianceValues.tax;
-                    
                 } else {
                     // variance can be edited //
                     var amountTax = varianceValues.tax || deltaAmount.tax || 0;
@@ -1004,7 +1086,7 @@ define([
 
                     varianceFields.shipping.amount.updateDisplayType({
                         displayType: serverWidget.FieldDisplayType.INLINE
-                    }).defaultValue = varianceValues.shipping || deltaAmount.shipping || 0;//varianceValues.shipping;
+                    }).defaultValue = varianceValues.shipping || deltaAmount.shipping || 0; //varianceValues.shipping;
                 } else {
                     // variance can be edited //
                     var amountShip = varianceValues.shipping || deltaAmount.shipping || 0;
@@ -1027,7 +1109,7 @@ define([
 
                     varianceFields.other.amount.updateDisplayType({
                         displayType: serverWidget.FieldDisplayType.INLINE
-                    }).defaultValue = varianceValues.other || deltaAmount.other || 0;//varianceValues.other;
+                    }).defaultValue = varianceValues.other || deltaAmount.other || 0; //varianceValues.other;
                 } else {
                     // variance can be edited //
                     var amountOther = varianceValues.other || deltaAmount.other || 0;
@@ -1037,25 +1119,22 @@ define([
                 }
 
                 if (Helper.inArray(dataBill.status, arrNoEditStatus)) {
-
                     varianceFields.adjustment.apply.updateDisplayType({
                         displayType: serverWidget.FieldDisplayType.INLINE
                     }).defaultValue = varianceValues.applyAdjustment ? 'T' : 'F';
-    
+
                     varianceFields.adjustment.amount.updateDisplayType({
                         displayType: serverWidget.FieldDisplayType.INLINE
-                    }).defaultValue = varianceValues.adjustment || deltaAmount.adjustment || 0;//varianceValues.adjustment;
-
+                    }).defaultValue = varianceValues.adjustment || deltaAmount.adjustment || 0; //varianceValues.adjustment;
                 } else {
                     // variance can be edited //
                     var amountAdjustment = varianceValues.adjustment || deltaAmount.adjustment || 0;
                     varianceFields.adjustment.apply.defaultValue =
-                        varianceValues.applyAdjustment || amountAdjustment!=0 ? 'T' : 'F';
+                        varianceValues.applyAdjustment || amountAdjustment != 0 ? 'T' : 'F';
 
                     varianceFields.adjustment.amount.defaultValue = amountAdjustment;
                 }
             }
-
 
             context.response.writePage(flexForm);
             /////////////////////////////////////////////////////////
@@ -1109,9 +1188,9 @@ define([
                 applyShip: params.custpage_variance_ship_apply,
                 shipping: params.custpage_variance_shipping,
                 applyOther: params.custpage_variance_other_apply,
-                other: params.custpage_variance_other, 
+                other: params.custpage_variance_other,
                 applyAdjustment: params.custpage_variance_adjustment_apply,
-                adjustment: params.custpage_variance_adjustment, 
+                adjustment: params.custpage_variance_adjustment
             };
             log.debug(logTitle, 'varianceValues = ' + JSON.stringify(varianceValues));
 

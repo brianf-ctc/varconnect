@@ -1,7 +1,7 @@
-        /**
-         * @NApiVersion 2.1
-         * @NScriptType MapReduceScript
-         */
+/**
+ * @NApiVersion 2.1
+ * @NScriptType MapReduceScript
+ */
 
 define([
     'N/search',
@@ -10,54 +10,73 @@ define([
     'N/log',
     './Libraries/moment',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-    './Libraries/CTC_VC_Lib_Vendor_Map',
+    './Libraries/CTC_VC_Lib_Vendor_Map'
 ], function (search, runtime, error, log, moment, vp, vm) {
-
     var LogTitle = 'MR_BillFiles-API';
 
-                function getInputData() {
-
+    function getInputData() {
         var logTitle = [LogTitle, 'getInputData'].join(':');
 
-                    return search.create({
+        var CONNECT_TYPE = {
+                API: 1,
+                SFTP: 2
+            },
+            validVendorCfg = [];
+
+        var vendorConfigSearch = search.create({
+            type: 'customrecord_vc_bill_vendor_config',
+            filters: [['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API]],
+            columns: ['internalid']
+        });
+
+        vendorConfigSearch.run().each(function (result) {
+            validVendorCfg.push(result.id);
+            return true;
+        });
+
+        return search.create({
             type: 'purchaseorder',
-                        filters: [
-                ['vendor.custentity_vc_bill_config', 'anyof', '1', '3', '4'], // Arrow, Ingram, TD
+            filters: [
+                ['vendor.custentity_vc_bill_config', 'anyof', validVendorCfg],
                 'AND',
-                ['type', 'anyof', 'PurchOrd'],'AND',
+                ['type', 'anyof', 'PurchOrd'],
+                'AND',
                 [
-                    'status', 'anyof',
-                    'PurchOrd:B',   // PendingReceipt
-                    'PurchOrd:D',   // PartiallyReceived
-                    'PurchOrd:E',   // PendingBilling_PartiallyReceived
-                    'PurchOrd:F',   // PendingBill
+                    'status',
+                    'anyof',
+                    'PurchOrd:B', // PendingReceipt
+                    'PurchOrd:D', // PartiallyReceived
+                    'PurchOrd:E', // PendingBilling_PartiallyReceived
+                    'PurchOrd:F' // PendingBill
                 ],
                 'AND',
-                ['mainline', 'is', 'T'],
-                        ],
-                        columns: [
-                'internalid', 'tranid',
-                            search.createColumn({
-                    name: 'custentity_vc_bill_config',
-                    join: 'vendor',
-                }),
+                ['mainline', 'is', 'T']
+                // ,'AND',['internalid', 'anyof', 6235]
             ],
-                    });
-                }
+            columns: [
+                'internalid',
+                'tranid',
+                search.createColumn({
+                    name: 'custentity_vc_bill_config',
+                    join: 'vendor'
+                })
+            ]
+        });
+    }
 
-                function reduce(context) {
+    function reduce(context) {
         var logTitle = [LogTitle, 'reduce'].join(':');
-                    //var scriptObj = runtime.getCurrentScript();
+        //var scriptObj = runtime.getCurrentScript();
 
-                    var searchValues = JSON.parse(context.values);
+        var searchValues = JSON.parse(context.values);
 
-                    //var record_id = searchValues.id;
-        log.audit(logTitle, '>> searchValues: ' + JSON.stringify(searchValues) );
+        //var record_id = searchValues.id;
+        log.audit(logTitle, '>> searchValues: ' + JSON.stringify(searchValues));
 
-                    var vendorConfig = search.lookupFields({
+        var vendorConfig = search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
-                        id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-                        columns: [
+            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
+            columns: [
                 'custrecord_vc_bc_ack',
                 'custrecord_vc_bc_entry',
                 'custrecord_vc_bc_user',
@@ -67,11 +86,11 @@ define([
                 'custrecord_vc_bc_host_key',
                 'custrecord_vc_bc_url',
                 'custrecord_vc_bc_res_path',
-                'custrecord_vc_bc_ack_path',
-            ],
+                'custrecord_vc_bc_ack_path'
+            ]
         });
 
-                    var configObj = {
+        var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
@@ -81,89 +100,82 @@ define([
             host_key: vendorConfig.custrecord_vc_bc_host_key,
             url: vendorConfig.custrecord_vc_bc_url,
             res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path
         };
-        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj) );
+        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj));
 
-                    try {
+        try {
+            var entryFunction = configObj.entry_function;
 
-                        var entryFunction = configObj.entry_function;
+            var myArr = [];
 
-                        var myArr = [];
+            switch (entryFunction) {
+                case 'arrow_api':
+                    myArr = vm.arrow_api(context.key, configObj);
+                    break;
+                case 'ingram_api':
+                    myArr = vm.ingram_api(context.key, configObj);
+                    break;
+                case 'techdata_api':
+                    myArr = vm.techdata_api(context.key, configObj);
+                    break;
+            }
 
-                        switch (entryFunction) {
-                            case 'arrow_api':
-                                myArr = vm.arrow_api(context.key, configObj);
-                                break;
-                            case 'ingram_api':
-                                myArr = vm.ingram_api(context.key, configObj);
-                                break;
-                            case 'techdata_api':
-                                myArr = vm.techdata_api(context.key, configObj);
-                                break;
-                        }
+            //log.debug(context.key, myArr);
 
-                        //log.debug(context.key, myArr);
+            log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr));
 
-            log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr) );
+            vp.process(configObj, myArr, moment().unix());
+        } catch (e) {
+            log.error(context.key + ': ' + 'Error encountered in reduce', e);
+        }
+    }
 
-                        vp.process(configObj, myArr, moment().unix());
+    function summarize(summary) {
+        handleErrorIfAny(summary);
+        createSummaryRecord(summary);
+    }
 
-                    } catch (e) {
-                        log.error(context.key + ': ' + 'Error encountered in reduce', e);
-                    }
-                }
+    function handleErrorIfAny(summary) {
+        var inputSummary = summary.inputSummary;
+        var mapSummary = summary.mapSummary;
+        var reduceSummary = summary.reduceSummary;
+        if (inputSummary.error) {
+            var e = error.create({
+                name: 'INPUT_STAGE_FAILED',
+                message: inputSummary.error
+            });
+            log.error('Stage: getInputData failed', e);
+        }
+        handleErrorInStage('map', mapSummary);
+        handleErrorInStage('reduce', reduceSummary);
+    }
 
+    function handleErrorInStage(stage, summary) {
+        summary.errors.iterator().each(function (key, value) {
+            log.error(key, value);
+            return true;
+        });
+    }
 
-                function summarize(summary) {
-                    handleErrorIfAny(summary);
-                    createSummaryRecord(summary);
-                }
+    function createSummaryRecord(summary) {
+        try {
+            var summaryJson = {
+                script: runtime.getCurrentScript().id,
+                seconds: summary.seconds,
+                usage: summary.usage,
+                yields: summary.yields
+            };
 
+            log.audit('summary', summaryJson);
+        } catch (e) {
+            log.error('Stage: summary failed', e);
+        }
+    }
 
-                function handleErrorIfAny(summary) {
-                    var inputSummary = summary.inputSummary;
-                    var mapSummary = summary.mapSummary;
-                    var reduceSummary = summary.reduceSummary;
-                    if (inputSummary.error) {
-                        var e = error.create({
-                            name: 'INPUT_STAGE_FAILED',
-                message: inputSummary.error,
-                        });
-                        log.error('Stage: getInputData failed', e);
-                    }
-                    handleErrorInStage('map', mapSummary);
-                    handleErrorInStage('reduce', reduceSummary);
-                }
-
-                function handleErrorInStage(stage, summary) {
-
-                    summary.errors.iterator().each(function(key, value) {
-                        log.error(key, value);
-                        return true;
-                    });
-                }
-
-                function createSummaryRecord(summary) {
-                    try {
-
-                        var summaryJson = {
-                            script: runtime.getCurrentScript().id,
-                            seconds: summary.seconds,
-                            usage: summary.usage,
-                yields: summary.yields,
-                        };
-
-                        log.audit('summary', summaryJson);
-
-                    } catch (e) {
-                        log.error('Stage: summary failed', e);
-                    }
-                }
-
-                return {
-                    getInputData: getInputData,
-                    reduce: reduce,
-        summarize: summarize,
-                };
+    return {
+        getInputData: getInputData,
+        reduce: reduce,
+        summarize: summarize
+    };
 });

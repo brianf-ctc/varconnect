@@ -195,6 +195,11 @@ define([], function () {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
             status: Bill_Creator.Status.ERROR
+        },
+        BILL_CREATE_DISABLED: {
+            code: 'BILL_CREATE_DISABLED',
+            msg: 'Vendor Bill creation is disabled',
+            status: Bill_Creator.Status.PENDING
         }
     };
 

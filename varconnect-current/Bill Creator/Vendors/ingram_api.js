@@ -88,7 +88,7 @@ define([
             countryCode +
             '&customerOrderNumber=' +
             docNum;
-            
+
         log.debug('im: searchRequest url', baseUrl + searchUrl);
 
         sleep(lastCall, 1050);
@@ -113,19 +113,30 @@ define([
         //      var searchOrders = searchBody.serviceresponse.ordesearchresponse.orders;
         var searchOrders = searchBody.orders;
 
-        var imOrders = [];
+        var imOrders = [],
+            imOrderNums = [];
 
         for (var i = 0; i < searchOrders.length; i++) {
             for (var s = 0; s < searchOrders[i].subOrders.length; s++) {
                 for (var l = 0; l < searchOrders[i].subOrders[s].links.length; l++) {
                     if (searchOrders[i].subOrders[s].links[l].topic == 'invoices') {
                         imOrders.push(searchOrders[i].subOrders[s].links[l].href);
+
+                        imOrderNums.push(searchOrders[i].ingramOrderNumber);
                     }
                 }
             }
         }
 
         log.debug('im: Orders', input + ': ' + JSON.stringify(imOrders));
+
+        var orderMiscCharges = {};
+        for (var ii = 0; ii < imOrderNums.length; ii++) {
+            util.extend(
+                orderMiscCharges,
+                _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNums[ii])
+            );
+        }
 
         for (var o = 0; o < imOrders.length; o++) {
             try {
@@ -169,6 +180,18 @@ define([
 
                 myObj.charges.other = invDetail.discountamount * 1;
 
+                // calculate the misc charges
+                if (orderMiscCharges.hasOwnProperty(invDetail.globalorderid)) {
+                    var miscCharge = orderMiscCharges[invDetail.globalorderid];
+                    if (!myObj.charges.hasOwnProperty('other')) {
+                        myObj.charges.other = 0;
+                    }
+
+                    for (ii = 0; ii < miscCharge.length; ii++) {
+                        myObj.charges.other += parseFloat(miscCharge[ii].amount);
+                    }
+                }
+
                 myObj.lines = [];
 
                 for (var i = 0; i < invDetail.lines.length; i++) {
@@ -209,6 +232,53 @@ define([
         }
 
         return myArr;
+    }
+
+    function _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNum) {
+        var logTitle = 'getMiscCharges',
+            returnValue,
+            miscCharges;
+
+        try {
+            var orderStatusUrl = config.url + '/resellers/v6/orders/' + imOrderNum;
+
+            var orderStatusResp = https.get({
+                url: orderStatusUrl,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: 'Bearer ' + authJson.access_token,
+                    'IM-CustomerNumber': config.partner_id,
+                    customerNumber: config.partner_id,
+                    'IM-CountryCode': countryCode,
+                    'IM-CorrelationID': tranNsid
+                }
+            });
+
+            var orderStatus = JSON.parse(orderStatusResp.body);
+            returnValue = {};
+
+            if (orderStatus.hasOwnProperty('miscellaneousCharges')) {
+                for (var i = 0, j = orderStatus.miscellaneousCharges.length; i < j; i++) {
+                    miscCharges = orderStatus.miscellaneousCharges[i];
+
+                    if (!returnValue.hasOwnProperty(miscCharges.subOrderNumber)) {
+                        returnValue[miscCharges.subOrderNumber] = [];
+                    }
+
+                    returnValue[miscCharges.subOrderNumber].push({
+                        description: miscCharges.chargeDescription,
+                        amount: miscCharges.chargeAmount
+                    });
+                }
+            }
+
+            log.debug('im: miscCharges', JSON.stringify(returnValue));
+        } catch (error) {
+            log.error('Error parsing order', e);
+        }
+
+        return returnValue;
     }
 
     function convertToXWWW(json) {

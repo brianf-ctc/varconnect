@@ -1,4 +1,8 @@
-define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, message, currentRecord) {
+define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
+    dialog,
+    message,
+    currentRecord
+) {
     /**
      *@NApiVersion 2.0
      *@NScriptType ClientScript
@@ -41,15 +45,26 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
 
             if (currentValue == 'reprocess_hasvar') {
                 currRecord.setValue({ fieldId: 'custpage_variance_tax_apply', value: !!taxValue });
-                currRecord.setValue({ fieldId: 'custpage_variance_ship_apply', value: !!shipValue });
-                currRecord.setValue({ fieldId: 'custpage_variance_other_apply', value: !!otherValue });
-                currRecord.setValue({ fieldId: 'custpage_variance_adjustment_apply', value: !!adjValue });
-
+                currRecord.setValue({
+                    fieldId: 'custpage_variance_ship_apply',
+                    value: !!shipValue
+                });
+                currRecord.setValue({
+                    fieldId: 'custpage_variance_other_apply',
+                    value: !!otherValue
+                });
+                currRecord.setValue({
+                    fieldId: 'custpage_variance_adjustment_apply',
+                    value: !!adjValue
+                });
             } else if (currentValue == 'reprocess_novar') {
                 currRecord.setValue({ fieldId: 'custpage_variance_tax_apply', value: false });
                 currRecord.setValue({ fieldId: 'custpage_variance_ship_apply', value: false });
                 currRecord.setValue({ fieldId: 'custpage_variance_other_apply', value: false });
-                currRecord.setValue({ fieldId: 'custpage_variance_adjustment_apply', value: false });
+                currRecord.setValue({
+                    fieldId: 'custpage_variance_adjustment_apply',
+                    value: false
+                });
             }
         }
 
@@ -92,7 +107,6 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
             //     });
             // }
         }
-
     }
 
     function pageInit(context) {
@@ -111,7 +125,9 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
         otherValueField.isDisabled = !currRecord.getValue('custpage_variance_other_apply');
 
         var adjustmentValueField = currRecord.getField('custpage_variance_adjustment');
-        adjustmentValueField.isDisabled = !currRecord.getValue('custpage_variance_adjustment_apply');
+        adjustmentValueField.isDisabled = !currRecord.getValue(
+            'custpage_variance_adjustment_apply'
+        );
 
         // console.log('otherValueField', otherValueField, currRecord.getValue('custpage_variance_other_apply'));
 
@@ -120,10 +136,15 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
 
     return {
         fieldChanged: fieldChanged,
-        pageInit: pageInit, 
+        pageInit: pageInit,
         goToBillFile: function () {
             var curRec = currentRecord.get();
-            var url = curRec.getValue({fieldId: 'custpage_bill_file'});
+            var url = curRec.getValue({ fieldId: 'custpage_bill_file' });
+            return window.open(url, '_blank');
+        },
+        goToProcessBill: function () {
+            var curRec = currentRecord.get();
+            var url = curRec.getValue({ fieldId: 'custpage_suitelet_url' });
             return window.open(url, '_blank');
         }
     };

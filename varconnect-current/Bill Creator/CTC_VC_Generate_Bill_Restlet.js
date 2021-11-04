@@ -2,14 +2,14 @@
  *@NApiVersion 2.x
  *@NScriptType Restlet
  */
-define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants', './../CTC_VC_Lib_Log'], function (
-    record,
-    search,
-    format,
-    runtime,
-    VC_Constants,
-    VC_Log
-) {
+define([
+    'N/record',
+    'N/search',
+    'N/format',
+    'N/runtime',
+    './../CTC_VC_Constants',
+    './../CTC_VC_Lib_Log'
+], function (record, search, format, runtime, VC_Constants, VC_Log) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
@@ -21,7 +21,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -63,7 +64,10 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 };
                 billPayload.lines.forEach(function (lineBill) {
                     if (lineBill.NSITEM == vbLineData.item) hasFoundLines = true;
-                    if (lineBill.NSITEM == vbLineData.item && lineBill.QUANTITY > vbLineData.qtybilled) {
+                    if (
+                        lineBill.NSITEM == vbLineData.item &&
+                        lineBill.QUANTITY > vbLineData.qtybilled
+                    ) {
                         arrLinesToBill.push(lineBill);
                     }
 
@@ -201,10 +205,13 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             }),
             hasOtherVariance: currScript.getParameter({
                 name: 'custscript_ctc_bc_other_var'
-            }), 
+            }),
             billDefaultStatus: currScript.getParameter({
                 name: 'custscript_ctc_bc_bill_status'
-            }), 
+            }),
+            dontSaveBill: currScript.getParameter({
+                name: 'custscript_ctc_bc_bill_dontcreate'
+            })
         };
 
         try {
@@ -213,7 +220,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
 
             currentData = {
                 poId:
-                    context.custrecord_ctc_vc_bill_linked_po && context.custrecord_ctc_vc_bill_linked_po[0]
+                    context.custrecord_ctc_vc_bill_linked_po &&
+                    context.custrecord_ctc_vc_bill_linked_po[0]
                         ? context.custrecord_ctc_vc_bill_linked_po[0].value
                         : false,
                 billInAdvance: context.billInAdvance || false,
@@ -223,7 +231,9 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
 
             ///////////////////
             if (!currentData.poId) {
-                returnObj.details = ['PO ID:', currentData.poId, ' is missing or inactive'].join('');
+                returnObj.details = ['PO ID:', currentData.poId, ' is missing or inactive'].join(
+                    ''
+                );
                 throw BILL_CREATOR.Code.MISSING_PO;
             }
             ///////////////////
@@ -309,7 +319,11 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                         })
                 );
 
-                returnObj.details = ['PO#', currentData.poNum, ' current status: ' + poStatus.statusRef].join('');
+                returnObj.details = [
+                    'PO#',
+                    currentData.poNum,
+                    ' current status: ' + poStatus.statusRef
+                ].join('');
 
                 throw BILL_CREATOR.Code.NOT_BILLABLE;
             }
@@ -417,10 +431,15 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
 
                     isLineFound = true;
 
-                    log.debug(logTitle, log_prefix + 'matching lines: ' + JSON.stringify(payloadLineData));
+                    log.debug(
+                        logTitle,
+                        log_prefix + 'matching lines: ' + JSON.stringify(payloadLineData)
+                    );
 
                     var billQty =
-                        payloadLineData.QUANTITY > vbLineData.quantity ? vbLineData.quantity : payloadLineData.QUANTITY;
+                        payloadLineData.QUANTITY > vbLineData.quantity
+                            ? vbLineData.quantity
+                            : payloadLineData.QUANTITY;
 
                     vbLineData.billQty += billQty;
                     vbLineData.billRate = payloadLineData.PRICE;
@@ -448,7 +467,10 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                             qty: line.QUANTITY
                         })
                     ].join('');
-                    log.debug(logTitle, '// line has remaining unprocessed qty' + JSON.stringify(line));
+                    log.debug(
+                        logTitle,
+                        '// line has remaining unprocessed qty' + JSON.stringify(line)
+                    );
                 }
             });
 
@@ -514,7 +536,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                     ? parseFloat(currentLineData.taxrate1 || '0')
                     : currentLineData.taxrate1;
                 if (currentLineData.taxrate1 > 0) {
-                    currentLineData.taxAmount1 = currentLineData.amount * (currentLineData.taxrate1 / 100);
+                    currentLineData.taxAmount1 =
+                        currentLineData.amount * (currentLineData.taxrate1 / 100);
                     lineTaxTotal += currentLineData.taxAmount1;
                 }
 
@@ -522,11 +545,15 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                     ? parseFloat(currentLineData.taxrate2 || '0')
                     : currentLineData.taxrate2;
                 if (currentLineData.taxrate2 > 0) {
-                    currentLineData.taxAmount2 = currentLineData.amount * (currentLineData.taxrate2 / 100);
+                    currentLineData.taxAmount2 =
+                        currentLineData.amount * (currentLineData.taxrate2 / 100);
                     lineTaxTotal += currentLineData.taxAmount2;
                 }
 
-                log.debug(logTitle, log_prefix + 'Checking for variance: ' + JSON.stringify(currentLineData));
+                log.debug(
+                    logTitle,
+                    log_prefix + 'Checking for variance: ' + JSON.stringify(currentLineData)
+                );
 
                 /// LINE: QTY Variance /////////////////////
                 ///////////////////////////////////
@@ -617,7 +644,8 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             var otherVariance = { apply: false, amount: 0 };
             var adjustmentVariance = { apply: false, amount: 0 };
 
-            var ignoreVariance = billPayload.hasOwnProperty('ignoreVariance') && billPayload.ignoreVariance == 'T';
+            var ignoreVariance =
+                billPayload.hasOwnProperty('ignoreVariance') && billPayload.ignoreVariance == 'T';
             log.debug(logTitle, '>> ignoreVariance: ' + JSON.stringify(ignoreVariance));
 
             taxVariance.apply = param.hasTaxVariance;
@@ -649,7 +677,6 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
                 adjustmentVariance.amount = varianceValues.adjustment;
             }
             log.debug(logTitle, '>> adjustmentVariance: ' + JSON.stringify(adjustmentVariance));
-
 
             if (!ignoreVariance && taxVariance.apply && taxVariance.amount) {
                 hasVariance = true;
@@ -724,12 +751,13 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             }
 
             /////////////////////////////////
-            
+
             if (hasVariance && !currentData.processVariance) {
                 util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
 
                 // make listVariance unique
-                var objVariance = {}, tmpArray = [];
+                var objVariance = {},
+                    tmpArray = [];
                 listVariance.forEach(function (varValue) {
                     if (!objVariance.hasOwnProperty(varValue)) {
                         objVariance[varValue] = 1;
@@ -750,6 +778,10 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             // attempt to save the record ////
             recBill.setValue({ fieldId: 'approvalstatus', value: param.billDefaultStatus || 1 }); // defaults to pending approval
 
+            if (param.dontSaveBill) {
+                util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
+                return returnObj;
+            }
 
             var newRecordId = recBill.save({
                 enableSourcing: true,
@@ -757,14 +789,21 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             });
 
             if (newRecordId) {
-                log.debug(logTitle, '>>> Bill Created succesfully...' + [currentData.poNum, billPayload.invoice]);
+                log.debug(
+                    logTitle,
+                    '>>> Bill Created succesfully...' + [currentData.poNum, billPayload.invoice]
+                );
 
                 returnObj = JSON.parse(JSON.stringify(recBill));
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
                 returnObj.details =
-                    'Linked to vendor bill ' + JSON.stringify({ id: newRecordId, name: billPayload.invoice });
+                    'Linked to vendor bill ' +
+                    JSON.stringify({ id: newRecordId, name: billPayload.invoice });
             } else {
-                log.debug(logTitle, '// bill creation fail...' + [currentData.poNum, billPayload.invoice]);
+                log.debug(
+                    logTitle,
+                    '// bill creation fail...' + [currentData.poNum, billPayload.invoice]
+                );
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
                 return returnObj;
             }
@@ -775,14 +814,20 @@ define(['N/record', 'N/search', 'N/format', 'N/runtime', './../CTC_VC_Constants'
             returnObj.details = returnObj.details || Helper.extractError(error);
             returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
             returnObj.isError = true;
-            returnObj.msg = [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join('\r\n');
+            returnObj.msg = [
+                returnObj.msg,
+                returnObj.details != returnObj.msg ? returnObj.details : ''
+            ].join('\r\n');
 
             log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
             VC_Log.add({
                 header: LOG_APP,
                 transaction: CURRENT_PO,
-                body: [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join(' -- '),
+                body: [
+                    returnObj.msg,
+                    returnObj.details != returnObj.msg ? returnObj.details : ''
+                ].join(' -- '),
                 status: returnObj.isError
                     ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
                     : VC_Constants.Lists.VC_LOG_STATUS.INFO
