@@ -11,17 +11,37 @@ define([
     'N/sftp',
     './Libraries/moment',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-    './Libraries/CTC_VC_Lib_Vendor_Map',
+    './Libraries/CTC_VC_Lib_Vendor_Map'
 ], function (search, runtime, error, log, sftp, moment, vp, vm) {
 
     var LogTitle = 'MR_BillFiles-SFTP';
 
                 function getInputData() {
+        var logTitle = [LogTitle, 'getInputData'].join(':');
 
                     // since we would have to update this code anyway to support a new vendor config the nsid's
                     // are hard coded here instead of doing a search
+        // return [2, 5, 6]; //[DH, WF, SYNNEX]
+        var CONNECT_TYPE = {
+                API: 1,
+                SFTP: 2
+            },
+            validVendorCfg = [];
 
-                    return [2, 5, 6]; //[DH, WF, SYNNEX]
+        var vendorConfigSearch = search.create({
+            type: 'customrecord_vc_bill_vendor_config',
+            filters: [['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.SFTP]],
+            columns: ['internalid']
+        });
+
+        vendorConfigSearch.run().each(function (result) {
+            validVendorCfg.push(result.id);
+            return true;
+        });
+
+        log.debug(logTitle, '>> Valid SFTP Configs : ' + JSON.stringify(validVendorCfg) );
+
+        return validVendorCfg;
                 }
 
                 function map(context) {
@@ -43,8 +63,8 @@ define([
                 'custrecord_vc_bc_host_key',
                 'custrecord_vc_bc_url',
                 'custrecord_vc_bc_res_path',
-                'custrecord_vc_bc_ack_path',
-            ],
+                'custrecord_vc_bc_ack_path'
+            ]
                     });
 
                     var configObj = {
@@ -57,7 +77,7 @@ define([
             host_key: vendorConfig.custrecord_vc_bc_host_key,
             url: vendorConfig.custrecord_vc_bc_url,
             res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path
         };
         log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
 
@@ -66,7 +86,7 @@ define([
                         passwordGuid: configObj.user_pass,
                         url: configObj.url,
                         directory: configObj.res_path,
-            hostKey: configObj.host_key,
+            hostKey: configObj.host_key
                     });
 
                     var list = connection.list();
@@ -83,9 +103,9 @@ define([
                             search.createColumn({
                     name: 'name',
                     summary: 'GROUP',
-                    sort: search.Sort.ASC,
-                }),
-            ],
+                    sort: search.Sort.ASC
+                })
+            ]
                     });
 
         var pagedData = s.runPaged({pageSize: 1000});
@@ -101,7 +121,7 @@ define([
                 existingFiles.push(
                     result.getValue({
                         name: 'name',
-                        summary: 'GROUP',
+                        summary: 'GROUP'
                     })
                 );
                         });
@@ -117,7 +137,10 @@ define([
                                     continue;
                                 }
 
-            var is90days = moment(list[i].lastModified).isSameOrAfter( moment().subtract(90, 'days'), 'day' );
+            var is90days = moment(list[i].lastModified).isSameOrAfter(
+                moment().subtract(90, 'days'),
+                'day'
+            );
             log.audit(logTitle, '>>> is 90 days old? ' + JSON.stringify(is90days) );
 
             if (!is90days) {
@@ -145,14 +168,18 @@ define([
                                 }
                             }
             if ( isAlreadyProcessed ) {
-                log.audit(logTitle, '... skipping, already processed. ' + JSON.stringify([list[i].name, existingFiles[e]] ));
+                log.audit(
+                    logTitle,
+                    '... skipping, already processed. ' +
+                        JSON.stringify([list[i].name, existingFiles[e]])
+                );
                                 continue;
                             }
 
             log.audit(logTitle, '>>> adding file: ' + JSON.stringify(list[i].name));
                             context.write({
                                 key: list[i].name,
-                value: JSON.stringify(configObj),
+                value: JSON.stringify(configObj)
                             });
 
                         }
@@ -207,7 +234,7 @@ define([
                     if (inputSummary.error) {
                         var e = error.create({
                             name: 'INPUT_STAGE_FAILED',
-                message: inputSummary.error,
+                message: inputSummary.error
                         });
                         log.error('Stage: getInputData failed', e);
                     }
@@ -230,7 +257,7 @@ define([
                             script: runtime.getCurrentScript().id,
                             seconds: summary.seconds,
                             usage: summary.usage,
-                yields: summary.yields,
+                yields: summary.yields
                         };
 
                         log.audit('summary', summaryJson);
@@ -244,6 +271,6 @@ define([
                     getInputData: getInputData,
                     map: map,
                     reduce: reduce,
-        summarize: summarize,
+        summarize: summarize
                 };
 });
