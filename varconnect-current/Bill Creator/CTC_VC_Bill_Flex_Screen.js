@@ -12,7 +12,7 @@ define([
     'N/url',
     'N/runtime',
     'N/task'
-], function (VC_Constants, serverWidget, record, redirect, search, url, runtime, task) {
+], function(VC_Constants, serverWidget, record, redirect, search, url, runtime, task) {
     var LOG_TITLE = 'VC_FLEX_SL',
         BILL_CREATOR = VC_Constants.Bill_Creator;
 
@@ -22,11 +22,11 @@ define([
      */
 
     var Helper = {
-        inArray: function (stValue, arrValue) {
+        inArray: function(stValue, arrValue) {
             if (!stValue || !arrValue) return false;
             return arrValue.indexOf(stValue) > -1;
         },
-        isEmpty: function (stValue) {
+        isEmpty: function(stValue) {
             return (
                 stValue === '' ||
                 stValue == null ||
@@ -35,13 +35,13 @@ define([
                 stValue == 'null' ||
                 (util.isArray(stValue) && stValue.length == 0) ||
                 (util.isObject(stValue) &&
-                    (function (v) {
+                    (function(v) {
                         for (var k in v) return false;
                         return true;
                     })(stValue))
             );
         },
-        roundOff: function (value) {
+        roundOff: function(value) {
             var flValue = parseFloat(value || '0');
             if (!flValue || isNaN(flValue)) return false;
 
@@ -61,9 +61,9 @@ define([
         log.debug(
             logTitle,
             '*** START *** ' +
-                JSON.stringify({
-                    method: context.request.method
-                })
+            JSON.stringify({
+                method: context.request.method
+            })
         );
 
         var poId = recBillFile.getValue('custrecord_ctc_vc_bill_linked_po');
@@ -81,8 +81,7 @@ define([
                 poId: poId,
                 status: recPO.getText({ fieldId: 'status' }),
                 statusRef: recPO.getValue({ fieldId: 'statusRef' }),
-                totalTax:
-                    parseFloat(recPO.getValue('tax2total') || '0') +
+                totalTax: parseFloat(recPO.getValue('tax2total') || '0') +
                     parseFloat(recPO.getValue('taxtotal') || '0'),
                 totalShipping: 0
             };
@@ -108,7 +107,7 @@ define([
             mrTask.submit();
 
             redirect.redirect({
-                url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&scripttype='
+                url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&scripttype=&primarykey=&sortcol=dateCreated&sortdir=DESC'
             });
 
             return false;
@@ -145,7 +144,7 @@ define([
             flexForm.addFieldGroup({ id: 'fg_po', label: 'Purchase Order' }).isSingleColumn = true;
 
             ///////////////////////////
-            var fnIsActive = function () {
+            var fnIsActive = function() {
                 var returnValue = false;
 
                 if (
@@ -168,7 +167,7 @@ define([
                 return returnValue;
             };
 
-            var fnAddFields = function (fieldInfo) {
+            var fnAddFields = function(fieldInfo) {
                 var fld = flexForm.addField(fieldInfo);
                 if (fieldInfo.displayType)
                     fld.updateDisplayType({
@@ -180,7 +179,7 @@ define([
                 fld.defaultValue = fieldInfo.defaultValue;
 
                 if (fieldInfo.selectOptions && fieldInfo.selectOptions.length) {
-                    fieldInfo.selectOptions.forEach(function (selOpt) {
+                    fieldInfo.selectOptions.forEach(function(selOpt) {
                         fld.addSelectOption(selOpt);
                         return true;
                     });
@@ -190,21 +189,17 @@ define([
             };
             ///////////////////////////
 
-            var ACT_Fields = [
-                {
-                    id: 'custpage_action',
-                    type: serverWidget.FieldType.SELECT,
-                    label: 'Action',
-                    container: 'fg_action',
-                    selectOptions: [
-                        {
-                            value: 'save',
-                            text: 'Save',
-                            default: true
-                        }
-                    ]
-                }
-            ];
+            var ACT_Fields = [{
+                id: 'custpage_action',
+                type: serverWidget.FieldType.SELECT,
+                label: 'Action',
+                container: 'fg_action',
+                selectOptions: [{
+                    value: 'save',
+                    text: 'Save',
+                    default: true
+                }]
+            }];
 
             var arrActiveStatus = [
                 BILL_CREATOR.Status.PENDING,
@@ -234,31 +229,24 @@ define([
                         });
                     }
                 } else if (dataBill.status == BILL_CREATOR.Status.VARIANCE) {
-                    ACT_Fields[0].selectOptions.push(
-                        {
-                            text: 'Submit & Process Variance',
-                            value: 'reprocess_hasvar'
-                        },
-                        {
-                            text: 'Submit & Ignore Variance',
-                            value: 'reprocess_novar'
-                        },
-                        {
-                            text: 'Save & Close',
-                            value: 'close'
-                        }
-                    );
+                    ACT_Fields[0].selectOptions.push({
+                        text: 'Submit & Process Variance',
+                        value: 'reprocess_hasvar'
+                    }, {
+                        text: 'Submit & Ignore Variance',
+                        value: 'reprocess_novar'
+                    }, {
+                        text: 'Save & Close',
+                        value: 'close'
+                    });
                 } else {
-                    ACT_Fields[0].selectOptions.push(
-                        {
-                            text: 'Save & Close',
-                            value: 'close'
-                        },
-                        {
-                            text: 'Submit & Reprocess',
-                            value: 'reprocess'
-                        }
-                    );
+                    ACT_Fields[0].selectOptions.push({
+                        text: 'Save & Close',
+                        value: 'close'
+                    }, {
+                        text: 'Submit & Reprocess',
+                        value: 'reprocess'
+                    });
                 }
             }
 
@@ -316,8 +304,7 @@ define([
                     displayType: serverWidget.FieldDisplayType.INLINE,
                     breakType: serverWidget.FieldBreakType.STARTCOL,
                     defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_integration')
-                },
-                {
+                }, {
                     id: 'custpage_status',
                     type: serverWidget.FieldType.SELECT,
                     source: 'customlist_ctc_vc_bill_statuses',
@@ -325,8 +312,7 @@ define([
                     label: 'Status',
                     displayType: serverWidget.FieldDisplayType.INLINE,
                     defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_proc_status')
-                },
-                {
+                }, {
                     id: 'custpage_bill_file',
                     type: serverWidget.FieldType.TEXT,
                     container: 'fg_action',
@@ -334,21 +320,19 @@ define([
                     displayType: serverWidget.FieldDisplayType.HIDDEN,
 
                     defaultValue: billFileUrl
-                    // '<a href="' +
-                    // billFileUrl +
-                    // '" target="_blank">' +
-                    // recBillFile.getValue({ fieldId: 'name' }) +
-                    // '</a>'
-                },
-                {
+                        // '<a href="' +
+                        // billFileUrl +
+                        // '" target="_blank">' +
+                        // recBillFile.getValue({ fieldId: 'name' }) +
+                        // '</a>'
+                }, {
                     id: 'custpage_suitelet_url',
                     type: serverWidget.FieldType.TEXT,
                     container: 'fg_action',
                     label: 'Process Bill',
                     displayType: serverWidget.FieldDisplayType.HIDDEN,
                     defaultValue: suiteletUrl
-                },
-                {
+                }, {
                     id: 'custpage_hold',
                     type: serverWidget.FieldType.SELECT,
                     source: 'customlist_ctc_vc_bill_hold_rsns',
@@ -356,15 +340,13 @@ define([
                     label: 'Hold Reason',
                     defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_hold_rsn'),
                     displayType: !fnIsActive() ? serverWidget.FieldDisplayType.INLINE : false
-                },
-                {
+                }, {
                     id: 'custpage_processing_notes',
                     type: serverWidget.FieldType.TEXTAREA,
                     container: 'fg_action',
                     label: 'Notes',
                     defaultValue: recBillFile.getValue('custrecord_ctc_vc_bill_notes')
-                },
-                {
+                }, {
                     id: 'custpage_processing_logs',
                     type: serverWidget.FieldType.LONGTEXT,
                     container: 'fg_action',
@@ -382,8 +364,7 @@ define([
 
             /// PO Info
             ///////////////////
-            var PO_Fields = [
-                {
+            var PO_Fields = [{
                     id: 'custpage_ponum',
                     type: serverWidget.FieldType.TEXT,
                     container: 'fg_po',
@@ -449,8 +430,7 @@ define([
                     container: 'fg_po',
                     label: 'Tax Total (PO)',
                     displayType: serverWidget.FieldDisplayType.INLINE,
-                    defaultValue:
-                        parseFloat(recPO.getValue('tax2total') || '0') +
+                    defaultValue: parseFloat(recPO.getValue('tax2total') || '0') +
                         parseFloat(recPO.getValue('taxtotal') || '0')
                 });
 
@@ -484,8 +464,7 @@ define([
 
             /// Invoice Info
             ///////////////////
-            var INV_Fields = [
-                {
+            var INV_Fields = [{
                     id: 'custpage_inv',
                     type: serverWidget.FieldType.TEXT,
                     container: 'fg_bill',
@@ -524,8 +503,7 @@ define([
                     container: 'fg_bill',
                     label: 'Due Date from File',
                     displayType: serverWidget.FieldDisplayType.INLINE,
-                    defaultValue:
-                        BOOLMAP[recBillFile.getValue('custrecord_ctc_vc_bill_due_date_f_file')]
+                    defaultValue: BOOLMAP[recBillFile.getValue('custrecord_ctc_vc_bill_due_date_f_file')]
                 },
                 {
                     id: 'custpage_total',
@@ -585,22 +563,18 @@ define([
 
             var billDataVariance = parsedBillData.variance || {};
             var varianceValues = {
-                applyTax:
-                    billDataVariance.hasOwnProperty('applyTax') && billDataVariance.applyTax == 'T',
+                applyTax: billDataVariance.hasOwnProperty('applyTax') && billDataVariance.applyTax == 'T',
                 tax: parseFloat(billDataVariance.tax || '0'),
 
-                applyShip:
-                    billDataVariance.hasOwnProperty('applyShip') &&
+                applyShip: billDataVariance.hasOwnProperty('applyShip') &&
                     billDataVariance.applyShip == 'T',
                 shipping: parseFloat(billDataVariance.shipping || '0'),
 
-                applyOther:
-                    billDataVariance.hasOwnProperty('applyOther') &&
+                applyOther: billDataVariance.hasOwnProperty('applyOther') &&
                     billDataVariance.applyOther == 'T',
                 other: parseFloat(billDataVariance.other || '0'),
 
-                applyAdjustment:
-                    billDataVariance.hasOwnProperty('applyAdjustment') &&
+                applyAdjustment: billDataVariance.hasOwnProperty('applyAdjustment') &&
                     billDataVariance.applyAdjustment == 'T',
                 adjustment: parseFloat(billDataVariance.adjustment || '0')
             };
@@ -610,23 +584,19 @@ define([
                 parsedBillData.hasOwnProperty('ignoreVariance') &&
                 parsedBillData.ignoreVariance == 'T';
 
-            var VAR_Fields = [
-                {
+            var VAR_Fields = [{
                     id: 'custpage_variance_tax_apply',
                     type: serverWidget.FieldType.CHECKBOX,
                     container: 'fg_variance',
                     label: Helper.inArray(dataBill.status, [
-                        BILL_CREATOR.Status.CLOSED,
-                        BILL_CREATOR.Status.PROCESSED
-                    ])
-                        ? 'Applied Tax'
-                        : 'Apply Tax',
+                            BILL_CREATOR.Status.CLOSED,
+                            BILL_CREATOR.Status.PROCESSED
+                        ]) ?
+                        'Applied Tax' : 'Apply Tax',
                     // defaultValue: applyTax && (varianceVals.tax || deltaAmount.tax) ? 'T' : 'F',
-                    displayType: !fnIsActive()
-                        ? serverWidget.FieldDisplayType.INLINE
-                        : dataBill.status != BILL_CREATOR.Status.VARIANCE
-                        ? serverWidget.FieldDisplayType.HIDDEN
-                        : false
+                    displayType: !fnIsActive() ?
+                        serverWidget.FieldDisplayType.INLINE : dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.HIDDEN : false
                 },
                 {
                     id: 'custpage_variance_tax',
@@ -634,29 +604,25 @@ define([
                     container: 'fg_variance',
                     label: 'Tax',
                     displayType:
-                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.INLINE
-                            : false
-                    // defaultValue: varianceVals.tax || deltaAmount.tax
+                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.INLINE : false
+                        // defaultValue: varianceVals.tax || deltaAmount.tax
                 },
                 {
                     id: 'custpage_variance_ship_apply',
                     type: serverWidget.FieldType.CHECKBOX,
                     container: 'fg_variance',
                     label: Helper.inArray(dataBill.status, [
-                        BILL_CREATOR.Status.CLOSED,
-                        BILL_CREATOR.Status.PROCESSED
-                    ])
-                        ? 'Applied Shipping'
-                        : 'Apply Shipping',
+                            BILL_CREATOR.Status.CLOSED,
+                            BILL_CREATOR.Status.PROCESSED
+                        ]) ?
+                        'Applied Shipping' : 'Apply Shipping',
 
                     // defaultValue:
                     //     applyShip && (varianceVals.shipping || deltaAmount.shipping) ? 'T' : 'F',
-                    displayType: !fnIsActive()
-                        ? serverWidget.FieldDisplayType.INLINE
-                        : dataBill.status != BILL_CREATOR.Status.VARIANCE
-                        ? serverWidget.FieldDisplayType.HIDDEN
-                        : false
+                    displayType: !fnIsActive() ?
+                        serverWidget.FieldDisplayType.INLINE : dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.HIDDEN : false
                 },
                 {
                     id: 'custpage_variance_shipping',
@@ -664,10 +630,9 @@ define([
                     container: 'fg_variance',
                     label: 'Shipping',
                     displayType:
-                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.INLINE
-                            : false
-                    // defaultValue: varianceVals.shipping || deltaAmount.shipping || 0.0
+                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.INLINE : false
+                        // defaultValue: varianceVals.shipping || deltaAmount.shipping || 0.0
                 },
 
                 {
@@ -675,19 +640,16 @@ define([
                     type: serverWidget.FieldType.CHECKBOX,
                     container: 'fg_variance',
                     label: Helper.inArray(dataBill.status, [
-                        BILL_CREATOR.Status.CLOSED,
-                        BILL_CREATOR.Status.PROCESSED
-                    ])
-                        ? 'Applied Other Charge'
-                        : 'Apply Other Charge',
+                            BILL_CREATOR.Status.CLOSED,
+                            BILL_CREATOR.Status.PROCESSED
+                        ]) ?
+                        'Applied Other Charge' : 'Apply Other Charge',
 
                     // defaultValue:
                     //     applyOther && (varianceVals.other || deltaAmount.other) ? 'T' : 'F',
-                    displayType: !fnIsActive()
-                        ? serverWidget.FieldDisplayType.DISABLED
-                        : dataBill.status != BILL_CREATOR.Status.VARIANCE
-                        ? serverWidget.FieldDisplayType.HIDDEN
-                        : false
+                    displayType: !fnIsActive() ?
+                        serverWidget.FieldDisplayType.DISABLED : dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.HIDDEN : false
                 },
                 {
                     id: 'custpage_variance_other',
@@ -695,10 +657,9 @@ define([
                     container: 'fg_variance',
                     label: 'Other Charges',
                     displayType:
-                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.INLINE
-                            : false
-                    // defaultValue: varianceVals.other || deltaAmount.other || 0.0
+                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.INLINE : false
+                        // defaultValue: varianceVals.other || deltaAmount.other || 0.0
                 },
 
                 {
@@ -706,19 +667,16 @@ define([
                     type: serverWidget.FieldType.CHECKBOX,
                     container: 'fg_variance',
                     label: Helper.inArray(dataBill.status, [
-                        BILL_CREATOR.Status.CLOSED,
-                        BILL_CREATOR.Status.PROCESSED
-                    ])
-                        ? 'Applied Adjustment'
-                        : 'Apply Adjustment',
+                            BILL_CREATOR.Status.CLOSED,
+                            BILL_CREATOR.Status.PROCESSED
+                        ]) ?
+                        'Applied Adjustment' : 'Apply Adjustment',
 
                     // defaultValue:
                     //     applyOther && (varianceVals.other || deltaAmount.other) ? 'T' : 'F',
-                    displayType: !fnIsActive()
-                        ? serverWidget.FieldDisplayType.DISABLED
-                        : dataBill.status != BILL_CREATOR.Status.VARIANCE
-                        ? serverWidget.FieldDisplayType.HIDDEN
-                        : false
+                    displayType: !fnIsActive() ?
+                        serverWidget.FieldDisplayType.DISABLED : dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.HIDDEN : false
                 },
                 {
                     id: 'custpage_variance_adjustment',
@@ -726,10 +684,9 @@ define([
                     container: 'fg_variance',
                     label: 'Adjustments',
                     displayType:
-                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.INLINE
-                            : false
-                    // defaultValue: varianceVals.other || deltaAmount.other || 0.0
+                        !fnIsActive() || dataBill.status != BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.INLINE : false
+                        // defaultValue: varianceVals.other || deltaAmount.other || 0.0
                 }
             ];
             log.debug(logTitle, 'VAR_Fields: ' + JSON.stringify(VAR_Fields));
@@ -745,13 +702,11 @@ define([
                 lineShipTotal = 0,
                 lineAmountTotal = 0;
 
-            var subListFields = [
-                {
-                    id: 'fitem',
-                    type: serverWidget.FieldType.TEXT,
-                    label: 'Item'
-                }
-            ];
+            var subListFields = [{
+                id: 'fitem',
+                type: serverWidget.FieldType.TEXT,
+                label: 'Item'
+            }];
 
             var applicableItems = [];
 
@@ -760,9 +715,8 @@ define([
                     id: 'nsitem',
                     type: serverWidget.FieldType.SELECT,
                     label: 'NS Item',
-                    displayType: fnIsActive()
-                        ? serverWidget.FieldDisplayType.ENTRY
-                        : serverWidget.FieldDisplayType.INLINE,
+                    displayType: fnIsActive() ?
+                        serverWidget.FieldDisplayType.ENTRY : serverWidget.FieldDisplayType.INLINE,
                     selectOptions: [{ value: '', text: '' }]
                 };
 
@@ -787,36 +741,27 @@ define([
                 subListFields.push(fldcolItem);
             }
 
-            subListFields.push(
-                {
+            subListFields.push({
                     id: 'fqty',
                     label: 'Bill Quantity',
                     type: serverWidget.FieldType.CURRENCY,
-                    displayType:
-                        dataBill.status == BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.ENTRY
-                            : serverWidget.FieldDisplayType.INLINE
-                },
-                {
+                    displayType: dataBill.status == BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.ENTRY : serverWidget.FieldDisplayType.INLINE
+                }, {
                     id: 'nsqty',
                     label: 'NS QUANTITY',
                     type: serverWidget.FieldType.CURRENCY
-                },
-                {
+                }, {
                     id: 'nsrcvd',
                     label: 'NS RECEIVED',
                     type: serverWidget.FieldType.CURRENCY
-                },
-                {
+                }, {
                     id: 'frate',
                     type: serverWidget.FieldType.CURRENCY,
                     label: 'Bill Rate',
-                    displayType:
-                        dataBill.status == BILL_CREATOR.Status.VARIANCE
-                            ? serverWidget.FieldDisplayType.ENTRY
-                            : serverWidget.FieldDisplayType.INLINE
-                },
-                {
+                    displayType: dataBill.status == BILL_CREATOR.Status.VARIANCE ?
+                        serverWidget.FieldDisplayType.ENTRY : serverWidget.FieldDisplayType.INLINE
+                }, {
                     id: 'billrate',
                     type: serverWidget.FieldType.CURRENCY,
                     label: 'Bill Rate',
@@ -827,26 +772,23 @@ define([
                     id: 'nsrate',
                     type: serverWidget.FieldType.CURRENCY,
                     label: 'NS Rate'
-                },
-                {
+                }, {
                     id: 'famt',
                     type: serverWidget.FieldType.CURRENCY,
                     label: 'Bill Amount',
                     totallingField: true
-                },
-                {
+                }, {
                     id: 'nstaxamt',
                     type: serverWidget.FieldType.CURRENCY,
                     label: 'Calc. Tax'
-                },
-                {
+                }, {
                     id: 'fdesc',
                     type: serverWidget.FieldType.TEXT,
                     label: 'Description'
                 }
             );
 
-            subListFields.forEach(function (colField) {
+            subListFields.forEach(function(colField) {
                 var fld = sublistLines.addField(colField);
                 if (colField.displayType)
                     fld.updateDisplayType({
@@ -858,7 +800,7 @@ define([
                 }
 
                 if (colField.selectOptions && colField.selectOptions.length) {
-                    colField.selectOptions.forEach(function (selOpt) {
+                    colField.selectOptions.forEach(function(selOpt) {
                         fld.addSelectOption(selOpt);
                         return true;
                     });
@@ -954,12 +896,12 @@ define([
                         lineValues.nstaxamt = 0;
                         if (poLineData.taxrate1 || poLineData.taxrate2) {
                             lineValues.nstaxamt = Helper.roundOff(
-                                (poLineData.taxrate1
-                                    ? (poLineData.taxrate1 / 100) * poLineData.amount
-                                    : 0) +
-                                    (poLineData.taxrate2
-                                        ? (poLineData.taxrate2 / 100) * poLineData.amount
-                                        : 0)
+                                (poLineData.taxrate1 ?
+                                    (poLineData.taxrate1 / 100) * poLineData.amount :
+                                    0) +
+                                (poLineData.taxrate2 ?
+                                    (poLineData.taxrate2 / 100) * poLineData.amount :
+                                    0)
                             );
                         }
 
@@ -1195,8 +1137,7 @@ define([
             if (params.custpage_hold && params.custpage_status !== BILL_CREATOR.Status.REPROCESS) {
                 log.debug('custpage_hold', params.custpage_hold);
                 params.custpage_action = 'fldHold';
-            } else if (
-                !params.custpage_hold &&
+            } else if (!params.custpage_hold &&
                 params.custpage_status == BILL_CREATOR.Status.REPROCESS
             ) {
                 params.custpage_action = 'renew';
