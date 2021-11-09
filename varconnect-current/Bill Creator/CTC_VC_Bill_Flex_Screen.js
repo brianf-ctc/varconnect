@@ -964,9 +964,6 @@ define([
                         }
 
                         lineTaxTotal += lineValues.nstaxamt;
-                        lineAmountTotal +=
-                            parseFloat(parsedBillData.lines[i].PRICE) *
-                            parseFloat(parsedBillData.lines[i].QUANTITY);
 
                         // poLineData.rate * parseFloat(parsedBillData.lines[i].QUANTITY);
                     }
@@ -978,6 +975,9 @@ define([
                 lineValues.billrate =
                     parsedBillData.lines[i].BILLRATE || parsedBillData.lines[i].PRICE;
                 lineValues.famt = lineValues.frate * lineValues.fqty;
+                lineAmountTotal += lineValues.frate * lineValues.fqty;
+                // parseFloat(parsedBillData.lines[i].PRICE) *
+                // parseFloat(parsedBillData.lines[i].QUANTITY);
 
                 log.debug(logTitle, '>>>>> lineValues: ' + JSON.stringify(lineValues));
 
@@ -994,8 +994,6 @@ define([
             if (!Helper.isEmpty(recPO)) {
                 var totalInvoiceAmt =
                     lineAmountTotal +
-                    // lineTaxTotal +
-                    parsedBillData.charges.tax +
                     parsedBillData.charges.shipping +
                     parsedBillData.charges.other;
 
