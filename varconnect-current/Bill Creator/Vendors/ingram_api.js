@@ -81,50 +81,73 @@ define([
 
         //docNum = '81936560.0';
 
-        var searchUrl =
-            '/resellers/v6/orders/search?customerNumber=' +
-            config.partner_id +
-            '&isoCountryCode=' +
-            countryCode +
-            '&customerOrderNumber=' +
-            docNum;
-
-        log.debug('im: searchRequest url', baseUrl + searchUrl);
-
-        sleep(lastCall, 1050);
-        lastCall = new Date().getTime();
-
-        var searchResponse = https.get({
-            url: baseUrl + searchUrl,
-            headers: headers
-        });
-
+        var pageNum = 1,
+            pageSize = 10,
+            totalRecords = 0,
+            pageComplete = false;
         var myArr = [];
-
-        log.debug('im: searchResponse', input + ': ' + JSON.stringify(searchResponse.body));
-
-        var searchBody = JSON.parse(searchResponse.body);
-
-        if (searchResponse.code !== 200) {
-            log.debug('im: ' + searchResponse.code, input + ': ' + 'No Records Returned');
-            return myArr;
-        }
-
-        //      var searchOrders = searchBody.serviceresponse.ordesearchresponse.orders;
-        var searchOrders = searchBody.orders;
-
         var imOrders = [],
             imOrderNums = [];
 
-        for (var i = 0; i < searchOrders.length; i++) {
-            for (var s = 0; s < searchOrders[i].subOrders.length; s++) {
-                for (var l = 0; l < searchOrders[i].subOrders[s].links.length; l++) {
-                    if (searchOrders[i].subOrders[s].links[l].topic == 'invoices') {
-                        imOrders.push(searchOrders[i].subOrders[s].links[l].href);
+        while (!pageComplete) {
+            var searchUrl =
+                '/resellers/v6/orders/search?' +
+                ['&customerNumber', config.partner_id].join('=') +
+                ['&isoCountryCode', countryCode].join('=') +
+                ['&customerOrderNumber', docNum].join('=') +
+                ['&pageNumber', pageNum].join('=') +
+                ['&pageSize', pageSize].join('=');
 
-                        imOrderNums.push(searchOrders[i].ingramOrderNumber);
+            log.debug('im: searchRequest url', baseUrl + searchUrl);
+
+            sleep(lastCall, 1050);
+            lastCall = new Date().getTime();
+
+            var searchResponse = https.get({
+                url: baseUrl + searchUrl,
+                headers: headers
+            });
+
+            log.debug('im: searchResponse', input + ': ' + JSON.stringify(searchResponse.body));
+
+            var searchBody = JSON.parse(searchResponse.body);
+
+            if (searchResponse.code !== 200) {
+                log.debug('im: ' + searchResponse.code, input + ': ' + 'No Records Returned');
+                return myArr;
+            }
+
+            //      var searchOrders = searchBody.serviceresponse.ordesearchresponse.orders;
+            var searchOrders = searchBody.orders;
+            totalRecords = totalRecords + searchBody.pageSize;
+
+            for (var i = 0; i < searchOrders.length; i++) {
+                for (var s = 0; s < searchOrders[i].subOrders.length; s++) {
+                    for (var l = 0; l < searchOrders[i].subOrders[s].links.length; l++) {
+                        if (searchOrders[i].subOrders[s].links[l].topic == 'invoices') {
+                            imOrders.push(searchOrders[i].subOrders[s].links[l].href);
+
+                            imOrderNums.push(searchOrders[i].ingramOrderNumber);
+                        }
                     }
                 }
+            }
+
+            log.audit(
+                'total records >>',
+                JSON.stringify({
+                    totalRecords: totalRecords,
+                    pageSize: pageSize,
+                    pageNum: pageNum,
+                    recordsFound: searchBody.recordsFound
+                })
+            );
+
+            if (totalRecords >= searchBody.recordsFound) {
+                pageComplete = true;
+                break;
+            } else {
+                pageNum++;
             }
         }
 
@@ -137,6 +160,8 @@ define([
                 _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNums[ii])
             );
         }
+
+        log.debug('im: orderMiscCharges', JSON.stringify(orderMiscCharges));
 
         for (var o = 0; o < imOrders.length; o++) {
             try {
@@ -163,7 +188,12 @@ define([
                 //			myObj.date = moment(invDetail.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY');
                 //ingram always provides an orderdate value but doesn't alway provide an invoicedate key:value
                 //using changed mapping to use orderdate instead.
-                myObj.date = moment(invDetail.orderdate, 'YYYY-MM-DD').format('MM/DD/YYYY');
+                if (invDetail.hasOwnProperty('invoicedate')) {
+                    myObj.date = moment(invDetail.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY');
+                } else {
+                    // use the current date
+                    myObj.date = moment().format('MM/DD/YYYY');
+                }
 
                 // myObj.invoice = invDetail.invoicenumber;
                 // changed invoice mapping per request on 12/9/20
@@ -183,14 +213,25 @@ define([
                 // calculate the misc charges
                 if (orderMiscCharges.hasOwnProperty(invDetail.globalorderid)) {
                     var miscCharge = orderMiscCharges[invDetail.globalorderid];
-                    if (!myObj.charges.hasOwnProperty('other')) {
-                        myObj.charges.other = 0;
-                    }
+
+                    if (!myObj.charges.miscCharges) myObj.charges.miscCharges = [];
+                    // if (!myObj.charges.hasOwnProperty('other')) {
+                    //     myObj.charges.other = 0;
+                    // }
 
                     for (ii = 0; ii < miscCharge.length; ii++) {
-                        myObj.charges.other += parseFloat(miscCharge[ii].amount);
+                        myObj.charges.miscCharges.push(miscCharge[ii]);
+                        // myObj.charges.other += parseFloat(miscCharge[ii].amount);
                     }
                 }
+
+                // // applies only for: Aqueduct
+                // if (invDetail.hasOwnProperty('weight')) {
+                //     myObj.weight = invDetail.weight;
+                //     if (parseFloat(myObj.weight) > 150) {
+                //         myObj.charges.shipping = parseFloat(myObj.charges.shipping) + 2;
+                //     }
+                // }
 
                 myObj.lines = [];
 
@@ -236,7 +277,7 @@ define([
 
     function _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNum) {
         var logTitle = 'getMiscCharges',
-            returnValue,
+            returnValue = false,
             miscCharges;
 
         try {
@@ -255,12 +296,17 @@ define([
                 }
             });
 
+            // log.debug('im: miscCharges', '>> orderStatusResp: ' + JSON.stringify(orderStatusResp));
             var orderStatus = JSON.parse(orderStatusResp.body);
-            returnValue = {};
 
+            // log.debug('im: miscCharges', '>> orderStatus: ' + JSON.stringify(orderStatus));
             if (orderStatus.hasOwnProperty('miscellaneousCharges')) {
+                returnValue = {};
+
                 for (var i = 0, j = orderStatus.miscellaneousCharges.length; i < j; i++) {
                     miscCharges = orderStatus.miscellaneousCharges[i];
+
+                    log.debug('im: miscCharges', '>> miscCharges: ' + JSON.stringify(miscCharges));
 
                     if (!returnValue.hasOwnProperty(miscCharges.subOrderNumber)) {
                         returnValue[miscCharges.subOrderNumber] = [];
@@ -275,7 +321,7 @@ define([
 
             log.debug('im: miscCharges', JSON.stringify(returnValue));
         } catch (error) {
-            log.error('Error parsing order', e);
+            log.error('Error parsing order', JSON.stringify(error));
         }
 
         return returnValue;
