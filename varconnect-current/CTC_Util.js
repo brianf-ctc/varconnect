@@ -33,6 +33,12 @@ define(['N/format', 'N/record','N/search', 'N/task'],
                     if (stValue == arrValue[i]) break;
                 return (i > -1);
             },
+            roundOff: function (value) {
+                var flValue = parseFloat(value || '0');
+                if (!flValue || isNaN(flValue)) return false;
+    
+                return Math.round(flValue * 100) / 100;
+            },    
             parseFloat: function (stValue) {
                 return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, "") || '0') : 0;
             },

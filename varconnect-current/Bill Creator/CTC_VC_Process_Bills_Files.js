@@ -9,8 +9,9 @@ define([
     'N/error',
     'N/https',
     './Libraries/moment',
-    './../CTC_VC_Constants'
-], function (search, record, runtime, error, https, moment, VC_Constants) {
+    './../CTC_VC_Constants',
+    './../CTC_Util'
+], function (search, record, runtime, error, https, moment, VC_Constants, CTC_Util) {
     var LOG_TITLE = 'VC_PROC_BILL_MR',
         LOG_APP = 'Process Bills (MR)',
         BILL_CREATOR = VC_Constants.Bill_Creator,
@@ -28,7 +29,12 @@ define([
         var filters = [
             ['custrecord_ctc_vc_bill_linked_bill', 'anyof', '@NONE@'],
             'AND',
-            ['custrecord_ctc_vc_bill_proc_status', 'anyof', BILL_CREATOR.Status.PENDING, BILL_CREATOR.Status.REPROCESS],
+            [
+                'custrecord_ctc_vc_bill_proc_status',
+                'anyof',
+                BILL_CREATOR.Status.PENDING,
+                BILL_CREATOR.Status.REPROCESS
+            ],
             'AND',
             ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
         ];
@@ -64,12 +70,39 @@ define([
         });
 
         if (billFileId) {
+            var updateValues = {
+                custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
+            };
+            // var billData = CTC_Util.flatLookup({
+            //     type: 'customrecord_ctc_vc_bills',
+            //     id: billFileId,
+            //     columns: ['custrecord_ctc_vc_bill_log']
+            // });
+            // log.debug(logTitle, '>> billData: ' + JSON.stringify(billData));
+
+            // var poSearch = search.create({
+            //     type: 'customrecord_ctc_vc_bills',
+            //     filters: filters,
+            //     columns: ['internalid']
+            // });
+            // log.debug(logTitle, '>> results: ' + JSON.stringify(poSearch.runPaged().count));
+
+            // if (poSearch.runPaged().count > 0) {
+            //     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.REPROCESS;
+            // } else {
+            //     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.PENDING;
+            //     updateValues.custrecord_ctc_vc_bill_log =
+            //         [moment().format('MM-DD-YY'), 'Not ready for billing'].join(' - ') +
+            //         '\r\n' +
+            //         billData.custrecord_ctc_vc_bill_log;
+            // }
+
+            // log.debug(logTitle, '>> updateValues: ' + JSON.stringify(updateValues));
+
             record.submitFields({
                 type: 'customrecord_ctc_vc_bills',
                 id: billFileId,
-                values: {
-                    custrecord_ctc_vc_bill_proc_status: BILL_CREATOR.Status.REPROCESS
-                },
+                values: updateValues,
                 options: {
                     enablesourcing: true,
                     ignoreMandatoryFields: true
@@ -94,12 +127,7 @@ define([
                 'custrecord_ctc_vc_bill_po',
                 'custrecord_ctc_vc_bill_number',
                 'custrecord_ctc_vc_bill_proc_status',
-                'custrecord_ctc_vc_bill_log',
-                search.createColumn({
-                    name: 'statusref',
-                    join: 'CUSTRECORD_CTC_VC_BILL_LINKED_PO',
-                    label: 'Status'
-                })
+                'custrecord_ctc_vc_bill_log'
             ]
         });
     }
