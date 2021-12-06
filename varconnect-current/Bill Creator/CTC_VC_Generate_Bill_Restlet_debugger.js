@@ -2,13 +2,15 @@
  *@NApiVersion 2.x
  *@NScriptType Restlet
  */
-define([
+var VCFolder = '/SuiteScripts/CTC.SS2/VCFolder/Bill Creator';
+require([
     'N/record',
     'N/search',
     'N/format',
     'N/runtime',
-    './../CTC_VC_Constants',
-    './../CTC_VC_Lib_Log'
+    VCFolder + '/../CTC_VC_Constants',
+    VCFolder + '/../CTC_VC_Lib_Log',
+    VCFolder + '/Libraries/lodash'
 ], function (record, search, format, runtime, VC_Constants, VC_Log) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
@@ -653,12 +655,11 @@ define([
                         qty: 1,
                         description: varianceData.description,
                         item: varianceData.item,
-                        rate: varianceData.rate
+                        rate: taxVariance.rate
                     });
 
                     return true;
                 });
-
             } else {
                 var varianceValues = billPayload.variance || {};
 
@@ -776,7 +777,8 @@ define([
                 util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
 
                 // make listVariance unique
-                var objVariance = {}, tmpArray = [];
+                var objVariance = {},
+                    tmpArray = [];
                 listVariance.forEach(function (varValue) {
                     if (!objVariance.hasOwnProperty(varValue)) {
                         objVariance[varValue] = 1;
@@ -859,7 +861,24 @@ define([
         return returnObj;
     }
 
-    return {
-        post: _post
-    };
+    //////////////////////////////
+    var arrFields = [
+            'custrecord_ctc_vc_bill_is_recievable',
+            'custrecord_ctc_vc_bill_log',
+            'custrecord_ctc_vc_bill_proc_status',
+            'custrecord_ctc_vc_bill_proc_variance',
+            'custrecord_ctc_vc_bill_linked_po',
+            'custrecord_ctc_vc_bill_json'
+        ],
+        searchValues = search.lookupFields({
+            type: 'customrecord_ctc_vc_bills',
+            id: '19701',
+            columns: arrFields
+        });
+
+    _post(searchValues);
+
+    // return {
+    //     post: _post
+    // };
 });
