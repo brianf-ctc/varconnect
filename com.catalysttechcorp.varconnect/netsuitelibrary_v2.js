@@ -61,6 +61,7 @@ define([
         log.debug('vendorConfig', vendorConfig);
 
         log.debug('netsuiteLibrary:start', 'poNum = ' + poNum);
+        log.debug('netsuiteLibrary:options', options);
         //logRowObjects(lineData);
 
         //		var po_record = r.load({

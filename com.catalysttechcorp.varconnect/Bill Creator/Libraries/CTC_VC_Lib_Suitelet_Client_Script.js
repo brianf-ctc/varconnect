@@ -1,12 +1,113 @@
+/**
+ * @NApiVersion 2.0
+ * @NScriptType ClientScript
+ */
 define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
     dialog,
     message,
     currentRecord
 ) {
-    /**
-     *@NApiVersion 2.0
-     *@NScriptType ClientScript
-     */
+    var Helper = {
+        calculateLineTax: function (option) {
+            var amount = option.amount,
+                taxRate1 = option.taxrate1 || false,
+                taxRate2 = option.taxrate2 || false;
+
+            var taxAmount = taxRate1 ? (taxRate1 / 100) * amount : 0;
+            taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
+
+            return Helper.roundOff(taxAmount) || 0;
+        }, 
+        roundOff: function (value) {
+            var flValue = parseFloat(value || '0');
+            if (!flValue || isNaN(flValue)) return 0;
+
+            return Math.round(flValue * 100) / 100;
+        },    
+    };
+
+    function recalculateTotals() {
+        var currRecord = currentRecord.get();
+
+        /// extract  the taxlines
+        var taxLinesJSON = currRecord.getValue({ fieldId: 'custpage_taxlines' });
+        var taxLines = JSON.parse(taxLinesJSON || '{}');
+
+        var Totals = {
+            lineTax: 0,
+            lineShip: 0,
+            lineAmount: 0,
+            Amount: 0,
+            deltaTax: 0,
+            deltaShip: 0
+        };
+        var lineCount, line, lineAmount, lineData;
+
+        // get the line items
+        lineCount = currRecord.getLineCount({ sublistId: 'item' });
+        for (line = 0; line < lineCount; line++) {
+            lineData = {
+                itemid: currRecord.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'nsitem',
+                    line: line
+                }),
+                quantity: currRecord.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'fqty',
+                    line: line
+                }),
+                rate: currRecord.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'frate',
+                    line: line
+                })
+            };
+            lineData.amount = lineData.quantity * lineData.rate;
+            lineData.taxAmount = Helper.calculateLineTax(
+                util.extend(lineData, taxLines[lineData.itemid])
+            );
+
+            console.log('lineData (item) >> ', lineData, taxLines[lineData.itemid]);
+            Totals.lineTax+=lineData.taxAmount;
+            Totals.lineAmount+=lineData.amount;
+        }
+
+        // variance lines
+        lineCount = currRecord.getLineCount({ sublistId: 'variance' });
+        for (line = 0; line < lineCount; line++) {
+            lineData = {
+                itemid: currRecord.getSublistValue({
+                    sublistId: 'variance',
+                    fieldId: 'nsitem',
+                    line: line
+                }) || currRecord.getSublistValue({
+                    sublistId: 'variance',
+                    fieldId: 'itemid',
+                    line: line
+                }),
+                amount : currRecord.getSublistValue({
+                    sublistId: 'variance',
+                    fieldId: 'amount',
+                    line: line
+                })
+            };
+            lineData.taxAmount = Helper.calculateLineTax(
+                util.extend(lineData, taxLines[lineData.itemid])
+            );
+
+            console.log('lineData (variance) >> ', lineData, taxLines[lineData.itemid]);
+
+            Totals.lineTax+=lineData.taxAmount;
+            Totals.lineAmount+=lineData.amount;
+        }
+
+        console.log('** Totals >> ', Totals);
+
+
+
+        console.log(taxLines);
+    }
 
     function fieldChanged(context) {
         var currentValue = context.currentRecord.getValue(context);
@@ -33,6 +134,14 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
         }
 
         // if (context.sublistId == 'variance') {
+        //     console.log('fieldChange: ' + context.sublistId, currentValue);
+        //     recalculateTotals();
+        // }
+        // if (context.sublistId == 'item') {
+        //     console.log('fieldChange: ' + context.sublistId, currentValue);
+        //     recalculateTotals();
+        // }
+
         //     currentValue = context.currentRecord.getSublistValue(context);
         //     var amountFixed = context.currentRecord.getSublistValue({
         //         sublistId: 'variance',
@@ -41,8 +150,8 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
         //     console.log('variance-apply', currentValue, amountFixed);
 
         //     context.currentRecord.setCurrentSublistValue({
-        //         sublistId:'variance', 
-        //         fieldId: 'amount', 
+        //         sublistId:'variance',
+        //         fieldId: 'amount',
         //         value: currentValue ? amountFixed : 0
         //     });
 

@@ -209,6 +209,11 @@ function(
 					isDynamic: true
 				});
 
+				// validate the dropship
+				isDropPO = po_record.getValue({
+					fieldId: 'dropshipso'
+				});
+
 	//			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
 
 				log.debug(logTitle, '>> Initiating library webservice ....');
