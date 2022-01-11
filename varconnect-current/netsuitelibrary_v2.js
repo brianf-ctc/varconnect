@@ -29,9 +29,13 @@ define([
     'N/record',
     'N/config',
     'N/format',
+    './CTC_VC_Lib_Utilities',
     './VC_Globals.js',
     './CTC_VC_Constants.js'
-], function (search, runtime, r, config, format, vcGlobals, constants) {
+], function (search, runtime, r, config, format, util, vcGlobals, constants) {
+    var LogTitle = 'NS_Library',
+        LogPrefix;
+
     var dateFormat;
 
     //***********************************************************************
@@ -39,6 +43,9 @@ define([
     //***********************************************************************
     //	function updatePOItemData(poNum, lineData)
     function updatePOItemData(options) {
+        var logTitle = [LogTitle, 'updatePOItemData'].join('::');
+        // log.audit(logTitle, '>> options: ' + JSON.stringify(options));
+
         /******
 		lineData definition {	line_num:"NA",
 								item_num = "NA',
@@ -57,19 +64,8 @@ define([
             vendorConfig = options.vendorConfig,
             po_record = options.po_record;
 
-        log.debug('mainConfig', mainConfig);
-        log.debug('vendorConfig', vendorConfig);
+        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
 
-        log.debug('netsuiteLibrary:start', 'poNum = ' + poNum);
-        log.debug('netsuiteLibrary:options', options);
-        //logRowObjects(lineData);
-
-        //		var po_record = r.load({
-        //				type : "purchaseorder",
-        //				id: poNum,
-        //				isDynamic : true
-        //			});
-        log.debug('netsuiteLibrary:afterLoadPO', 'poNum = ' + poNum);
         var po_updated = false;
         var so_updated = false;
 
@@ -113,14 +109,11 @@ define([
 			else
 				var so_record = null;
 ***/
-            log.debug('netsuiteLibrary:beforeTry', 'createdFromID = ' + createdFromID);
+            // log.debug('netsuiteLibrary:beforeTry', 'createdFromID = ' + createdFromID);
 
             try {
                 checkForDuplicateItems(po_record);
-                log.debug(
-                    'netsuiteLibrary:afterCheckForDups',
-                    'lineData = ' + JSON.stringify(lineData)
-                );
+                log.audit(logTitle, LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
 
                 //4.01
                 if (!dateFormat) {
@@ -128,7 +121,7 @@ define([
                         type: config.Type.COMPANY_PREFERENCES
                     });
                     dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                    log.debug('dateFormat', dateFormat);
+                    log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
                 }
 
                 for (var i = 0; i < lineData.length; i++) {
@@ -140,71 +133,67 @@ define([
                         mainConfig.ingramHashSpace,
                         vendorConfig.xmlVendor
                     );
-                    log.debug('netsuiteLibrary:afterCheckForDups', lineData);
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
+                    );
 
-                    if (line_num != null) {
-                        po_updated = true;
-                        //Serial num link is created with a UE now
-                        var lineNum = po_record.selectLine({
-                            sublistId: 'item',
-                            line: line_num
-                        });
-
-                        updateField(
-                            po_record,
-                            'custcol_ctc_xml_dist_order_num',
-                            lineData[i].order_num
+                    if (line_num == null || !line_num) {
+                        log.error(
+                            logTitle,
+                            LogPrefix +
+                                '!! ERROR !! Could not find line number for item: ' +
+                                JSON.stringify(lineData[i])
                         );
-                        updateField(
-                            po_record,
-                            'custcol_ctc_xml_date_order_placed',
-                            lineData[i].order_date
-                        );
-                        updateField(po_record, 'custcol_ctc_xml_eta', lineData[i].order_eta);
-
-                        var nsDate = parseDate({ dateString: lineData[i].order_date });
-                        if (nsDate)
-                            updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
-                        nsDate = parseDate({ dateString: lineData[i].order_eta });
-                        if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
-
-                        //  Don't use XML serial numbers on special order POs, warehouse will scan them in
-                        if (!specialOrder) {
-                            //Serials are viewed with a separate suitelet now
-                            //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
-                        }
-
-                        updateFieldList(lineData[i].carrier, po_record, 'custcol_ctc_xml_carrier');
-                        updateFieldList(
-                            lineData[i].ship_date,
-                            po_record,
-                            'custcol_ctc_xml_ship_date'
-                        );
-
-                        if (isDropPO || !mainConfig.useInboundTrackingNumbers)
-                            updateFieldList(
-                                lineData[i].tracking_num,
-                                po_record,
-                                'custcol_ctc_xml_tracking_num'
-                            );
-                        else
-                            updateFieldList(
-                                lineData[i].tracking_num,
-                                po_record,
-                                'custcol_ctc_xml_inb_tracking_num'
-                            );
-
-                        po_record.commitLine({
-                            sublistId: 'item'
-                        });
-                    } else {
-                        log.error({
-                            title: 'CTC Update PO ' + poNum,
-                            details: 'Could not find line number for item ' + lineData[i].item_num
-                        });
+                        continue;
                     }
+                    po_updated = true;
+                    //Serial num link is created with a UE now
+                    lineNum = po_record.selectLine({
+                        sublistId: 'item',
+                        line: line_num
+                    });
+
+                    updateField(po_record, 'custcol_ctc_xml_dist_order_num', lineData[i].order_num);
+                    updateField(
+                        po_record,
+                        'custcol_ctc_xml_date_order_placed',
+                        lineData[i].order_date
+                    );
+                    updateField(po_record, 'custcol_ctc_xml_eta', lineData[i].order_eta);
+
+                    var nsDate = parseDate({ dateString: lineData[i].order_date });
+                    if (nsDate) updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
+                    nsDate = parseDate({ dateString: lineData[i].order_eta });
+                    if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
+
+                    //  Don't use XML serial numbers on special order POs, warehouse will scan them in
+                    if (!specialOrder) {
+                        //Serials are viewed with a separate suitelet now
+                        //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
+                    }
+
+                    updateFieldList(lineData[i].carrier, po_record, 'custcol_ctc_xml_carrier');
+                    updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
+
+                    if (isDropPO || !mainConfig.useInboundTrackingNumbers)
+                        updateFieldList(
+                            lineData[i].tracking_num,
+                            po_record,
+                            'custcol_ctc_xml_tracking_num'
+                        );
+                    else
+                        updateFieldList(
+                            lineData[i].tracking_num,
+                            po_record,
+                            'custcol_ctc_xml_inb_tracking_num'
+                        );
+
+                    po_record.commitLine({
+                        sublistId: 'item'
+                    });
                 } //end for
-                log.debug('netsuiteLibrary:beforeSavePO', 'poNum = ' + poNum);
+                // log.debug('netsuiteLibrary:beforeSavePO', 'poNum = ' + poNum);
 
                 if (po_updated) {
                     po_record.save({
@@ -214,17 +203,16 @@ define([
                 }
                 return createdFromID;
             } catch (err) {
-                log.error({
-                    title: 'Update PO line data ERROR',
-                    details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
-                });
+                log.error(logTitle, LogPrefix + '!! ERROR !! ' + util.extractError(err));
+                // log.error({
+                //     title: 'Update PO line data ERROR',
+                //     details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
+                // });
                 return null;
             }
         } else {
-            log.error({
-                title: 'CTC Update PO ' + poNum,
-                details: 'Could not update PO'
-            });
+            log.error(logTitle, LogPrefix + '!! ERROR !! Could not update PO ');
+
             return null;
         }
     }
@@ -237,14 +225,19 @@ define([
      * @returns {int} the line number of the matching item or null
      */
     function validateLineNumber(po_record, itemNum, vendorSKU, hashSpace, xmlVendor) {
+        var logTitle = [LogTitle, 'validateLineNumber'].join('::');
+        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
+
+        // log.audit(
+        //     logTitle,
+        //     '>> params: ' + JSON.stringify([itemNum, vendorSKU, hashSpace, xmlVendor, po_record])
+        // );
+
         var vendorList = constants.Lists.XML_VENDOR;
         var vendorSKU = vendorSKU || '';
 
         if (itemNum == null || itemNum.length == 0 || itemNum == 'NA') {
-            log.error({
-                title: 'CTC Update PO ' + po_record.id,
-                details: 'Could not find line number for item ' + itemNum
-            });
+            log.error(logTitle, LogPrefix + 'Could not find line number for item ' + itemNum);
             return null;
         } else {
             var lineItemCount = po_record.getLineCount({
@@ -267,7 +260,10 @@ define([
                         });
 
                         if (tempVendorSKU == vendorSKU) {
-                            log.debug('matched vendor sku for line ' + i);
+                            log.audit(
+                                logTitle,
+                                LogPrefix + '>>> matched vendor sku for line :' + i
+                            );
                             return i;
                         }
 
@@ -278,7 +274,10 @@ define([
                                 xmlVendor == vendorList.INGRAM_MICRO)
                         ) {
                             if (vendorSKU.replace('#', ' ') == tempVendorSKU) {
-                                log.debug('matched vendor sku for line ' + i);
+                                log.audit(
+                                    logTitle,
+                                    LogPrefix + '>>> matched vendor sku for line :' + i
+                                );
                                 return i;
                             }
                         }
@@ -317,13 +316,17 @@ define([
      * @returns {*} void
      */
     function updateField(po_record, fieldID, xmlVal) {
+        var logTitle = [LogTitle, 'updateField'].join('::');
+        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
+        // log.audit(logTitle, '>> params: ' + JSON.stringify([po_record, fieldID, xmlVal]));
+
         var maxFieldLength = 290; // free form text fields have max length of 300 chars
-        log.debug('netsuiteLibrary:updateField', 'field=' + fieldID + ' - xmlval=' + xmlVal);
+        // log.debug('netsuiteLibrary:updateField', 'field=' + fieldID + ' - xmlval=' + xmlVal);
         var currentFieldValue = po_record.getCurrentSublistValue({
             sublistId: 'item',
             fieldId: fieldID
         });
-        log.debug('netsuiteLibrary:updateField:currentFieldValue', currentFieldValue);
+        // log.audit(logTitle, '>> currentFieldValue: ' + JSON.stringify(currentFieldValue));
 
         if (
             currentFieldValue != null &&
@@ -360,13 +363,13 @@ define([
      * @returns {*} void
      */
     function updateFieldList(xmlNumbers, po_record, fieldID) {
+        var logTitle = [LogTitle, 'updateFieldList'].join('::');
+        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
+        // log.audit(logTitle, '>> params: ' + JSON.stringify([xmlNumbers, fieldID, po_record]));
+
         var errorMsg = 'Maximum Field Length Exceeded';
         var errorFound = false;
         var maxFieldLength = 3950;
-        log.debug(
-            'netsuiteLibrary:updateFieldList',
-            'field=' + fieldID + ' - xmlval ' + xmlNumbers
-        );
 
         // split up the comma delimited line data into arrays for easier processing
         if (xmlNumbers && xmlNumbers != null && xmlNumbers != undefined) {
@@ -519,10 +522,7 @@ define([
                     }
                 }
             } catch (err) {
-                log.error({
-                    title: 'CTC Update PO ',
-                    details: 'ERROR In updateFieldLIST ' + fieldID + ' = ' + err.message
-                });
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(err));
             }
         }
     }
@@ -533,6 +533,9 @@ define([
      * @returns {*} void
      */
     function checkForDuplicateItems(po_record) {
+        var logTitle = [LogTitle, 'checkForDuplicateItems'].join('::');
+        // log.audit(logTitle, '>> params: ' + JSON.stringify([po_record]));
+
         //log.audit('checkForDuplicateItems', JSON.stringify(po_record))
         var lineItemCount = po_record.getLineCount({
             sublistId: 'item'
@@ -593,6 +596,9 @@ define([
     }
 
     function parseDate(options) {
+        var logTitle = [LogTitle, 'parseDate'].join('::');
+        // log.audit(logTitle, '>> options: ' + JSON.stringify(options));
+
         var dateString = options.dateString,
             date = '';
 
@@ -611,7 +617,7 @@ define([
                     }
                 }
             } catch (e) {
-                log.error('Error parsing date ' + dateString, e);
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
             }
         }
 
@@ -630,12 +636,15 @@ define([
             });
         }
 
-        log.debug('---datestring ' + dateString, date);
+        // log.audit('---datestring ' + dateString, date);
 
         return date;
     }
 
     function getOrderLineNumbers(options) {
+        var logTitle = [LogTitle, 'getOrderLineNumbers'].join('::');
+        // log.audit(logTitle, '>> options: ' + JSON.stringify(options));
+
         var fulfillmentId = options.fulfillmentId,
             poLine = options.poLine,
             soLine,

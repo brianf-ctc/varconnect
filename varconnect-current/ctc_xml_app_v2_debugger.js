@@ -45,11 +45,13 @@ require([
     var LogTitle = 'MR_OrderStatus';
 
     /////////////////////////////////
+    /////////////////////////////////
     var objSearch = getInputData(),
         arrResults = [];
+
     objSearch.run().each(function (result, idx) {
         // arrResults.push(JSON.parse(JSON.stringify(result)));
-        map.call(this, {key: idx, value: JSON.stringify(result) });
+        map.call(this, { key: idx, value: JSON.stringify(result) });
         return true;
     });
 
@@ -58,9 +60,9 @@ require([
         if (!arrReduceData[key]) arrReduceData[key] = [];
         arrReduceData[key].push(JSON.stringify(value));
     };
-    arrResults.forEach(function (data, idx) {
-        contextWrite(data.id, data);
-    });
+    // arrResults.forEach(function (data, idx) {
+    //     contextWrite(data.id, data);
+    // });
 
     for (var redkey in arrReduceData) {
         reduce.call(this, {
@@ -68,9 +70,14 @@ require([
             values: arrReduceData[redkey]
         });
     }
+    /////////////////////////////////
     ///////////////////////////////
 
     function _validateLicense(options) {
+        var logTitle = [LogTitle, 'validateLicense'].join('::');
+        log.debug(logTitle, '>> options: ' + JSON.stringify(options));
+
+
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
             response = libLicenseValidator.callValidationSuitelet({
@@ -94,6 +101,9 @@ require([
     }
 
     function _loadVendorConfig(options) {
+        var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
+        log.debug(logTitle, '>> options: ' + JSON.stringify(options));
+
         var vendor = options.vendor,
             subsidiary = options.subsidiary,
             vendorConfig = libVendorConfig.getVendorConfiguration({
@@ -102,13 +112,16 @@ require([
             });
 
         if (!vendorConfig) {
-            log.debug(
+            log.error(
                 'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
         } else return vendorConfig;
     }
 
     function _processDropshipsAndSpecialOrders(options) {
+        var logTitle = [LogTitle, 'processDropshipsAndSpecialOrders'].join('::');
+        log.debug(logTitle, '>> options: ' + JSON.stringify(options));
+
         var mainConfig = options.mainConfig,
             vendorConfig = options.vendorConfig,
             isDropPO = options.isDropPO,
@@ -117,8 +130,6 @@ require([
             itemArray = options.itemArray,
             vendor = options.vendor,
             fulfillmentData;
-
-        log.debug('xml app v2: options', JSON.stringify(options));
 
         try {
             if (
@@ -157,6 +168,9 @@ require([
     }
 
     function _getSubsidiary(poId) {
+        var logTitle = [LogTitle, 'getSubsidiary'].join('::');
+        log.debug(logTitle, '>> poId: ' + JSON.stringify(poId));
+
         var subsidiary = null;
 
         if (vcGlobals.ENABLE_SUBSIDIARIES) {
@@ -173,7 +187,7 @@ require([
 
     function getInputData() {
         var logTitle = [LogTitle, 'getInputData'].join('::');
-        log.debug(logTitle, '### START ### ');
+        log.debug(logTitle, '###### START ######');
 
         //return saved search for company to get list of purchase orders
         vcLog.recordLog({
@@ -181,7 +195,7 @@ require([
             body: 'VAR Connect START',
             status: constants.Lists.VC_LOG_STATUS.INFO
         });
-        var searchId = 'customsearch_ctc_open_po_search_2';//runtime.getCurrentScript().getParameter('custscript_searchid2');
+        var searchId = 'customsearch_ctc_open_po_search_2'; //runtime.getCurrentScript().getParameter('custscript_searchid2');
         var vendor = runtime.getCurrentScript().getParameter('custscript_vendor2');
 
         var mainConfig = _loadMainConfig();
@@ -207,7 +221,7 @@ require([
 
         try {
             // for each search result, the map function is called in parallel. It will handle the request write out the requestXML
-            log.debug(logTitle, '### START: map ## ' + JSON.stringify(contextM));
+            log.debug(logTitle, '###### START: map ###### ' + JSON.stringify(contextM));
 
             var searchResult = JSON.parse(contextM.value);
             var docid = searchResult.id;
@@ -218,7 +232,7 @@ require([
                 !searchResult.values.custbody_isdropshippo
                     ? false
                     : true;
-            var vendor = searchResult.values.entity.value;
+            var vendor = searchResult.values.entity[0].value;
 
             var outputObj = '';
             var custID = '';
@@ -253,6 +267,10 @@ require([
                     isDynamic: true
                 });
 
+                isDropPO = po_record.getValue({
+                    fieldId: 'dropshipso'
+                });
+
                 //			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
 
                 log.debug(logTitle, '>> Initiating library webservice ....');
@@ -260,6 +278,7 @@ require([
                     mainConfig: mainConfig,
                     vendorConfig: vendorConfig,
                     vendor: vendor,
+                    po_record: po_record,
                     poId: docid,
                     poNum: docnum,
                     tranDate: tranDate,
@@ -389,7 +408,7 @@ require([
                                     //line serials
                                     //									contextM.write(key, {'docid': docid, 'itemnum': lineData[i].item_num, 'custid':custID, 'orderNum': fulfillmentNum, 'receiptNum': receiptNum, serial: serialArray[j]});
                                     //old
-                                    contextM.write(serialArray[j], {
+                                    contextWrite(serialArray[j], {
                                         docid: docid,
                                         itemnum: lineData[i].item_num,
                                         custid: custID,
@@ -567,6 +586,8 @@ require([
     function reduce(context) {
         // reduce runs on each serial number to save it
         // each instance of reduce has 5000 unit and this way there will be a new one for each line
+        var logTitle = [LogTitle, 'reduce'].join('::');
+        log.debug(logTitle, '###### START: REDUCE ###### ' + JSON.stringify(context));
 
         var serial = context.key;
         var data = JSON.parse(context.values[0]);
@@ -574,9 +595,7 @@ require([
         var itemNum = data.itemnum;
         var line = data.line;
 
-        log.debug('xml app v2: reduce serial data', data);
-        //log.debug("reduce poId", poId);
-        //log.debug("reduce itemNum", itemNum);
+        log.debug(logTitle, '>> serial data: ' + JSON.stringify(data) );
 
         var po_record = r.load({
             type: 'purchaseorder',
