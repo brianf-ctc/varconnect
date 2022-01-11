@@ -2,15 +2,14 @@
  *@NApiVersion 2.x
  *@NScriptType Restlet
  */
-var VCFolder = '/SuiteScripts/CTC.SS2/VCFolder/Bill Creator';
+var VCFolder = '/SuiteScripts/VCFolder/Bill Creator';
 require([
     'N/record',
     'N/search',
     'N/format',
     'N/runtime',
     VCFolder + '/../CTC_VC_Constants',
-    VCFolder + '/../CTC_VC_Lib_Log',
-    VCFolder + '/Libraries/lodash'
+    VCFolder + '/../CTC_VC_Lib_Log'
 ], function (record, search, format, runtime, VC_Constants, VC_Log) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
@@ -872,7 +871,7 @@ require([
         ],
         searchValues = search.lookupFields({
             type: 'customrecord_ctc_vc_bills',
-            id: '19701',
+            id: '574',
             columns: arrFields
         });
 
