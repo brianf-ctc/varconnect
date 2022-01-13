@@ -138,7 +138,7 @@ define([
                         LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
                     );
 
-                    if (line_num == null || !line_num) {
+                    if (line_num == null) {
                         log.error(
                             logTitle,
                             LogPrefix +

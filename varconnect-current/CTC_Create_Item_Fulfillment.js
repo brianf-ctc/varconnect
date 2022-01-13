@@ -1204,7 +1204,6 @@ define([
                         isSucces: true,
                         message: '## Created Item Fulfillement: [itemfulfillment:' + objId + ']'
                     });
-                    
                 } catch (err) {
                     var errMsg = Helper.extractError(err);
                     log.error(

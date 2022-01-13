@@ -211,7 +211,7 @@ define([
             }),
             dontSaveBill: currScript.getParameter({
                 name: 'custscript_ctc_bc_bill_dontcreate'
-            }), 
+            }),
             allowedThreshold: currScript.getParameter({
                 name: 'custscript_ctc_bc_variance_threshold'
             })
@@ -685,7 +685,6 @@ define([
 
                     return true;
                 });
-
             } else {
                 var varianceValues = billPayload.variance || {};
 
@@ -822,7 +821,7 @@ define([
                 allowableVarianceThreshold = param.allowedThreshold,
                 totalVarianceAmount = 0;
 
-                param.allowedThreshold
+            param.allowedThreshold;
 
             if (allowableVarianceThreshold && listVarianceDetails.length) {
                 listVarianceDetails.forEach(function (variance) {
@@ -841,9 +840,7 @@ define([
                 log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
             }
 
-
             if (hasVariance && !currentData.processVariance && !allowBillVariance) {
-
                 util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
 
                 // make listVariance unique
@@ -860,10 +857,15 @@ define([
                 returnObj.details = listVariance.length ? ' -- ' + listVariance.join(', ') : '';
                 returnObj.msg += returnObj.details;
 
-                if (! allowBillVariance && allowableVarianceThreshold) {
-                    returnObj.msg = 'Variance Total exceeded the Allowable Threshold - ' + 
-                    JSON.stringify({total: totalVarianceAmount, threshold: allowableVarianceThreshold}) + '\n' + 
-                    returnObj.msg;
+                if (!allowBillVariance && allowableVarianceThreshold) {
+                    returnObj.msg =
+                        'Variance Total exceeded the Allowable Threshold - ' +
+                        JSON.stringify({
+                            total: totalVarianceAmount,
+                            threshold: allowableVarianceThreshold
+                        }) +
+                        '\n' +
+                        returnObj.msg;
                 }
 
                 return returnObj;
@@ -895,10 +897,15 @@ define([
                 returnObj = JSON.parse(JSON.stringify(recBill));
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
 
-                if (allowableVarianceThreshold && allowBillVariance ) {
-                    returnObj.msg = 'Variance Total is less than Allowable Threshold - ' + 
-                    JSON.stringify({total: totalVarianceAmount, threshold: allowableVarianceThreshold}) + '\n\t\t' + 
-                    returnObj.msg;
+                if (allowableVarianceThreshold && allowBillVariance) {
+                    returnObj.msg =
+                        'Variance Total is less than Allowable Threshold - ' +
+                        JSON.stringify({
+                            total: totalVarianceAmount,
+                            threshold: allowableVarianceThreshold
+                        }) +
+                        '\n\t\t' +
+                        returnObj.msg;
                 }
 
                 returnObj.details =

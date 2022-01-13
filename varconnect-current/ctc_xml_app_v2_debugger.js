@@ -77,7 +77,6 @@ require([
         var logTitle = [LogTitle, 'validateLicense'].join('::');
         log.debug(logTitle, '>> options: ' + JSON.stringify(options));
 
-
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
             response = libLicenseValidator.callValidationSuitelet({
@@ -595,7 +594,7 @@ require([
         var itemNum = data.itemnum;
         var line = data.line;
 
-        log.debug(logTitle, '>> serial data: ' + JSON.stringify(data) );
+        log.debug(logTitle, '>> serial data: ' + JSON.stringify(data));
 
         var po_record = r.load({
             type: 'purchaseorder',

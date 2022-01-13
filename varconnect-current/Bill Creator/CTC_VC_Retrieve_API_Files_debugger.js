@@ -34,7 +34,7 @@ require([
             return true;
         });
 
-        log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg) );
+        log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
 
         return search.create({
             type: 'purchaseorder',
@@ -52,8 +52,9 @@ require([
                     'PurchOrd:F' // PendingBill
                 ],
                 'AND',
-                ['mainline', 'is', 'T']
-                ,'AND',['internalid', 'anyof', 347630]
+                ['mainline', 'is', 'T'],
+                'AND',
+                ['internalid', 'anyof', 347630]
             ],
             columns: [
                 'internalid',
@@ -78,7 +79,7 @@ require([
         var vendorConfig = search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
             // id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            id: searchValues.values['vendor.custentity_vc_bill_config'][0].value,            
+            id: searchValues.values['vendor.custentity_vc_bill_config'][0].value,
             columns: [
                 'custrecord_vc_bc_ack',
                 'custrecord_vc_bc_entry',
@@ -164,8 +165,7 @@ require([
             values: arrReduceData[redkey]
         });
     }
-    ///////////////////////////////    
-
+    ///////////////////////////////
 
     function handleErrorIfAny(summary) {
         var inputSummary = summary.inputSummary;

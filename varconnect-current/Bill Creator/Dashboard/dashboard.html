@@ -5,14 +5,19 @@
     <title>VAR Connect - Bill Creator Dashboard</title>
     <meta name="author" content="Shawn Blackburn" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/bootstrap-ns.css" rel="stylesheet" />
+    <link
+        href="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/bootstrap-ns.css"
+        rel="stylesheet" />
     <!-- change this id after deployment -->
     <!-- bootstrap-ns.css -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+        integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+        crossorigin="anonymous" />
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.24/datatables.min.css" />
     <link rel="shortcut icon" href="#" />
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.24/datatables.min.js"></script>
-    <script src="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/custom.js"></script>
+    <script
+        src="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/custom.js"></script>
     <!-- change this id after deployment -->
     <!-- custom.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
@@ -31,18 +36,24 @@
                         <ul class="list-unstyled">
                             <h4>Alerts</h4>
                             <li id="due">
-                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_not_proc_due_soon" target="_blank">
-                                    <i class="fa fa-hourglass-end"></i> Due Soon <span class="badge badge-due pull-right">{{alert_due}}</span>
+                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_not_proc_due_soon"
+                                    target="_blank">
+                                    <i class="fa fa-hourglass-end"></i> Due Soon <span
+                                        class="badge badge-due pull-right">{{alert_due}}</span>
                                 </a>
                             </li>
                             <li id="no_po">
-                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link" target="_blank">
-                                    <i class="fa fa-exclamation-triangle"></i> No PO Link <span class="badge badge-exclamation pull-right">{{no_po_cnt}}</span>
+                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link"
+                                    target="_blank">
+                                    <i class="fa fa-exclamation-triangle"></i> No PO Link <span
+                                        class="badge badge-exclamation pull-right">{{no_po_cnt}}</span>
                                 </a>
                             </li>
                             <li id="errors">
-                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2" target="_blank">
-                                    <i class="fa fa-bomb"></i> Errors <span class="badge badge-error pull-right">{{alert_error}}</span>
+                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2"
+                                    target="_blank">
+                                    <i class="fa fa-bomb"></i> Errors <span
+                                        class="badge badge-error pull-right">{{alert_error}}</span>
                                 </a>
                             </li>
                             <br />
@@ -53,32 +64,38 @@
                                         class="nav-caret fa fa-caret-down"></span></a>
                                 <ul class="list-unstyled">
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Error
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Pending
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=4" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=4"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Reprocess
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> On Hold
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=7" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=7"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Variance
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link" target="_blank"><i class="fa fa-angle-double-right"></i> No PO Link</a>
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link"
+                                            target="_blank"><i class="fa fa-angle-double-right"></i> No PO Link</a>
                                     </li>
                                 </ul>
                             </li>
@@ -88,33 +105,39 @@
                                 <ul class="list-unstyled">
                                     <li><i class="fa fa-angle-right"></i> Invoice Generated</li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> This Year
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Last Year
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> All
                                         </a>
                                     </li>
                                     <li><i class="fa fa-angle-right"></i> Closed</li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> This Year
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Last Year
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> All
                                         </a>
                                     </li>
@@ -125,19 +148,22 @@
                                         class="nav-caret fa fa-caret-down"></span></a>
                                 <ul class="list-unstyled">
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=107" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=107"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Retrieve API Files
                                         </a>
                                     </li>
                                     <!-- change this id after deployment -->
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=105" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=105"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Retrieve SFTP Files
                                         </a>
                                     </li>
                                     <!-- change this id after deployment -->
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=104" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=104"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Bill File Processor
                                         </a>
                                     </li>
@@ -147,7 +173,8 @@
                                     <!--<li><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=1967" target="_blank"><i class="fa fa-angle-double-right"></i> Serial Generator</a></li>-->
                                     <!-- change this id after deployment -->
                                     <li>
-                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=108" target="_blank">
+                                        <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=108"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> Bill Generator
                                         </a>
                                     </li>
@@ -162,7 +189,8 @@
                                         class="nav-caret fa fa-caret-down"></span></a>
                                 <ul class="list-unstyled">
                                     <li>
-                                        <a href="/app/common/custom/custrecordentrylist.nl?rectype=109" target="_blank"><i class="fa fa-angle-double-right"></i> Vendor Configs</a>
+                                        <a href="/app/common/custom/custrecordentrylist.nl?rectype=109"
+                                            target="_blank"><i class="fa fa-angle-double-right"></i> Vendor Configs</a>
                                     </li>
                                     <!-- change this id after deployment -->
                                     <li>
@@ -176,7 +204,8 @@
                                     </li>
                                     <!-- change this id after deployment -->
                                     <li>
-                                        <a href="/app/site/hosting/scriptlet.nl?script=customscript_sftp_helper_tool&deploy=customdeploy_ctc_vc_bc_sftp_helper" target="_blank">
+                                        <a href="/app/site/hosting/scriptlet.nl?script=customscript_sftp_helper_tool&deploy=customdeploy_ctc_vc_bc_sftp_helper"
+                                            target="_blank">
                                             <i class="fa fa-angle-double-right"></i> SFTP Helper Tool
                                         </a>
                                     </li>
@@ -234,7 +263,7 @@
                                     </tfoot>
                                 </table>
                                 <script type="text/javascript">
-                                    $(document).ready(function() {
+                                    $(document).ready(function () {
                                         $("#example").DataTable({
                                             lengthMenu: [25, 50, 100],
                                             //"pageSize" : 50,
@@ -248,7 +277,7 @@
                                                 //'targets': [15, 16],
                                                 searchable: false,
                                                 orderable: false,
-                                                render: function(data, type, full, meta) {
+                                                render: function (data, type, full, meta) {
                                                     return (
                                                         '<a href="/app/site/hosting/scriptlet.nl?script=customscript_ctc_vc_bill_flex_screen&deploy=customdeploy_vc_bill_creator_flex_screen&record_id=' +
                                                         full.id +
@@ -270,7 +299,7 @@
                                                 data: "billDue",
                                             }, {
                                                 data: "po",
-                                                fnCreatedCell: function(nTd, sData, oData, iRow, iCol) {
+                                                fnCreatedCell: function (nTd, sData, oData, iRow, iCol) {
                                                     $(nTd).html('<a href="/app/accounting/transactions/transaction.nl?id=' + oData.poId + '" target="_blank">' + oData.po + "</a>");
                                                 },
                                             }, {
@@ -282,7 +311,7 @@
                                                 //"render": function(data, type, row) {
                                                 //return data.split("\r\n").join("<br/>");
                                                 //}
-                                            }, ],
+                                            },],
                                             columnDefs: [{
                                                 className: "dt-body-right",
                                                 targets: [4],
@@ -292,7 +321,7 @@
                                             }, {
                                                 width: "25%",
                                                 targets: [10],
-                                            }, ],
+                                            },],
                                             order: [
                                                 [6, "asc"]
                                             ],
@@ -308,7 +337,8 @@
                                         <div class="current-status-item">
                                             <h6><span></span> To Be Processed</h6>
                                             <h3>
-                                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054" target="_blank">
+                                                <a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054"
+                                                    target="_blank">
                                                     {{to_be_proc_cnt}}
                                                 </a>
                                             </h3>
@@ -319,7 +349,8 @@
                                     <div class="col-md-12 col-sm-4 col-xs-6">
                                         <div class="current-status-item">
                                             <h6><span></span> Pending Receipt</h6>
-                                            <h3><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_pending_receipt" target="_blank"> {{pend_rcpt_cnt}} </a></h3>
+                                            <h3><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_pending_receipt"
+                                                    target="_blank"> {{pend_rcpt_cnt}} </a></h3>
                                         </div>
                                     </div>
                                 </div>
@@ -327,7 +358,8 @@
                                     <div class="col-md-12 col-sm-4 col-xs-6">
                                         <div class="current-status-item">
                                             <h6><span></span> On Hold</h6>
-                                            <h3><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6" target="_blank"> {{on_hold_cnt}} </a></h3>
+                                            <h3><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6"
+                                                    target="_blank"> {{on_hold_cnt}} </a></h3>
                                         </div>
                                     </div>
                                 </div>
@@ -341,7 +373,7 @@
                                                 <ul class="list-unstyled">
                                                     <canvas id="chartNotProcessed" width="400" height="400"></canvas>
                                                     <script>
-                                                        $.get("/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=statusSummary", function(d) {
+                                                        $.get("/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=statusSummary", function (d) {
                                                             var ctx = document.getElementById("chartNotProcessed").getContext("2d");
                                                             var myChart = new Chart(ctx, {
                                                                 type: "pie",
@@ -357,7 +389,7 @@
                                                                         backgroundColor: ["rgba(54, 162, 235, 1)", "rgba(255, 99, 132, 1)", "rgba(255, 206, 86, 1)", "rgba(75, 192, 192, 1)", "rgba(153, 5, 255, 1)"],
                                                                         datalabels: {
                                                                             listeners: {
-                                                                                click: function(context) {
+                                                                                click: function (context) {
                                                                                     switch (context.dataIndex) {
                                                                                         case 0:
                                                                                             window.open(
@@ -388,7 +420,7 @@
                                                                                 },
                                                                             },
                                                                         },
-                                                                    }, ],
+                                                                    },],
                                                                 },
                                                             });
                                                         });
@@ -408,9 +440,10 @@
                                                 <ul class="list-unstyled">
                                                     <ul class="list-unstyled">
                                                         <!--{{graph_two_data}}-->
-                                                        <canvas id="chartIntegrations" width="400" height="400"></canvas>
+                                                        <canvas id="chartIntegrations" width="400"
+                                                            height="400"></canvas>
                                                         <script>
-                                                            $.get("/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=integrationSummary", function(d) {
+                                                            $.get("/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=integrationSummary", function (d) {
                                                                 var ctx = document.getElementById("chartIntegrations").getContext("2d");
                                                                 var myChart = new Chart(ctx, {
                                                                     type: "bar",
@@ -428,7 +461,7 @@
                                                                             ],
                                                                             datalabels: {
                                                                                 listeners: {
-                                                                                    click: function(context) {
+                                                                                    click: function (context) {
                                                                                         switch (context.dataIndex) {
                                                                                             case 0:
                                                                                                 window.open(
@@ -464,7 +497,7 @@
                                                                                     },
                                                                                 },
                                                                             },
-                                                                        }, ],
+                                                                        },],
                                                                     },
                                                                     options: {
                                                                         scales: {

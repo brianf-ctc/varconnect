@@ -1,459 +1,464 @@
 <?xml version="1.0"?>
 <!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
 <!-- config -->
-<#assign VC_SerialsMacro_ScriptUrl = "script=577&deploy=1&compid=3353377_SB1&h=dcf4d658ecb45f076d4d" />
-<#assign VC_SerialsTable_NumCols = 5 />
+<#assign VC_SerialsMacro_ScriptUrl="script=577&deploy=1&compid=3353377_SB1&h=dcf4d658ecb45f076d4d" />
+<#assign VC_SerialsTable_NumCols=5 />
 <!-- config:end -->
 
 <!-- serials macro:start -->
-<#assign VC_SerialsUrl = [companyinformation.formsurl?replace("<.*?>", "", "ri"),
-         "/app/site/hosting/scriptlet.nl?", VC_SerialsMacro_ScriptUrl,
-         "&compid=",companyinformation.companyid,
-         "&recid=", record.internalid,
-         "&rectype=invoice",
-         "&mkey=invoiceserials"]?join("") >
-<#import VC_SerialsUrl as VC_SerialsImport />
-<#assign VC_SerialsImportJSON><@VC_SerialsImport.serials /></#assign>
-<#assign VC_InvoiceSerials=[] />
+<#assign VC_SerialsUrl=[companyinformation.formsurl?replace("<.*?>", "", "ri"),
+  "/app/site/hosting/scriptlet.nl?", VC_SerialsMacro_ScriptUrl,
+  "&compid=",companyinformation.companyid,
+  "&recid=", record.internalid,
+  "&rectype=invoice",
+  "&mkey=invoiceserials"]?join("") >
+  <#import VC_SerialsUrl as VC_SerialsImport />
+  <#assign VC_SerialsImportJSON>
+    <@VC_SerialsImport.serials />
+  </#assign>
+  <#assign VC_InvoiceSerials=[] />
 
-<#if VC_SerialsImportJSON != ''>
-  <#assign VC_InvoiceSerials=VC_SerialsImportJSON?eval />
-</#if>
-<!-- serials macro:end -->
+  <#if VC_SerialsImportJSON !=''>
+    <#assign VC_InvoiceSerials=VC_SerialsImportJSON?eval />
+  </#if>
+  <!-- serials macro:end -->
 
-<pdf>
-  <head>
-    <#if .locale=="ru_RU">
-      <link name="verdana" type="font" subtype="opentype" src="${nsfont.verdana}" src-bold="${nsfont.verdana_bold}"
-        bytes="2" />
-    </#if>
-    <macrolist>
-      <macro id="nlheader">
-        <table class="header" style="width: 100%; font-size: 8pt;">
-          <tr style="padding-bottom: 0px;">
-            <td style="padding: 0;"><span style="padding-bottom: 10px; font-size:14pt;"><span
-                  style="font-family:arial,helvetica,sans-serif;">${record@title} ${record.tranid}</span></span></td>
-            <td>&nbsp;</td>
-            <td rowspan="2" align="right" style="padding: 0; font-size: 8pt;"><img
-                src="https://4245687.app.netsuite.com/core/media/media.nl?id=979624&amp;c=4245687&amp;h=76c4d63171647c0ccd85&amp;whence="
-                style="height: 68px; width: 254px;" />
-              <!--<p style="margin-right: 10px;">971 S Clearwater Loop, Post Falls, ID 83854</p>-->
-            </td>
-          </tr>
-          <tr>
-            <td valign="bottom" style="padding: 0;">
-              <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">Invoice Date
-                  ${record.trandate}</span></span><br />
-              <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">Due Date
-                  ${record.duedate}</span></span><br />
-              <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">${record.terms@label}
-                  ${record.terms}</span></span><br />
-              <#if record.custbody_mscontractnumber?has_content><span style="font-size:8pt;"><span
-                    style="font-family:arial,helvetica,sans-serif;">Contract
-                    ${record.custbody_mscontractnumber}</span></span><br /></#if>
-              <#if record.otherrefnum?has_content><span style="font-size:8pt;"><span
-                    style="font-family:arial,helvetica,sans-serif;">Customer PO Number
-                    ${record.otherrefnum}</span></span><br /></#if>
-              <#if record.createdfrom?has_content><span style="font-size:8pt;"><span
-                    style="font-family:arial,helvetica,sans-serif;">${record.createdfrom}</span></span><br /></#if>
-            </td>
-            <td align="left" valign="bottom" style="padding: 0;">
-              <#if record.custbody_erate==true>
-                <#if record.custbody_eratefundingtype?has_content><span style="font-size:8pt;"><span
-                      style="font-family:arial,helvetica,sans-serif;">E-Rate Funding Type
-                      ${record.custbody_eratefundingtype}</span></span><br /></#if>
-                <#if record.custbody_frnnumber?has_content><span style="font-size:8pt;"><span
-                      style="font-family:arial,helvetica,sans-serif;">FRN Number
-                      ${record.custbody_frnnumber}</span></span><br /></#if>
-                <#if record.custbody_form471?has_content><span style="font-size:8pt;"><span
-                      style="font-family:arial,helvetica,sans-serif;">Form 471 Number
-                      ${record.custbody_form471}</span></span><br /></#if>
-                <#else>&nbsp;
-              </#if>
-              <#if record.custbody_quosal_quote_number !=0><span style="font-size:8pt;"><span
-                    style="font-family:arial,helvetica,sans-serif;">Quote Number
-                    ${record.custbody_quosal_quote_number}</span></span><br /></#if>
-            </td>
-          </tr>
-        </table>
-      </macro>
-      <macro id="nlfooter">
-        <table style="width: 100%; font-size: 8pt; margin-top: 10px;">
-          <tr height="0px;">
-            <th>&nbsp;</th>
-            <th style="width: 80px;">&nbsp;</th>
-          </tr>
-          <tr style="background-color: rgb(241, 242, 242); font-size: 8pt;">
-            <td align="center" colspan="2">Customer service and billing inquiries 1-888-809-4609 or
-              accounting@ednetics.com</td>
-          </tr>
-          <tr style="background-color: rgb(241, 242, 242); font-size: 8pt;">
-            <td align="right" style="padding: 0px 150px 0 0px;">Ednetics Inc. 971 S Clearwater Loop, Post Falls, Idaho
-              83854</td>
-            <td align="right">
-              <pagenumber /> of
-              <totalpages />
-            </td>
-          </tr>
-        </table>
-      </macro>
-    </macrolist>
-    <style type="text/css">
-      table {
-        <#if .locale=="zh_CN">font-family: stsong, sans-serif;
-        <#elseif .locale=="zh_TW">font-family: msung, sans-serif;
-        <#elseif .locale=="ja_JP">font-family: heiseimin, sans-serif;
-        <#elseif .locale=="ko_KR">font-family: hygothic, sans-serif;
-        <#elseif .locale=="ru_RU">font-family: verdana;
-        <#else>font-family: arial, helvetica, sans-serif;
-        </#if>font-size: 9pt;
-        table-layout: fixed;
-      }
+  <pdf>
 
-      th {
-        font-size: 8pt;
-        vertical-align: middle;
-        padding: 1px 5px;
-        background-color: #ffffff;
-        color: #a9a9a9;
-      }
-
-      td p {
-        text-align: left;
-      }
-    </style>
-  </head>
-
-  <body header="nlheader" header-height="100px" footer="nlfooter" footer-height="20pt"
-    padding="0.25in 0.25in 0.5in 0.25in" size="Letter">
-    <table style="font-family: Arial, Verdana, sans-serif; width: 100%; margin-top: 10px;">
-      <tr>
-        <td height="210px" rowspan="2" width="480px" valign="bottom"
-          style="font-size: 12pt; padding: 0 2px 50px 60px; color: rgb(65, 64, 66); background-color: rgb(241, 242, 242);">
-          ${record.billaddress}</td>
-        <td height="170px"
-          style="font-size: 8pt; padding: 15px 5px 0 15px; margin-left: 4px; background-color: rgb(241, 242, 242);">SHIP
-          TO<br />${record.shipaddress}</td>
-      </tr>
-      <tr style="height: 20px;">
-        <td
-          style="font-size: 8pt; padding: 10px 5px 10px 15px; background-color: rgb(230, 231, 232); margin-top: 5px; margin-left: 4px;"
-          align="left"><span style="font-size: 8pt;">TOTAL AMOUNT DUE</span><br /><span
-            style="font-size: 14pt;">${record.total}</span></td>
-      </tr>
-      <#if record.memo?has_content || record.message?has_content>
-        <tr style="margin-top: 4px; background-color: rgb(0, 48, 95);">
-          <td colspan="2" style="background-color: rgb(241, 242, 242); padding: 15px;">
-            <#if record.memo?has_content>
-              <p><span style="font-size:8pt; font-family:arial,helvetica,sans-serif;">${record.memo}</span></p>
-            </#if>
-            <#if record.message?has_content>
-              <p><span style="font-size:8pt; font-family:arial,helvetica,sans-serif;">${record.message}</span></p>
-            </#if>
-          </td>
-        </tr>
+    <head>
+      <#if .locale=="ru_RU">
+        <link name="verdana" type="font" subtype="opentype" src="${nsfont.verdana}" src-bold="${nsfont.verdana_bold}"
+          bytes="2" />
       </#if>
-    </table>
+      <macrolist>
+        <macro id="nlheader">
+          <table class="header" style="width: 100%; font-size: 8pt;">
+            <tr style="padding-bottom: 0px;">
+              <td style="padding: 0;"><span style="padding-bottom: 10px; font-size:14pt;"><span
+                    style="font-family:arial,helvetica,sans-serif;">${record@title} ${record.tranid}</span></span></td>
+              <td>&nbsp;</td>
+              <td rowspan="2" align="right" style="padding: 0; font-size: 8pt;"><img
+                  src="https://4245687.app.netsuite.com/core/media/media.nl?id=979624&amp;c=4245687&amp;h=76c4d63171647c0ccd85&amp;whence="
+                  style="height: 68px; width: 254px;" />
+                <!--<p style="margin-right: 10px;">971 S Clearwater Loop, Post Falls, ID 83854</p>-->
+              </td>
+            </tr>
+            <tr>
+              <td valign="bottom" style="padding: 0;">
+                <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">Invoice Date
+                    ${record.trandate}</span></span><br />
+                <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">Due Date
+                    ${record.duedate}</span></span><br />
+                <span style="font-size:8pt;"><span style="font-family:arial,helvetica,sans-serif;">${record.terms@label}
+                    ${record.terms}</span></span><br />
+                <#if record.custbody_mscontractnumber?has_content><span style="font-size:8pt;"><span
+                      style="font-family:arial,helvetica,sans-serif;">Contract
+                      ${record.custbody_mscontractnumber}</span></span><br /></#if>
+                <#if record.otherrefnum?has_content><span style="font-size:8pt;"><span
+                      style="font-family:arial,helvetica,sans-serif;">Customer PO Number
+                      ${record.otherrefnum}</span></span><br /></#if>
+                <#if record.createdfrom?has_content><span style="font-size:8pt;"><span
+                      style="font-family:arial,helvetica,sans-serif;">${record.createdfrom}</span></span><br /></#if>
+              </td>
+              <td align="left" valign="bottom" style="padding: 0;">
+                <#if record.custbody_erate==true>
+                  <#if record.custbody_eratefundingtype?has_content><span style="font-size:8pt;"><span
+                        style="font-family:arial,helvetica,sans-serif;">E-Rate Funding Type
+                        ${record.custbody_eratefundingtype}</span></span><br /></#if>
+                  <#if record.custbody_frnnumber?has_content><span style="font-size:8pt;"><span
+                        style="font-family:arial,helvetica,sans-serif;">FRN Number
+                        ${record.custbody_frnnumber}</span></span><br /></#if>
+                  <#if record.custbody_form471?has_content><span style="font-size:8pt;"><span
+                        style="font-family:arial,helvetica,sans-serif;">Form 471 Number
+                        ${record.custbody_form471}</span></span><br /></#if>
+                  <#else>&nbsp;
+                </#if>
+                <#if record.custbody_quosal_quote_number !=0><span style="font-size:8pt;"><span
+                      style="font-family:arial,helvetica,sans-serif;">Quote Number
+                      ${record.custbody_quosal_quote_number}</span></span><br /></#if>
+              </td>
+            </tr>
+          </table>
+        </macro>
+        <macro id="nlfooter">
+          <table style="width: 100%; font-size: 8pt; margin-top: 10px;">
+            <tr height="0px;">
+              <th>&nbsp;</th>
+              <th style="width: 80px;">&nbsp;</th>
+            </tr>
+            <tr style="background-color: rgb(241, 242, 242); font-size: 8pt;">
+              <td align="center" colspan="2">Customer service and billing inquiries 1-888-809-4609 or
+                accounting@ednetics.com</td>
+            </tr>
+            <tr style="background-color: rgb(241, 242, 242); font-size: 8pt;">
+              <td align="right" style="padding: 0px 150px 0 0px;">Ednetics Inc. 971 S Clearwater Loop, Post Falls, Idaho
+                83854</td>
+              <td align="right">
+                <pagenumber /> of
+                <totalpages />
+              </td>
+            </tr>
+          </table>
+        </macro>
+      </macrolist>
+      <style type="text/css">
+        table {
+          <#if .locale=="zh_CN">font-family: stsong, sans-serif;
+          <#elseif .locale=="zh_TW">font-family: msung, sans-serif;
+          <#elseif .locale=="ja_JP">font-family: heiseimin, sans-serif;
+          <#elseif .locale=="ko_KR">font-family: hygothic, sans-serif;
+          <#elseif .locale=="ru_RU">font-family: verdana;
+          <#else>font-family: arial, helvetica, sans-serif;
+          </#if>font-size: 9pt;
+          table-layout: fixed;
+        }
 
-    <#assign printeratesummary=false />
-    <#assign taxrate=0 />
-    <#assign alternatesubtotal=0 />
-    <#assign eratediscount=0 />
-    <#assign lessretainage=0 />
-    <#if record.item?has_content>
-      <br />
-      <table style="width: 100%;">
-        <!-- start items -->
-        <#list record.item as item>
-          <#if item_index==0>
-            <!-- START Header Definition -->
-            <thead>
-              <tr style="backgrount-color: #ffffff; color: #a9a9a9;">
-                <th align="left" style="width: 40px;">LINE</th>
-                <th align="left" style="width: 116px;">PART NUMBER</th>
-                <th>DESCRIPTION</th>
-                <th align="right" style="width: 90px;">PRICE</th>
-                <th align="right" style="width: 50px; padding-left: 10px;">QTY</th>
-                <th align="right" style="width: 90px;">EXTENDED</th>
-              </tr>
-            </thead>
-          </#if><!-- END Header Definition -->
-          <!-- START Set printing variables for erate and retainage -->
-          <#assign printline=true />
-          <#if item.olditemid=="4946" && record.entity.internalId=="4238">
-            <#assign printline=true />
-            <#elseif item.olditemid=="4946">
-              <#assign printline=false />
-              <#assign printeratesummary=true />
-              <#elseif item.olditemid=="5263">
-                <#assign printline=false />
-          </#if>
-          <!-- END Set printing variables for erate and retainage -->
-          <!-- START Set Tax Rate if available and not a Description or Summary. Should check for isTaxable item possibly. -->
-          <#if item.itemtype !="Subtotal" && item.itemtype !="Description" && item.olditemid !="4946" && item.olditemid
-            !="5263" && item.olditemid !="8261">
-            <#if item.taxrate1?has_content>
-              <#assign taxrate=item.taxrate1 />
-            </#if>
-          </#if>
-          <!-- END Set Tax Rate if available and not a Description or Summary. Should check for isTaxable item possibly. -->
-          <!-- START Item Logic -->
-          <#if item.custcol_printline==true && printline==true>
-            <!-- START Item Row Logic -->
-            <#if item.itemtype=="Description">
-              <#if item.olditemid=="6711">
-                <tr style="font-size: 8pt;">
-                  <td align="left">&nbsp;</td>
-                  <td colspan="5" style="">${item.description}</td>
-                </tr>
-                <#else>
-                  <tr style="border-top: solid #f1f2f2; font-size: 8pt;">
-                    <td align="left">
-                      <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
-                          ${item_index + 1}</#if>
-                    </td>
-                    <td colspan="5" style="font-weight: bold;">${item.description}</td>
-                  </tr>
+        th {
+          font-size: 8pt;
+          vertical-align: middle;
+          padding: 1px 5px;
+          background-color: #ffffff;
+          color: #a9a9a9;
+        }
+
+        td p {
+          text-align: left;
+        }
+      </style>
+    </head>
+
+    <body header="nlheader" header-height="100px" footer="nlfooter" footer-height="20pt"
+      padding="0.25in 0.25in 0.5in 0.25in" size="Letter">
+      <table style="font-family: Arial, Verdana, sans-serif; width: 100%; margin-top: 10px;">
+        <tr>
+          <td height="210px" rowspan="2" width="480px" valign="bottom"
+            style="font-size: 12pt; padding: 0 2px 50px 60px; color: rgb(65, 64, 66); background-color: rgb(241, 242, 242);">
+            ${record.billaddress}</td>
+          <td height="170px"
+            style="font-size: 8pt; padding: 15px 5px 0 15px; margin-left: 4px; background-color: rgb(241, 242, 242);">
+            SHIP
+            TO<br />${record.shipaddress}</td>
+        </tr>
+        <tr style="height: 20px;">
+          <td
+            style="font-size: 8pt; padding: 10px 5px 10px 15px; background-color: rgb(230, 231, 232); margin-top: 5px; margin-left: 4px;"
+            align="left"><span style="font-size: 8pt;">TOTAL AMOUNT DUE</span><br /><span
+              style="font-size: 14pt;">${record.total}</span></td>
+        </tr>
+        <#if record.memo?has_content || record.message?has_content>
+          <tr style="margin-top: 4px; background-color: rgb(0, 48, 95);">
+            <td colspan="2" style="background-color: rgb(241, 242, 242); padding: 15px;">
+              <#if record.memo?has_content>
+                <p><span style="font-size:8pt; font-family:arial,helvetica,sans-serif;">${record.memo}</span></p>
               </#if>
-              <#elseif item.itemtype=="Subtotal">
-                <#if item.olditemid=="7014">
-                  <!-- Package Subtotal Start -->
-                  <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
-                    <td align="left" style="padding-left: 6px;">
-                      <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
-                          ${item_index + 1}</#if>
-                    </td>
-                    <td align="left" style="">${item.custcol_pkg_part_number}</td>
-                    <td>${item.description}</td>
-                    <td align="right">
-                      <#if item.custcol_pkg_price?has_content>${item.custcol_pkg_price}<#else>&nbsp;</#if>
-                    </td>
-                    <td align="right">
-                      <#if item.custcol_pkg_quantity?has_content && item.custcol_pkg_quantity !=0>
-                        ${item.custcol_pkg_quantity}<#else>&nbsp;</#if>
-                    </td>
-                    <td align="right" style="padding-right: 5px;">${item.amount}</td>
+              <#if record.message?has_content>
+                <p><span style="font-size:8pt; font-family:arial,helvetica,sans-serif;">${record.message}</span></p>
+              </#if>
+            </td>
+          </tr>
+        </#if>
+      </table>
+
+      <#assign printeratesummary=false />
+      <#assign taxrate=0 />
+      <#assign alternatesubtotal=0 />
+      <#assign eratediscount=0 />
+      <#assign lessretainage=0 />
+      <#if record.item?has_content>
+        <br />
+        <table style="width: 100%;">
+          <!-- start items -->
+          <#list record.item as item>
+            <#if item_index==0>
+              <!-- START Header Definition -->
+              <thead>
+                <tr style="backgrount-color: #ffffff; color: #a9a9a9;">
+                  <th align="left" style="width: 40px;">LINE</th>
+                  <th align="left" style="width: 116px;">PART NUMBER</th>
+                  <th>DESCRIPTION</th>
+                  <th align="right" style="width: 90px;">PRICE</th>
+                  <th align="right" style="width: 50px; padding-left: 10px;">QTY</th>
+                  <th align="right" style="width: 90px;">EXTENDED</th>
+                </tr>
+              </thead>
+            </#if><!-- END Header Definition -->
+            <!-- START Set printing variables for erate and retainage -->
+            <#assign printline=true />
+            <#if item.olditemid=="4946" && record.entity.internalId=="4238">
+              <#assign printline=true />
+              <#elseif item.olditemid=="4946">
+                <#assign printline=false />
+                <#assign printeratesummary=true />
+                <#elseif item.olditemid=="5263">
+                  <#assign printline=false />
+            </#if>
+            <!-- END Set printing variables for erate and retainage -->
+            <!-- START Set Tax Rate if available and not a Description or Summary. Should check for isTaxable item possibly. -->
+            <#if item.itemtype !="Subtotal" && item.itemtype !="Description" && item.olditemid !="4946" &&
+              item.olditemid !="5263" && item.olditemid !="8261">
+              <#if item.taxrate1?has_content>
+                <#assign taxrate=item.taxrate1 />
+              </#if>
+            </#if>
+            <!-- END Set Tax Rate if available and not a Description or Summary. Should check for isTaxable item possibly. -->
+            <!-- START Item Logic -->
+            <#if item.custcol_printline==true && printline==true>
+              <!-- START Item Row Logic -->
+              <#if item.itemtype=="Description">
+                <#if item.olditemid=="6711">
+                  <tr style="font-size: 8pt;">
+                    <td align="left">&nbsp;</td>
+                    <td colspan="5" style="">${item.description}</td>
                   </tr>
-                  <#elseif item.olditemid=="7015">
-                    <!-- Package Subtotal Stop -->
+                  <#else>
+                    <tr style="border-top: solid #f1f2f2; font-size: 8pt;">
+                      <td align="left">
+                        <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
+                            ${item_index + 1}</#if>
+                      </td>
+                      <td colspan="5" style="font-weight: bold;">${item.description}</td>
+                    </tr>
+                </#if>
+                <#elseif item.itemtype=="Subtotal">
+                  <#if item.olditemid=="7014">
+                    <!-- Package Subtotal Start -->
                     <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
                       <td align="left" style="padding-left: 6px;">
                         <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
                             ${item_index + 1}</#if>
                       </td>
-                      <td colspan="5" align="left" style="font-weight: bold;">${item.description}</td>
+                      <td align="left" style="">${item.custcol_pkg_part_number}</td>
+                      <td>${item.description}</td>
+                      <td align="right">
+                        <#if item.custcol_pkg_price?has_content>${item.custcol_pkg_price}<#else>&nbsp;</#if>
+                      </td>
+                      <td align="right">
+                        <#if item.custcol_pkg_quantity?has_content && item.custcol_pkg_quantity !=0>
+                          ${item.custcol_pkg_quantity}<#else>&nbsp;</#if>
+                      </td>
+                      <td align="right" style="padding-right: 5px;">${item.amount}</td>
                     </tr>
-                    <#else>
-                      <!-- Default Subtotal -->
+                    <#elseif item.olditemid=="7015">
+                      <!-- Package Subtotal Stop -->
                       <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
-                        <td align="left" style="paddng-left: 6px;">
+                        <td align="left" style="padding-left: 6px;">
                           <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
                               ${item_index + 1}</#if>
                         </td>
-                        <td colspan="2" align="left" style="font-weight: bold;">${item.description}</td>
-                        <td align="left">&nbsp;</td>
-                        <td align="left">&nbsp;</td>
-                        <td align="right" style="font-weight: bold; padding-right: 5px;">${item.amount}</td>
+                        <td colspan="5" align="left" style="font-weight: bold;">${item.description}</td>
                       </tr>
+                      <#else>
+                        <!-- Default Subtotal -->
+                        <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
+                          <td align="left" style="paddng-left: 6px;">
+                            <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
+                                ${item_index + 1}</#if>
+                          </td>
+                          <td colspan="2" align="left" style="font-weight: bold;">${item.description}</td>
+                          <td align="left">&nbsp;</td>
+                          <td align="left">&nbsp;</td>
+                          <td align="right" style="font-weight: bold; padding-right: 5px;">${item.amount}</td>
+                        </tr>
+                  </#if>
+                  <#else>
+                    <!-- START show regular line data -->
+                    <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
+                      <td align="left" style="padding-left: 5px;">
+                        <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
+                            ${item_index + 1}</#if>
+                      </td>
+                      <td align="left">
+                        <#if item.custcol_pkg_part_number?has_content>${item.custcol_pkg_part_number}<#elseif
+                            item.custcol_item_displayname?has_content>${item.custcol_item_displayname}<#else>
+                              ${item.item}
+                        </#if>
+                      </td>
+                      <td>${item.description}</td>
+                      <td align="right">${item.rate}</td>
+                      <td align="right" style="padding-left: 10px;">${item.quantity}</td>
+                      <td align="right" style="padding-right: 5px;">${item.amount}</td>
+                    </tr>
+              </#if><!-- END show regular line data -->
+              <#if item.custcol_item_notes !="">
+                <!-- START show item notes -->
+                <#list item.custcol_item_notes?split("<br /><br />") as paragraph>
+                <#if paragraph_index==0>
+                  <tr style=" font-size: 8pt; padding-left: 5px; margin-botton: 0px;">
+                    <td align="left" style="padding-left: 5px;">&nbsp;</td>
+                    <td colspan="2" align="left" style="margin-bottom: 0px;">
+                      <span style="backgrount-color: #ffffff; color: #a9a9a9;">Notes: </span>
+                      <span style="backgrount-color: #ffffff; color: #a9a9a9; font-style: italic;">${paragraph}</span>
+                    </td>
+                    <td align="right">&nbsp;</td>
+                    <td align="right" style="padding-left: 10px;">&nbsp;</td>
+                    <td align="right" style="padding-right: 5px;">&nbsp;</td>
+                  </tr>
+                  <#else>
+                    <tr style=" font-size: 8pt; padding-left: 5px; margin-top: 0px; padding-top: 5px;">
+                      <td align="left" style="padding-left: 5px; margin-top: 0px; margin-botton: 0px;">&nbsp;</td>
+                      <td colspan="2" align="left" style="margin-top: 0px; margin-bottom: 0px;">
+                        <p style="backgrount-color: #ffffff; color: #a9a9a9; font-style: italic;">${paragraph}</p>
+                      </td>
+                      <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
+                      <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
+                      <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
+                    </tr>
                 </#if>
-                <#else>
-                  <!-- START show regular line data -->
-                  <tr style="border-top: solid #f1f2f2; font-size: 8pt; padding-left: 5px;">
-                    <td align="left" style="padding-left: 5px;">
-                      <#if item.custcol_printed_line_number?has_content>${item.custcol_printed_line_number}<#else>
-                          ${item_index + 1}</#if>
-                    </td>
-                    <td align="left">
-                      <#if item.custcol_pkg_part_number?has_content>${item.custcol_pkg_part_number}<#elseif
-                          item.custcol_item_displayname?has_content>${item.custcol_item_displayname}<#else>${item.item}
-                      </#if>
-                    </td>
-                    <td>${item.description}</td>
-                    <td align="right">${item.rate}</td>
-                    <td align="right" style="padding-left: 10px;">${item.quantity}</td>
-                    <td align="right" style="padding-right: 5px;">${item.amount}</td>
-                  </tr>
-            </#if><!-- END show regular line data -->
-            <#if item.custcol_item_notes !="">
-              <!-- START show item notes -->
-              <#list item.custcol_item_notes?split("<br /><br />") as paragraph>
-              <#if paragraph_index==0>
-                <tr style=" font-size: 8pt; padding-left: 5px; margin-botton: 0px;">
-                  <td align="left" style="padding-left: 5px;">&nbsp;</td>
-                  <td colspan="2" align="left" style="margin-bottom: 0px;">
-                    <span style="backgrount-color: #ffffff; color: #a9a9a9;">Notes: </span>
-                    <span style="backgrount-color: #ffffff; color: #a9a9a9; font-style: italic;">${paragraph}</span>
-                  </td>
-                  <td align="right">&nbsp;</td>
-                  <td align="right" style="padding-left: 10px;">&nbsp;</td>
-                  <td align="right" style="padding-right: 5px;">&nbsp;</td>
-                </tr>
-                <#else>
-                  <tr style=" font-size: 8pt; padding-left: 5px; margin-top: 0px; padding-top: 5px;">
-                    <td align="left" style="padding-left: 5px; margin-top: 0px; margin-botton: 0px;">&nbsp;</td>
-                    <td colspan="2" align="left" style="margin-top: 0px; margin-bottom: 0px;">
-                      <p style="backgrount-color: #ffffff; color: #a9a9a9; font-style: italic;">${paragraph}</p>
-                    </td>
-                    <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
-                    <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
-                    <td align="right" style="margin-top: 0px; margin-bottom: 0px;">&nbsp;</td>
-                  </tr>
-              </#if>
-        </#list>
-    </#if><!-- END show item notes -->
-    <#if item.custcol_serial_number_summary !="" && item.custcol_serial_number_summary_two="">
-      <!-- START show serial number summary -->
-      <tr style=" font-size: 8pt; padding-left: 5px;">
-        <td align="left" style="padding-left: 5px;">&nbsp;</td>
-        <td colspan="2" align="left">&nbsp;
-          <span style="backgrount-color: #ffffff; color: #a9a9a9;">Serial Numbers: </span> <span
-            style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary}</span>
-        </td>
-        <td align="right">&nbsp;</td>
-        <td align="right" style="padding-left: 10px;">&nbsp;</td>
-        <td align="right" style="padding-right: 5px;">&nbsp;</td>
-      </tr>
-    </#if><!-- END show serial number summary -->
-    <#if item.custcol_serial_number_summary_two !="">
-      <!-- START show serial number summary -->
-      <tr style=" font-size: 8pt; padding-left: 5px;">
-        <td align="left" style="padding-left: 5px;">&nbsp;</td>
-        <td colspan="2" align="left">
-          <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_two}</span>
-        </td>
-        <td align="right">&nbsp;</td>
-        <td align="right" style="padding-left: 10px;">&nbsp;</td>
-        <td align="right" style="padding-right: 5px;">&nbsp;</td>
-      </tr>
-    </#if><!-- END show serial number summary -->
-    <#if item.custcol_serial_number_summary_three !="">
-      <!-- START show serial number summary -->
-      <tr style=" font-size: 8pt; padding-left: 5px;">
-        <td align="left" style="padding-left: 5px;">&nbsp;</td>
-        <td colspan="2" align="left">
-          <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_three}</span>
-        </td>
-        <td align="right">&nbsp;</td>
-        <td align="right" style="padding-left: 10px;">&nbsp;</td>
-        <td align="right" style="padding-right: 5px;">&nbsp;</td>
-      </tr>
-    </#if><!-- END show serial number summary -->
-    <#if item.custcol_serial_number_summary_four !="">
-      <!-- START show serial number summary -->
-      <tr style=" font-size: 8pt; padding-left: 5px;">
-        <td align="left" style="padding-left: 5px;">&nbsp;</td>
-        <td colspan="2" align="left">
-          <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_four}</span>
-        </td>
-        <td align="right">&nbsp;</td>
-        <td align="right" style="padding-left: 10px;">&nbsp;</td>
-        <td align="right" style="padding-right: 5px;">&nbsp;</td>
-      </tr>
-    </#if><!-- END show serial number summary -->
-    </#if><!-- END Item Row Logic -->
-    </#list><!-- END items loop -->
-    </table>
-    </#if>
-    <br />
-    <br />
-    <table style="page-break-inside: avoid; width: 100%;  font-size: 8pt; font-family:arial,helvetica,sans-serif;">
-      <tr style="border-bottom: solid #E8E8E8;">
-        <td colspan="2" style="padding-left: 5px;"><span
-            style="font-size:14pt; padding: 0; margin: 0; font-family:arial,helvetica,sans-serif;">${record@title}
-            Summary</span></td>
-      </tr>
-      <#if record.custbody_less_retainage !=0 || printeratesummary==true>
-        <#assign alternatesubtotal=record.subtotal - record.custbody_less_retainage - record.custbody_erate_total />
-        <tr style="border-bottom: solid #E8E8E8;">
-          <td align="left" style="font-size: 8pt; padding-left: 5px;">Subtotal</td>
-          <td align="right" style="font-size: 8pt; padding-right: 5px;">${alternatesubtotal?string.currency}</td>
-        </tr>
-        <#else>
-          <tr style="border-bottom: solid #E8E8E8;">
-            <td align="left" style="font-size: 8pt; padding-left: 5px;">${record.subtotal@label}</td>
-            <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.subtotal}</td>
-          </tr>
-      </#if>
-      <#if record.taxtotal !=0>
-        <tr style="border-bottom: solid #E8E8E8;">
-          <td align="left" style="font-size: 8pt; padding-left: 5px;">${record.taxtotal@label} (${taxrate})</td>
-          <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.taxtotal}</td>
-        </tr>
-      </#if>
-      <#if record.custbody_less_retainage !=0>
-        <tr style="border-bottom: solid #E8E8E8;">
-          <td align="left" style="font-size: 8pt; padding-left: 5px;">Less Retainage</td>
-          <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.custbody_less_retainage}</td>
-        </tr>
-      </#if>
-      <#if record.custbody_erate_total !=0 && printeratesummary==true>
-        <tr style="border-bottom: solid #E8E8E8;">
-          <td align="left" style="font-size: 8pt; padding-left: 5px;">E-rate Discount</td>
-          <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.custbody_erate_total}</td>
-        </tr>
-      </#if>
-      <tr style="line-height: 150%;">
-        <td align="left" style="font-size: 8pt; font-weight: bold; padding-left: 5px;">${record.total@label}</td>
-        <td align="right" style="font-weight: bold; font-size: 8pt; padding-right: 5px;">${record.total}</td>
-      </tr>
-    </table>
-    <!-- START INVOICE SERIALS CODE  -->
-
-
-
-    <!-- serials table:start -->
-    <#if VC_InvoiceSerials?has_content>
-
-      <#assign itemName='' />
-      <#assign numCols=VC_SerialsTable_NumCols />
-      <#assign colCnt=1 />
-      <pbr />
-      <table class="serials" table-layout="auto" style="width: 100%;margin-top:10px;align:center;">
-
-        <#list VC_InvoiceSerials?sort_by("itemName") as serialline>
-
-          <#if (itemName !=serialline.itemName)>
-            <#if itemName !=''>
-              <!-- fill up empty columns -->
-              <#if (colCnt> 1) ><#list 0..numCols-colCnt as cnt>
-                  <td>&nbsp;</td>
-                </#list>
-              </#if>
-              </tr>
-            </#if><!-- #if itemName != '' -->
-            <tr style="margin-top:10px; border-bottom: 1px solid #000;">
-              <th colspan="${numCols}">${serialline.itemName} Serial Number(s) </th>
-            </tr>
-            <tr>
-              <#assign itemName=serialline.itemName />
-              <#assign colCnt=1 />
-          </#if>
-
-          <td align="center"><span style="white-space:nowrap;" align="center">${serialline.serialno}</span></td>
-
-          <!-- column breaker -->
-          <#if (colCnt==numCols)>
-            </tr>
-            <tr>
-              <#assign colCnt=1 />
-              <#else>
-                <#assign colCnt+=1 />
-          </#if>
-
-        </#list><!-- #list VC_InvoiceSerials?sort_by("itemName") as serialline -->
-
-        <!-- fill up empty columns -->
-        <#if (colCnt> 1) ><#list 0..numCols-colCnt as cnt>
-            <td>&nbsp;</td>
           </#list>
+      </#if><!-- END show item notes -->
+      <#if item.custcol_serial_number_summary !="" && item.custcol_serial_number_summary_two="">
+        <!-- START show serial number summary -->
+        <tr style=" font-size: 8pt; padding-left: 5px;">
+          <td align="left" style="padding-left: 5px;">&nbsp;</td>
+          <td colspan="2" align="left">&nbsp;
+            <span style="backgrount-color: #ffffff; color: #a9a9a9;">Serial Numbers: </span> <span
+              style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary}</span>
+          </td>
+          <td align="right">&nbsp;</td>
+          <td align="right" style="padding-left: 10px;">&nbsp;</td>
+          <td align="right" style="padding-right: 5px;">&nbsp;</td>
+        </tr>
+      </#if><!-- END show serial number summary -->
+      <#if item.custcol_serial_number_summary_two !="">
+        <!-- START show serial number summary -->
+        <tr style=" font-size: 8pt; padding-left: 5px;">
+          <td align="left" style="padding-left: 5px;">&nbsp;</td>
+          <td colspan="2" align="left">
+            <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_two}</span>
+          </td>
+          <td align="right">&nbsp;</td>
+          <td align="right" style="padding-left: 10px;">&nbsp;</td>
+          <td align="right" style="padding-right: 5px;">&nbsp;</td>
+        </tr>
+      </#if><!-- END show serial number summary -->
+      <#if item.custcol_serial_number_summary_three !="">
+        <!-- START show serial number summary -->
+        <tr style=" font-size: 8pt; padding-left: 5px;">
+          <td align="left" style="padding-left: 5px;">&nbsp;</td>
+          <td colspan="2" align="left">
+            <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_three}</span>
+          </td>
+          <td align="right">&nbsp;</td>
+          <td align="right" style="padding-left: 10px;">&nbsp;</td>
+          <td align="right" style="padding-right: 5px;">&nbsp;</td>
+        </tr>
+      </#if><!-- END show serial number summary -->
+      <#if item.custcol_serial_number_summary_four !="">
+        <!-- START show serial number summary -->
+        <tr style=" font-size: 8pt; padding-left: 5px;">
+          <td align="left" style="padding-left: 5px;">&nbsp;</td>
+          <td colspan="2" align="left">
+            <span style="backgrount-color: #ffffff; color: #a9a9a9;">${item.custcol_serial_number_summary_four}</span>
+          </td>
+          <td align="right">&nbsp;</td>
+          <td align="right" style="padding-left: 10px;">&nbsp;</td>
+          <td align="right" style="padding-right: 5px;">&nbsp;</td>
+        </tr>
+      </#if><!-- END show serial number summary -->
+      </#if><!-- END Item Row Logic -->
+      </#list><!-- END items loop -->
+      </table>
+      </#if>
+      <br />
+      <br />
+      <table style="page-break-inside: avoid; width: 100%;  font-size: 8pt; font-family:arial,helvetica,sans-serif;">
+        <tr style="border-bottom: solid #E8E8E8;">
+          <td colspan="2" style="padding-left: 5px;"><span
+              style="font-size:14pt; padding: 0; margin: 0; font-family:arial,helvetica,sans-serif;">${record@title}
+              Summary</span></td>
+        </tr>
+        <#if record.custbody_less_retainage !=0 || printeratesummary==true>
+          <#assign alternatesubtotal=record.subtotal - record.custbody_less_retainage - record.custbody_erate_total />
+          <tr style="border-bottom: solid #E8E8E8;">
+            <td align="left" style="font-size: 8pt; padding-left: 5px;">Subtotal</td>
+            <td align="right" style="font-size: 8pt; padding-right: 5px;">${alternatesubtotal?string.currency}</td>
+          </tr>
+          <#else>
+            <tr style="border-bottom: solid #E8E8E8;">
+              <td align="left" style="font-size: 8pt; padding-left: 5px;">${record.subtotal@label}</td>
+              <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.subtotal}</td>
+            </tr>
         </#if>
-
+        <#if record.taxtotal !=0>
+          <tr style="border-bottom: solid #E8E8E8;">
+            <td align="left" style="font-size: 8pt; padding-left: 5px;">${record.taxtotal@label} (${taxrate})</td>
+            <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.taxtotal}</td>
+          </tr>
+        </#if>
+        <#if record.custbody_less_retainage !=0>
+          <tr style="border-bottom: solid #E8E8E8;">
+            <td align="left" style="font-size: 8pt; padding-left: 5px;">Less Retainage</td>
+            <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.custbody_less_retainage}</td>
+          </tr>
+        </#if>
+        <#if record.custbody_erate_total !=0 && printeratesummary==true>
+          <tr style="border-bottom: solid #E8E8E8;">
+            <td align="left" style="font-size: 8pt; padding-left: 5px;">E-rate Discount</td>
+            <td align="right" style="font-size: 8pt; padding-right: 5px;">${record.custbody_erate_total}</td>
+          </tr>
+        </#if>
+        <tr style="line-height: 150%;">
+          <td align="left" style="font-size: 8pt; font-weight: bold; padding-left: 5px;">${record.total@label}</td>
+          <td align="right" style="font-weight: bold; font-size: 8pt; padding-right: 5px;">${record.total}</td>
         </tr>
       </table>
-      <hr />
-    </#if><!-- #if VC_InvoiceSerials?has_content -->
-    <!-- serials table:end-->
+      <!-- START INVOICE SERIALS CODE  -->
 
-    <!-- END INVOICE SERIALS CODE  -->
-  </body>
-</pdf>
+
+
+      <!-- serials table:start -->
+      <#if VC_InvoiceSerials?has_content>
+
+        <#assign itemName='' />
+        <#assign numCols=VC_SerialsTable_NumCols />
+        <#assign colCnt=1 />
+        <pbr />
+        <table class="serials" table-layout="auto" style="width: 100%;margin-top:10px;align:center;">
+
+          <#list VC_InvoiceSerials?sort_by("itemName") as serialline>
+
+            <#if (itemName !=serialline.itemName)>
+              <#if itemName !=''>
+                <!-- fill up empty columns -->
+                <#if (colCnt> 1) ><#list 0..numCols-colCnt as cnt>
+                    <td>&nbsp;</td>
+                  </#list>
+                </#if>
+                </tr>
+              </#if><!-- #if itemName != '' -->
+              <tr style="margin-top:10px; border-bottom: 1px solid #000;">
+                <th colspan="${numCols}">${serialline.itemName} Serial Number(s) </th>
+              </tr>
+              <tr>
+                <#assign itemName=serialline.itemName />
+                <#assign colCnt=1 />
+            </#if>
+
+            <td align="center"><span style="white-space:nowrap;" align="center">${serialline.serialno}</span></td>
+
+            <!-- column breaker -->
+            <#if (colCnt==numCols)>
+              </tr>
+              <tr>
+                <#assign colCnt=1 />
+                <#else>
+                  <#assign colCnt+=1 />
+            </#if>
+
+          </#list><!-- #list VC_InvoiceSerials?sort_by("itemName") as serialline -->
+
+          <!-- fill up empty columns -->
+          <#if (colCnt> 1) ><#list 0..numCols-colCnt as cnt>
+              <td>&nbsp;</td>
+            </#list>
+          </#if>
+
+          </tr>
+        </table>
+        <hr />
+      </#if><!-- #if VC_InvoiceSerials?has_content -->
+      <!-- serials table:end-->
+
+      <!-- END INVOICE SERIALS CODE  -->
+    </body>
+  </pdf>

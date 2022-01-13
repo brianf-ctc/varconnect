@@ -552,7 +552,6 @@ define([
             } else if (rs.length == 1) {
                 log.debug(logTitle, LogPrefix + ' >> Matching serial found');
             } else {
-
                 log.debug(
                     logTitle,
                     LogPrefix + ' >> Multiple Duplicates ' + JSON.stringify(rs.length)

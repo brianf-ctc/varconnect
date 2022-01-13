@@ -211,6 +211,9 @@ define([
             }),
             dontSaveBill: currScript.getParameter({
                 name: 'custscript_ctc_bc_bill_dontcreate'
+            }), 
+            allowedThreshold: currScript.getParameter({
+                name: 'custscript_ctc_bc_variance_threshold'
             })
         };
 
@@ -330,6 +333,8 @@ define([
             ///////////////////////////////////
 
             var hasVariance = false,
+                totalVarianceAmount = 0,
+                listVarianceDetails = [],
                 listVariance = [];
 
             //// TRANSFORM TO VENDOR BILL ////////////////
@@ -565,6 +570,16 @@ define([
 
                         lineVariance.push('Quantity');
                         listVariance.push('Quantity');
+
+                        listVarianceDetails.push({
+                            type: 'line',
+                            label: 'Quantity',
+                            diffQty: lineDataVB.billQty - currentLineData.qty,
+                            diffAmount: Helper.roundOff(
+                                (lineDataVB.billQty - currentLineData.qty) *
+                                    (lineDataVB.billRate - currentLineData.rate)
+                            )
+                        });
                     } else {
                         recBill.setCurrentSublistValue({
                             sublistId: 'item',
@@ -587,6 +602,12 @@ define([
                         sublistId: 'item',
                         fieldId: 'rate',
                         value: lineDataVB.billRate
+                    });
+
+                    listVarianceDetails.push({
+                        type: 'line',
+                        label: 'Rate',
+                        diffAmount: Helper.roundOff(lineDataVB.billRate - currentLineData.rate)
                     });
                 }
                 ///////////////////////////////////
@@ -615,7 +636,7 @@ define([
             log.debug(logTitle, 'Processing charges :  ' + JSON.stringify(billPayload.charges));
             log.debug(logTitle, '// variances :  ' + JSON.stringify(billPayload.variance));
 
-            taxTotal = Helper.roundOff(taxTotal);
+            taxTotal = Helper.roundOff(taxTotal) || 0;
 
             var vbTaxTotal =
                 parseFloat(recBill.getValue({ fieldId: 'taxtotal' })) +
@@ -648,6 +669,12 @@ define([
 
                 billPayload.varianceLines.forEach(function (varianceData) {
                     listVariance.push(varianceData.name);
+
+                    listVarianceDetails.push({
+                        label: varianceData.name,
+                        diffAmount: varianceData.rate
+                    });
+
                     Helper.addNewLine({
                         record: recBill,
                         qty: 1,
@@ -701,6 +728,11 @@ define([
                     hasVariance = true;
                     listVariance.push('Tax');
 
+                    listVarianceDetails.push({
+                        label: 'Tax',
+                        diffAmount: taxVariance.amount
+                    });
+
                     try {
                         Helper.addNewLine({
                             record: recBill,
@@ -718,6 +750,11 @@ define([
                 if (!ignoreVariance && shipVariance.apply && shipVariance.amount) {
                     hasVariance = true;
                     listVariance.push('Shipping');
+
+                    listVarianceDetails.push({
+                        label: 'Shipping',
+                        diffAmount: shipVariance.amount
+                    });
 
                     try {
                         Helper.addNewLine({
@@ -737,6 +774,11 @@ define([
                     hasVariance = true;
                     listVariance.push('Other');
 
+                    listVarianceDetails.push({
+                        label: 'Other',
+                        diffAmount: otherVariance.amount
+                    });
+
                     try {
                         Helper.addNewLine({
                             record: recBill,
@@ -755,6 +797,11 @@ define([
                     hasVariance = true;
                     listVariance.push('Adjustments');
 
+                    listVarianceDetails.push({
+                        label: 'Adjustments',
+                        diffAmount: otherVariance.amount
+                    });
+
                     try {
                         Helper.addNewLine({
                             record: recBill,
@@ -771,12 +818,37 @@ define([
             }
 
             /////////////////////////////////
+            var allowBillVariance = false,
+                allowableVarianceThreshold = param.allowedThreshold,
+                totalVarianceAmount = 0;
 
-            if (hasVariance && !currentData.processVariance) {
+                param.allowedThreshold
+
+            if (allowableVarianceThreshold && listVarianceDetails.length) {
+                listVarianceDetails.forEach(function (variance) {
+                    totalVarianceAmount += variance.diffAmount;
+                    return true;
+                });
+                totalVarianceAmount = Helper.roundOff(totalVarianceAmount);
+
+                log.debug(logTitle, '>>> totalVarianceAmount: ' + totalVarianceAmount);
+                log.debug(
+                    logTitle,
+                    '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
+                );
+
+                allowBillVariance = totalVarianceAmount <= allowableVarianceThreshold;
+                log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
+            }
+
+
+            if (hasVariance && !currentData.processVariance && !allowBillVariance) {
+
                 util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
 
                 // make listVariance unique
-                var objVariance = {}, tmpArray = [];
+                var objVariance = {},
+                    tmpArray = [];
                 listVariance.forEach(function (varValue) {
                     if (!objVariance.hasOwnProperty(varValue)) {
                         objVariance[varValue] = 1;
@@ -787,6 +859,12 @@ define([
 
                 returnObj.details = listVariance.length ? ' -- ' + listVariance.join(', ') : '';
                 returnObj.msg += returnObj.details;
+
+                if (! allowBillVariance && allowableVarianceThreshold) {
+                    returnObj.msg = 'Variance Total exceeded the Allowable Threshold - ' + 
+                    JSON.stringify({total: totalVarianceAmount, threshold: allowableVarianceThreshold}) + '\n' + 
+                    returnObj.msg;
+                }
 
                 return returnObj;
             }
@@ -816,6 +894,13 @@ define([
 
                 returnObj = JSON.parse(JSON.stringify(recBill));
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
+
+                if (allowableVarianceThreshold && allowBillVariance ) {
+                    returnObj.msg = 'Variance Total is less than Allowable Threshold - ' + 
+                    JSON.stringify({total: totalVarianceAmount, threshold: allowableVarianceThreshold}) + '\n\t\t' + 
+                    returnObj.msg;
+                }
+
                 returnObj.details =
                     'Linked to vendor bill ' +
                     JSON.stringify({ id: newRecordId, name: billPayload.invoice });

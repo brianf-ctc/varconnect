@@ -261,11 +261,11 @@ define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'], func
                         arrMatchedSKU.push(matchedSku);
                         // billFileNotes.push('Matched SKU: ' + matchedSku);
                     }
-                    }
+                }
 
                 if (arrMatchedSKU.length) {
                     // billFileNotes.push('Matched SKU: (' + arrMatchedSKU.join(',') + ')');
-                    billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length );
+                    billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
                 }
             } else {
                 for (var l = 0; l < myArr[i].ordObj.lines.length; l++) {

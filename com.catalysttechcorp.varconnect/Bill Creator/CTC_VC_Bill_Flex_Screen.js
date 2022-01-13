@@ -855,7 +855,7 @@ define([
                     if ( Variance.Config.taxItem2) {
                         arrItemOptions.push({
                             value: Variance.Config.taxItem2,
-                            text: Helper.getItemName(Variance.Config.taxItem2,)
+                            text: Helper.getItemName(Variance.Config.taxItem2)
                         });
                     }
 
@@ -1601,6 +1601,11 @@ define([
                 adjustment: { applied: false, amount: 0, item: Variance.Config.otherItem }
             });
 
+            var ignoreVariance = false;
+            if (Current.BILL_DATA.hasOwnProperty('ignoreVariance') && Current.BILL_DATA.ignoreVariance == 'T' ) {
+                ignoreVariance = true;
+            }
+
             var varianceValues = processVariance.loadValues();
             log.debug(logTitle, '>> varianceValues : ' + JSON.stringify(varianceValues));
 
@@ -1659,6 +1664,8 @@ define([
 
             arrVarianceLines.forEach(function (lineData, index) {
                 lineData.amountfixed = lineData.amount;
+                if (ignoreVariance) lineData.applied = 'F';
+
                 log.debug(logTitle, '>>>> lineData ' + JSON.stringify(lineData));
 
                 for (var fieldId in lineData) {
@@ -1709,7 +1716,8 @@ define([
             log.debug(logTitle, 'custpage_action = ' + params.custpage_action);
             // log.debug(logTitle, 'params = ' + JSON.stringify(params) );
 
-            var updateValues = {};
+            var updateValues = {},
+                ignoreVariance = params.custpage_action == 'reprocess_novar';
 
             // first treat every submission as a "Save"
             for (var i = 0; i < Current.BILL_DATA.lines.length; i++) {
@@ -1720,6 +1728,7 @@ define([
                         line: i
                     }) * 1;
 
+                if (!ignoreVariance) {
                 Current.BILL_DATA.lines[i].PRICE =
                     context.request.getSublistValue({
                         group: 'item',
@@ -1740,6 +1749,7 @@ define([
                         name: 'fqty',
                         line: i
                     }) * 1;
+            }
             }
 
             var varianceLines = [];
@@ -1786,6 +1796,8 @@ define([
                     varLineData.nsitem && varLineData.nsitem.trim()
                         ? varLineData.nsitem
                         : varLineData.item;
+
+                if (ignoreVariance) varLineData.apply = 'F';
 
                 if (varLineData.apply == 'T')
                     varianceLines.push({
@@ -1840,12 +1852,7 @@ define([
                     break;
                 case 'reprocess_novar':
                     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.REPROCESS;
-                    updateValues.custrecord_ctc_vc_bill_proc_variance = 'T';
-                    // Variance.Values.applyTax = 'F';
-                    // Variance.Values.applyShip = 'F';
-                    // Variance.Values.applyOther = 'F';
-                    // Variance.Values.applyAdjustment = 'F';
-
+                    updateValues.custrecord_ctc_vc_bill_proc_variance = 'F';
                     Current.BILL_DATA.ignoreVariance = 'T';
                     log.debug(logTitle, '>> reprocess_novar ' + JSON.stringify(updateValues));
                     break;
