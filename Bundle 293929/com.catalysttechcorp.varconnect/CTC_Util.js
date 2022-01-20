@@ -35,7 +35,7 @@ define(['N/format', 'N/record','N/search', 'N/task'],
             },
             roundOff: function (value) {
                 var flValue = parseFloat(value || '0');
-                if (!flValue || isNaN(flValue)) return false;
+                if (!flValue || isNaN(flValue)) return 0;
     
                 return Math.round(flValue * 100) / 100;
             },    

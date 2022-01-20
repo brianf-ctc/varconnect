@@ -496,9 +496,20 @@ define([
                                 node: lineInfoNodes[j],
                                 xpath: 'ItemEstimatedShipDate'
                             })[0]
+                        ),
+                        order_eta_parent: util.getNodeTextContent(
+                            xml.XPath.select({
+                                node: lineInfoNodes[j].parentNode,
+                                xpath: 'EstimatedShipDate'
+                            })[0]
                         )
                     };
                     log.audit(logTitle, '>> xml line info: ' + JSON.stringify(xmlLineInfo));
+
+                    if (!xmlLineInfo.order_eta) {
+                        xmlLineInfo.order_eta = xmlLineInfo.order_eta_parent;
+                    }
+
                     // check if backordered
                     if (!xmlLineInfo.bo_qty) continue;
 

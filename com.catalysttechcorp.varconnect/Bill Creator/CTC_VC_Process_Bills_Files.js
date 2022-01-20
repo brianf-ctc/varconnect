@@ -91,7 +91,6 @@ define([
             }
         }
 
-
         // end
         // filters.push('OR');
         // filters.push(['custrecord_ctc_vc_bill_linked_po','anyof','@NONE@']);

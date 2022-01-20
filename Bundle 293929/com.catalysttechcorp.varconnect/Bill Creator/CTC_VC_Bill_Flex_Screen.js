@@ -7,18 +7,40 @@ define([
     './../CTC_VC_Constants',
     './../CTC_Util',
     'N/ui/serverWidget',
+    'N/ui/message',
     'N/record',
     'N/redirect',
     'N/search',
     'N/url',
     'N/runtime',
     'N/task'
-], function (VC_Constants, CTC_Util, serverWidget, record, redirect, search, url, runtime, task) {
+], function (
+    VC_Constants,
+    CTC_Util,
+    serverWidget,
+    message,
+    record,
+    redirect,
+    search,
+    url,
+    runtime,
+    task
+) {
     var LOG_TITLE = 'FlexScreen',
         BILL_CREATOR = VC_Constants.Bill_Creator;
 
     var Helper = {
             CACHE: {},
+            extractError: function (option) {
+                var errorMessage = util.isString(option)
+                    ? option
+                    : option.message || option.error || JSON.stringify(option);
+
+                if (!errorMessage || !util.isString(errorMessage))
+                    errorMessage = 'Unexpected Error occurred';
+
+                return errorMessage;
+            },
             processBill: function () {
                 var mrTask = task.create({
                     taskType: task.TaskType.MAP_REDUCE,
@@ -34,7 +56,8 @@ define([
                 return false;
             },
             getItemName: function (itemId) {
-                if (!itemId ) return '';
+                if (!itemId) return '';
+
                 var cacheKey = ['item', itemId].join(':');
                 if (!Helper.CACHE.hasOwnProperty(cacheKey)) {
                     try {
@@ -56,8 +79,67 @@ define([
 
                 return Helper.CACHE[cacheKey];
             },
+            isCalcActive: function () {
+                var returnValue = false;
+
+                if (
+                    CTC_Util.inArray(Current.BILLFILE_DATA.status, [
+                        BILL_CREATOR.Status.PENDING,
+                        BILL_CREATOR.Status.VARIANCE
+                    ]) &&
+                    !Current.BILLFILE_DATA.billLink
+                ) {
+                    returnValue = true;
+                }
+
+                return returnValue;
+            },
+            isBillable: function () {
+                var returnValue = true;
+                if (!Current.PO_DATA) return false;
+
+                if (
+                    Current.PO_DATA &&
+                    CTC_Util.inArray(Current.PO_DATA.statusRef, [
+                        'fullyBilled',
+                        'pendingReceipt',
+                        'closed'
+                    ])
+                ) {
+                    Current.WarnMessage.push(
+                        'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
+                    );
+                    returnValue = false;
+                }
+
+                if (returnValue) {
+                    if (Current.PO_REC && !Current.BILLFILE_DATA.billLink) {
+                        try {
+                            Current.BILL_REC = record.transform({
+                                fromType: 'purchaseorder',
+                                fromId: Current.PO_ID,
+                                toType: 'vendorbill',
+                                isDynamic: true
+                            });
+                        } catch (bill_err) {
+                            returnValue = false;
+                            log.audit(
+                                logTitle,
+                                '>> ERROR Generating Bill Record: ' + Helper.extractError(bill_err)
+                            );
+                            Current.ErrorMessage.push(
+                                'Unable to create Vendor Bill due to - ' +
+                                    Helper.extractError(bill_err)
+                            );
+                        }
+                    }
+                }
+
+                return returnValue;
+            },
             isEditActive: function () {
                 var returnValue = false;
+                if (!Current.BILLFILE_DATA) return false; // no bill file, return false;
 
                 if (
                     CTC_Util.inArray(Current.BILLFILE_DATA.status, [
@@ -69,10 +151,15 @@ define([
                     ])
                 ) {
                     returnValue = true;
-                    if (!Current.BILLFILE_DATA.billLink) {
-                        if (Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
-                            returnValue = false;
-                    } else {
+
+                    // exception on edit mode:
+                    if (
+                        // if the PO is already fully billed
+                        !Current.IS_BILLABLE ||
+                        // bill file is already closed, but
+                        (!Current.BILLFILE_DATA.billLink &&
+                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
+                    ) {
                         returnValue = false;
                     }
                 }
@@ -81,7 +168,7 @@ define([
             },
             addFields: function (fieldInfo) {
                 var logTitle = [logTitle, 'addFields'].join('::');
-                log.debug(logTitle, '>> fieldInfo: ' + JSON.stringify(fieldInfo));
+                // log.audit(logTitle, '>> fieldInfo: ' + JSON.stringify(fieldInfo));
 
                 var fld = Current.Form.addField(fieldInfo);
 
@@ -232,6 +319,16 @@ define([
                                     text: 'Save & Process Manually'
                                 });
                             }
+                        } else if (
+                            !CTC_Util.isEmpty(Current.PO_DATA) &&
+                            CTC_Util.inArray(Current.PO_DATA.statusRef, ['fullyBilled'])
+                        ) {
+                            arrFields[0].selectOptions.push({
+                                text: 'Save & Close',
+                                value: 'close'
+                            });
+
+                            // var msg = message
                         } else if (Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE) {
                             arrFields[0].selectOptions.push(
                                 {
@@ -526,7 +623,7 @@ define([
                             });
                         } else if (lineFields[field] == 'int') {
                             lineData[field] = parseInt(lineData[field], 10);
-                            lineData[field] = lineData[field].toFixed(0);
+                            // lineData[field] = lineData[field].toFixed(0);
                         } else if (lineFields[field] == 'currency') {
                             lineData[field] = parseFloat(lineData[field]);
                         }
@@ -550,8 +647,6 @@ define([
                     // lineData.taxAmount = Helper.calculateLineTax(lineData);
                 }
 
-                // log.audit('getLineItems', '>> objLineItems: ' + JSON.stringify(objLineItems));
-
                 for (var lineItem in objLineItems) {
                     objLineItems[lineItem].amount =
                         objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
@@ -563,6 +658,8 @@ define([
                         objLineItems[lineItem]
                     );
                 }
+
+                log.audit('getLineItems', '>> objLineItems: ' + JSON.stringify(objLineItems));
 
                 return objLineItems;
             },
@@ -576,9 +673,38 @@ define([
 
                 return CTC_Util.roundOff(taxAmount) || 0;
             },
+            collectTaxItems: function (objLineItems, itemId) {
+                if (!Current.listTaxItems) Current.listTaxItems = {};
+                if (!objLineItems || CTC_Util.isEmpty(objLineItems)) return false;
+
+                log.audit('collectTaxItems', '>> items: ' + JSON.stringify([objLineItems, itemId]));
+
+                if (itemId) objLineItems[itemId] = objLineItems;
+
+                for (var lineItem in objLineItems) {
+                    if (Current.listTaxItems.hasOwnProperty(lineItem)) continue;
+
+                    var taxData = {};
+
+                    if (objLineItems[lineItem].taxrate || objLineItems[lineItem].taxrate1) {
+                        taxData.taxrate1 =
+                            objLineItems[lineItem].taxrate || objLineItems[lineItem].taxrate1;
+                    }
+
+                    if (objLineItems[lineItem].taxrate2) {
+                        taxData.taxrate1 = objLineItems[lineItem].taxrate2;
+                    }
+
+                    if (!CTC_Util.isEmpty(taxData)) {
+                        Current.listTaxItems[lineItem] = taxData;
+                    }
+                }
+
+                return Current.listTaxItems;
+            },
             addLineItem: function (record, lineData) {
-                if (!lineData.item) return false;
                 log.audit('addLineItem', '>> lineData: ' + JSON.stringify(lineData));
+                if (!lineData.item) return false;
                 record.selectNewLine({
                     sublistId: 'item'
                 });
@@ -595,12 +721,12 @@ define([
                 record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'rate',
-                    value: lineData.rate || 0.0
+                    value: Math.abs(lineData.rate || 0.0)
                 });
                 record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'amount',
-                    value: (lineData.quantity || 1) * (lineData.rate || 0.0)
+                    value: Math.abs((lineData.quantity || 1) * (lineData.rate || 0.0))
                 });
                 record.commitLine({ sublistId: 'item' });
                 var lineCount = record.getLineCount('item');
@@ -618,7 +744,7 @@ define([
                     var objItemLines = Helper.getLineItems(Current.PO_REC);
                     var arrItemOptions = [{ text: ' ', value: '' }];
 
-                    log.debug('SublistFields.InvoiceLines', JSON.stringify(objItemLines));
+                    log.audit('SublistFields.InvoiceLines', JSON.stringify(objItemLines));
 
                     if (!CTC_Util.isEmpty(objItemLines)) {
                         for (var lineItem in objItemLines) {
@@ -650,6 +776,7 @@ define([
                             label: 'Bill Quantity',
                             type: serverWidget.FieldType.CURRENCY,
                             displayType:
+                                Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                     ? serverWidget.FieldDisplayType.ENTRY
                                     : serverWidget.FieldDisplayType.INLINE
@@ -674,6 +801,7 @@ define([
                             type: serverWidget.FieldType.CURRENCY,
                             label: 'Bill Rate',
                             displayType:
+                                Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                     ? serverWidget.FieldDisplayType.ENTRY
                                     : serverWidget.FieldDisplayType.INLINE
@@ -713,7 +841,7 @@ define([
                     var objItemLines = Helper.getLineItems(Current.PO_REC);
                     var arrItemOptions = [{ text: ' ', value: ' ' }];
 
-                    log.debug('SublistFields.Variance', JSON.stringify(objItemLines));
+                    log.audit('SublistFields.Variance', JSON.stringify(objItemLines));
                     if (!CTC_Util.isEmpty(objItemLines)) {
                         for (var lineItem in objItemLines) {
                             var lineData = objItemLines[lineItem];
@@ -724,10 +852,22 @@ define([
                         }
                     }
 
+                    if ( Variance.Config.taxItem2) {
+                        arrItemOptions.push({
+                            value: Variance.Config.taxItem2,
+                            text: Helper.getItemName(Variance.Config.taxItem2)
+                        });
+                    }
+
                     return [
                         {
                             id: 'applied',
                             type: serverWidget.FieldType.CHECKBOX,
+                            displayType:
+                                Current.IS_ACTIVE_EDIT &&
+                                Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                                    ? serverWidget.FieldDisplayType.ENTRY
+                                    : serverWidget.FieldDisplayType.INLINE,
                             label: 'Apply'
                         },
                         {
@@ -755,9 +895,11 @@ define([
                             id: 'nsitem',
                             type: serverWidget.FieldType.SELECT,
                             label: 'PO Item',
-                            displayType: Current.IS_ACTIVE_EDIT
-                                ? serverWidget.FieldDisplayType.ENTRY
-                                : serverWidget.FieldDisplayType.INLINE,
+                            displayType:
+                                Current.IS_ACTIVE_EDIT &&
+                                Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                                    ? serverWidget.FieldDisplayType.ENTRY
+                                    : serverWidget.FieldDisplayType.INLINE,
                             selectOptions: arrItemOptions
                         },
                         {
@@ -772,6 +914,7 @@ define([
                             label: 'Amount',
                             totallingField: true,
                             displayType:
+                                Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                     ? serverWidget.FieldDisplayType.ENTRY
                                     : serverWidget.FieldDisplayType.INLINE
@@ -792,6 +935,288 @@ define([
                 };
 
                 return SublistFields[sublistName].call(SublistFields);
+            },
+            processInvoiceLines: function () {},
+            processVariance: function (option) {
+                var logTitle = [LOG_TITLE, 'processVariance'].join('::');
+
+                var varianceOption = option,
+                    varianceLineValues = {};
+
+                ///////////////////////////
+                // VARIANCE INITIALIZE
+                // var varianceValues = {
+                //         tax: { applied: false, amount: 0, item: Variance.Config.taxItem },
+                //         shipping: { applied: false, amount: 0, item: Variance.Config.shipItem },
+                //         other: { applied: false, amount: 0, item: Variance.Config.otherItem },
+                //         adjustment: { applied: false, amount: 0, item: Variance.Config.otherItem }
+                //     },
+                //     varLineData = {},
+                //     varianceLineValues = {},
+                //     arrVarianceLines = [];
+
+                return {
+                    loadValues: function () {
+                        // if (CTC_Util.isEmpty(Current.BILL_DATA.varianceLines)) return false;
+
+                        var lineValues = {};
+                        if (!CTC_Util.isEmpty(Current.BILL_DATA.varianceLines)) {
+                            Current.BILL_DATA.varianceLines.forEach(function (varianceValue) {
+                                if (varianceValue.type == 'miscCharges') {
+                                    if (!lineValues[varianceValue.type])
+                                        lineValues[varianceValue.type] = {};
+
+                                    lineValues[varianceValue.type][varianceValue.description] =
+                                        varianceValue;
+                                } else {
+                                    lineValues[varianceValue.type] = varianceValue;
+                                }
+                                return true;
+                            });
+                            varianceLineValues = lineValues;
+                        }
+                        return lineValues;
+                    },
+
+                    /// SHIPPING CHARGES //////////////
+                    shippingCharge: function (values, listVariance) {
+                        var shipVariance = varianceOption.shipping;
+
+                        if (Variance.Config.applyShip) {
+                            if (values) {
+                                shipVariance.applied = true;
+                                shipVariance.nsitem = values.item;
+                                // shipVariance.item = values.item;
+                                shipVariance.amount = Current.IS_ACTIVE_RECALC
+                                    ? Total.deltaShip || 0
+                                    : parseFloat(values.rate || '0');
+                            } else {
+                                shipVariance.applied = Total.deltaShip != 0;
+                                shipVariance.amount = Total.deltaShip || 0;
+                            }
+
+                            shipVariance.itemname = Helper.getItemName(shipVariance.item);
+                        }
+
+                        log.audit(logTitle, '>> shipVariance: ' + JSON.stringify(shipVariance));
+
+                        if (Current.BILL_REC && shipVariance.item) {
+                            var varLineData = Helper.addLineItem(Current.BILL_REC, {
+                                label: 'SHIPPING',
+                                item: shipVariance.nsitem || shipVariance.item,
+                                rate: shipVariance.amount
+                            });
+                            log.audit(logTitle, '>> shipping line: ' + JSON.stringify(varLineData));
+
+                            if (varLineData) {
+                                shipVariance.taxAmount = varLineData.taxAmount || 0;
+                                // Total.lineTax += varLineData.taxAmount || 0;
+                            }
+                        }
+                        util.extend(shipVariance, {
+                            type: 'shipping',
+                            varname: 'Shipping',
+                            applied: shipVariance.applied === true ? 'T' : 'F',
+                            description: 'VC | Shipping Variance',
+                            itemid: shipVariance.item,
+                            amount: shipVariance.amount || 0,
+                            amounttax: shipVariance.taxAmount
+                        });
+
+                        log.audit(logTitle, '>> shipVariance (2): ' + JSON.stringify(shipVariance));
+
+                        if (shipVariance.taxAmount) Total.lineTax += shipVariance.taxAmount;
+
+                        listVariance.push(shipVariance);
+
+                        return shipVariance;
+                        /////////////////////////////////
+                    },
+                    /// OTHER CHARGES //////////////
+                    otherCharge: function (values, listVariance) {
+                        var otherVariance = varianceOption.other;
+
+                        if (Variance.Config.applyOther) {
+                            if (values) {
+                                otherVariance.applied = true;
+                                otherVariance.nsitem = values.item;
+                                // otherVariance.item = values.item;
+                                otherVariance.amount = Current.IS_ACTIVE_RECALC
+                                    ? Current.BILL_DATA.charges.other
+                                    : parseFloat(values.rate || '0');
+                            } else {
+                                otherVariance.applied = Current.BILL_DATA.charges.other != 0;
+                                otherVariance.amount = Current.BILL_DATA.charges.other;
+                            }
+
+                            otherVariance.itemname = Helper.getItemName(otherVariance.item);
+                        }
+
+                        if (Current.BILL_REC && otherVariance.item) {
+                            var varLineData = Helper.addLineItem(Current.BILL_REC, {
+                                label: 'OTHER CHARGES',
+                                item: otherVariance.nsitem || otherVariance.item,
+                                rate: otherVariance.amount
+                            });
+
+                            if (varLineData) {
+                                otherVariance.taxAmount = varLineData.taxAmount || 0;
+                                // Total.lineTax += varLineData.taxAmount || 0;
+                            }
+                        }
+
+                        util.extend(otherVariance, {
+                            applied: otherVariance.applied === true ? 'T' : 'F',
+                            type: 'other',
+                            varname: 'Other Charges',
+                            description: 'VC | Other Charges',
+                            itemid: otherVariance.item,
+                            amounttax: otherVariance.taxAmount
+                        });
+
+                        if (otherVariance.taxAmount) Total.lineTax += otherVariance.taxAmount;
+                        Total.miscAmount += otherVariance.amount;
+                        listVariance.push(otherVariance);
+
+                        return otherVariance;
+                        /////////////////////////////////
+                    },
+                    /// MISC CHARGES //////////////
+                    miscCharge: function (values, listVariance) {
+                        var arrMiscCharges = Current.BILL_DATA.charges.miscCharges || [];
+
+                        // misc charges
+                        arrMiscCharges.forEach(function (miscCharge) {
+                            var miscChargeLine = {
+                                    item: Variance.Config.otherItem,
+                                    applied: 'T',
+                                    type: 'miscCharges',
+                                    varname: 'Misc Charges'
+                                },
+                                miscChgLineData = {};
+
+                            if (values && values[miscCharge.description]) {
+                                var savedMiscCharge = values[miscCharge.description];
+                                miscChargeLine.nsitem = savedMiscCharge.item;
+                                // miscChargeLine.item = values.item;
+
+                                miscChargeLine.amount = Current.IS_ACTIVE_RECALC
+                                    ? parseFloat(miscCharge.amount)
+                                    : parseFloat(savedMiscCharge.rate || '0');
+
+                                miscChargeLine.itemname = Helper.getItemName(miscChargeLine.item);
+                            }
+
+                            if (Current.BILL_REC && miscChargeLine.item) {
+                                miscChgLineData = Helper.addLineItem(Current.BILL_REC, {
+                                    label: 'MISC CHARGES - ' + miscCharge.description,
+                                    item: miscChargeLine.nsitem || miscChargeLine.item,
+                                    rate: parseFloat(miscChargeLine.amount)
+                                });
+                            }
+
+                            util.extend(miscChargeLine, {
+                                description: miscCharge.description,
+                                amount: parseFloat(miscCharge.amount),
+                                itemid: miscChargeLine.item,
+                                itemname: Helper.getItemName(miscChargeLine.item),
+                                amounttax: miscChgLineData.taxAmount || 0
+                            });
+
+                            if (miscChargeLine.taxAmount) Total.lineTax += miscChargeLine.taxAmount;
+                            Total.miscAmount += miscChargeLine.amount;
+                            listVariance.push(miscChargeLine);
+
+                            return true;
+                        });
+
+                        return true;
+                        /////////////////////////////////
+                    },
+                    taxCharge: function (values, listVariance) {
+                        var taxVariance = varianceOption.tax;
+
+                        if (Variance.Config.applyTax) {
+                            if (values) {
+                                taxVariance.applied = true;
+                                taxVariance.nsitem = values.item;
+                                taxVariance.amount = Current.IS_ACTIVE_RECALC
+                                    ? Total.deltaTax
+                                    : parseFloat(values.rate);
+                            } else {
+                                taxVariance.applied = Total.deltaTax != 0;
+                                taxVariance.amount = Total.deltaTax;
+                            }
+                            taxVariance.itemname = Helper.getItemName(taxVariance.item);
+                        }
+                        if (Current.BILL_REC && taxVariance.item) {
+                            var varLineData = Helper.addLineItem(Current.BILL_REC, {
+                                label: 'TAX CHARGES',
+                                item: taxVariance.nsitem || taxVariance.item,
+                                rate: taxVariance.amount
+                            });
+
+                            if (varLineData) {
+                                taxVariance.taxAmount = varLineData.taxAmount || 0;
+                            }
+                        }
+
+                        util.extend(taxVariance, {
+                            applied: taxVariance.applied === true ? 'T' : 'F',
+                            type: 'tax',
+                            varname: 'Tax',
+                            amount: taxVariance.amount || 0,
+                            amounttax: taxVariance.taxAmount,
+                            description: 'VC | Tax Variance',
+                            itemid: taxVariance.item
+                        });
+
+                        if (taxVariance.taxAmount) Total.lineTax += taxVariance.taxAmount;
+
+                        listVariance.unshift(taxVariance);
+                    },
+                    adjustmentCharge: function (values, listVariance) {
+                        var adjustmentVariance = varianceOption.adjustment;
+
+                        if (Total.Adjustment) {
+                            if (values) {
+                                adjustmentVariance.applied = true;
+                                adjustmentVariance.amount = parseFloat(values.rate);
+                                adjustmentVariance.nsitem = values.item;
+                            } else {
+                                adjustmentVariance.applied = Total.Adjustment != 0;
+                                adjustmentVariance.amount = Total.Adjustment;
+                            }
+                        }
+                        adjustmentVariance.itemname = Helper.getItemName(adjustmentVariance.item);
+
+                        if (Current.BILL_REC && adjustmentVariance.item) {
+                            varLineData = Helper.addLineItem(Current.BILL_REC, {
+                                label: 'ADJUSTMENT',
+                                item: adjustmentVariance.nsitem || adjustmentVariance.item,
+                                rate: adjustmentVariance.amount
+                            });
+                            adjustmentVariance.taxAmount = varLineData.taxAmount;
+                            log.debug(
+                                logTitle,
+                                '>> adjustment line: ' + JSON.stringify(varLineData)
+                            );
+                            // Total.lineTax += varianceValues.tax.lineData.taxAmount;
+                        }
+
+                        util.extend(adjustmentVariance, {
+                            applied: adjustmentVariance.applied === true ? 'T' : 'F',
+                            type: 'adjustment',
+                            varname: 'Adjustment',
+                            description: 'VC | Adjustment',
+                            itemid: adjustmentVariance.item,
+                            amounttax: adjustmentVariance.taxAmount
+                        });
+                        listVariance.push(adjustmentVariance);
+                        //////////////////////////////////////
+                    },
+                    addVarianceLine: function (lineData, index) {}
+                };
             }
         },
         Param = {
@@ -799,6 +1224,15 @@ define([
             TaskId: null
         },
         Variance = {},
+        Total = {
+            lineTax: 0,
+            lineShip: 0,
+            lineAmount: 0,
+            Amount: 0,
+            deltaTax: 0,
+            deltaShip: 0,
+            miscAmount: 0
+        },
         Current = {
             Method: null,
             PO_ID: null,
@@ -808,6 +1242,8 @@ define([
             BILL_DATA: null,
             BILL_REC: null,
             Form: null,
+            WarnMessage: [],
+            ErrorMessage: [],
             ActiveStatus: [
                 BILL_CREATOR.Status.PENDING,
                 BILL_CREATOR.Status.ERROR,
@@ -828,7 +1264,7 @@ define([
 
         log.debug(
             logTitle,
-            '*** START *** ' + JSON.stringify({ method: Current.Method, param: Param })
+            '****** START ****** :  ' + JSON.stringify({ method: Current.Method, param: Param })
         );
 
         Variance.Config = {
@@ -836,10 +1272,11 @@ define([
             applyShip: Current.Script.getParameter({ name: 'custscript_ctc_bc_ship_var' }),
             applyOther: Current.Script.getParameter({ name: 'custscript_ctc_bc_other_var' }),
             taxItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_tax_item' }),
+            taxItem2: Current.Script.getParameter({ name: 'custscript_ctc_bc_tax_item2' }),
             shipItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_ship_item' }),
             otherItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_other_item' })
         };
-        log.debug(logTitle, 'Variance.Config : ' + JSON.stringify(Variance.Config));
+        log.debug(logTitle, '>> Variance.Config : ' + JSON.stringify(Variance.Config));
 
         Current.BILLFILE_REC = record.load({
             type: 'customrecord_ctc_vc_bills',
@@ -900,12 +1337,22 @@ define([
         };
 
         Current.BILL_DATA = JSON.parse(Current.BILLFILE_DATA.billJson);
+        ['shipping', 'other', 'tax'].forEach(function (chargeType) {
+            Current.BILL_DATA.charges[chargeType] = parseFloat(
+                Current.BILL_DATA.charges[chargeType] || '0.00'
+            );
+            return true;
+        });
 
+        /////////////////////////////////////////////////////////
         if (Current.Method === 'GET' && Param.TaskId == 'processbill') {
             return Helper.processBill();
         }
         /////////////////////////////////////////////////////////
+
+        /////////////////////////////////////////////////////////
         if (Current.Method === 'GET') {
+            // CREATE FORM
             Current.Form = serverWidget.createForm({ title: 'Flex Screen' });
             Current.Form.clientScriptModulePath = './Libraries/CTC_VC_Lib_Suitelet_Client_Script';
 
@@ -937,7 +1384,10 @@ define([
                 Current.BILLFILE_DATA.status = parseInt(Current.BILLFILE_DATA.status);
             }
 
-            log.debug(logTitle, 'Current.BILLFILE_DATA: ' + JSON.stringify(Current.BILLFILE_DATA));
+            log.debug(
+                logTitle,
+                '>> Current.BILLFILE_DATA: ' + JSON.stringify(Current.BILLFILE_DATA)
+            );
             ////////////////////////////////////
 
             // fieldgroups
@@ -953,7 +1403,14 @@ define([
             }).isSingleColumn = true;
 
             ///////////////////////////
+            Current.ErrorMessage = '';
+            Current.IS_BILLABLE = Helper.isBillable();
             Current.IS_ACTIVE_EDIT = Helper.isEditActive();
+            Current.IS_ACTIVE_RECALC = Helper.isCalcActive();
+
+            log.debug(logTitle, '>> IS_BILLABLE: ' + JSON.stringify(Current.IS_BILLABLE));
+            log.debug(logTitle, '>> IS_ACTIVE_EDIT: ' + JSON.stringify(Current.IS_ACTIVE_EDIT));
+            log.debug(logTitle, '>> IS_ACTIVE_RECALC: ' + JSON.stringify(Current.IS_ACTIVE_RECALC));
 
             ///////////////////////////
             /// ACTION FIELDS ////////
@@ -967,6 +1424,7 @@ define([
                 custpage_processing_logs: Current.BILLFILE_DATA.processLog
             }).forEach(Helper.addFields);
 
+            ///////////////////////////
             /// PO  FIELDS ////////
             Helper.getFormFields('PURCH_ORDER', {
                 custpage_ponum: Current.BILLFILE_DATA.billPO || '',
@@ -982,6 +1440,8 @@ define([
                 custpage_calctotal: Current.BILL_DATA.total || ''
             }).forEach(Helper.addFields);
 
+            ///////////////////////////
+            /// TOTALS  ////////
             Helper.getFormFields('TOTALS', {
                 custpage_total: 0,
                 custpage_calctotal: 0,
@@ -990,6 +1450,7 @@ define([
                 custpage_poshiptotal: 0
             }).forEach(Helper.addFields);
 
+            ///////////////////////////
             /// INVOICE  FIELDS ////////
             Helper.getFormFields('INVOICE', {
                 custpage_inv: Current.BILLFILE_REC.getValue('custrecord_ctc_vc_bill_number'),
@@ -1009,27 +1470,7 @@ define([
                 custpage_other: Current.BILL_DATA.charges.other
             }).forEach(Helper.addFields);
 
-            var Total = {
-                lineTax: 0,
-                lineShip: 0,
-                lineAmount: 0,
-                Amount: 0,
-                deltaTax: 0,
-                deltaShip: 0
-            };
-
-            // try to create a vendor bill
-            if (Current.PO_REC && !Current.BILLFILE_DATA.billLink) {
-                try {
-                    Current.BILL_REC = record.transform({
-                        fromType: 'purchaseorder',
-                        fromId: Current.PO_ID,
-                        toType: 'vendorbill',
-                        isDynamic: true
-                    });
-                } catch (bill_err) {}
-            }
-
+            ///////////////////////////
             /// ITEM SUBLIST //////////
             var i, j;
             var sublistItem = Current.Form.addSublist({
@@ -1038,6 +1479,7 @@ define([
                 type: serverWidget.SublistType.LIST
             });
 
+            Current.listTaxItems = {};
             Helper.getSublistFields('InvoiceLines').forEach(function (colField) {
                 Helper.addSublistFields(colField, sublistItem);
                 return true;
@@ -1062,7 +1504,7 @@ define([
                         fieldId: 'item',
                         value: billLineData.NSITEM
                     });
-                    log.debug(logTitle, '>> lineNo:  ' + JSON.stringify(lineNo));
+                    // log.debug(logTitle, '>> lineNo:  ' + JSON.stringify(lineNo));
 
                     if (lineNo >= 0) {
                         Current.BILL_REC.selectLine({
@@ -1083,6 +1525,8 @@ define([
                     var objBillLines = Helper.getLineItems(Current.BILL_REC, {
                         item: billLineData.NSITEM
                     });
+
+                    // Helper.collectTaxItems(objBillLines);
 
                     if (!CTC_Util.isEmpty(objBillLines) && objBillLines[billLineData.NSITEM]) {
                         if (!lineData.hasOwnProperty('nstaxamt')) lineData.nstaxamt = 0;
@@ -1134,16 +1578,11 @@ define([
                 }
                 Total.lineAmount += CTC_Util.roundOff(lineData.frate * lineData.fqty);
 
-                log.debug(logTitle, '## lineData : ' + JSON.stringify(lineData));
+                // log.debug(logTitle, '## lineData : ' + JSON.stringify(lineData));
 
                 for (var fieldId in lineData) {
                     if (!CTC_Util.isEmpty(lineData[fieldId])) {
-                        // log.debug(
-                        //     logTitle,
-                        //     '## setting line field : ' +
-                        //         JSON.stringify([fieldId, lineData[fieldId]])
-                        // );
-
+                        // log.debug(logTitle,'## setting line field : ' + JSON.stringify([fieldId, lineData[fieldId]]) );
                         sublistItem.setSublistValue({
                             id: fieldId,
                             value: lineData[fieldId],
@@ -1152,216 +1591,47 @@ define([
                     }
                 }
             }
-            ///////////////////////////
-            // VARIANCE
-            var varianceValues = {
-                    tax: { applied: false, amount: 0, item: Variance.Config.taxItem },
-                    shipping: { applied: false, amount: 0, item: Variance.Config.shipItem },
-                    other: { applied: false, amount: 0, item: Variance.Config.otherItem },
-                    adjustment: { applied: false, amount: 0.0, item: Variance.Config.otherItem }
-                },
-                varLineData = {},
-                varianceLineValues = {},
-                arrVarianceLines = [];
 
-            // variance lines values (saved) ////
-            if (
-                Current.BILL_DATA.hasOwnProperty('varianceLines') &&
-                Current.BILL_DATA.varianceLines.length
-            ) {
-                Current.BILL_DATA.varianceLines.forEach(function (varianceValue) {
-                    if (varianceValue.type == 'miscCharges') {
-                        if (!varianceLineValues[varianceValue.type])
-                            varianceLineValues[varianceValue.type] = {};
-                        varianceLineValues[varianceValue.type][varianceValue.description] =
-                            varianceValue;
-                    } else {
-                        varianceLineValues[varianceValue.type] = varianceValue;
-                    }
-                    return true;
-                });
-                log.audit(logTitle, '>> varianceLineValues: ' + JSON.stringify(varianceLineValues));
+            /////////////////////////////////////////////////////////////////
+            /// P R O C E S S    V A R I A N C E
+            var processVariance = Helper.processVariance({
+                tax: { applied: false, amount: 0, item: Variance.Config.taxItem },
+                shipping: { applied: false, amount: 0, item: Variance.Config.shipItem },
+                other: { applied: false, amount: 0, item: Variance.Config.otherItem },
+                adjustment: { applied: false, amount: 0, item: Variance.Config.otherItem }
+            });
+
+            var ignoreVariance = false;
+            if (Current.BILL_DATA.hasOwnProperty('ignoreVariance') && Current.BILL_DATA.ignoreVariance == 'T' ) {
+                ignoreVariance = true;
             }
 
-            /// SHIPPING CHARGES //////////////
-            Current.BILL_DATA.charges.shipping = parseFloat(
-                Current.BILL_DATA.charges.shipping || '0.00'
-            );
+            var varianceValues = processVariance.loadValues();
+            log.debug(logTitle, '>> varianceValues : ' + JSON.stringify(varianceValues));
+
             Total.lineShip = CTC_Util.roundOff(Total.lineShip) || 0;
-            Total.deltaShip = CTC_Util.roundOff(
-                Current.BILL_DATA.charges.shipping - Total.lineShip
-            );
+            Total.deltaShip = Current.BILL_DATA.charges.shipping - Total.lineShip;
+            Total.deltaShip = CTC_Util.roundOff(Total.deltaShip);
 
-            if (Variance.Config.applyShip) {
-                if (varianceLineValues.shipping) {
-                    varianceValues.shipping.applied = true;
-                    varianceValues.shipping.amount = parseFloat(
-                        varianceLineValues.shipping.rate || '0'
-                    );
-                    varianceValues.shipping.nsitem = varianceLineValues.shipping.item;
-                } else {
-                    varianceValues.shipping.applied = Total.deltaShip != 0;
-                    varianceValues.shipping.amount = Total.deltaShip || 0;
-                }
-                varianceValues.shipping.itemname = Helper.getItemName(varianceValues.shipping.item);
-            }
-
-            if (Current.BILL_REC && varianceValues.shipping.item) {
-                varLineData = Helper.addLineItem(Current.BILL_REC, {
-                    label: 'SHIPPING',
-                    item: varianceValues.shipping.item,
-                    rate: varianceValues.shipping.amount
-                });
-                log.audit(logTitle, '>> shipping line: ' + JSON.stringify(varLineData));
-
-                if (varLineData) {
-                    varianceValues.shipping.taxAmount = varLineData.taxAmount || 0;
-                    Total.lineTax += varLineData.taxAmount || 0;
-                }
-            }
-            util.extend(varianceValues.shipping, {
-                type: 'shipping',
-                varname: 'Shipping',
-                applied: varianceValues.shipping.applied === true ? 'T' : 'F',
-                description: 'VC | Shipping Variance',
-                itemid: varianceValues.shipping.item,
-                amount: varianceValues.shipping.amount || 0,
-                amounttax: varianceValues.shipping.taxAmount
-            });
-            arrVarianceLines.push(varianceValues.shipping);
-            /////////////////////////////////
-
-            /// OTHER CHARGES //////////////
-            Current.BILL_DATA.charges.other = parseFloat(Current.BILL_DATA.charges.other || '0.00');
-
-            if (Variance.Config.applyOther) {
-                if (varianceLineValues.other) {
-                    varianceValues.other.applied = true;
-                    varianceValues.other.amount = parseFloat(varianceLineValues.other.rate || '0');
-                    varianceValues.other.nsitem = varianceLineValues.other.item;
-                } else {
-                    varianceValues.other.applied = Current.BILL_DATA.charges.other != 0;
-                    varianceValues.other.amount = Current.BILL_DATA.charges.other;
-                }
-
-                varianceValues.other.itemname = Helper.getItemName(varianceValues.other.item);
-            }
-
-            if (Current.BILL_REC && varianceValues.other.item) {
-                varLineData = Helper.addLineItem(Current.BILL_REC, {
-                    label: 'OTHER CHARGES',
-                    item: varianceValues.other.item,
-                    rate: varianceValues.other.amount
-                });
-                log.audit(logTitle, '>> other charges line: ' + JSON.stringify(varLineData));
-                if (varLineData) {
-                    varianceValues.other.taxAmount = varLineData.taxAmount || 0;
-                    Total.lineTax += varLineData.taxAmount || 0;
-                }
-            }
-
-            util.extend(varianceValues.other, {
-                applied: varianceValues.other.applied === true ? 'T' : 'F',
-                type: 'other',
-                varname: 'Other Charges',
-                description: 'VC | Other Charges',
-                itemid: varianceValues.other.item,
-                amounttax: varianceValues.other.taxAmount
-            });
-            arrVarianceLines.push(varianceValues.other);
-            /////////////////////////////////
-
-            /// MISC CHARGES //////////////
-            if (
-                Current.BILL_DATA.charges.hasOwnProperty('miscCharges') &&
-                Current.BILL_DATA.charges.miscCharges.length
-            ) {
-                // misc charges
-                Current.BILL_DATA.charges.miscCharges.forEach(function (miscCharge) {
-                    var miscChargeLine = {
-                            item: Variance.Config.otherItem,
-                            applied: 'T',
-                            type: 'miscCharges',
-                            varname: 'Misc Charges'
-                        },
-                        miscChgLineData = {};
-                    if (
-                        varianceLineValues.miscCharges &&
-                        varianceLineValues.miscCharges[miscCharge.description]
-                    ) {
-                        var savedMiscCharge =
-                            varianceLineValues.miscCharges[miscCharge.description];
-                        miscChargeLine.nsitem = savedMiscCharge.item;
-                        miscChargeLine.amount = parseFloat(savedMiscCharge.rate || '0');
-                    }
-
-                    if (Current.BILL_REC && miscChargeLine.item) {
-                        miscChgLineData = Helper.addLineItem(Current.BILL_REC, {
-                            label: 'MISC CHARGES - ' + miscCharge.description,
-                            item: miscChargeLine.nsitem || miscChargeLine.item,
-                            rate: parseFloat(miscCharge.amount)
-                        });
-                        Total.lineTax += miscChgLineData.taxAmount || 0;
-                    }
-                    util.extend(miscChargeLine, {
-                        description: miscCharge.description,
-                        amount: parseFloat(miscCharge.amount),
-                        itemid: miscChargeLine.item,
-                        itemname: Helper.getItemName(miscChargeLine.item),
-                        amounttax: miscChgLineData.taxAmount || 0
-                    });
-
-                    arrVarianceLines.push(miscChargeLine);
-                    Total.Adjustment -= parseFloat(miscCharge.amount);
-                    return true;
-                });
-            }
-            /////////////////////////////////
+            var arrVarianceLines = [];
+            processVariance.shippingCharge(varianceValues.shipping, arrVarianceLines);
+            processVariance.otherCharge(varianceValues.other, arrVarianceLines);
+            processVariance.miscCharge(varianceValues.miscCharges, arrVarianceLines);
 
             /// RECALCULATE THE TAX ///////////////
             Total.lineTax = CTC_Util.roundOff(Total.lineTax) || 0;
-            Current.BILL_DATA.charges.tax = parseFloat(Current.BILL_DATA.charges.tax || '0.00');
-            Total.deltaTax = CTC_Util.roundOff(Current.BILL_DATA.charges.tax - Total.lineTax);
-
-            if (Variance.Config.applyTax) {
-                if (varianceLineValues.tax) {
-                    varianceValues.tax.applied = true;
-                    varianceValues.tax.amount = parseFloat(varianceLineValues.tax.rate);
-                    varianceValues.tax.nsitem = varianceLineValues.tax.item;
-                } else {
-                    varianceValues.tax.applied = Total.deltaTax != 0;
-                    varianceValues.tax.amount = Total.deltaTax;
-                }
-                varianceValues.tax.itemname = Helper.getItemName(varianceValues.tax.item);
-            }
-            if (Current.BILL_REC && varianceValues.tax.item) {
-                varLineData = Helper.addLineItem(Current.BILL_REC, {
-                    label: 'TAX CHARGES',
-                    item: varianceValues.tax.nsitem || varianceValues.tax.item,
-                    rate: varianceValues.tax.amount
-                });
-                log.debug(logTitle, '>> tax line: ' + JSON.stringify(varLineData));
-                // Total.lineTax += varianceValues.tax.lineData.taxAmount;
-            }
-
-            util.extend(varianceValues.tax, {
-                applied: varianceValues.tax.applied === true ? 'T' : 'F',
-                type: 'tax',
-                varname: 'Tax',
-                amount: varianceValues.tax.amount || 0,
-                description: 'VC | Tax Variance',
-                itemid: varianceValues.tax.item
-            });
-            arrVarianceLines.unshift(varianceValues.tax);
-
-            //////////////////////////////////////
-
-            Total.Amount = Total.lineAmount + Total.lineTax + Total.lineShip;
+            Total.deltaTax = Current.BILL_DATA.charges.tax - Total.lineTax;
+            Total.Amount = Total.lineAmount + Total.lineTax + Total.deltaShip + Total.miscAmount;
             Total.Amount = CTC_Util.roundOff(Total.Amount);
-            Total.Adjustment =
-                Current.BILL_DATA.total -
-                (Total.Amount + Total.deltaTax + Total.deltaShip + Current.BILL_DATA.charges.other);
 
+            if (Current.BILL_DATA.charges.tax) {
+                Total.deltaTax = Current.BILL_DATA.charges.tax - Total.lineTax;
+                Total.Adjustment = Current.BILL_DATA.total - (Total.Amount + Total.deltaTax);
+            } else {
+                Total.deltaTax = Current.BILL_DATA.total - Total.Amount;
+                Total.Adjustment = 0;
+            }
+            Total.deltaTax = CTC_Util.roundOff(Total.deltaTax);
             Total.Adjustment = CTC_Util.roundOff(Total.Adjustment);
 
             log.debug(logTitle, '## Totals : ' + JSON.stringify(Total));
@@ -1371,46 +1641,14 @@ define([
             Current.Form.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = Total.lineTax;
             Current.Form.getField({ id: 'custpage_poshiptotal' }).defaultValue = Total.lineShip;
 
-            /// ADJUSTMENT LINE ///////////////
-            Total.lineTax = CTC_Util.roundOff(Total.lineTax) || 0;
-            if (Total.Adjustment) {
-                if (varianceLineValues.adjustment) {
-                    varianceValues.adjustment.applied = true;
-                    varianceValues.adjustment.amount = parseFloat(
-                        varianceLineValues.adjustment.rate
-                    );
-                    varianceValues.adjustment.nsitem = varianceLineValues.adjustment.item;
-                } else {
-                    varianceValues.adjustment.applied = Total.Adjustment != 0;
-                    varianceValues.adjustment.amount = Total.Adjustment;
-                }
-            }
-            varianceValues.adjustment.itemname = Helper.getItemName(varianceValues.adjustment.item);
-
-            if (Current.BILL_REC && varianceValues.adjustment.item) {
-                varLineData = Helper.addLineItem(Current.BILL_REC, {
-                    label: 'ADJUSTMENT',
-                    item: varianceValues.adjustment.nsitem || varianceValues.adjustment.item,
-                    rate: varianceValues.adjustment.amount
-                });
-                varianceValues.adjustment.taxAmount = varLineData.taxAmount;
-                log.debug(logTitle, '>> adjustment line: ' + JSON.stringify(varLineData));
-                // Total.lineTax += varianceValues.tax.lineData.taxAmount;
-            }
-
-            util.extend(varianceValues.adjustment, {
-                applied: varianceValues.adjustment.applied === true ? 'T' : 'F',
-                type: 'adjustment',
-                varname: 'Adjustment',
-                description: 'VC | Adjustment',
-                itemid: varianceValues.adjustment.item,
-                amounttax: varianceValues.adjustment.taxAmount
-            });
-            arrVarianceLines.push(varianceValues.adjustment);
+            processVariance.taxCharge(varianceValues.tax, arrVarianceLines);
+            processVariance.adjustmentCharge(varianceValues.adjustment, arrVarianceLines);
+            
+            // varianceLines.misc = processVariance.miscCharge(varianceValues.misc);
             //////////////////////////////////////
 
-            // log.debug(logTitle, '## varianceValues : ' + JSON.stringify(varianceValues));
-            log.debug(logTitle, '## arrVarianceLines : ' + JSON.stringify(arrVarianceLines));
+            // // log.debug(logTitle, '## varianceValues : ' + JSON.stringify(varianceValues));
+            // log.debug(logTitle, '## arrVarianceLines : ' + JSON.stringify(arrVarianceLines));
 
             /// VARIANCE SUBLIST //////
             var sublistVar = Current.Form.addSublist({
@@ -1426,13 +1664,15 @@ define([
 
             arrVarianceLines.forEach(function (lineData, index) {
                 lineData.amountfixed = lineData.amount;
+                if (ignoreVariance) lineData.applied = 'F';
+
                 log.debug(logTitle, '>>>> lineData ' + JSON.stringify(lineData));
 
                 for (var fieldId in lineData) {
-                    log.debug(
-                        logTitle,
-                        '>> setting field: ' + JSON.stringify([fieldId, lineData[fieldId]])
-                    );
+                    // log.debug(
+                    //     logTitle,
+                    //     '>> setting field: ' + JSON.stringify([fieldId, lineData[fieldId]])
+                    // );
 
                     if (!CTC_Util.isEmpty(lineData[fieldId])) {
                         sublistVar.setSublistValue({
@@ -1444,6 +1684,25 @@ define([
                 }
                 return true;
             });
+
+            /////////////////////////////////////////////////
+            if (!CTC_Util.isEmpty(Current.ErrorMessage)) {
+                log.debug(logTitle, '>> ErrorMessage: ' + JSON.stringify(Current.ErrorMessage));
+                Current.Form.addPageInitMessage({
+                    title: 'Error',
+                    message: Current.ErrorMessage,
+                    type: message.Type.WARNING
+                });
+            }
+
+            if (!CTC_Util.isEmpty(Current.WarnMessage)) {
+                log.debug(logTitle, '>> WarnMessage: ' + JSON.stringify(Current.WarnMessage));
+                Current.Form.addPageInitMessage({
+                    title: 'Warning',
+                    message: Current.WarnMessage,
+                    type: message.Type.WARNING
+                });
+            }
 
             context.response.writePage(Current.Form);
             /////////////////////////////////////////////////////////
@@ -1457,7 +1716,8 @@ define([
             log.debug(logTitle, 'custpage_action = ' + params.custpage_action);
             // log.debug(logTitle, 'params = ' + JSON.stringify(params) );
 
-            var updateValues = {};
+            var updateValues = {},
+                ignoreVariance = params.custpage_action == 'reprocess_novar';
 
             // first treat every submission as a "Save"
             for (var i = 0; i < Current.BILL_DATA.lines.length; i++) {
@@ -1468,6 +1728,7 @@ define([
                         line: i
                     }) * 1;
 
+                if (!ignoreVariance) {
                 Current.BILL_DATA.lines[i].PRICE =
                     context.request.getSublistValue({
                         group: 'item',
@@ -1488,6 +1749,7 @@ define([
                         name: 'fqty',
                         line: i
                     }) * 1;
+            }
             }
 
             var varianceLines = [];
@@ -1534,6 +1796,8 @@ define([
                     varLineData.nsitem && varLineData.nsitem.trim()
                         ? varLineData.nsitem
                         : varLineData.item;
+
+                if (ignoreVariance) varLineData.apply = 'F';
 
                 if (varLineData.apply == 'T')
                     varianceLines.push({
@@ -1588,12 +1852,7 @@ define([
                     break;
                 case 'reprocess_novar':
                     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.REPROCESS;
-                    updateValues.custrecord_ctc_vc_bill_proc_variance = 'T';
-                    // Variance.Values.applyTax = 'F';
-                    // Variance.Values.applyShip = 'F';
-                    // Variance.Values.applyOther = 'F';
-                    // Variance.Values.applyAdjustment = 'F';
-
+                    updateValues.custrecord_ctc_vc_bill_proc_variance = 'F';
                     Current.BILL_DATA.ignoreVariance = 'T';
                     log.debug(logTitle, '>> reprocess_novar ' + JSON.stringify(updateValues));
                     break;

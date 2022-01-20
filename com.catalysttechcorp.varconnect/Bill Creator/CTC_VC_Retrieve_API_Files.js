@@ -34,7 +34,7 @@ define([
             return true;
         });
 
-        log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg) );
+        log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
 
         return search.create({
             type: 'purchaseorder',

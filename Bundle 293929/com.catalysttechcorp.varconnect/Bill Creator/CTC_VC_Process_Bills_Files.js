@@ -39,30 +39,6 @@ define([
             ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
         ];
 
-        if (billInAdvance == true) {
-            // include all applicable statuses
-            filters.push('AND');
-            filters.push([
-                'custrecord_ctc_vc_bill_linked_po.status',
-                'anyof',
-                'PurchOrd:B', // PendingReceipt
-                'PurchOrd:D', // PartiallyReceived
-                'PurchOrd:E', // PendingBilling_PartiallyReceived
-                'PurchOrd:F', // PendingBill
-                'PurchOrd:G' // FullyBilled
-            ]);
-        } else {
-            // only include statuses that have been received and are ready to be billed
-            filters.push('AND');
-            filters.push([
-                'custrecord_ctc_vc_bill_linked_po.status',
-                'anyof',
-                'PurchOrd:E', // PendingBilling_PartiallyReceived
-                'PurchOrd:F', // PendingBill
-                'PurchOrd:G' // FullyBilled
-            ]);
-        }
-
         // added isolate bill file id //
         // @bfeliciano
         var billFileId = runtime.getCurrentScript().getParameter({
@@ -73,29 +49,6 @@ define([
             var updateValues = {
                 custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
             };
-            // var billData = CTC_Util.flatLookup({
-            //     type: 'customrecord_ctc_vc_bills',
-            //     id: billFileId,
-            //     columns: ['custrecord_ctc_vc_bill_log']
-            // });
-            // log.debug(logTitle, '>> billData: ' + JSON.stringify(billData));
-
-            // var poSearch = search.create({
-            //     type: 'customrecord_ctc_vc_bills',
-            //     filters: filters,
-            //     columns: ['internalid']
-            // });
-            // log.debug(logTitle, '>> results: ' + JSON.stringify(poSearch.runPaged().count));
-
-            // if (poSearch.runPaged().count > 0) {
-            //     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.REPROCESS;
-            // } else {
-            //     updateValues.custrecord_ctc_vc_bill_proc_status = BILL_CREATOR.Status.PENDING;
-            //     updateValues.custrecord_ctc_vc_bill_log =
-            //         [moment().format('MM-DD-YY'), 'Not ready for billing'].join(' - ') +
-            //         '\r\n' +
-            //         billData.custrecord_ctc_vc_bill_log;
-            // }
 
             // log.debug(logTitle, '>> updateValues: ' + JSON.stringify(updateValues));
 
@@ -112,11 +65,36 @@ define([
             log.debug(logTitle, '>> billFileId: ' + JSON.stringify(billFileId));
             filters.push('AND');
             filters.push(['internalid', 'anyof', billFileId]);
+        } else {
+            if (billInAdvance == true) {
+                // include all applicable statuses
+                filters.push('AND');
+                filters.push([
+                    'custrecord_ctc_vc_bill_linked_po.status',
+                    'anyof',
+                    'PurchOrd:B', // PendingReceipt
+                    'PurchOrd:D', // PartiallyReceived
+                    'PurchOrd:E', // PendingBilling_PartiallyReceived
+                    'PurchOrd:F', // PendingBill
+                    'PurchOrd:G' // FullyBilled
+                ]);
+            } else {
+                // only include statuses that have been received and are ready to be billed
+                filters.push('AND');
+                filters.push([
+                    'custrecord_ctc_vc_bill_linked_po.status',
+                    'anyof',
+                    'PurchOrd:E', // PendingBilling_PartiallyReceived
+                    'PurchOrd:F', // PendingBill
+                    'PurchOrd:G' // FullyBilled
+                ]);
+            }
         }
+
+
         // end
         // filters.push('OR');
         // filters.push(['custrecord_ctc_vc_bill_linked_po','anyof','@NONE@']);
-
         log.debug(logTitle, '>> filters: ' + JSON.stringify({ filters: filters }));
 
         return search.create({
