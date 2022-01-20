@@ -1,0 +1,1019 @@
+{
+	"info": {
+		"_postman_id": "929f6f8f-5ee7-4225-a0e5-f2fb57519c75",
+		"name": "VAR Connect",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Synnex XML",
+			"item": [
+				{
+					"name": "PO Status",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"connection": true,
+							"accept-encoding": true,
+							"accept": true,
+							"user-agent": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml; charset=utf-8",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Content-Length",
+								"value": "length",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<SynnexB2B version=\"2.2\">\r\n    <Credential>\r\n        <UserID>mspsupport@integra1.net</UserID>\r\n        <Password>Quosal7248!</Password>\r\n    </Credential>\r\n    <OrderStatusRequest>\r\n        <CustomerNumber>102904</CustomerNumber>\r\n        <PONumber>210568</PONumber>\r\n    </OrderStatusRequest>\r\n</SynnexB2B>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://ec.synnex.com/SynnexXML/POStatus",
+							"protocol": "https",
+							"host": [
+								"ec",
+								"synnex",
+								"com"
+							],
+							"path": [
+								"SynnexXML",
+								"POStatus"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "IngrammMicro",
+			"item": [
+				{
+					"name": "Generate Token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "client_id",
+									"value": "{{INGRAM_USER}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{INGRAM_SECRET}}",
+									"type": "text"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/oauth/oauth30/token",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"oauth",
+								"oauth30",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status Search",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "4390",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?orderStatus=PROCESSING",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"search"
+							],
+							"query": [
+								{
+									"key": "orderStatus",
+									"value": "PROCESSING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Data",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "6231",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/10-CGRYG",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"10-CGRYG"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "customerOrderNumber Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "439012341234",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/10-CD921",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"10-CD921"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "customerOrderNumber",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "439012341234",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com/resellers/v6/orders/search?customerOrderNumber=12254&pageSize=5&page",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"search"
+							],
+							"query": [
+								{
+									"key": "customerOrderNumber",
+									"value": "12254"
+								},
+								{
+									"key": "pageSize",
+									"value": "5"
+								},
+								{
+									"key": "page",
+									"value": null
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "InvoiceSearch",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "10-471580",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "CA",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "R485215",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/invoices/60-90782-11?customerNumber={{INGRAM_PARTNERID}}&isoCountryCode={{INGRAM_CCODE}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v5",
+								"invoices",
+								"60-90782-11"
+							],
+							"query": [
+								{
+									"key": "customerNumber",
+									"value": "{{INGRAM_PARTNERID}}"
+								},
+								{
+									"key": "isoCountryCode",
+									"value": "{{INGRAM_CCODE}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Price and Availability",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"content-type": true,
+							"user-agent": true,
+							"accept": true,
+							"connection": true,
+							"accept-encoding": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "6231123412342134234",
+								"type": "text"
+							},
+							{
+								"key": "Host",
+								"value": "netsuite.com",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"showAvailableDiscounts\": true,\r\n    \"showReserveInventoryDetails\": true,\r\n    \"specialBidNumber\": \"\",\r\n    \"products\": [\r\n      {\r\n        \"ingramPartNumber\": \"713HHF\",\r\n        \"customerPartNumber\": \"713HHF\",\r\n        \"vendorPartNumber\": \"40ANY230US\",\r\n        \"upc\": \"0193638285168\",\r\n        \"quantityRequested\": 1\r\n      }, \r\n      {\r\n        \"ingramPartNumber\": \"979PPU\",\r\n        \"customerPartNumber\": \"979PPU\",\r\n        \"vendorPartNumber\": \"20T40035US\",\r\n        \"upc\": \"0195042602630\",\r\n        \"quantityRequested\": 1\r\n      }\r\n\r\n    ]\r\n  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/catalog/priceandavailability?includeAvailability=true&includePricing=true&includeProductAttributes=true",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"catalog",
+								"priceandavailability"
+							],
+							"query": [
+								{
+									"key": "includeAvailability",
+									"value": "true"
+								},
+								{
+									"key": "includePricing",
+									"value": "true"
+								},
+								{
+									"key": "includeProductAttributes",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Price and Availability V5",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "10-471580",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "CA",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "6231",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"servicerequest\": {\r\n    \"requestpreamble\": {\r\n      \"customernumber\": \"10-471580\",\r\n      \"isocountrycode\": \"CA\"\r\n    },\r\n    \"priceandstockrequest\": {\r\n      \"showwarehouseavailability\": true,\r\n      \"extravailabilityflag\": \"Y\",\r\n      \"item\": [\r\n        {\r\n          \"ingrampartnumber\": \"903A1U\",\r\n          \"quantity\": 1\r\n        },\r\n      ],\r\n      \"includeallsystems\": false\r\n    }\r\n  }\r\n}"
+						},
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/catalog/priceandavailability",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v5",
+								"catalog",
+								"priceandavailability"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Search (v5)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer jfGHILjjMX7euSegly74AH6ztCXL",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/orders/search/?customerNumber=10-CFB9F&isocountrycode=CA&customerordernumber=PO00586",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v5",
+								"orders",
+								"search",
+								""
+							],
+							"query": [
+								{
+									"key": "customerNumber",
+									"value": "10-CFB9F"
+								},
+								{
+									"key": "isocountrycode",
+									"value": "CA"
+								},
+								{
+									"key": "customerordernumber",
+									"value": "PO00586"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Product Search v5",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "10-471580",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "CA",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "22141234",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"showAvailableDiscounts\": true,\r\n  \"showReserveInventoryDetails\": true,\r\n  \"specialBidNumber\": \"\",\r\n  \"products\": [\r\n    {\r\n      \"ingramPartNumber\": \"5UU40AT\",\r\n      \"vendorPartNumber\": \"870GGN\",\r\n      \"customerPartNumber\": \"5UU40AT\",\r\n      \"UPC\": \"\",\r\n      \"quantityRequested\": \"1\"\r\n    }\r\n  ],\r\n  \"plantAvailability\": [\r\n    {\r\n      \"plant\": \"\",\r\n      \"includeAvailabilityForAllStorageLocations\": true,\r\n      \"storageLocation\": \"\"\r\n    }\r\n  ],\r\n  \"additionalAttributes\": [\r\n    {\r\n      \"attributeName\": \"\",\r\n      \"attributeValue\": \"\"\r\n    }\r\n  ]\r\n}"
+						},
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/catalog/?partNumber=903A1U&customerNumber=10-471580&isoCountryCode=CA",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v5",
+								"catalog",
+								""
+							],
+							"query": [
+								{
+									"key": "partNumber",
+									"value": "903A1U"
+								},
+								{
+									"key": "customerNumber",
+									"value": "10-471580"
+								},
+								{
+									"key": "isoCountryCode",
+									"value": "CA"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Product Search",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "10-471580",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "CA",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "22141234",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"showAvailableDiscounts\": true,\r\n  \"showReserveInventoryDetails\": true,\r\n  \"specialBidNumber\": \"\",\r\n  \"products\": [\r\n    {\r\n      \"ingramPartNumber\": \"\",\r\n      \"vendorPartNumber\": \"\",\r\n      \"customerPartNumber\": \"20W4001DUS\",\r\n      \"UPC\": \"\",\r\n      \"quantityRequested\": \"1\"\r\n    }\r\n  ],\r\n  \"plantAvailability\": [\r\n    {\r\n      \"plant\": \"\",\r\n      \"includeAvailabilityForAllStorageLocations\": true,\r\n      \"storageLocation\": \"\"\r\n    }\r\n  ],\r\n  \"additionalAttributes\": [\r\n    {\r\n      \"attributeName\": \"\",\r\n      \"attributeValue\": \"\"\r\n    }\r\n  ]\r\n}"
+						},
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/catalog/?vendorPartNumber=20W4001DUS",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"catalog",
+								""
+							],
+							"query": [
+								{
+									"key": "vendorPartNumber",
+									"value": "20W4001DUS"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "D&H",
+			"item": [
+				{
+					"name": "itemRequest-DH",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>itemInquiry</REQUEST>\r\n    <LOGIN>\r\n        <USERID>157720XML</USERID>\r\n        <PASSWORD>Ergo6093!</PASSWORD>\r\n    </LOGIN>\r\n    <PARTNUM>910-002974</PARTNUM>\r\n    <LOOKUPTYPE>DH</LOOKUPTYPE>            \r\n    <QUANTITY>1</QUANTITY>            \r\n</XMLFORMPOST>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://www.dandh.com/dhXML/xmlDispatch",
+							"protocol": "https",
+							"host": [
+								"www",
+								"dandh",
+								"com"
+							],
+							"path": [
+								"dhXML",
+								"xmlDispatch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "itemRequest-MFR",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>itemInquiry</REQUEST>\r\n    <LOGIN>\r\n        <USERID>157720XML</USERID>\r\n        <PASSWORD>Ergo6093!</PASSWORD>\r\n    </LOGIN>\r\n    <PARTNUM>11DGS06Q1E</PARTNUM>\r\n    <LOOKUPTYPE>MFR</LOOKUPTYPE>            \r\n    <QUANTITY>1</QUANTITY>            \r\n</XMLFORMPOST>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://www.dandh.com/dhXML/xmlDispatch",
+							"protocol": "https",
+							"host": [
+								"www",
+								"dandh",
+								"com"
+							],
+							"path": [
+								"dhXML",
+								"xmlDispatch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "xmlorderStatus",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>orderStatus</REQUEST>\r\n    <LOGIN>\r\n        <USERID>8036670000</USERID>\r\n        <PASSWORD>383DjcCXiLnA#MdF</PASSWORD>\r\n    </LOGIN>\r\n    <STATUSREQUEST>\r\n        <PONUM></PONUM>\r\n    </STATUSREQUEST>\r\n</XMLFORMPOST>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://www.dandh.ca/dhXML/xmlDispatch",
+							"protocol": "https",
+							"host": [
+								"www",
+								"dandh",
+								"ca"
+							],
+							"path": [
+								"dhXML",
+								"xmlDispatch"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "TechData",
+			"item": [
+				{
+					"name": "OrderStatus 01",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n        <ResponseVersion>1.7</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>211633</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://tdxml.techdata.com/xmlservlet",
+							"protocol": "https",
+							"host": [
+								"tdxml",
+								"techdata",
+								"com"
+							],
+							"path": [
+								"xmlservlet"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OrderStatus 01 Copy",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>789812</UserName>\r\n        <Password>j5xxT3qLJNbpcDD#</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID></RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://tdxml.techdata.ca/xmlservlet",
+							"protocol": "https",
+							"host": [
+								"tdxml",
+								"techdata",
+								"ca"
+							],
+							"path": [
+								"xmlservlet"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "OrderStatus 02",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>02</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>212215</RefID>\r\n        </RefInfo>\r\n        <RefInfo>\r\n            <RefIDQual>ON</RefIDQual>\r\n            <RefID>6032601562</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://tdxml.techdata.com/xmlservlet",
+							"protocol": "https",
+							"host": [
+								"tdxml",
+								"techdata",
+								"com"
+							],
+							"path": [
+								"xmlservlet"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "InvoiceDetail By PO",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XML_InvoiceDetailByPO_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n        <ResponseVersion>1.7</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <POInfo>\r\n            <PONbr>211472</PONbr>\r\n        </POInfo>\r\n    </Detail>\r\n</XML_InvoiceDetailByPO_Submit>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://tdxml.techdata.com/xmlservlet",
+							"protocol": "https",
+							"host": [
+								"tdxml",
+								"techdata",
+								"com"
+							],
+							"path": [
+								"xmlservlet"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "INGRAM_TOKEN",
+			"value": "RCjqB3C3TRL1SwpKhXJ5BD7hR4cg"
+		},
+		{
+			"key": "SYNNEX_URL",
+			"value": "https://ec.synnex.com/SynnexXML/POStatus"
+		},
+		{
+			"key": "SYNNEX_USERNAME",
+			"value": "jeff@catalysttechcorp.com"
+		},
+		{
+			"key": "SYNNEX_PASSWORD",
+			"value": "BedrocXML1!"
+		},
+		{
+			"key": "SYNNEX_CUSTNO",
+			"value": "597668"
+		}
+	]
+}
