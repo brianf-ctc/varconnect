@@ -1,0 +1,20 @@
+<customlist scriptid="customlist_ctc_vc_log_status">
+  <description>Status list used by the VAR Connect Log record</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>VAR Connect Log Status</name>
+  <customvalues>
+    <customvalue scriptid="val_1060445_t1716438_902">
+      <isinactive>F</isinactive>
+      <value>Success</value>
+    </customvalue>
+    <customvalue scriptid="val_1060446_t1716438_753">
+      <isinactive>F</isinactive>
+      <value>Error</value>
+    </customvalue>
+    <customvalue scriptid="val_1060447_t1716438_629">
+      <isinactive>F</isinactive>
+      <value>Information</value>
+    </customvalue>
+  </customvalues>
+</customlist>

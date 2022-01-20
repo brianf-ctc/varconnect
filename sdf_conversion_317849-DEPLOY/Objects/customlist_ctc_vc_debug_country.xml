@@ -1,0 +1,19 @@
+<customlist scriptid="customlist_ctc_vc_debug_country">
+  <description></description>
+  <isinactive>F</isinactive>
+  <ismatrixoption>F</ismatrixoption>
+  <isordered>T</isordered>
+  <name>VAR Connect Debug Country</name>
+  <customvalues>
+    <customvalue scriptid="val_1660608_t1716438_477">
+      <abbreviation></abbreviation>
+      <isinactive>F</isinactive>
+      <value>US</value>
+    </customvalue>
+    <customvalue scriptid="val_1660609_t1716438_489">
+      <abbreviation></abbreviation>
+      <isinactive>F</isinactive>
+      <value>Canada</value>
+    </customvalue>
+  </customvalues>
+</customlist>

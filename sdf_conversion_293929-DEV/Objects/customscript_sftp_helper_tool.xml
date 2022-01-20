@@ -1,0 +1,25 @@
+<suitelet scriptid="customscript_sftp_helper_tool">
+  <description></description>
+  <isinactive>F</isinactive>
+  <name>SFTP Helper Tool</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/SFTP Helper Tool.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_ctc_vc_bc_sftp_helper">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype></eventtype>
+      <isdeployed>T</isdeployed>
+      <isonline>F</isonline>
+      <loglevel>ERROR</loglevel>
+      <runasrole></runasrole>
+      <status>RELEASED</status>
+      <title>Default Deployment</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>

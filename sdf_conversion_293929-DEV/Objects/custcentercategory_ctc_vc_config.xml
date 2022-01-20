@@ -1,0 +1,25 @@
+<centercategory scriptid="custcentercategory_ctc_vc_config">
+  <center>BASIC</center>
+  <centertab>[scriptid=custcentertab_ctc_vc_center]</centertab>
+  <label>Configuration</label>
+  <links>
+    <link>
+      <linklabel>Main Configuration</linklabel>
+      <linkobject>[scriptid=customrecord_ctc_vc_main_config]</linkobject>
+      <linktasktype>LIST</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Vendor Configuration</linklabel>
+      <linkobject>[scriptid=customrecord_ctc_vc_vendor_config]</linkobject>
+      <linktasktype>LIST</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Bill Create Vendors</linklabel>
+      <linkobject>[scriptid=customrecord_vc_bill_vendor_config]</linkobject>
+      <linktasktype>LIST</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+  </links>
+</centercategory>

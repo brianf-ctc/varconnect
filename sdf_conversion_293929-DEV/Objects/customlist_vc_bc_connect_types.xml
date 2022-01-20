@@ -1,0 +1,16 @@
+<customlist scriptid="customlist_vc_bc_connect_types">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>VAR Connect Connection Types</name>
+  <customvalues>
+    <customvalue scriptid="val_72822_6389393_sb1_419">
+      <isinactive>F</isinactive>
+      <value>API</value>
+    </customvalue>
+    <customvalue scriptid="val_72823_6389393_sb1_381">
+      <isinactive>F</isinactive>
+      <value>SFTP</value>
+    </customvalue>
+  </customvalues>
+</customlist>

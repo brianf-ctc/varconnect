@@ -1,0 +1,64 @@
+<customlist scriptid="customlist_ctc_xml_vendor_list">
+  <description>Vendor list available for the VAR Connect application</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>VAR Connect XML Vendor List</name>
+  <customvalues>
+    <customvalue scriptid="val_56178_t1716407_338">
+      <isinactive>F</isinactive>
+      <value>Tech Data</value>
+    </customvalue>
+    <customvalue scriptid="val_56181_t1716407_190">
+      <isinactive>F</isinactive>
+      <value>Ingram Micro XML</value>
+    </customvalue>
+    <customvalue scriptid="val_56182_t1716407_791">
+      <isinactive>F</isinactive>
+      <value>Synnex XML</value>
+    </customvalue>
+    <customvalue scriptid="val_56183_t1716407_718">
+      <isinactive>F</isinactive>
+      <value>D&amp;H</value>
+    </customvalue>
+    <customvalue scriptid="val_56184_t1716407_139">
+      <isinactive>F</isinactive>
+      <value>Avnet</value>
+    </customvalue>
+    <customvalue scriptid="val_56185_t1716407_633">
+      <isinactive>F</isinactive>
+      <value>Westcon</value>
+    </customvalue>
+    <customvalue scriptid="val_56186_t1716407_155">
+      <isinactive>F</isinactive>
+      <value>Arrow</value>
+    </customvalue>
+    <customvalue scriptid="val_1036599_t1716438_330">
+      <isinactive>F</isinactive>
+      <value>Dell</value>
+    </customvalue>
+    <customvalue scriptid="val_1036600_t1716438_964">
+      <isinactive>F</isinactive>
+      <value>Synnex API</value>
+    </customvalue>
+    <customvalue scriptid="val_1036601_t1716438_790">
+      <isinactive>T</isinactive>
+      <value>Ingram Micro API</value>
+    </customvalue>
+    <customvalue scriptid="val_1060749_t1716438_492">
+      <isinactive>F</isinactive>
+      <value>Ingram Micro API</value>
+    </customvalue>
+    <customvalue scriptid="val_1061575_t1716438_112">
+      <isinactive>F</isinactive>
+      <value>Tech Data API</value>
+    </customvalue>
+    <customvalue scriptid="val_1671738_t1716438_221">
+      <isinactive>F</isinactive>
+      <value>Jenne</value>
+    </customvalue>
+    <customvalue scriptid="val_1671739_t1716438_943">
+      <isinactive>F</isinactive>
+      <value>ScanSource</value>
+    </customvalue>
+  </customvalues>
+</customlist>

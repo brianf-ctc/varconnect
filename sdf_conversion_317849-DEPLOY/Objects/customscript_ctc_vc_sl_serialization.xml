@@ -1,0 +1,25 @@
+<suitelet scriptid="customscript_ctc_vc_sl_serialization">
+  <description></description>
+  <isinactive>F</isinactive>
+  <name>CTC VC SL Serialization</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteBundles/Bundle 293929/com.catalysttechcorp.varconnect/Serialization/CTC_VC_SL_Serialization.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_ctc_vc_sl_serialization">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype></eventtype>
+      <isdeployed>T</isdeployed>
+      <isonline>F</isonline>
+      <loglevel>DEBUG</loglevel>
+      <runasrole>ADMINISTRATOR</runasrole>
+      <status>RELEASED</status>
+      <title>CTC VC SL Serialization</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>

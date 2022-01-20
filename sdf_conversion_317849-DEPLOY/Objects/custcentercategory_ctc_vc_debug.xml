@@ -1,0 +1,37 @@
+<centercategory scriptid="custcentercategory_ctc_vc_debug">
+  <center>BASIC</center>
+  <centertab>[scriptid=custcentertab_ctc_vc_center]</centertab>
+  <label>Misc</label>
+  <links>
+    <link>
+      <linklabel>Bill Creator Files</linklabel>
+      <linkobject>[scriptid=customsearch_vc_bcfiles]</linkobject>
+      <linktasktype>SRCH_RSLT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>VAR Connect Scripts</linklabel>
+      <linkobject>[scriptid=customsearch_ctc_vc_process_scripts]</linkobject>
+      <linktasktype>SRCH_RSLT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>VAR Connect Logs</linklabel>
+      <linkobject>[scriptid=customsearch_ctc_vc_log_view_2]</linkobject>
+      <linktasktype>SRCH_RSLT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel></linklabel>
+      <linkobject>[scriptid=customscript_suitelet_test_jkc.customdeploy_suitelet_test_jkc]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>SFTP Helper Tool</linklabel>
+      <linkobject>[scriptid=customscript_sftp_helper_tool.customdeploy_ctc_vc_bc_sftp_helper]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+  </links>
+</centercategory>

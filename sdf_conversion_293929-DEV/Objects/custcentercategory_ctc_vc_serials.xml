@@ -1,0 +1,37 @@
+<centercategory scriptid="custcentercategory_ctc_vc_serials">
+  <center>BASIC</center>
+  <centertab>[scriptid=custcentertab_ctc_vc_center]</centertab>
+  <label>Serial Numbers</label>
+  <links>
+    <link>
+      <linklabel>Add Serials to PO</linklabel>
+      <linkobject>[scriptid=customscript_vc_bulk_serial_numbers.customdeploy_vc_bulk_serial_numbers]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Link Serials to Fulfillment</linklabel>
+      <linkobject>[scriptid=customscript_vc_associate_sn_pg1.customdeploy_vc_associate_sn_pg1_if]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Link Serials to Customer RMA</linklabel>
+      <linkobject>[scriptid=customscript_vc_associate_sn_pg1.customdeploy_vc_associate_sn_pg1_rma]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Link Serials to Vendor RMA</linklabel>
+      <linkobject>[scriptid=customscript_vc_associate_sn_pg1.customdeploy_vc_associate_sn_pg1_vnd_rma]</linkobject>
+      <linktasktype>SCRIPT</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+    <link>
+      <linklabel>Serial Number Table</linklabel>
+      <linkobject>[scriptid=customrecordserialnum]</linkobject>
+      <linktasktype>LIST</linktasktype>
+      <shortlist>F</shortlist>
+    </link>
+  </links>
+</centercategory>
