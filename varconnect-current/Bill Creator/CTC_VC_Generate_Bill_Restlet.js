@@ -214,9 +214,6 @@ define([
             }),
             allowedThreshold: currScript.getParameter({
                 name: 'custscript_ctc_bc_variance_threshold'
-            }),
-            defaultBillForm: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_form'
             })
         };
 
@@ -341,28 +338,13 @@ define([
                 listVariance = [];
 
             //// TRANSFORM TO VENDOR BILL ////////////////
-            var transformOption = {
+            log.debug(logTitle, '** Vendor Bill record creation:start **');
+            var recBill = record.transform({
                 fromType: 'purchaseorder',
                 fromId: currentData.poId,
                 toType: 'vendorbill',
                 isDynamic: true
-            };
-
-            if (param.defaultBillForm) {
-                transformOption.customform = param.defaultBillForm;
-            }
-
-            log.debug(
-                logTitle,
-                '** Vendor Bill record creation:start **' + JSON.stringify(transformOption)
-            );
-
-            var recBill = record.transform(transformOption);
-
-            if (param.defaultBillForm) {
-                recBill.setValue({fieldId:'customform', value: param.defaultBillForm});
-            }
-
+            });
 
             // store the current posting period
             var postingPeriod = recBill.getValue({ fieldId: 'postingperiod' });

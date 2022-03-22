@@ -170,17 +170,10 @@ define(['N/log', '../Libraries/moment', '../Libraries/lodash', 'N/sftp', 'N/enco
                 return;
             }
 
-            SUMS10.forEach(function (sums_10, ctr) {
-                log.error('SUMS10', JSON.stringify([SUMS10, sums_10, ctr]));
-
-                if (sums_10.model_number == 'FREIGHT') {
-                    ordObj.charges.shipping += sums_10.finance_charge;
+            SUMS10.forEach(function (sums10) {
+                if (sums10.model_number == 'FREIGHT') {
+                    ordObj.charges.shipping += SUMS10[SUMSCtr].finance_charge;
                 }
-                if (sums_10.model_number == 'TAX') {
-                    ordObj.charges.tax += sums_10.finance_charge;
-                }
-
-                return true;
             });
             ordObj.lines = [];
 
@@ -203,13 +196,6 @@ define(['N/log', '../Libraries/moment', '../Libraries/lodash', 'N/sftp', 'N/enco
                     }
                     if (dtld10.DTLD41.scac_code !== '') {
                         lineObj.CARRIER = dtld10.DTLD41.scac_code;
-                    }
-
-                    if (
-                        dtld10.DTLD41.extended_model_number &&
-                        dtld10.DTLD41.extended_model_number !== ''
-                    ) {
-                        lineObj.ITEMNO_EXT = dtld10.DTLD41.extended_model_number;
                     }
                 }
 

@@ -45,7 +45,7 @@ define([
             result = true;
 
         if (response == 'invalid') {
-            log.error(
+            log.warn(
                 'License expired',
                 'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
             );
@@ -59,7 +59,7 @@ define([
         var mainConfig = libMainConfig.getMainConfiguration();
 
         if (!mainConfig) {
-            log.error('No VAR Connect Main Coniguration available');
+            log.warn('No VAR Connect Main Coniguration available');
         } else return mainConfig;
     }
 
