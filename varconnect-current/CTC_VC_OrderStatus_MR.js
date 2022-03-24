@@ -42,6 +42,7 @@ define([
 ) {
     var LogTitle = 'MR_OrderStatus';
     var LogPrefix = '';
+    var Params = {};
 
     var Helper = {
         logMsg: function (option) {
@@ -69,7 +70,7 @@ define([
         }
     };
 
-    function _validateLicense(options) {
+    Helper.validateLicense = function (options) {
         var logTitle = [LogTitle, 'validateLicense'].join('::');
         log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
 
@@ -84,18 +85,17 @@ define([
             throw new Error(
                 'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
             );
-    }
+    };
 
-    function _loadMainConfig() {
+    Helper.loadMainConfig = function () {
         var mainConfig = libMainConfig.getMainConfiguration();
-
         if (!mainConfig) {
             log.error('No Coniguration available');
             throw new Error('No Coniguration available');
         } else return mainConfig;
-    }
+    };
 
-    function _loadVendorConfig(options) {
+    Helper.loadVendorConfig = function (options) {
         var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
         log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
 
@@ -111,9 +111,9 @@ define([
                 'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
         } else return vendorConfig;
-    }
+    };
 
-    function _processDropshipsAndSpecialOrders(options) {
+    Helper.processDropshipsAndSpecialOrders = function (options) {
         var logTitle = [LogTitle, 'processDropshipsAndSpecialOrders'].join('::');
         log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
 
@@ -160,9 +160,9 @@ define([
         }
 
         return fulfillmentData;
-    }
+    };
 
-    function _getSubsidiary(poId) {
+    Helper.getSubsidiary = function (poId) {
         var logTitle = [LogTitle, 'getSubsidiary'].join('::');
         log.debug(logTitle, LogPrefix + '>> poId: ' + JSON.stringify(poId));
 
@@ -178,34 +178,77 @@ define([
         }
 
         return subsidiary;
-    }
+    };
 
-    function getInputData() {
+    /////////////////////////////////////////////////////////
+    var MAP_REDUCE = {};
+
+    /**
+     *   Get the list of PO to process from a saved search
+     */
+    MAP_REDUCE.getInputData = function () {
         var logTitle = [LogTitle, 'getInputData'].join('::');
         log.debug(logTitle, '###### START OF SCRIPT ######');
+        var returnValue;
 
-        //return saved search for company to get list of purchase orders
-        vcLog.recordLog({
-            header: 'VAR Connect START',
-            body: 'VAR Connect START',
-            status: constants.Lists.VC_LOG_STATUS.INFO
-        });
-        var searchId = runtime.getCurrentScript().getParameter('custscript_searchid2');
-        var vendor = runtime.getCurrentScript().getParameter('custscript_vendor2');
+        try {
+            //return saved search for company to get list of purchase orders
+            vcLog.recordLog({
+                header: 'VAR Connect START',
+                body: 'VAR Connect START',
+                status: constants.Lists.VC_LOG_STATUS.INFO
+            });
 
-        var mainConfig = _loadMainConfig();
-        log.debug(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+            Params = {
+                searchId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                vendorId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                internalid: runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid')
+            };
+            log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
-        _validateLicense({ mainConfig: mainConfig });
+            var mainConfig = Helper.loadMainConfig();
+            log.debug(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+            Helper.validateLicense({ mainConfig: mainConfig });
 
-        if (searchId != null && (mainConfig.processDropships || mainConfig.processSpecialOrders)) {
-            return search.load({ id: searchId });
+            if (!mainConfig.processDropships && !mainConfig.processSpecialOrders) {
+                throw 'Process DropShips and Process Special Orders is not enabled!';
+            }
+
+            if (!Params.searchId) {
+                throw 'Missing Search: Open PO for Order Status processing';
+            }
+
+            if (!Params.internalid) {
+                returnValue = search.load({ id: Params.searchId });
+            } else {
+                var searchRec = search.load({ id: Params.searchId });
+                log.audit(logTitle, '>> search type: ' + JSON.stringify(searchRec));
+
+                var searchNew = search.create({
+                    type: searchRec.searchType,
+                    filters: searchRec.filters,
+                    columns: searchRec.columns
+                });
+
+                searchNew.filters.push(
+                    search.createFilter({
+                        name: 'internalid',
+                        operator: 'anyof',
+                        values: Params.internalid
+                    })
+                );
+
+                returnValue = searchNew;
+            }
+        } catch (error) {
+            throw util.extractError(error);
+            returnValue = false;
         }
 
-        return false;
-    }
+        return returnValue;
+    };
 
-    function map(contextM) {
+    MAP_REDUCE.map = function (contextM) {
         var logTitle = [LogTitle, 'map'].join('::');
 
         try {
@@ -241,187 +284,197 @@ define([
                     })
             );
 
-            var subsidiary = _getSubsidiary(docid);
-            var mainConfig = _loadMainConfig();
-            var vendorConfig = _loadVendorConfig({
+            var subsidiary = Helper.getSubsidiary(docid);
+            var mainConfig = Helper.loadMainConfig();
+            var vendorConfig = Helper.loadVendorConfig({
                 vendor: vendor,
                 subsidiary: subsidiary
             });
 
+            // looup the country
+            var countryCode = search.lookupFields({
+                type: 'subsidiary',
+                id: subsidiary,
+                columns: ['country']
+            });
+            // flatten the coutnryCode
+            if (countryCode) {
+                countryCode = countryCode.country[0].value;
+            }
+
+
+            log.debug(logTitle, LogPrefix + '>> country: ' + JSON.stringify(countryCode));
             log.debug(logTitle, LogPrefix + '>> subsidiary: ' + JSON.stringify(subsidiary));
             log.debug(logTitle, LogPrefix + '>> mainConfig: ' + JSON.stringify(mainConfig));
             log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
-            if (vendorConfig) {
-                var po_record = r.load({
-                    type: 'purchaseorder',
-                    id: docid,
-                    isDynamic: true
+            if (!vendorConfig) throw 'Vendor Config not found';
+
+            var po_record = r.load({
+                type: 'purchaseorder',
+                id: docid,
+                isDynamic: true
+            });
+
+            isDropPO = po_record.getValue({
+                fieldId: 'dropshipso'
+            });
+
+            //			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
+
+            log.debug(logTitle, LogPrefix + '>> Initiating library webservice ....');
+
+            outputObj = libWebService.process({
+                mainConfig: mainConfig,
+                vendorConfig: vendorConfig,
+                vendor: vendor,
+                po_record: po_record,
+                poId: docid,
+                poNum: docnum,
+                tranDate: tranDate,
+                subsidiary: subsidiary,
+                countryCode: countryCode
+            });
+            log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
+
+            so_ID = libcode.updatepo({
+                po_record: po_record,
+                poNum: docid,
+                lineData: outputObj.itemArray,
+                mainConfig: mainConfig,
+                vendorConfig: vendorConfig
+            });
+
+            log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(so_ID));
+
+            if (so_ID != null && so_ID != undefined) {
+                var so_rec = r.load({
+                    type: r.Type.SALES_ORDER,
+                    id: so_ID
                 });
-
-                isDropPO = po_record.getValue({
-                    fieldId: 'dropshipso'
-                });
-
-                //			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
-
-                log.debug(logTitle, LogPrefix + '>> Initiating library webservice ....');
-
-                outputObj = libWebService.process({
+                custID = so_rec.getValue('entity');
+                var params = {
                     mainConfig: mainConfig,
                     vendorConfig: vendorConfig,
-                    vendor: vendor,
-                    po_record: po_record,
-                    poId: docid,
-                    poNum: docnum,
-                    tranDate: tranDate,
-                    subsidiary: subsidiary
+                    isDropPO: isDropPO,
+                    docid: docid,
+                    soID: so_ID,
+                    itemArray: outputObj.itemArray,
+                    vendor: vendor
+                };
+
+                var fulfillmentData = Helper.processDropshipsAndSpecialOrders(params);
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> fulfillmentData: ' + JSON.stringify(fulfillmentData)
+                );
+            }
+            // logXML(outputObj.xmlString);
+            // logRowObjects(outputObj.itemArray);
+
+            //Logic for retrieving information and creating list of serials to be created
+            if (
+                (isDropPO && mainConfig.createSerialDropship) ||
+                (!isDropPO && mainConfig.createSerialSpecialOrder)
+            ) {
+                var numPrefix = vendorConfig.fulfillmentPrefix;
+
+                var lineData = outputObj.itemArray;
+                // log.debug(logTitle, '>> xml app v2: MAP lineData length: ' + JSON.stringify(lineData.length));
+
+                // Move the searches outside of the for loop for governance issues
+                var arrFulfillments = [];
+                var ifSearch = search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+                var ifFilters = search.createFilter({
+                    name: 'custbody_ctc_if_vendor_order_match',
+                    operator: search.Operator.STARTSWITH,
+                    values: numPrefix
                 });
-                log.debug(logTitle, LogPrefix + '>> outputObj: ' + JSON.stringify(outputObj));
-
-                so_ID = libcode.updatepo({
-                    po_record: po_record,
-                    poNum: docid,
-                    lineData: outputObj.itemArray,
-                    mainConfig: mainConfig,
-                    vendorConfig: vendorConfig
+                ifSearch.filters.push(ifFilters);
+                ifSearch.run().each(function (result) {
+                    arrFulfillments.push({
+                        id: result.id,
+                        num: result.getValue('custbody_ctc_if_vendor_order_match')
+                    });
+                    return true;
                 });
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
+                );
 
-                log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(so_ID));
-
-                if (so_ID != null && so_ID != undefined) {
-                    var so_rec = r.load({
-                        type: r.Type.SALES_ORDER,
-                        id: so_ID
+                var arrReceipts = [];
+                var ifSearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+                var ifFilters = search.createFilter({
+                    name: 'custbody_ctc_if_vendor_order_match',
+                    operator: search.Operator.STARTSWITH,
+                    values: numPrefix
+                });
+                ifSearch.filters.push(ifFilters);
+                ifSearch.run().each(function (result) {
+                    arrReceipts.push({
+                        id: result.id,
+                        num: result.getValue('custbody_ctc_if_vendor_order_match')
                     });
-                    custID = so_rec.getValue('entity');
-                    var params = {
-                        mainConfig: mainConfig,
-                        vendorConfig: vendorConfig,
-                        isDropPO: isDropPO,
-                        docid: docid,
-                        soID: so_ID,
-                        itemArray: outputObj.itemArray,
-                        vendor: vendor
-                    };
+                    return true;
+                });
+                log.debug(logTitle, LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts));
 
-                    var fulfillmentData = _processDropshipsAndSpecialOrders(params);
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> fulfillmentData: ' + JSON.stringify(fulfillmentData)
-                    );
-                }
-                // logXML(outputObj.xmlString);
-                // logRowObjects(outputObj.itemArray);
+                log.debug(logTitle, LogPrefix + '>> lineData: ' + JSON.stringify(lineData));
 
-                //Logic for retrieving information and creating list of serials to be created
-                if (
-                    (isDropPO && mainConfig.createSerialDropship) ||
-                    (!isDropPO && mainConfig.createSerialSpecialOrder)
-                ) {
-                    var numPrefix = vendorConfig.fulfillmentPrefix;
-
-                    var lineData = outputObj.itemArray;
-                    // log.debug(logTitle, '>> xml app v2: MAP lineData length: ' + JSON.stringify(lineData.length));
-
-                    // Move the searches outside of the for loop for governance issues
-                    var arrFulfillments = [];
-                    var ifSearch = search.load({ id: 'customsearch_ctc_if_vendor_orders' });
-                    var ifFilters = search.createFilter({
-                        name: 'custbody_ctc_if_vendor_order_match',
-                        operator: search.Operator.STARTSWITH,
-                        values: numPrefix
-                    });
-                    ifSearch.filters.push(ifFilters);
-                    ifSearch.run().each(function (result) {
-                        arrFulfillments.push({
-                            id: result.id,
-                            num: result.getValue('custbody_ctc_if_vendor_order_match')
-                        });
-                        return true;
-                    });
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
-                    );
-
-                    var arrReceipts = [];
-                    var ifSearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
-                    var ifFilters = search.createFilter({
-                        name: 'custbody_ctc_if_vendor_order_match',
-                        operator: search.Operator.STARTSWITH,
-                        values: numPrefix
-                    });
-                    ifSearch.filters.push(ifFilters);
-                    ifSearch.run().each(function (result) {
-                        arrReceipts.push({
-                            id: result.id,
-                            num: result.getValue('custbody_ctc_if_vendor_order_match')
-                        });
-                        return true;
-                    });
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts)
-                    );
-
+                if (lineData && lineData.length) {
                     for (var i = 0; i < lineData.length; i++) {
-                        if (lineData) {
-                            var serialStr = lineData[i].serial_num;
-                            var serialArray = serialStr;
-                            if (typeof serialArray == 'string' && serialArray.length > 0)
-                                serialArray = serialStr.split(',');
+                        var serialStr = lineData[i].serial_num;
+                        var serialArray = serialStr;
+                        if (typeof serialArray == 'string' && serialArray.length > 0)
+                            serialArray = serialStr.split(',');
 
-                            // log.debug('xml app v2: serial array', serialArray);
+                        // log.debug('xml app v2: serial array', serialArray);
 
-                            var fulfillmentNum = null,
-                                receiptNum = null;
+                        var fulfillmentNum = null,
+                            receiptNum = null;
 
-                            if (isDropPO && mainConfig.processDropships) {
-                                for (var x = 0; x < arrFulfillments.length; x++) {
-                                    if (
-                                        arrFulfillments[x].num ==
-                                        numPrefix + lineData[i].order_num
-                                    ) {
-                                        fulfillmentNum = arrFulfillments[x].id;
-                                        break;
-                                    }
+                        if (isDropPO && mainConfig.processDropships) {
+                            for (var x = 0; x < arrFulfillments.length; x++) {
+                                if (arrFulfillments[x].num == numPrefix + lineData[i].order_num) {
+                                    fulfillmentNum = arrFulfillments[x].id;
+                                    break;
                                 }
-
-                                // log.debug('xml app v2: fulfillmentNum', fulfillmentNum);
-                            } else if (!isDropPO && mainConfig.processSpecialOrders) {
-                                for (var x = 0; x < arrReceipts.length; x++) {
-                                    if (arrReceipts[x].num == numPrefix + lineData[i].order_num) {
-                                        receiptNum = arrReceipts[x].id;
-                                        break;
-                                    }
-                                }
-
-                                // log.debug('xml app v2: receiptNum', receiptNum);
                             }
 
-                            if (serialArray) {
-                                for (var j = 0; j < serialArray.length; j++) {
-                                    if (serialArray[j] == '') continue;
-                                    var key =
-                                        'IF' +
-                                        fulfillmentNum +
-                                        '|IR' +
-                                        receiptNum +
-                                        '|IT' +
-                                        lineData[i].item_num;
-                                    //line serials
-                                    //									contextM.write(key, {'docid': docid, 'itemnum': lineData[i].item_num, 'custid':custID, 'orderNum': fulfillmentNum, 'receiptNum': receiptNum, serial: serialArray[j]});
-                                    //old
-                                    contextM.write(serialArray[j], {
-                                        docid: docid,
-                                        itemnum: lineData[i].item_num,
-                                        custid: custID,
-                                        orderNum: fulfillmentNum,
-                                        receiptNum: receiptNum,
-                                        linenum: lineData[i].line_num
-                                    });
+                            // log.debug('xml app v2: fulfillmentNum', fulfillmentNum);
+                        } else if (!isDropPO && mainConfig.processSpecialOrders) {
+                            for (var x = 0; x < arrReceipts.length; x++) {
+                                if (arrReceipts[x].num == numPrefix + lineData[i].order_num) {
+                                    receiptNum = arrReceipts[x].id;
+                                    break;
                                 }
+                            }
+
+                            // log.debug('xml app v2: receiptNum', receiptNum);
+                        }
+
+                        if (serialArray) {
+                            for (var j = 0; j < serialArray.length; j++) {
+                                if (serialArray[j] == '') continue;
+                                var key =
+                                    'IF' +
+                                    fulfillmentNum +
+                                    '|IR' +
+                                    receiptNum +
+                                    '|IT' +
+                                    lineData[i].item_num;
+                                //line serials
+                                //									contextM.write(key, {'docid': docid, 'itemnum': lineData[i].item_num, 'custid':custID, 'orderNum': fulfillmentNum, 'receiptNum': receiptNum, serial: serialArray[j]});
+                                //old
+                                contextM.write(serialArray[j], {
+                                    docid: docid,
+                                    itemnum: lineData[i].item_num,
+                                    custid: custID,
+                                    orderNum: fulfillmentNum,
+                                    receiptNum: receiptNum,
+                                    linenum: lineData[i].line_num
+                                });
                             }
                         }
                     }
@@ -430,10 +483,10 @@ define([
         } catch (e) {
             log.error('Error encountered in map', e);
         }
-    }
+    };
 
     //old
-    function reduce(context) {
+    MAP_REDUCE.reduce = function (context) {
         // reduce runs on each serial number to save it
         // each instance of reduce has 5000 unit and this way there will be a new one for each line
         var logTitle = [LogTitle, 'reduce'].join('::');
@@ -559,9 +612,9 @@ define([
                 // log.debug('xml app v2: error duplicates');
             }
         }
-    }
+    };
 
-    function summarize(summary) {
+    MAP_REDUCE.summarize = function (summary) {
         //any errors that happen in the above methods are thrown here so they should be handled
         //log stuff that we care about, like number of serial numbers
         var logTitle = [LogTitle, 'summarize'].join('::');
@@ -584,7 +637,7 @@ define([
         });
 
         log.debug(logTitle, '###### END OF SCRIPT ###### ');
-    }
+    };
 
     //****************************************************************
     //** Debugging Code
@@ -598,6 +651,7 @@ define([
         }
         // log.debug('logXML code =', xmlString);
     }
+
     function logRowObjects(itemArray) {
         //log.debug("logRowObjects");
         if (itemArray == '') {
@@ -607,10 +661,5 @@ define([
         // log.debug('logRowObjects array =', JSON.stringify(itemArray));
     }
 
-    return {
-        getInputData: getInputData,
-        map: map,
-        reduce: reduce,
-        summarize: summarize
-    };
+    return MAP_REDUCE;
 });
