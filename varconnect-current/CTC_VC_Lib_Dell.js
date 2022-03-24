@@ -50,7 +50,7 @@ define([
             });
             log.debug('auth', responseObj);
         } catch (e) {
-            log.error('Error getting authorization', e);
+            log.error('Error getting authorization', e); 
         }
 
         return JSON.parse(responseObj.body);

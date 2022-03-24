@@ -124,13 +124,10 @@ define([
                         } catch (bill_err) {
                             returnValue = false;
                             log.audit(
-                                logTitle,
+                                'isBillable',
                                 '>> ERROR Generating Bill Record: ' + Helper.extractError(bill_err)
                             );
-                            Current.ErrorMessage.push(
-                                'Unable to create Vendor Bill due to - ' +
-                                    Helper.extractError(bill_err)
-                            );
+                            Current.ErrorMessage = 'Unable to create Vendor Bill due to - ' + Helper.extractError(bill_err);
                         }
                     }
                 }

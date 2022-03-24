@@ -139,7 +139,8 @@ define([
                     totalRecords: totalRecords,
                     pageSize: pageSize,
                     pageNum: pageNum,
-                    recordsFound: searchBody.recordsFound
+                    recordsFound: searchBody.recordsFound, 
+                    imOrderNums: imOrderNums
                 })
             );
 

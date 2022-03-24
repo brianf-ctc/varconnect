@@ -8,14 +8,26 @@ define([
     'N/runtime',
     'N/error',
     'N/https',
+    'N/config',
     './Libraries/moment',
     './../CTC_VC_Constants',
     './../CTC_Util'
-], function (search, record, runtime, error, https, moment, VC_Constants, CTC_Util) {
+], function (search, record, runtime, error, https, config, moment, VC_Constants, CTC_Util) {
     var LOG_TITLE = 'VC_PROC_BILL_MR',
         LOG_APP = 'Process Bills (MR)',
         BILL_CREATOR = VC_Constants.Bill_Creator,
         CURRENT_PO = '';
+
+    function _getDateFormat() {
+        var logTitle = [LOG_TITLE, '_getDateFormat'].join(':');
+        
+        var generalPref = config.load({
+            type: config.Type.COMPANY_PREFERENCES
+        });
+        var dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+        log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+        return dateFormat;
+    }
 
     function getInputData() {
         var logTitle = [LOG_TITLE, 'getInputData'].join(':');
@@ -33,7 +45,8 @@ define([
                 'custrecord_ctc_vc_bill_proc_status',
                 'anyof',
                 BILL_CREATOR.Status.PENDING,
-                BILL_CREATOR.Status.REPROCESS
+                BILL_CREATOR.Status.REPROCESS,
+                BILL_CREATOR.Status.ERROR
             ],
             'AND',
             ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
@@ -65,30 +78,30 @@ define([
             log.debug(logTitle, '>> billFileId: ' + JSON.stringify(billFileId));
             filters.push('AND');
             filters.push(['internalid', 'anyof', billFileId]);
-        } else {
-            if (billInAdvance == true) {
-                // include all applicable statuses
-                filters.push('AND');
-                filters.push([
-                    'custrecord_ctc_vc_bill_linked_po.status',
-                    'anyof',
-                    'PurchOrd:B', // PendingReceipt
-                    'PurchOrd:D', // PartiallyReceived
-                    'PurchOrd:E', // PendingBilling_PartiallyReceived
-                    'PurchOrd:F', // PendingBill
-                    'PurchOrd:G' // FullyBilled
-                ]);
-            } else {
-                // only include statuses that have been received and are ready to be billed
-                filters.push('AND');
-                filters.push([
-                    'custrecord_ctc_vc_bill_linked_po.status',
-                    'anyof',
-                    'PurchOrd:E', // PendingBilling_PartiallyReceived
-                    'PurchOrd:F', // PendingBill
-                    'PurchOrd:G' // FullyBilled
-                ]);
-            }
+            // } else {
+            // if (billInAdvance == true) {
+            //     // include all applicable statuses
+            //     filters.push('AND');
+            //     filters.push([
+            //         'custrecord_ctc_vc_bill_linked_po.status',
+            //         'anyof',
+            //         'PurchOrd:B', // PendingReceipt
+            //         'PurchOrd:D', // PartiallyReceived
+            //         'PurchOrd:E', // PendingBilling_PartiallyReceived
+            //         'PurchOrd:F', // PendingBill
+            //         'PurchOrd:G' // FullyBilled
+            //     ]);
+            // } else {
+            //     // only include statuses that have been received and are ready to be billed
+            //     filters.push('AND');
+            //     filters.push([
+            //         'custrecord_ctc_vc_bill_linked_po.status',
+            //         'anyof',
+            //         'PurchOrd:E', // PendingBilling_PartiallyReceived
+            //         'PurchOrd:F', // PendingBill
+            //         'PurchOrd:G' // FullyBilled
+            //     ]);
+            // }
         }
 
         // end
@@ -173,7 +186,7 @@ define([
 
                 if (r.msg) {
                     var currentMessages = rec.custrecord_ctc_vc_bill_log;
-                    var newMessage = moment().format('MM-DD-YY') + ' - ' + r.msg;
+                    var newMessage = moment().format(_getDateFormat()) + ' - ' + r.msg;
                     updateValues.custrecord_ctc_vc_bill_log = newMessage + '\r\n' + currentMessages;
                 }
                 if (r.id) {

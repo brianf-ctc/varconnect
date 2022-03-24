@@ -1,6 +1,7 @@
 define([
     'N/https',
     'N/search',
+    'N/format',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities',
     './CTC_VC_Lib_VendorConfig',
@@ -17,6 +18,7 @@ define([
 ], function (
     https,
     search,
+    format,
     constants,
     util,
     libVendorConfig,
@@ -33,9 +35,76 @@ define([
 ) {
     var LogTitle = 'WebSvcLib';
 
+    var dateFormat;
+
+    function _parseDate(options) {
+        var logTitle = [LogTitle, 'parseDate'].join('::');
+        // log.audit(logTitle, '>> options: ' + JSON.stringify(options));
+
+        var dateString = options.dateString,
+            date = '';
+
+        if (!dateFormat) {
+            try {
+                require(['N/config'], function (config) {
+                    var generalPref = config.load({
+                        type: config.Type.COMPANY_PREFERENCES
+                    });
+                    dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+                    return true;
+                });
+            } catch (e) {}
+            // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+        }
+        if (!dateFormat) {
+            try {
+                dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+            } catch (e) {}
+            // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+        }
+
+        if (dateString && dateString.length > 0 && dateString != 'NA') {
+            try {
+                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
+
+                for (var i = 0; i < stringToProcess.length; i++) {
+                    var singleString = stringToProcess[i];
+                    if (singleString) {
+                        var stringArr = singleString.split('T'); //handle timestamps with T
+                        singleString = stringArr[0];
+                        var convertedDate = new Date(singleString);
+
+                        if (!date || convertedDate > date) date = convertedDate;
+                    }
+                }
+            } catch (e) {
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
+            }
+        }
+
+        //Convert to string
+        if (date) {
+            //set date
+            var year = date.getFullYear();
+            if (year < 2000) {
+                year += 100;
+                date.setFullYear(year);
+            }
+
+            date = format.format({
+                value: date,
+                type: dateFormat ? dateFormat : format.Type.DATE
+            });
+        }
+
+        // log.audit('---datestring ' + dateString, date);
+
+        return date;
+    }
+
     function _validateVendorConfig(options) {
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
 
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
@@ -106,7 +175,7 @@ define([
 
     function _getVendorLibrary(options) {
         var logTitle = [LogTitle, '_getVendorLibrary'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
 
         var vendorConfig = options.vendorConfig,
             xmlVendor = vendorConfig.xmlVendor,
@@ -163,18 +232,21 @@ define([
             tranDate = options.tranDate,
             xmlVendorText = options.xmlVendorText;
 
-        // log.debug(
-        //     xmlVendorText + ' ' + poNum + ' dates',
-        //     'startDate ' + startDate + ' tranDate ' + tranDate
-        // );
-        // log.debug('check dates', new Date(startDate) < new Date(tranDate));
+        var dtStartDate = _parseDate({ dateString: startDate }),
+            dtTranDate = _parseDate({ dateString: tranDate });
 
-        return new Date(startDate) < new Date(tranDate);
+        // log.audit(
+        //     logTitle,
+        //     '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
+        // );
+
+        return dtStartDate <= dtTranDate;
     }
 
     function _handleSingleVendor(options) {
         var logTitle = [LogTitle, '_handleSingleVendor'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+
+        log.audit(logTitle, options);
 
         var vendorConfig = options.vendorConfig,
             poNum = options.poNum,
@@ -184,10 +256,6 @@ define([
             xmlVendorText = vendorConfig.xmlVendorText,
             outputArray;
 
-        //		log.debug(poNum + ' dates', 'startDate ' + startDate + ' tranDate ' + tranDate);
-        //		log.debug('check dates', new Date(startDate) < new Date(tranDate));
-
-        //		if (new Date(startDate) < new Date(tranDate)) {
         var dateCheck = _checkDates({
             poNum: poNum,
             startDate: startDate,
@@ -195,41 +263,44 @@ define([
             xmlVendorText: xmlVendorText
         });
 
-        if (dateCheck) {
-            var libVendor = _getVendorLibrary({
-                vendorConfig: vendorConfig
-            });
-
-            if (libVendor) {
-                _validateVendorConfig({
-                    poNum: poNum,
-                    vendorConfig: vendorConfig
-                });
-                try {
-                    outputArray = libVendor.process({
-                        poNum: poNum,
-                        poId: poId,
-                        vendorConfig: vendorConfig
-                    });
-                } catch (e) {
-                    log.error(logTitle, '!! ERROR !!' + util.extractError(e));
-
-                    vcLog.recordLog({
-                        header: 'VAR Connect ERROR',
-                        body: JSON.stringify({
-                            error: util.extractError(e),
-                            details: JSON.stringify(e)
-                        }),
-                        status: constants.Lists.VC_LOG_STATUS.ERROR,
-                        transaction: poId
-                    });
-                }
-            }
-        } else {
+        if (!dateCheck) {
             log.audit(logTitle, '>> Invalid Date ');
+            return false;            
         }
 
-        log.audit(logTitle, '>> Output Array: ' + JSON.stringify(outputArray));
+
+        var libVendor = _getVendorLibrary({
+            vendorConfig: vendorConfig
+        });
+
+        if (libVendor) {
+            _validateVendorConfig({
+                poNum: poNum,
+                vendorConfig: vendorConfig
+            });
+            try {
+                outputArray = libVendor.process({
+                    poNum: poNum,
+                    poId: poId,
+                    countryCode: options.countryCode,
+                    vendorConfig: vendorConfig
+                });
+            } catch (e) {
+                log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+
+                vcLog.recordLog({
+                    header: 'VAR Connect ERROR',
+                    body: JSON.stringify({
+                        error: util.extractError(e),
+                        details: JSON.stringify(e)
+                    }),
+                    status: constants.Lists.VC_LOG_STATUS.ERROR,
+                    transaction: poId
+                });
+            }
+        }
+
+        // log.audit(logTitle, '>> Order Lines: ' + JSON.stringify(outputArray));
 
         return outputArray;
     }
@@ -284,7 +355,7 @@ define([
 
     function process(options) {
         var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, options);
 
         try {
             var mainConfig = options.mainConfig,
@@ -296,6 +367,7 @@ define([
                 subsidiary = options.subsidiary,
                 vendorList = constants.Lists.XML_VENDOR,
                 xmlVendor = vendorConfig.xmlVendor,
+                countryCode = options.countryCode,
                 outputArray = null;
 
             if (vendorConfig) {
@@ -309,6 +381,7 @@ define([
                         subsidiary: subsidiary,
                         poNum: poNum,
                         poId: poId,
+                        countryCode: countryCode,
                         tranDate: tranDate
                     });
                 } else {
@@ -316,6 +389,7 @@ define([
                         vendorConfig: vendorConfig,
                         poNum: poNum,
                         poId: poId,
+                        countryCode: countryCode,
                         tranDate: tranDate
                     });
                 }
