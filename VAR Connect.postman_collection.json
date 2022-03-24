@@ -205,7 +205,7 @@
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/10-CGRYG",
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/DNP-000410",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -217,7 +217,7 @@
 								"resellers",
 								"v6",
 								"orders",
-								"10-CGRYG"
+								"DNP-000410"
 							]
 						}
 					},
@@ -310,12 +310,12 @@
 							},
 							{
 								"key": "IM-CorrelationID",
-								"value": "439012341234",
+								"value": "DNP-000409",
 								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com/resellers/v6/orders/search?customerOrderNumber=12254&pageSize=5&page",
+							"raw": "https://api.ingrammicro.com/resellers/v6/orders/search?customerOrderNumber=DNP-000362",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -331,15 +331,7 @@
 							"query": [
 								{
 									"key": "customerOrderNumber",
-									"value": "12254"
-								},
-								{
-									"key": "pageSize",
-									"value": "5"
-								},
-								{
-									"key": "page",
-									"value": null
+									"value": "DNP-000362"
 								}
 							]
 						}
@@ -386,7 +378,7 @@
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com:443/resellers/v5/invoices/60-90782-11?customerNumber={{INGRAM_PARTNERID}}&isoCountryCode={{INGRAM_CCODE}}",
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/invoices/40-L926Q-11?customerNumber={{INGRAM_PARTNERID}}&isoCountryCode={{INGRAM_CCODE}}",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -398,7 +390,7 @@
 								"resellers",
 								"v5",
 								"invoices",
-								"60-90782-11"
+								"40-L926Q-11"
 							],
 							"query": [
 								{
