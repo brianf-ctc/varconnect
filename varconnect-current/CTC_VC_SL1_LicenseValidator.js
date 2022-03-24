@@ -13,7 +13,7 @@ function _decryptLicense(options) {
         if (decryptedLicenseKey) {
             var resultArray = decryptedLicenseKey.split('|'),
                 product = resultArray[0],
-                expiryDate = nlapiStringToDate(resultArray[1]),
+                expiryDate = new Date(resultArray[1]) || nlapiStringToDate(resultArray[1]),
                 accountId = resultArray[2];
         }
     } catch (e) {}
