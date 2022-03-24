@@ -14,7 +14,7 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Enables and disables fields depending on current selection
- * 
+ *
  */
 
 /**
@@ -22,12 +22,10 @@
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  */
-define(['./CTC_VC_Constants',
-        './CTC_VC_Lib_LicenseValidator'],
-
-function(constants, 
-		libLicenseValidator) {
-    
+define(['./CTC_VC_Constants', './CTC_VC_Lib_LicenseValidator'], function (
+    constants,
+    libLicenseValidator
+) {
     /**
      * Validation function to be executed when field is changed.
      *
@@ -43,20 +41,19 @@ function(constants,
      * @since 2015.2
      */
     function validateField(scriptContext) {
-    	if (scriptContext.fieldId == constants.Fields.MainConfig.LICENSE) {
-    		var currentRecord = scriptContext.currentRecord,
-    			license = currentRecord.getValue({ fieldId: scriptContext.fieldId });
-    		
-    		var response = libLicenseValidator.callValidationSuitelet({ license: license });
+        if (scriptContext.fieldId == constants.Fields.MainConfig.LICENSE) {
+            var currentRecord = scriptContext.currentRecord,
+                license = currentRecord.getValue({ fieldId: scriptContext.fieldId });
 
-    		log.debug('response', JSON.stringify(response))
-    	}
-    	
-    	return true;
+            var response = libLicenseValidator.callValidationSuitelet({ license: license });
+
+            log.debug('response', JSON.stringify(response));
+        }
+
+        return true;
     }
 
     return {
         validateField: validateField
     };
-    
 });
