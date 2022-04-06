@@ -19,6 +19,8 @@
  *			Oct 1, 2020		paolodl		Auto Shipped status for Pick, Pack, Ship
  *			Feb 8, 2021		paolodl		Add population for new date columns
  * 2.00		May 28, 2021	paolodl		Also check for line number
+ * 2.01		Mar 21, 2022	ccanaria	Add functionality for package
+ * 2.02		Mar 31, 2022	ccanaria	Add functionality to put serials using standard inventiory details
  */
 
 /**
@@ -431,6 +433,51 @@ define([
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
             vcLog.recordLog(logOption);
             return true;
+        },
+
+        // Added by Clemen - 03/18/2022
+        getSerials: function (soId, itemId) {
+            var retVal;
+
+            var customrecordserialnumSearchObj = search.create({
+                type: 'customrecordserialnum',
+                filters: [
+                    ['custrecordserialsales', 'is', soId],
+                    'AND',
+                    ['custrecordserialitem', 'is', itemId]
+                ],
+                columns: ['name']
+            });
+
+            var snList = [];
+
+            var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
+            log.debug('customrecordserialnumSearchObj result count', searchResultCount);
+
+            for (var x = 0; x < searchResultCount; x += 1000) {
+                var rangeStart = x;
+
+                var searchResult = customrecordserialnumSearchObj.run().getRange({
+                    start: rangeStart,
+                    end: rangeStart + 1000
+                });
+
+                for (var i = 0; i < searchResult.length; i++) {
+                    var snNum = searchResult[i].getValue({
+                        name: 'name'
+                    });
+                    var snId = searchResult[i].id;
+
+                    snList.push({
+                        snNum: snNum,
+                        snId: snId
+                    });
+                }
+            }
+
+            retVal = snList;
+
+            return retVal;
         }
     };
 
@@ -937,6 +984,7 @@ define([
                                             var tempSerials2 = '';
                                             var snSplit =
                                                 uniqueItems[tmp2].all_serial_nums.split('\n');
+
                                             for (
                                                 var tempCount = 0;
                                                 tempCount < snSplit.length;
@@ -946,11 +994,13 @@ define([
                                                     tempSerials += snSplit.shift() + '\n';
                                                 else break;
                                             }
+
                                             // reset Unique serial nums to whatever is left after processing current line
                                             for (var i2 = 0; i2 < snSplit.length; i2++) {
                                                 if (snSplit[i2].length > 0)
                                                     tempSerials2 += snSplit[i2] + '\n';
                                             }
+
                                             uniqueItems[tmp2].all_serial_nums = tempSerials2;
 
                                             objRecord.setCurrentSublistValue({
@@ -971,6 +1021,109 @@ define([
                                                 all_serial_nums: tempSerials
                                             };
                                             recordLines.push(item);
+
+                                            /*** Start Clem - Serial functionality 1 ***/
+                                            // Check if serialized
+                                            var isSerialized = objRecord.getCurrentSublistValue({
+                                                sublistId: 'item',
+                                                fieldId: 'isserial'
+                                            });
+
+                                            if (isSerialized || isSerialized === 'T') {
+                                                // Check if DropShip PO
+                                                var dropShipPO = objRecord.getCurrentSublistValue({
+                                                    sublistId: 'item',
+                                                    fieldId: 'createpo'
+                                                });
+
+                                                if (!Helper.isEmpty(dropShipPO)) {
+                                                    //Check if location is set on line level
+
+                                                    var lineLoc = objRecord.getCurrentSublistValue({
+                                                        sublistId: 'item',
+                                                        fieldId: 'location'
+                                                    });
+
+                                                    if (Helper.isEmpty(lineLoc)) {
+                                                        //Use SO's header level Location
+                                                        var locationLookup = search.lookupFields({
+                                                            type: 'salesorder',
+                                                            id: so_ID,
+                                                            columns: ['location']
+                                                        });
+
+                                                        if (locationLookup) {
+                                                            lineLoc =
+                                                                locationLookup.location[0].value;
+                                                        }
+                                                    }
+
+                                                    if (!Helper.isEmpty(lineLoc)) {
+                                                        objRecord.setCurrentSublistValue({
+                                                            sublistId: 'item',
+                                                            fieldId: 'location',
+                                                            value: lineLoc
+                                                        });
+
+                                                        var itemId =
+                                                            objRecord.getCurrentSublistValue({
+                                                                sublistId: 'item',
+                                                                fieldId: 'item'
+                                                            });
+
+                                                        // Get Serial numbers associated with the line item
+                                                        var snList = Helper.getSerials(
+                                                            so_ID,
+                                                            itemId
+                                                        );
+                                                        log.debug('snList', JSON.stringify(snList));
+
+                                                        if (!Helper.isEmpty(snList)) {
+                                                            var inventoryDetailRecord =
+                                                                objRecord.getCurrentSublistSubrecord(
+                                                                    {
+                                                                        sublistId: 'item',
+                                                                        fieldId: 'inventorydetail'
+                                                                    }
+                                                                );
+
+                                                            for (
+                                                                var y = 0;
+                                                                y < snList.length;
+                                                                y++
+                                                            ) {
+                                                                if (snList[y].snId > 0) {
+                                                                    inventoryDetailRecord.selectLine(
+                                                                        {
+                                                                            sublistId:
+                                                                                'inventoryassignment',
+                                                                            line: y
+                                                                        }
+                                                                    );
+
+                                                                    inventoryDetailRecord.setCurrentSublistValue(
+                                                                        {
+                                                                            sublistId:
+                                                                                'inventoryassignment',
+                                                                            fieldId:
+                                                                                'receiptinventorynumber',
+                                                                            value: snList[y].snNum
+                                                                        }
+                                                                    );
+
+                                                                    inventoryDetailRecord.commitLine(
+                                                                        {
+                                                                            sublistId:
+                                                                                'inventoryassignment'
+                                                                        }
+                                                                    );
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            /*** End Clem - Serial functionality 1 ***/
 
                                             objRecord.commitLine({
                                                 sublistId: 'item'
@@ -1072,6 +1225,96 @@ define([
                                         };
                                         recordLines.push(item);
 
+                                        /*** Start Clem - Serial functionality 2 ***/
+                                        // Check if serialized
+                                        var isSerialized = objRecord.getCurrentSublistValue({
+                                            sublistId: 'item',
+                                            fieldId: 'isserial'
+                                        });
+
+                                        if (isSerialized || isSerialized === 'T') {
+                                            // Check if DropShip PO
+                                            var dropShipPO = objRecord.getCurrentSublistValue({
+                                                sublistId: 'item',
+                                                fieldId: 'createpo'
+                                            });
+
+                                            if (!Helper.isEmpty(dropShipPO)) {
+                                                //Check if location is set on line level
+                                                var lineLoc = objRecord.getCurrentSublistValue({
+                                                    sublistId: 'item',
+                                                    fieldId: 'location'
+                                                });
+
+                                                if (Helper.isEmpty(lineLoc)) {
+                                                    //Use SO's header level Location
+                                                    var locationLookup = search.lookupFields({
+                                                        type: 'salesorder',
+                                                        id: so_ID,
+                                                        columns: ['location']
+                                                    });
+                                                    log.audit(
+                                                        'locationLookup',
+                                                        JSON.stringify(locationLookup)
+                                                    );
+
+                                                    if (locationLookup) {
+                                                        lineLoc = locationLookup.location[0].value;
+                                                    }
+                                                }
+
+                                                if (!Helper.isEmpty(lineLoc)) {
+                                                    objRecord.setCurrentSublistValue({
+                                                        sublistId: 'item',
+                                                        fieldId: 'location',
+                                                        value: lineLoc
+                                                    });
+
+                                                    var itemId = objRecord.getCurrentSublistValue({
+                                                        sublistId: 'item',
+                                                        fieldId: 'item'
+                                                    });
+
+                                                    // Get Serial numbers associated with the line item
+                                                    var snList = Helper.getSerials(so_ID, itemId);
+                                                    log.debug('snList', JSON.stringify(snList));
+
+                                                    if (!Helper.isEmpty(snList)) {
+                                                        var inventoryDetailRecord =
+                                                            objRecord.getCurrentSublistSubrecord({
+                                                                sublistId: 'item',
+                                                                fieldId: 'inventorydetail'
+                                                            });
+
+                                                        for (var y = 0; y < snList.length; y++) {
+                                                            if (snList[y].snId > 0) {
+                                                                inventoryDetailRecord.selectLine({
+                                                                    sublistId:
+                                                                        'inventoryassignment',
+                                                                    line: y
+                                                                });
+
+                                                                inventoryDetailRecord.setCurrentSublistValue(
+                                                                    {
+                                                                        sublistId:
+                                                                            'inventoryassignment',
+                                                                        fieldId:
+                                                                            'receiptinventorynumber',
+                                                                        value: snList[y].snNum
+                                                                    }
+                                                                );
+
+                                                                inventoryDetailRecord.commitLine({
+                                                                    sublistId: 'inventoryassignment'
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        /*** End Clem - Serial functionality 2 ***/
+
                                         uniqueItems[tmp2].totalShipped = 0;
                                         uniqueItems[tmp2].all_serial_nums = '';
                                         objRecord.commitLine({ sublistId: 'item' });
@@ -1115,6 +1358,7 @@ define([
 
                         if (index >= 0) {
                             found = true;
+
                             objRecord.selectLine({
                                 sublistId: 'item',
                                 line: index
@@ -1126,6 +1370,23 @@ define([
                             });
                             objRecord.commitLine({ sublistId: 'item' });
                             rec_Changed = true;
+
+                            /*** Start Clemen - Package 1***/
+                            objRecord.selectLine({
+                                sublistId: 'package',
+                                line: tmp3
+                            });
+
+                            objRecord.setCurrentSublistValue({
+                                sublistId: 'package',
+                                fieldId: 'packagetrackingnumber',
+                                value: uniqueItems[tmp3].all_tracking_nums
+                            });
+
+                            objRecord.commitLine({
+                                sublistId: 'package'
+                            });
+                            /*** End Clemen - Package 1***/
                         }
                     }
                     if (!found) {
@@ -1147,6 +1408,23 @@ define([
                             });
                             objRecord.commitLine({ sublistId: 'item' });
                             rec_Changed = true;
+
+                            /*** Start Clemen - Package 2***/
+                            objRecord.selectLine({
+                                sublistId: 'package',
+                                line: tmp3
+                            });
+
+                            objRecord.setCurrentSublistValue({
+                                sublistId: 'package',
+                                fieldId: 'packagetrackingnumber',
+                                value: uniqueItems[tmp3].all_tracking_nums
+                            });
+
+                            objRecord.commitLine({
+                                sublistId: 'package'
+                            });
+                            /*** End Clemen - Package 2***/
                         }
                     }
                 }
@@ -1204,7 +1482,6 @@ define([
                         isSucces: true,
                         message: '## Created Item Fulfillement: [itemfulfillment:' + objId + ']'
                     });
-                    
                 } catch (err) {
                     var errMsg = Helper.extractError(err);
                     log.error(

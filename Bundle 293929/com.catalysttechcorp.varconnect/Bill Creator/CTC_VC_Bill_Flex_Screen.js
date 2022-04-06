@@ -852,7 +852,7 @@ define([
                         }
                     }
 
-                    if ( Variance.Config.taxItem2) {
+                    if (Variance.Config.taxItem2) {
                         arrItemOptions.push({
                             value: Variance.Config.taxItem2,
                             text: Helper.getItemName(Variance.Config.taxItem2)
@@ -1602,7 +1602,10 @@ define([
             });
 
             var ignoreVariance = false;
-            if (Current.BILL_DATA.hasOwnProperty('ignoreVariance') && Current.BILL_DATA.ignoreVariance == 'T' ) {
+            if (
+                Current.BILL_DATA.hasOwnProperty('ignoreVariance') &&
+                Current.BILL_DATA.ignoreVariance == 'T'
+            ) {
                 ignoreVariance = true;
             }
 
@@ -1643,7 +1646,7 @@ define([
 
             processVariance.taxCharge(varianceValues.tax, arrVarianceLines);
             processVariance.adjustmentCharge(varianceValues.adjustment, arrVarianceLines);
-            
+
             // varianceLines.misc = processVariance.miscCharge(varianceValues.misc);
             //////////////////////////////////////
 
@@ -1729,27 +1732,27 @@ define([
                     }) * 1;
 
                 if (!ignoreVariance) {
-                Current.BILL_DATA.lines[i].PRICE =
-                    context.request.getSublistValue({
-                        group: 'item',
-                        name: 'frate',
-                        line: i
-                    }) * 1;
+                    Current.BILL_DATA.lines[i].PRICE =
+                        context.request.getSublistValue({
+                            group: 'item',
+                            name: 'frate',
+                            line: i
+                        }) * 1;
 
-                Current.BILL_DATA.lines[i].BILLRATE =
-                    context.request.getSublistValue({
-                        group: 'item',
-                        name: 'billrate',
-                        line: i
-                    }) * 1;
+                    Current.BILL_DATA.lines[i].BILLRATE =
+                        context.request.getSublistValue({
+                            group: 'item',
+                            name: 'billrate',
+                            line: i
+                        }) * 1;
 
-                Current.BILL_DATA.lines[i].QUANTITY =
-                    context.request.getSublistValue({
-                        group: 'item',
-                        name: 'fqty',
-                        line: i
-                    }) * 1;
-            }
+                    Current.BILL_DATA.lines[i].QUANTITY =
+                        context.request.getSublistValue({
+                            group: 'item',
+                            name: 'fqty',
+                            line: i
+                        }) * 1;
+                }
             }
 
             var varianceLines = [];

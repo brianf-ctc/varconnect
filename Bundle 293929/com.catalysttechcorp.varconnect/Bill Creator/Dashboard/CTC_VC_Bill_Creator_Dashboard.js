@@ -2,119 +2,105 @@
  * @NApiVersion 2.x
  * @NScriptType Suitelet
  */
-define(['N/search', 'N/file', '../Libraries/mustache'],
-   function(search, file, Mustache) {
-      function onRequest(context) {
+define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, Mustache) {
+    function onRequest(context) {
+        var data = {};
 
-         var data = {};
+        // data.block_one_value = '12'
+        // data.block_two_value = '24'
+        // data.block_three_value = '77'
+        // data.block_four_value = '354'
 
-         // data.block_one_value = '12'
-         // data.block_two_value = '24'
-         // data.block_three_value = '77'
-         // data.block_four_value = '354'
+        //var s;
 
-         //var s;
-
-         var s1 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s1 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_due_date", "onorbefore", "weeksfromnow1"],
-               "AND", ["custrecord_ctc_vc_bill_proc_status", "anyof", "1", "2", "4", "6", "7"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_due_date', 'onorbefore', 'weeksfromnow1'],
+                'AND',
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '6', '7'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.alert_due = s1.runPaged().count;
+        data.alert_due = s1.runPaged().count;
 
-
-
-         var s2 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s2 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_proc_status", "anyof", "2"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '2'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.alert_error = s2.runPaged().count;
+        data.alert_error = s2.runPaged().count;
 
-
-
-         var s3 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s3 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_proc_status", "noneof", "5"],
-               "AND", ["custrecord_ctc_vc_bill_linked_po", "anyof", "@NONE@"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_proc_status', 'noneof', '5'],
+                'AND',
+                ['custrecord_ctc_vc_bill_linked_po', 'anyof', '@NONE@'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.no_po_cnt= s3.runPaged().count;
+        data.no_po_cnt = s3.runPaged().count;
 
-
-         var s4 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s4 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_proc_status", "anyof", "6"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '6'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.on_hold_cnt = s4.runPaged().count;
+        data.on_hold_cnt = s4.runPaged().count;
 
-
-         var s5 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s5 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_linked_po.status", "anyof", "PurchOrd:B"],
-               "AND", ["custrecord_ctc_vc_bill_linked_po.mainline", "is", "T"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_linked_po.status', 'anyof', 'PurchOrd:B'],
+                'AND',
+                ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.pend_rcpt_cnt = s5.runPaged().count;
+        data.pend_rcpt_cnt = s5.runPaged().count;
 
-
-         var s6 = search.create({
-            type: "customrecord_ctc_vc_bills",
+        var s6 = search.create({
+            type: 'customrecord_ctc_vc_bills',
             filters: [
-               ["custrecord_ctc_vc_bill_proc_status", "anyof", "1", "2", "4", "7"],
-               "AND", ["isinactive", "is", "F"]
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '7'],
+                'AND',
+                ['isinactive', 'is', 'F']
             ],
-            columns: [
-               "internalid"
-            ]
-         });
+            columns: ['internalid']
+        });
 
-         data.to_be_proc_cnt = s6.runPaged().count;
+        data.to_be_proc_cnt = s6.runPaged().count;
 
+        var html = file
+            .load({
+                id: './dashboard.html'
+            })
+            .getContents();
 
+        context.response.write(Mustache.render(html, data));
+    }
 
-         var html = file.load({
-            id: './dashboard.html'
-         }).getContents();
-
-         context.response.write(Mustache.render(html, data));
-
-
-      }
-
-      return {
-         onRequest: onRequest
-      };
-   });
+    return {
+        onRequest: onRequest
+    };
+});

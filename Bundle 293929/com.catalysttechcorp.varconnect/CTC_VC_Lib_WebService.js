@@ -169,7 +169,7 @@ define([
         // );
         // log.debug('check dates', new Date(startDate) < new Date(tranDate));
 
-        return new Date(startDate) <= new Date(tranDate);
+        return new Date(startDate) < new Date(tranDate);
     }
 
     function _handleSingleVendor(options) {

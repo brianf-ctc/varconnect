@@ -119,8 +119,7 @@ define([
         try {
             vcLog.recordLog({
                 header: 'Ingram V1 (Cisco) Search PO Request',
-                body: 'url='+ url + '\r\n' + 
-                'header ' + JSON.stringify(headers),
+                body: 'url=' + url + '\r\n' + 'header ' + JSON.stringify(headers),
                 transaction: obj.poId,
                 status: constants.Lists.VC_LOG_STATUS.INFO
             });

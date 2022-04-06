@@ -17,13 +17,13 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return Helper.roundOff(taxAmount) || 0;
-        }, 
+        },
         roundOff: function (value) {
             var flValue = parseFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
-        },    
+        }
     };
 
     function recalculateTotals() {
@@ -69,24 +69,26 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             );
 
             console.log('lineData (item) >> ', lineData, taxLines[lineData.itemid]);
-            Totals.lineTax+=lineData.taxAmount;
-            Totals.lineAmount+=lineData.amount;
+            Totals.lineTax += lineData.taxAmount;
+            Totals.lineAmount += lineData.amount;
         }
 
         // variance lines
         lineCount = currRecord.getLineCount({ sublistId: 'variance' });
         for (line = 0; line < lineCount; line++) {
             lineData = {
-                itemid: currRecord.getSublistValue({
-                    sublistId: 'variance',
-                    fieldId: 'nsitem',
-                    line: line
-                }) || currRecord.getSublistValue({
-                    sublistId: 'variance',
-                    fieldId: 'itemid',
-                    line: line
-                }),
-                amount : currRecord.getSublistValue({
+                itemid:
+                    currRecord.getSublistValue({
+                        sublistId: 'variance',
+                        fieldId: 'nsitem',
+                        line: line
+                    }) ||
+                    currRecord.getSublistValue({
+                        sublistId: 'variance',
+                        fieldId: 'itemid',
+                        line: line
+                    }),
+                amount: currRecord.getSublistValue({
                     sublistId: 'variance',
                     fieldId: 'amount',
                     line: line
@@ -98,13 +100,11 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
 
             console.log('lineData (variance) >> ', lineData, taxLines[lineData.itemid]);
 
-            Totals.lineTax+=lineData.taxAmount;
-            Totals.lineAmount+=lineData.amount;
+            Totals.lineTax += lineData.taxAmount;
+            Totals.lineAmount += lineData.amount;
         }
 
         console.log('** Totals >> ', Totals);
-
-
 
         console.log(taxLines);
     }

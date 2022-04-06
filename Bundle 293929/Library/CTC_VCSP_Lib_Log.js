@@ -14,54 +14,48 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
- * 
- *//**
+ *
+ */ /**
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  */
-define(['N/record',
-        './CTC_VCSP_Constants.js'
-        ],
+define(['N/record', './CTC_VCSP_Constants.js'], function (record, constants) {
+    function recordLog(options) {
+        var header = options.header,
+            body = options.body,
+            transaction = options.transaction,
+            status = options.status,
+            logFields = constants.Fields.VarConnectLog;
 
-function(record,
-		constants) {
-	
-	function recordLog(options) {
-		var header = options.header,
-			body = options.body,
-			transaction = options.transaction,
-			status = options.status,
-			logFields = constants.Fields.VarConnectLog;
-		
-		var recLog = record.create({
-			type: constants.Records.VC_LOG
-		});
-		
-		recLog.setValue({
-			fieldId: logFields.APPLICATION,
-			value: constants.LOG_APPLICATION
-		});
-		recLog.setValue({
-			fieldId: logFields.HEADER,
-			value: header
-		});
-		recLog.setValue({
-			fieldId: logFields.BODY,
-			value: body
-		});
-		recLog.setValue({
-			fieldId: logFields.TRANSACTION,
-			value: transaction
-		});
-		recLog.setValue({
-			fieldId: logFields.STATUS,
-			value: status
-		});
-		
-		recLog.save();
-	}
-   
+        var recLog = record.create({
+            type: constants.Records.VC_LOG
+        });
+
+        recLog.setValue({
+            fieldId: logFields.APPLICATION,
+            value: constants.LOG_APPLICATION
+        });
+        recLog.setValue({
+            fieldId: logFields.HEADER,
+            value: header
+        });
+        recLog.setValue({
+            fieldId: logFields.BODY,
+            value: body
+        });
+        recLog.setValue({
+            fieldId: logFields.TRANSACTION,
+            value: transaction
+        });
+        recLog.setValue({
+            fieldId: logFields.STATUS,
+            value: status
+        });
+
+        recLog.save();
+    }
+
     return {
-    	recordLog: recordLog
+        recordLog: recordLog
     };
 });

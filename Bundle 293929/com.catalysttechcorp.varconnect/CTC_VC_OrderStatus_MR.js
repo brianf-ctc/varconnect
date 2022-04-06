@@ -182,7 +182,7 @@ define([
 
     function getInputData() {
         var logTitle = [LogTitle, 'getInputData'].join('::');
-        log.debug(logTitle, '###### START OF SCRIPT ######');
+        log.debug(logTitle, '###### START OF SCRIPT #######');
 
         //return saved search for company to get list of purchase orders
         vcLog.recordLog({
@@ -552,7 +552,6 @@ define([
             } else if (rs.length == 1) {
                 log.debug(logTitle, LogPrefix + ' >> Matching serial found');
             } else {
-
                 log.debug(
                     logTitle,
                     LogPrefix + ' >> Multiple Duplicates ' + JSON.stringify(rs.length)

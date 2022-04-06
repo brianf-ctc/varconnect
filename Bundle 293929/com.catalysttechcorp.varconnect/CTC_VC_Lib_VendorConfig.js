@@ -25,7 +25,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities'
 ], function (search, vcGlobals, constants, util) {
-    var LogTitle = 'VendorCFG', 
+    var LogTitle = 'VendorCFG',
         LogPrefix = LogPrefix || '';
 
     var vendorConfigFields = [
