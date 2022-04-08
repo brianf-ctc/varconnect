@@ -14,10 +14,16 @@ define([
     'N/https',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
+    './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (search, record, runtime, log, https, vcLog, constants, moment) {
+], function (search, record, runtime, log, https, vcLog, constants, vc2Utils, moment) {
     'use strict';
     var LogTitle = 'WS:IngramV1';
+
+    var CONFIG = {
+        CountryCode: '',
+        WAITMS: 300
+    };
 
     /**
      * @memberOf CTC_VC_Lib_Ingram_v1
@@ -95,17 +101,16 @@ define([
         //for debugging
         if (!obj.poId) obj.poId = obj.poNum;
 
-        var countryCode = 'US';
-        if (runtime.country == 'CA') countryCode = 'CA';
-        if (obj.countryCode) countryCode = obj.countryCode;
-
+        CONFIG.CountryCode =
+            obj.countryCode || obj.vendorConfig.country || runtime.country == 'US' ? 'US' : 'CA';
+        log.audit(logTitle, '>> country code: ' + CONFIG.CountryCode);
 
         var headers = {
             Authorization: 'Bearer ' + token,
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'IM-CustomerNumber': obj.vendorConfig.customerNo,
-            'IM-CountryCode': countryCode,
+            'IM-CountryCode': CONFIG.CountryCode,
             'IM-CustomerOrderNumber': obj.poNum,
             'IM-CorrelationID': obj.poId
         };
@@ -135,7 +140,7 @@ define([
         try {
             vcLog.recordLog({
                 header: 'Ingram V1 OrderStatus Response',
-                body: JSON.stringify(response),
+                body: JSON.stringify(response.body || response),
                 transaction: obj.poId,
                 status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
@@ -145,6 +150,9 @@ define([
 
         if (response) {
             var responseBody = JSON.parse(response.body);
+            // wait for 2
+            vc2Utils.waitMs(CONFIG.WAITMS);
+
             responseBody = _getOrderDetail({
                 responseBody: responseBody,
                 token: token,
@@ -154,6 +162,8 @@ define([
 
             /// PRICE & AVAILABILITY /////
             if (responseBody) {
+                vc2Utils.waitMs(CONFIG.WAITMS);
+
                 _getItemAvailability({
                     responseBody: responseBody,
                     token: token,
@@ -200,15 +210,15 @@ define([
             log.audit(logTitle, '>> ingramOrderNumber: ' + JSON.stringify(ingramOrderNumber));
 
             // TODO: send the correct country code
-            var countryCode = 'US';
-            if (runtime.country == 'CA') countryCode = 'CA';
+            // var countryCode = 'US';
+            // if (runtime.country == 'CA') countryCode = 'CA';
 
             var headers = {
                 Authorization: 'Bearer ' + token,
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
                 'IM-CustomerNumber': vendorConfig.customerNo,
-                'IM-CountryCode': countryCode,
+                'IM-CountryCode': CONFIG.CountryCode,
                 'IM-CorrelationID': poId
                 //				'IM-SenderID': vendorConfig.customerNo
             };
@@ -218,7 +228,10 @@ define([
             try {
                 vcLog.recordLog({
                     header: 'Ingram V6 PO Details Request',
-                    body: JSON.stringify(headers),
+                    body: JSON.stringify({
+                        HEADER: headers,
+                        URL: url
+                    }),
                     transaction: poId,
                     status: constants.Lists.VC_LOG_STATUS.INFO
                 });
@@ -234,7 +247,7 @@ define([
             try {
                 vcLog.recordLog({
                     header: 'Ingram V6 PO Details Response',
-                    body: JSON.stringify(response),
+                    body: JSON.stringify(response.body || response),
                     transaction: poId,
                     status: constants.Lists.VC_LOG_STATUS.SUCCESS
                 });
@@ -244,7 +257,7 @@ define([
 
             if (response) {
                 log.audit({
-                    title: 'Details Response',
+                    title: logTitle,
                     details: response
                 });
                 responseBody = JSON.parse(response.body);
@@ -327,7 +340,7 @@ define([
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'IM-CustomerNumber': vendorConfig.customerNo,
-            'IM-CountryCode': runtime.country == 'CA' ? 'CA' : 'US',
+            'IM-CountryCode': CONFIG.CountryCode,
             'IM-CustomerOrderNumber': poNum,
             'IM-CorrelationID': poId
         };
@@ -341,7 +354,7 @@ define([
 
         var url =
             vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
-            '/includeAvailability=true&includePricing=true&includeProductAttributes=true';
+            'includeAvailability=true&includePricing=true&includeProductAttributes=true';
 
         log.audit(logTitle, 'requestUrl: ' + url);
         log.audit(logTitle, 'requestOption ' + JSON.stringify(requestOption));
@@ -361,12 +374,13 @@ define([
 
         requestOption.body = JSON.stringify(requestOption.body);
 
+        vc2Utils.waitMs(CONFIG.WAITMS);
         var responseETA = https.post(requestOption);
 
         try {
             vcLog.recordLog({
                 header: 'Ingram V6 Item Availability (Response)',
-                body: JSON.stringify(responseETA),
+                body: JSON.stringify(responseETA.body || responseETA),
                 transaction: poId,
                 status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
@@ -440,39 +454,56 @@ define([
         var logTitle = [LogTitle, 'processResponse'].join('::');
         log.audit(logTitle, obj);
 
-        var outputArray = [];
+        var outputArray = [],
+            poId = obj.poId;
 
-        if (obj.responseBody === null) {
-            return outputArray;
+        var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
+        var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
+        var validShippedStatus = ['SHIPPED'];
+
+        try {
+            if (obj.responseBody === null || !obj.responseBody) {
+                throw 'Missing or invalid responseBody';
         }
+            var objBody = obj.responseBody;
 
-        var objBody = obj.responseBody;
-        log.audit('objBody', objBody);
-        if (objBody) {
-            var status = objBody.orderStatus;
+            log.audit(logTitle, '>> objBody : ' + JSON.stringify(objBody));
 
-            var validStatus = ['Shipped', 'Processing', 'Delivered', 'Backordered'];
-            if (validStatus.indexOf(status) >= 0) {
+            var orderStatus = objBody.orderStatus;
+            if (orderStatus) orderStatus = orderStatus.toUpperCase();
+            log.audit(logTitle, '>> orderStatus : ' + JSON.stringify(orderStatus));
+
+            if (!vc2Utils.inArray(orderStatus, validOrderStatus)) {
+                throw 'Skipping Order - ' + orderStatus;
+            }
+
                 for (var i = 0; i < objBody.lines.length; i++) {
                     var orderLine = objBody.lines[i];
-                    log.audit(logTitle, '>> line ' + i + ': ' + JSON.stringify(orderLine));
+                var lineStatus = orderLine.lineStatus;
+                if (lineStatus) lineStatus = lineStatus.toUpperCase();
 
-                    if (validStatus.indexOf(orderLine.lineStatus) >= 0) {
+                log.audit(logTitle, '>> orderLine #' + i + ': ' + JSON.stringify(orderLine));
+
+                if (!vc2Utils.inArray(lineStatus, validLineStatus)) {
+                    log.audit(
+                        logTitle,
+                        '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']'
+                    );
+                }
+
                         var outputObj = {};
 
                         // get line details from order lines
                         outputObj.line_num = orderLine.customerLineNumber;
-                        outputObj.item_num = orderLine.ingramPartNumber;//orderLine.vendorPartNumber; //
+                outputObj.item_num = orderLine.vendorPartNumber; ////orderLine.ingramPartNumber;//
+                outputObj.item_num_alt = orderLine.ingramPartNumber;
+                outputObj.is_shipped = vc2Utils.inArray(lineStatus, validShippedStatus);
 
                         //add shipment details
                         outputObj.ship_qty = 0;
                         var trackingNum = [];
                         var serials = [];
-                        for (
-                            var shipLine = 0;
-                            shipLine < orderLine.shipmentDetails.length;
-                            shipLine++
-                        ) {
+                for (var shipLine = 0; shipLine < orderLine.shipmentDetails.length; shipLine++) {
                             var shipment = orderLine.shipmentDetails[shipLine];
 
                             outputObj.ship_qty += parseInt(shipment.quantity);
@@ -480,6 +511,7 @@ define([
                             outputObj.order_date = shipment.invoiceDate;
                             outputObj.ship_date = shipment.shippedDate;
                             outputObj.order_eta = shipment.estimatedDeliveryDate || '';
+                    outputObj.order_eta_ship = shipment.estimatedDeliveryDate;
 
                             //add carrier details
                             //		            	  for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
@@ -496,8 +528,7 @@ define([
                                 ) {
                                     var tracking = carrier.trackingDetails[trackingLine];
 
-                                    if (tracking.trackingNumber)
-                                        trackingNum.push(tracking.trackingNumber);
+                            if (tracking.trackingNumber) trackingNum.push(tracking.trackingNumber);
 
                                     //add serials
                                     if (tracking.SerialNumbers)
@@ -508,8 +539,7 @@ define([
                                         ) {
                                             var serial = tracking.SerialNumbers[serialLine];
 
-                                            if (serial.serialNumber)
-                                                serials.push(serial.serialNumber);
+                                    if (serial.serialNumber) serials.push(serial.serialNumber);
                                         }
                                 }
                             }
@@ -520,13 +550,18 @@ define([
                         log.audit(logTitle, '>> adding: ' + JSON.stringify(outputObj));
                         outputArray.push(outputObj);
                     }
+        } catch (error) {
+            log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
+
+            vcLog.recordLog({
+                header: 'Ingram Response Processing | ERROR',
+                body: vc2Utils.extractError(error),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
+            });
                 }
-            }
-        }
-        log.audit({
-            title: 'outputArray',
-            details: outputArray
-        });
+
+        log.audit(logTitle, '>> output array: ' + JSON.stringify(outputArray));
         return outputArray;
     }
 
@@ -563,8 +598,16 @@ define([
             countryCode: options.countryCode
         });
 
+        CONFIG.CountryCode =
+            options.countryCode || options.vendorConfig.country || runtime.country == 'US'
+                ? 'US'
+                : 'CA';
+        log.audit(logTitle, '>> country code: ' + CONFIG.CountryCode);
+
         if (responseBody) {
             outputArray = processResponse({
+                poNum: options.poNum,
+                poId: options.poId,
                 vendorConfig: options.vendorConfig,
                 responseBody: responseBody
             });

@@ -4,6 +4,7 @@ define([
     'N/format',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities',
+    './CTC_VC2_Lib_Utils',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_Synnex',
     './CTC_VC_Lib_TechData',
@@ -21,6 +22,7 @@ define([
     format,
     constants,
     util,
+    vc2Utils,
     libVendorConfig,
     libSynnex,
     libTechData,
@@ -34,73 +36,6 @@ define([
     vcLog
 ) {
     var LogTitle = 'WebSvcLib';
-
-    var dateFormat;
-
-    function _parseDate(options) {
-        var logTitle = [LogTitle, 'parseDate'].join('::');
-        // log.audit(logTitle, '>> options: ' + JSON.stringify(options));
-
-        var dateString = options.dateString,
-            date = '';
-
-        if (!dateFormat) {
-            try {
-                require(['N/config'], function (config) {
-                    var generalPref = config.load({
-                        type: config.Type.COMPANY_PREFERENCES
-                    });
-                    dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                    return true;
-                });
-            } catch (e) {}
-            // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-        if (!dateFormat) {
-            try {
-                dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
-            } catch (e) {}
-            // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-
-        if (dateString && dateString.length > 0 && dateString != 'NA') {
-            try {
-                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
-
-                for (var i = 0; i < stringToProcess.length; i++) {
-                    var singleString = stringToProcess[i];
-                    if (singleString) {
-                        var stringArr = singleString.split('T'); //handle timestamps with T
-                        singleString = stringArr[0];
-                        var convertedDate = new Date(singleString);
-
-                        if (!date || convertedDate > date) date = convertedDate;
-                    }
-                }
-            } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
-            }
-        }
-
-        //Convert to string
-        if (date) {
-            //set date
-            var year = date.getFullYear();
-            if (year < 2000) {
-                year += 100;
-                date.setFullYear(year);
-            }
-
-            date = format.format({
-                value: date,
-                type: dateFormat ? dateFormat : format.Type.DATE
-            });
-        }
-
-        // log.audit('---datestring ' + dateString, date);
-
-        return date;
-    }
 
     function _validateVendorConfig(options) {
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
@@ -232,13 +167,13 @@ define([
             tranDate = options.tranDate,
             xmlVendorText = options.xmlVendorText;
 
-        var dtStartDate = _parseDate({ dateString: startDate }),
-            dtTranDate = _parseDate({ dateString: tranDate });
+        var dtStartDate = vc2Utils.parseDate(startDate),
+            dtTranDate = vc2Utils.parseDate(tranDate);
 
-        // log.audit(
-        //     logTitle,
-        //     '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
-        // );
+        log.audit(
+            logTitle,
+            '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
+        );
 
         return dtStartDate <= dtTranDate;
     }
@@ -264,7 +199,18 @@ define([
         });
 
         if (!dateCheck) {
-            log.audit(logTitle, '>> Invalid Date ');
+            vcLog.recordLog({
+                header: 'WebService',
+                body:
+                    'Invalid transaction date -- ' +
+                    JSON.stringify({
+                        'config startdate': startDate,
+                        'transaction date': tranDate
+                    }),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
+            });
+
             return false;            
         }
 
@@ -335,7 +281,22 @@ define([
                     xmlVendorText: xmlVendorText
                 });
 
-                if (dateCheck) {
+                if (!dateCheck) {
+                    vcLog.recordLog({
+                        header: 'WebService',
+                        body:
+                            'Invalid transaction date -- ' +
+                            JSON.stringify({
+                                'config startdate': startDate,
+                                'transaction date': tranDate
+                            }),
+                        transaction: poId,
+                        status: constants.Lists.VC_LOG_STATUS.ERROR
+                    });
+
+                    continue;
+                }
+
                     itemArray = itemArray.concat(
                         _handleSingleVendor({
                             vendorConfig: config,
@@ -344,9 +305,15 @@ define([
                             tranDate: tranDate
                         })
                     );
-                }
             } catch (e) {
-                log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+                log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+
+                vcLog.recordLog({
+                    header: 'WebService',
+                    body: 'Error encountered: ' + vc2Utils.extractError(e),
+                    transaction: poId,
+                    status: constants.Lists.VC_LOG_STATUS.ERROR
+                });
             }
         }
 
@@ -357,7 +324,6 @@ define([
         var logTitle = [LogTitle, 'process'].join('::');
         log.audit(logTitle, options);
 
-        try {
             var mainConfig = options.mainConfig,
                 vendorConfig = options.vendorConfig,
                 vendor = options.vendor,
@@ -370,6 +336,7 @@ define([
                 countryCode = options.countryCode,
                 outputArray = null;
 
+        try {
             if (vendorConfig) {
                 if (
                     mainConfig.multipleIngram &&
@@ -400,7 +367,14 @@ define([
                 prefix: vendorConfig.fulfillmentPrefix
             };
         } catch (e) {
-            log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+            log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+
+            vcLog.recordLog({
+                header: 'WebService::process',
+                body: 'Error encountered: ' + vc2Utils.extractError(e),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
+            });
         }
     }
 

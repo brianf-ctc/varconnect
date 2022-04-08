@@ -109,15 +109,15 @@ define([
                 })
             );
 
-        log.audit(
-            logTitle,
-            '>> search option: ' +
-                JSON.stringify({
-                    type: constants.Records.VENDOR_CONFIG,
-                    filters: filter,
-                    columns: vendorConfigFields
-                })
-        );
+        // log.audit(
+        //     logTitle,
+        //     '>> search option: ' +
+        //         JSON.stringify({
+        //             type: constants.Records.VENDOR_CONFIG,
+        //             filters: filter,
+        //             columns: vendorConfigFields
+        //         })
+        // );
 
         vendorConfigFields.push(
             search.createColumn({

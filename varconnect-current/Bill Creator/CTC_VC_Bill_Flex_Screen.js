@@ -127,7 +127,9 @@ define([
                                 'isBillable',
                                 '>> ERROR Generating Bill Record: ' + Helper.extractError(bill_err)
                             );
-                            Current.ErrorMessage = 'Unable to create Vendor Bill due to - ' + Helper.extractError(bill_err);
+                            Current.ErrorMessage =
+                                'Unable to create Vendor Bill due to - ' +
+                                Helper.extractError(bill_err);
                         }
                     }
                 }

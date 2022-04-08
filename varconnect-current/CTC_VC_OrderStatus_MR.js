@@ -10,10 +10,11 @@ define([
     'N/log',
     'N/xml',
     'N/https',
-    './CTC_Create_Item_Fulfillment',
-    './netsuitelibrary_v2.js',
+    './CTC_VC2_Lib_Utils',
     './VC_Globals',
+    './CTC_Create_Item_Fulfillment',
     './CTC_Create_Item_Receipt',
+    './netsuitelibrary_v2.js',
     './CTC_VC_Lib_MainConfiguration',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
@@ -28,10 +29,11 @@ define([
     log,
     xml,
     https,
-    createIF,
-    libcode,
+    vc2Utils,
     vcGlobals,
+    createIF,
     createIR,
+    libcode,
     libMainConfig,
     libVendorConfig,
     libWebService,
@@ -72,7 +74,8 @@ define([
 
     Helper.validateLicense = function (options) {
         var logTitle = [LogTitle, 'validateLicense'].join('::');
-        log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+        // log.audit(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+        // return true;
 
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
@@ -97,7 +100,7 @@ define([
 
     Helper.loadVendorConfig = function (options) {
         var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
-        log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+        // log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
 
         var vendor = options.vendor,
             subsidiary = options.subsidiary,
@@ -124,9 +127,21 @@ define([
             so_ID = options.soID,
             itemArray = options.itemArray,
             vendor = options.vendor,
-            fulfillmentData;
+            fulfillmentData = false;
 
         try {
+            log.audit(
+                logTitle,
+                LogPrefix +
+                    '>> Fulfillment Creation Settings << ' +
+                    JSON.stringify({
+                        'mainConfig.processDropships': mainConfig.processDropships,
+                        'vendorConfig.processDropships': vendorConfig.processDropships,
+                        'mainConfig.createIF': mainConfig.createIF,
+                        isDropPO: isDropPO
+                    })
+            );
+
             if (
                 mainConfig.processDropships &&
                 vendorConfig.processDropships &&
@@ -141,7 +156,23 @@ define([
                     lineData: itemArray,
                     vendor: vendor
                 });
-            } else if (
+            } else {
+                log.audit(logTitle, LogPrefix + '*** Fulfillment Creation not allowed ***');
+            }
+
+            log.audit(
+                logTitle,
+                LogPrefix +
+                    '>> Item Receipt Creation Settings << ' +
+                    JSON.stringify({
+                        'mainConfig.processSpecialOrders': mainConfig.processSpecialOrders,
+                        'vendorConfig.processSpecialOrders': vendorConfig.processSpecialOrders,
+                        'mainConfig.createIR': mainConfig.createIR,
+                        '!isDropPO': !isDropPO
+                    })
+            );
+
+            if (
                 mainConfig.processSpecialOrders &&
                 vendorConfig.processSpecialOrders &&
                 mainConfig.createIR &&
@@ -154,9 +185,18 @@ define([
                     lineData: itemArray,
                     vendor: vendor
                 });
+            } else {
+                log.audit(logTitle, LogPrefix + '*** Item Receipt Creation not allowed ***');
             }
         } catch (e) {
             log.error(logTitle, 'Error creating fulfillment/receipt : ' + JSON.stringify(e));
+
+            vcLog.recordLog({
+                header: 'Fulfillment/Receipt Creation | Error',
+                body: vc2Utils.extractError(e),
+                transaction: docid,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
+            });
         }
 
         return fulfillmentData;
@@ -193,11 +233,11 @@ define([
 
         try {
             //return saved search for company to get list of purchase orders
-            vcLog.recordLog({
-                header: 'VAR Connect START',
-                body: 'VAR Connect START',
-                status: constants.Lists.VC_LOG_STATUS.INFO
-            });
+            // vcLog.recordLog({
+            //     header: 'VAR Connect START',
+            //     body: 'VAR Connect START',
+            //     status: constants.Lists.VC_LOG_STATUS.INFO
+            // });
 
             Params = {
                 searchId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
@@ -217,6 +257,8 @@ define([
             if (!Params.searchId) {
                 throw 'Missing Search: Open PO for Order Status processing';
             }
+
+            log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
             if (!Params.internalid) {
                 returnValue = search.load({ id: Params.searchId });
@@ -285,30 +327,20 @@ define([
             );
 
             var subsidiary = Helper.getSubsidiary(docid);
+            // log.debug(logTitle, LogPrefix + '>> subsidiary: ' + JSON.stringify(subsidiary));
+
             var mainConfig = Helper.loadMainConfig();
+            // log.debug(logTitle, LogPrefix + '>> mainConfig: ' + JSON.stringify(mainConfig));
+
             var vendorConfig = Helper.loadVendorConfig({
                 vendor: vendor,
                 subsidiary: subsidiary
             });
+            if (!vendorConfig) throw 'Vendor Config not found';
+            // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
             // looup the country
-            var countryCode = search.lookupFields({
-                type: 'subsidiary',
-                id: subsidiary,
-                columns: ['country']
-            });
-            // flatten the coutnryCode
-            if (countryCode) {
-                countryCode = countryCode.country[0].value;
-            }
-
-
-            log.debug(logTitle, LogPrefix + '>> country: ' + JSON.stringify(countryCode));
-            log.debug(logTitle, LogPrefix + '>> subsidiary: ' + JSON.stringify(subsidiary));
-            log.debug(logTitle, LogPrefix + '>> mainConfig: ' + JSON.stringify(mainConfig));
-            log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
-
-            if (!vendorConfig) throw 'Vendor Config not found';
+            var countryCode = vendorConfig.countryCode;
 
             var po_record = r.load({
                 type: 'purchaseorder',
@@ -316,11 +348,23 @@ define([
                 isDynamic: true
             });
 
-            isDropPO = po_record.getValue({
+            log.audit(
+                logTitle,
+                '>> isDrop PO? ' +
+                    JSON.stringify({
+                        isDropPO: isDropPO,
+                        dropshipso: po_record.getValue({
                 fieldId: 'dropshipso'
-            });
+                        }),
+                        po_linktype: po_record.getValue({ fieldId: 'custbody_ctc_po_link_type' })
+                    })
+            );
 
-            //			var isDropPO = po_record.getValue({ fieldId: 'custbody_ctc_po_link_type '}) == 'Drop Shipment';
+            isDropPO =
+                po_record.getValue({
+                    fieldId: 'dropshipso'
+                }) ||
+                po_record.getValue({ fieldId: 'custbody_ctc_po_link_type' }) == 'Drop Shipment';
 
             log.debug(logTitle, LogPrefix + '>> Initiating library webservice ....');
 
@@ -336,6 +380,12 @@ define([
                 countryCode: countryCode
             });
             log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
+
+            // if there are no lines.. just exit the script
+            if (vc2Utils.isEmpty(outputObj.itemArray)) {
+                log.debug(logTitle, LogPrefix + '>> no line items to process... exiting script: ');
+                return true;
+            }
 
             so_ID = libcode.updatepo({
                 po_record: po_record,
@@ -398,10 +448,10 @@ define([
                     });
                     return true;
                 });
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
-                );
+                // log.debug(
+                //     logTitle,
+                //     LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
+                // );
 
                 var arrReceipts = [];
                 var ifSearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
@@ -418,12 +468,20 @@ define([
                     });
                     return true;
                 });
-                log.debug(logTitle, LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts));
+                // log.debug(logTitle, LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts));
 
                 log.debug(logTitle, LogPrefix + '>> lineData: ' + JSON.stringify(lineData));
 
                 if (lineData && lineData.length) {
                     for (var i = 0; i < lineData.length; i++) {
+                        if (!lineData[i]) {
+                            log.audit(
+                                logTitle,
+                                '....empty linedata: ' + JSON.stringify(lineData[i])
+                            );
+                            continue;
+                        }
+
                         var serialStr = lineData[i].serial_num;
                         var serialArray = serialStr;
                         if (typeof serialArray == 'string' && serialArray.length > 0)
@@ -454,6 +512,19 @@ define([
                             // log.debug('xml app v2: receiptNum', receiptNum);
                         }
 
+                        log.audit(
+                            logTitle,
+                            '.... matching fulfillment: ' +
+                                JSON.stringify([lineData[i].order_num, fulfillmentNum])
+                        );
+                        log.audit(
+                            logTitle,
+                            '... matching receipt: ' +
+                                JSON.stringify([lineData[i].order_num, receiptNum])
+                        );
+
+                        log.audit(logTitle, '... serialArray: ' + JSON.stringify(serialArray));
+
                         if (serialArray) {
                             for (var j = 0; j < serialArray.length; j++) {
                                 if (serialArray[j] == '') continue;
@@ -470,6 +541,7 @@ define([
                                 contextM.write(serialArray[j], {
                                     docid: docid,
                                     itemnum: lineData[i].item_num,
+                                    lineData: lineData[i],
                                     custid: custID,
                                     orderNum: fulfillmentNum,
                                     receiptNum: receiptNum,
@@ -479,6 +551,17 @@ define([
                         }
                     }
                 }
+            } else {
+                log.debug(
+                    logTitle,
+                    LogPrefix +
+                        '>> SKIPPED: ' +
+                        JSON.stringify({
+                            createSerialDropship: mainConfig.createSerialDropship,
+                            createSerialSpecialOrder: mainConfig.createSerialSpecialOrder,
+                            isDropPO: isDropPO
+                        })
+                );
             }
         } catch (e) {
             log.error('Error encountered in map', e);
@@ -510,33 +593,42 @@ define([
         if (po_record != null) {
             var itemId = '';
             var vendor = po_record.getValue({ fieldId: 'entity' });
-            var subsidiary = null;
+            var subsidiaryId = null;
             if (vcGlobals.ENABLE_SUBSIDIARIES)
-                subsidiary = po_record.getValue({ fieldId: 'subsidiary' });
+                subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
 
-            var mainConfig = _loadMainConfig();
-            var vendorConfig = _loadVendorConfig({
+            var mainConfig = Helper.loadMainConfig();
+            var subsidiary = Helper.getSubsidiary(poId);
+            var vendorConfig = Helper.loadVendorConfig({
                 vendor: vendor,
                 subsidiary: subsidiary
             });
+            if (!vendorConfig) throw 'Vendor Config not found';
+            // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
-            var lineNum = libcode.validateline(
-                po_record,
-                itemNum,
-                null,
-                mainConfig.ingramHashSpace,
-                vendorConfig.xmlVendor
-            );
+            // var lineNum = libcode.validateline(
+            //     po_record,
+            //     itemNum,
+            //     null,
+            //     mainConfig.ingramHashSpace,
+            //     vendorConfig.xmlVendor
+            // );
+
+            var lineNum = libcode.validateline({
+                po_record: po_record,
+                lineData: data.lineData,
+                ingramHashSpace: mainConfig.ingramHashSpace,
+                xmlVendor: vendorConfig.xmlVendor
+            });
+
             if (lineNum != null) {
-                var itemId = po_record.getSublistValue({
+                itemId = po_record.getSublistValue({
                     sublistId: 'item',
                     fieldId: 'item',
                     line: lineNum
                 });
             }
             //log.debug('Reduce ItemId', itemId);
-
-            var soId = '';
             var soId = po_record.getValue({
                 fieldId: 'createdfrom'
             });
@@ -630,11 +722,11 @@ define([
             return true;
         });
         log.audit('REDUCE keys processed', reduceKeys);
-        vcLog.recordLog({
-            header: 'VAR Connect END',
-            body: 'VAR Connect END',
-            status: constants.Lists.VC_LOG_STATUS.INFO
-        });
+        // vcLog.recordLog({
+        //     header: 'VAR Connect END',
+        //     body: 'VAR Connect END',
+        //     status: constants.Lists.VC_LOG_STATUS.INFO
+        // });
 
         log.debug(logTitle, '###### END OF SCRIPT ###### ');
     };

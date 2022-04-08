@@ -46,8 +46,6 @@ define([
             password = vendorConfig.password,
             customerNo = vendorConfig.customerNo;
 
-
-            
         log.debug({
             title: 'Ingram Micro Scheduled',
             details: 'requestIngramMicro'

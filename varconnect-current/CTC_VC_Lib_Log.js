@@ -69,6 +69,17 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             value: _getCurrentTime()
         });
 
+        log.audit(
+            'VCLOG:recordLog',
+            JSON.stringify({
+                APP: options.logApp || constants.LOG_APPLICATION,
+                HEADER: header || '',
+                BODY: body || '',
+                TXN: transaction || '',
+                STATUS: status || constants.Lists.VC_LOG_STATUS.INFO
+            })
+        );
+
         recLog.save();
     }
 

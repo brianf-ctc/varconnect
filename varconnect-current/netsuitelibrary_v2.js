@@ -126,13 +126,15 @@ define([
 
                 for (var i = 0; i < lineData.length; i++) {
                     // Find the line on the PO that matches the line data from the XML file
-                    var line_num = validateLineNumber(
-                        po_record,
-                        lineData[i].item_num,
-                        lineData[i].vendorSKU,
-                        mainConfig.ingramHashSpace,
-                        vendorConfig.xmlVendor
-                    );
+                    var line_num = validateLineNumber({
+                        po_record: po_record,
+                        lineData: lineData[i],
+                        ingramHashSpace: mainConfig.ingramHashSpace,
+                        xmlVendor: vendorConfig.xmlVendor
+                        // lineData[i].item_num,
+                        // lineData[i].vendorSKU,
+                    });
+
                     log.audit(
                         logTitle,
                         LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
@@ -203,7 +205,7 @@ define([
                 }
                 return createdFromID;
             } catch (err) {
-                log.error(logTitle, LogPrefix + '!! ERROR !! ' + util.extractError(err));
+                log.error(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
                 // log.error({
                 //     title: 'Update PO line data ERROR',
                 //     details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
@@ -224,22 +226,26 @@ define([
      * @param {*} vendorSKU optionally the vendorSKU if matching that instead of mpn
      * @returns {int} the line number of the matching item or null
      */
-    function validateLineNumber(po_record, itemNum, vendorSKU, hashSpace, xmlVendor) {
+    function validateLineNumber(option) {
+        //po_record, itemNum, vendorSKU, hashSpace, xmlVendor
         var logTitle = [LogTitle, 'validateLineNumber'].join('::');
+
+        var po_record = option.po_record,
+            lineData = option.lineData,
+            itemNum = lineData ? lineData.item_num : null,
+            vendorSKU = lineData.vendorSKU || lineData.item_num_alt || '',
+            hashSpace = option.ingramHashSpace,
+            xmlVendor = option.xmlVendor;
+
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-
-        // log.audit(
-        //     logTitle,
-        //     '>> params: ' + JSON.stringify([itemNum, vendorSKU, hashSpace, xmlVendor, po_record])
-        // );
-
+        log.audit(logTitle, LogPrefix + '>> params: ' + JSON.stringify(option));
         var vendorList = constants.Lists.XML_VENDOR;
-        var vendorSKU = vendorSKU || '';
 
         if (itemNum == null || itemNum.length == 0 || itemNum == 'NA') {
             log.error(logTitle, LogPrefix + 'Could not find line number for item ' + itemNum);
             return null;
-        } else {
+        }
+
             var lineItemCount = po_record.getLineCount({
                 sublistId: 'item'
             });
@@ -260,10 +266,7 @@ define([
                         });
 
                         if (tempVendorSKU == vendorSKU) {
-                            log.audit(
-                                logTitle,
-                                LogPrefix + '>>> matched vendor sku for line :' + i
-                            );
+                        log.audit(logTitle, LogPrefix + '>>> matched vendor sku for line :' + i);
                             return i;
                         }
 
@@ -305,7 +308,6 @@ define([
                 }
                 return null;
             } else return null;
-        }
     }
 
     /**

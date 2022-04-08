@@ -4,26 +4,43 @@
  */
 
 define([
-    'N/xml',
     'N/search',
-    'N/https',
-    'N/record',
     'N/currentRecord',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
-    './VC_Globals.js'
+    './VC_Globals.js',
+    './highlight/highlight.js',
+    './highlight/languages/xml.min.js',
+    './highlight/languages/json.min.js'
 ], function (
-    xml,
     nsSearch,
-    https,
-    r,
     currentRecord,
     constants,
     libVendorConfig,
     libWebService,
-    vcGlobals
+    vcGlobals,
+    hljs,
+    hljsXmlLanguage,
+    hljsJsonLanguage
 ) {
+    if (!hljs) {
+        require([
+            'SuiteScripts/VAR Connect/highlight/highlight.js',
+            'SuiteScripts/VAR Connect/highlight/languages/xml.min.js',
+            'SuiteScripts/VAR Connect/highlight/languages/json.min.js'
+        ], function (rehljs, rehljsXmlLanguage, rehljsJsonLanguage) {
+            hljs = rehljs;
+            hljsXmlLanguage = rehljsXmlLanguage;
+            hljsJsonLanguage = rehljsJsonLanguage;
+            hljs.registerLanguage('xml', hljsXmlLanguage);
+            hljs.registerLanguage('json', hljsJsonLanguage);
+        });
+    } else {
+        hljs.registerLanguage('xml', hljsXmlLanguage);
+        hljs.registerLanguage('json', hljsJsonLanguage);
+    }
+
     function _getPODetails(poNum) {
         var columns = [nsSearch.createColumn({ name: 'entity' })];
         if (vcGlobals.ENABLE_SUBSIDIARIES)
@@ -81,683 +98,125 @@ define([
     }
 
     function showVendorName() {
-        var currRec = currentRecord.get();
-        var xmlVendor = currRec.getValue({ fieldId: 'vendors' });
+        var xmlViewer = document.getElementById('custpage_xml_viewer_frame');
+        var xmlViewerDocument = xmlViewer.contentDocument || xmlViewer.contentWindow.document;
+        xmlViewerDocument.getElementById('custpage_xml__viewer').style.display = 'none';
+        xmlViewerDocument.getElementById('custpage_json__viewer').style.display = 'none';
+        var thisRecord = currentRecord.get();
+        var xmlVendor = thisRecord.getValue({ fieldId: 'vendors' });
 
-        var ponum = document.getElementById('ponum').value;
-        var ouputObj = '';
+        var ponum = thisRecord.getValue({ fieldId: 'ponum' });
+        var outputObj = '';
 
-        var country = currRec.getValue({ fieldId: 'country' });
+        var country = thisRecord.getValue({ fieldId: 'country' });
 
         if (ponum != null && ponum.length > 0) {
-            var msg = document.getElementById('message');
-            msg.value = 'Your PO = ' + ponum;
-
-            var poObj = _getPODetails(ponum);
-
+            var xmlContent = 'Your PO = ' + ponum;
             var vendorConfig = _loadDebugVendorConfig({ xmlVendor: xmlVendor });
-
+            var elementIdToShow, elementIdToHide;
             if (vendorConfig) {
                 console.log('debug lib: Calling library webservice');
-                ouputObj = libWebService.handleRequest({
+                try {
+                    outputObj = libWebService.handleRequest({
                     vendorConfig: vendorConfig,
                     poNum: ponum,
                     country: country
                 });
-                console.log('debug lib: webservice return ' + JSON.stringify(ouputObj));
-
-                if (ouputObj) {
-                    if (vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO)
-                        msg.value =
-                            'Retrieved XML:\n' +
-                            vkbeautify.xml(ouputObj.detailxml, 4) +
-                            '\nTracking XML:\n' +
-                            vkbeautify.xml(ouputObj.trackxml, 4);
-                    else if (
+                } catch (processErr) {
+                    outputObj =
+                        'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
+                        processErr.name +
+                        ': ' +
+                        processErr.message +
+                        ']';
+                    console.log(
+                        'debug lib: ' +
+                            processErr.name +
+                            '- ' +
+                            processErr.message +
+                            '==\n' +
+                            processErr.stack
+                    );
+                }
+                console.log('debug lib: webservice return ' + JSON.stringify(outputObj));
+                if (outputObj) {
+                    if (vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO) {
+                        xmlContent =
+                            '<!--Retrieved XML-->\n' +
+                            outputObj.detailxml +
+                            '\n<!--Tracking XML-->\n' +
+                            outputObj.trackxml;
+                        try {
+                            xmlContent = vkbeautify.xml(xmlContent, 4);
+                            xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                            elementIdToShow = 'custpage_xml__viewer';
+                            elementIdToHide = 'custpage_json__viewer';
+                        } catch (parseErr) {
+                            xmlContent = JSON.stringify(outputObj);
+                            xmlContent = vkbeautify.json(xmlContent, 4);
+                            xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                            elementIdToShow = 'custpage_json__viewer';
+                            elementIdToHide = 'custpage_xml__viewer';
+                        }
+                    } else if (
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.SYNNEX_API ||
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
-                    )
-                        msg.value = 'Retrieved JSON:\n' + vkbeautify.json(ouputObj, 4);
-                    else msg.value = 'Retrieved XML:\n' + vkbeautify.xml(ouputObj, 4);
+                    ) {
+                        xmlContent = JSON.stringify(outputObj);
+                        try {
+                            xmlContent = vkbeautify.json(xmlContent, 4);
+                            xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                            elementIdToShow = 'custpage_json__viewer';
+                            elementIdToHide = 'custpage_xml__viewer';
+                        } catch (parseErr) {
+                            xmlContent = vkbeautify.xml(xmlContent, 4);
+                            xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                            elementIdToShow = 'custpage_xml__viewer';
+                            elementIdToHide = 'custpage_json__viewer';
+                        }
+                    } else {
+                        xmlContent = outputObj;
+                        if (typeof xmlContent == 'string') {
+                            try {
+                                xmlContent = vkbeautify.xml(xmlContent, 4);
+                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                elementIdToShow = 'custpage_xml__viewer';
+                                elementIdToHide = 'custpage_json__viewer';
+                            } catch (parseErr) {
+                                xmlContent = JSON.stringify(outputObj);
+                                xmlContent = vkbeautify.json(xmlContent, 4);
+                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                elementIdToShow = 'custpage_json__viewer';
+                                elementIdToHide = 'custpage_xml__viewer';
+                            }
+                        } else {
+                            xmlContent = JSON.stringify(outputObj);
+                            try {
+                                xmlContent = vkbeautify.json(xmlContent, 4);
+                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                elementIdToShow = 'custpage_json__viewer';
+                                elementIdToHide = 'custpage_xml__viewer';
+                            } catch (parseErr) {
+                                xmlContent = vkbeautify.xml(xmlContent, 4);
+                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                elementIdToShow = 'custpage_xml__viewer';
+                                elementIdToHide = 'custpage_json__viewer';
+                            }
+                        }
                 }
+                    xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
+                    xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
+                }
+                xmlViewerDocument.getElementById([elementIdToShow, '_content'].join('')).innerHTML =
+                    xmlContent;
             } else {
                 alert('Please Select a valid PO with vendor properly configured');
             }
         } else alert('Please Select a vendor and enter a PO number');
     }
-
-    //    //****************************************************************
-    //    //** Westcon Code
-    //    //****************************************************************
-    //    function handleWestcon(poNum) {
-    //        //stub function that handles everything for synnex
-    //
-    //        //requestWestcon
-    //        var responseXML = requestWestcon(poNum);
-    //
-    //        //var outputObj = {"xmlString": responseXML, "itemArray": outputArr};
-    //        var outputObj = {"xmlString": responseXML};
-    //        //returnXML
-    //        return outputObj;
-    //    };
-    //
-    //    function requestWestcon(poNum) {
-    //
-    //        var xmlorderStatus;
-    //
-    //        var customerNumber = "597668";
-    //        var custPONumber = poNum;
-    //        var requestURL = "https://companya.cloudfloordns.com/b2b/OrderStatus/v2/OrderStatus.svc?wsdl";
-    //
-    //        var orderXMLLineData = [];
-    //
-    //        /* 			xmlorderStatus =
-    //                        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/" xmlns:wes="http://schemas.datacontract.org/2004/07/Westcon.B2B.WebServices.OrderStatus.Contracts.Request">' +
-    //                            '<soapenv:Body>' +
-    //                                '<tem:GetOrderStatus>' +
-    //                                    '<tem:GetOrderStatus>' +
-    //                                        '<wes:WestconOrderStatus>' +
-    //                                            '<wes:CustomerAccountNumber>1003408</wes:CustomerAccountNumber>' +
-    //                                            '<wes:OrderNumberType>W</wes:OrderNumberType>' +
-    //                                            '<wes:Orders>' +
-    //                                                '<wes:Order>' +
-    //                                                    '<wes:OrderNumber>704571</wes:OrderNumber>' +
-    //                                                '</wes:Order>' +
-    //                                            '</wes:Orders>' +
-    //                                        '</wes:WestconOrderStatus>' +
-    //                                    '</tem:request>' +
-    //                                '</tem:GetOrderStatus>' +
-    //                            '</soapenv:Body>' +
-    //                        '</soapenv:Envelope>';
-    //         */
-    //        xmlorderStatus = '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:tem="http://tempuri.org/" xmlns:wes="http://schemas.datacontract.org/2004/07/Westcon.B2B.WebServices.OrderStatus.Contracts.Request"> ' +
-    //            '   <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">' +
-    //            '	   <wsse:Security soap:mustUnderstand="true" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">' +
-    //            '         <wsse:UsernameToken wsu:Id="UsernameToken-AEFEE4C6144495356215102517373256">' +
-    //            '            <wsse:Username>1009255</wsse:Username>' +
-    //            '            <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">OZobLgcYMS8cclKxRQnQBOYxnDk21jiqqhbj</wsse:Password>' +
-    //            '            <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">EmkG1ju7JxFq2/Bh6tHLuQ==</wsse:Nonce>' +
-    //            '            <wsu:Created>2017-11-09T18:22:17.325Z</wsu:Created>' +
-    //            '         </wsse:UsernameToken>' +
-    //            '      </wsse:Security>' +
-    //            '      <wsa:Action>http://tempuri.org/IOrderStatus/GetOrderStatus</wsa:Action>' +
-    //            '   </soap:Header>' +
-    //            '   <soap:Body>' +
-    //            '      <tem:GetOrderStatus>' +
-    //            '         <tem:request>' +
-    //            '            <wes:WestconMetadata>' +
-    //            '               <wes:Culture>2000</wes:Culture>' +
-    //            '               <wes:OperationType>OrderStatus</wes:OperationType>' +
-    //            '               <wes:SourceSystem>B2BWEB</wes:SourceSystem>' +
-    //            '               <wes:TimeStamp>2016-05-31T09:00:00</wes:TimeStamp>' +
-    //            '               <wes:TransactionID>B2BWEB</wes:TransactionID>' +
-    //            '            </wes:WestconMetadata>' +
-    //            '            <wes:WestconOrderStatus>' +
-    //            '               <wes:CustomerAccountNumber>1009255</wes:CustomerAccountNumber>' +
-    //            '               <wes:OrderNumberType>W</wes:OrderNumberType>' +
-    //            '               <wes:Orders>' +
-    //            '                  <wes:Order>' +
-    //            '                     <wes:OrderNumber>'+custPONumber+'</wes:OrderNumber>' +
-    //            '                  </wes:Order>' +
-    //            '               </wes:Orders>' +
-    //            '            </wes:WestconOrderStatus>' +
-    //            '         </tem:request>' +
-    //            '      </tem:GetOrderStatus>' +
-    //            '   </soap:Body>' +
-    //            '</soap:Envelope>';
-    //
-    //
-    //
-    //        var headers = {
-    //            'Content-Type': "application/soap+xml"
-    ////				'Content-Length': 'length'
-    //        };
-    //
-    //        try {
-    //            var response = https.post({
-    //                url: requestURL,
-    //                body: xmlorderStatus,
-    //                headers: headers
-    //            });
-    //            var responseXML = response.body;
-    ////				alert ('response = '+responseXML)
-    //
-    ////				responseXML='This is where the Westcon POST goes';
-    //        }
-    //        catch (err) {
-    //            alert ('Post error = '+err)
-    //        }
-    //
-    //        return responseXML;
-    //    }
-    //
-    //    //****************************************************************
-    //    //** Synnex Code
-    //    //****************************************************************
-    //    function handleSynnex(poNum) {
-    //
-    //        var responseXML = requestSynnex(poNum);
-    //        var outputObj = {"xmlString": responseXML};
-    //        //returnXML
-    //        return outputObj;
-    //    };
-    //
-    //    function requestSynnex(poNum) {
-    //
-    //        var xmlorderStatus;
-    //
-    //        var credentials = decodeCredentials("Synnex", poNum)
-    //        if (credentials == null) return ("Synnex Credentials missing");
-    //        if (isEmpty(credentials.userName) || isEmpty(credentials.password) || isEmpty(credentials.customerNum)) return ("Synnex Credentials missing")
-    //
-    //        var userName = credentials.userName;
-    //        var password = credentials.password;
-    //        var customerNumber = credentials.customerNum;
-    //
-    //
-    //        var custPONumber = poNum;
-    //        var requestURL = "https://ec.synnex.com/SynnexXML/POStatus";
-    //        //var requestURL = "https://ec.synnex.ca/SynnexXML/POStatus";
-    //
-    //        var orderXMLLineData = [];
-    //
-    //        xmlorderStatus =
-    //            '<?xml version="1.0" encoding="UTF-8" ?>' +
-    //            '<SynnexB2B version="2.2">' +
-    //            '<Credential>' +
-    //            '<UserID>' + userName + '</UserID>' +
-    //            '<Password>' + password + '</Password>' +
-    //            '</Credential>' +
-    //            '<OrderStatusRequest>' +
-    //            '<CustomerNumber>' + customerNumber + '</CustomerNumber>' +
-    //            '<PONumber>' + custPONumber + '</PONumber>' +
-    //            '</OrderStatusRequest>' +
-    //            '</SynnexB2B>';
-    //
-    //        var headers = {
-    //            'Content-Type': 'text/xml; charset=utf-8',
-    //            'Content-Length': 'length'
-    //        };
-    //
-    //        log.debug('url', requestURL);
-    //        log.debug('body', xmlorderStatus);
-    //        log.debug('headers', headers);
-    //
-    //        try {
-    //        	var request = {
-    //                    url: requestURL,
-    //                    body: xmlorderStatus,
-    //                    headers: headers
-    //                }
-    //        	log.debug('obj ', request);
-    //        	log.debug('obj string ', JSON.stringify(request));
-    //
-    //            var response = https.post(request);
-    //            var responseXML = response.body;
-    //        }
-    //        catch (err) {
-    //            /**				log.error({
-    //				title: 'Synnex scheduled',
-    //				details: 'error = '+err.message
-    //			});
-    //             **/
-    //            alert('Synnex scheduled : error = '+err.message);
-    //        }
-    //
-    //        return responseXML;
-    //    }
-    //
-    //    //****************************************************************
-    //    //** D and H Code
-    //    //****************************************************************
-    //    function handleDandH(poNum) {
-    //        var responseXML = requestDandH(poNum);
-    //
-    //        var outputObj = {"xmlString": responseXML};
-    //
-    //        return outputObj;
-    //
-    //    }
-    //
-    //    function requestDandH(poNum) {
-    //        var xmlorderStatus;
-    //        var xmlInvoiceByPOStatus;
-    //
-    //        var credentials = decodeCredentials("DandH", poNum)
-    //        if (credentials == null) return ("DandH Credentials missing");
-    //        if (isEmpty(credentials.userName) || isEmpty(credentials.password) ) return ("DandH Credentials missing")
-    //
-    //        var userName = credentials.userName;
-    //        var password = credentials.password;
-    //
-    //        var custPONumber = poNum;
-    //        var requestURL = "https://www.dandh.com/dhXML/xmlDispatch";
-    //
-    //        var orderXMLLineData = [];
-    //
-    //        xmlorderStatus =
-    //            '<XMLFORMPOST>' +
-    //            '<REQUEST>orderStatus</REQUEST>' +
-    //            '<LOGIN>' +
-    //            '<USERID>' + userName + '</USERID>' +
-    //            '<PASSWORD>' + password + '</PASSWORD>' +
-    //            '</LOGIN>' +
-    //            '<STATUSREQUEST>' +
-    //            '<PONUM>' + custPONumber + '</PONUM>' +
-    //            '</STATUSREQUEST>' +
-    //            '</XMLFORMPOST>';
-    //
-    //        var headers = {
-    //            'Content-Type': 'text/xml; charset=utf-8',
-    //            'Content-Length': 'length'
-    //        };
-    //
-    //        try {
-    //            var response = https.post({
-    //                url: requestURL,
-    //                body: xmlorderStatus,
-    //                headers: headers
-    //
-    //            });
-    //            var responseXML = response.body ;
-    //        }
-    //        catch (err) {
-    //            alert('DandH scheduled error = '+err.message);
-    //        }
-    //
-    //        return responseXML;
-    //
-    //    }
-    //
-    //    //****************************************************************
-    //    //** Tech Data Code
-    //    //****************************************************************
-    //
-    //    function handleTechData(poNum) {
-    //        var responseXML = requestTechData(poNum);
-    //        var outputObj = {"xmlString": responseXML};
-    //
-    //        return outputObj;
-    //    }
-    //
-    //    function requestTechData(poNum) {
-    //        var xmlInvoiceByPOStatus;
-    //
-    //        var credentials = decodeCredentials("TechData", poNum)
-    //        if (credentials == null) return ("TechData Credentials not found");
-    //        if (isEmpty(credentials.userName) || isEmpty(credentials.password)) return ("TechData Credentials missing")
-    //
-    //        var userName = credentials.userName;
-    //        var password = credentials.password;
-    //
-    //        var responseVersion = "1.8";
-    //        var custPONumber = poNum;
-    //
-    //        var requestURL =  "https://tdxml.techdata.com/xmlservlet";
-    //
-    //        var orderXMLLineData = [];
-    //
-    //        xmlInvoiceByPOStatus =
-    //            "<XML_InvoiceDetailByPO_Submit>" +
-    //            "<Header>" +
-    //            "<UserName>"+userName+"</UserName>" +
-    //            "<Password>"+password+"</Password>" +
-    //            "</Header>" +
-    //            "<Detail>" +
-    //            "<POInfo>" +
-    //            "<PONbr>" + custPONumber + "</PONbr>" +
-    //            "</POInfo>" +
-    //            "</Detail>" +
-    //            "</XML_InvoiceDetailByPO_Submit>";
-    //
-    //        var headers = {
-    //            'Content-Type': 'text/xml; charset=utf-8',
-    //            'Content-Length': 'length'
-    //        };
-    //
-    //        try {
-    //            var response = https.post({
-    //                url: requestURL,
-    //                body: xmlInvoiceByPOStatus,
-    //                headers: headers
-    //
-    //            });
-    //            var responseXML = response.body ;
-    //        }
-    //        catch (err) {
-    //            alert('TechData scheduled error = '+err.message);
-    //        }
-    //
-    //        // Remove first two lines of XML response
-    //        responseXML = responseXML.substring(responseXML.indexOf("\n") + 1);
-    //        responseXML = responseXML.substring(responseXML.indexOf("\n") + 1);
-    //
-    //        return responseXML;
-    //
-    //    }
-    //
-    //    //****************************************************************
-    //    //** Ingram Micro Code
-    //    //****************************************************************
-    //    function handleIngramMicro(poNum) {
-    //        var responseXML = requestIngramMicro(poNum);
-    //        var outputObj = {"xmlString": responseXML};
-    //
-    //        return outputObj;
-    //    }
-    //
-    //    function requestIngramMicro(poNum) {
-    //        var xmlorderStatus;
-    //        var xmlInvoiceByPOStatus;
-    //
-    //        var credentials = decodeCredentials("IngramMicro", poNum)
-    //        if (credentials == null) return ("IngramMicro Credentials not found");
-    //        if (isEmpty(credentials.userName) || isEmpty(credentials.password)) return ("IngramMicro Credentials missing")
-    //
-    //        var userName = credentials.userName;
-    //        var password = credentials.password;
-    //
-    //
-    //        var custPONumber = poNum;
-    //        var requestURL = "https://newport.ingrammicro.com";
-    //        var branchOrderNumber = "";
-    //
-    //        var headers = {
-    //            'Content-Type': 'text/xml; charset=utf-8',
-    //            'Content-Length': 'length'
-    //        };
-    //
-    //        //get branch order number
-    //        xmlorderStatus =
-    //            '<OrderStatusRequest>' +
-    //            '<Version>2.0</Version>' +
-    //            '<TransactionHeader>' +
-    //            '<SenderID>123456789</SenderID>' +
-    //            '<ReceiverID>987654321</ReceiverID>' +
-    //            '<CountryCode>MD</CountryCode>' +
-    //            '<LoginID>' + userName + '</LoginID>' +
-    //            '<Password>' + password + '</Password>' +
-    //            '<TransactionID>54321</TransactionID>' +
-    //            '</TransactionHeader>' +
-    //            '<OrderHeaderInfo>' +
-    //            '<CustomerPO>' + custPONumber + '</CustomerPO>' +
-    //            '</OrderHeaderInfo>' +
-    //            '</OrderStatusRequest>';
-    //        try {
-    //            var orderNumberResponse = https.post({
-    //                url: requestURL,
-    //                body: xmlorderStatus,
-    //                headers: headers
-    //            });
-    //            var orderNumberXML = xml.Parser.fromString({
-    //                text : orderNumberResponse.body
-    //            }) ;
-    //
-    //            branchOrderNumber = xml.XPath.select({ node:orderNumberXML, xpath: '//BranchOrderNumber' })[0].textContent;
-    //        }
-    //        catch (err) {
-    //            alert('requestIngramMicro error = '+err.message);
-    //        }
-    //
-    //        var orderXMLLineData = [];
-    //
-    //        var xmlorderDetailStatus =
-    //            '<OrderDetailRequest>' +
-    //            '<Version>2.0</Version>' +
-    //            '<TransactionHeader>' +
-    //            '<SenderID>123456789</SenderID>' +
-    //            '<ReceiverID>987654321</ReceiverID>' +
-    //            '<CountryCode>MD</CountryCode>' +
-    //            '<LoginID>' + userName + '</LoginID>' +
-    //            '<Password>' + password + '</Password>' +
-    //            '<TransactionID>54321</TransactionID>' +
-    //            '</TransactionHeader>' +
-    //            '<OrderHeaderInfo>' +
-    //            '<BranchOrderNumber>' + branchOrderNumber + '</BranchOrderNumber>' +
-    //            '<OrderSuffix/>' +
-    //            '<CustomerPO>' + custPONumber + '</CustomerPO>' +
-    //            '</OrderHeaderInfo>' +
-    //            '<ShowDetail>2</ShowDetail>' +
-    //            '</OrderDetailRequest>';
-    //
-    //        var orderTrackingRequest =
-    //            '<OrderTrackingRequest>' +
-    //            '<Version>2.0</Version>' +
-    //            '<TransactionHeader>' +
-    //            '<SenderID>123456789</SenderID>' +
-    //            '<ReceiverID>987654321</ReceiverID>' +
-    //            '<CountryCode>MD</CountryCode>' +
-    //            '<LoginID>' + userName + '</LoginID>' +
-    //            '<Password>' + password + '</Password>' +
-    //            '<TransactionID>54321</TransactionID>' +
-    //            '</TransactionHeader>' +
-    //            '<TrackingRequestHeader>' +
-    //            '<BranchOrderNumber>' + branchOrderNumber + '</BranchOrderNumber>' +
-    //            '<OrderSuffix/>' +
-    //            '<CustomerPO>' + custPONumber + '</CustomerPO>' +
-    //            '</TrackingRequestHeader>' +
-    //            '<ShowDetail>2</ShowDetail>' +
-    //            '</OrderTrackingRequest>';
-    //        try {
-    //            var response = https.post({
-    //                url: requestURL,
-    //                body: xmlorderDetailStatus,
-    //                headers: headers
-    //            });
-    //            var responseXML = response.body;
-    //
-    //            var trackingXML = https.post({
-    //                url: requestURL,
-    //                body: orderTrackingRequest,
-    //                headers: headers
-    //            }).body;
-    //
-    //
-    //        }
-    //        catch (err) {
-    //            alert('requestIngramMicro error = '+err.message);
-    //        }
-    //
-    //        return {detailxml:responseXML, trackxml:trackingXML} ;
-    //
-    //    }
-    //
-    //    /***  OLD Encoded Version
-    //     function decodeCredentials(company) {
-    //	var cred = record.load({
-    //		type: 'customrecord_vc_config',
-    //		id: 1
-    //	});
-    //	var loginCreds = {userName:"", password:""};
-    //
-    //	var encoded = "";
-    //	if (company == 'Synnex') encoded = cred.getValue({fieldId: 'credentialsSynnex'});
-    //	if (company == 'DandH') encoded = cred.getValue({fieldId: 'credentialsDandH'});
-    //	if (company == 'IngramMicro') encoded = cred.getValue({fieldId: 'credentialsIngramMicro'});
-    //	if (company == 'TechData') encoded = cred.getValue({fieldId: 'credentialsTechData'});
-    //	return encode.convert({
-    //		string: encoded,
-    //		inputEncoding: encode.Encoding.BASE_64,
-    //		outputEncoding: encode.Encoding.UTF_8
-    //	});
-    //};
-    //     *********/
-    //
-    //    function decodeCredentials(company, poNum) {
-    //        var cred;
-    //        var enableSubsidiaries = vcGlobals.ENABLE_SUBSIDIARIES;
-    //        var loginCreds = {userName:"", password:"", customerNum:""};
-    //
-    //        log.debug('decodeCredentials', poNum)
-    //        if (enableSubsidiaries) {
-    //            var subsidiary = "";
-    //            var purchaseorderSearchObj = nsSearch.create({
-    //                type: "purchaseorder",
-    //                filters:
-    //                [
-    //                ["type","anyof","PurchOrd"],
-    //                "AND",
-    //                ["numbertext","is",poNum],
-    //                "AND",
-    //                ["mainline", "is", true ]
-    //                ],
-    //                columns:
-    //                [
-    //                    nsSearch.createColumn({name: "subsidiary"}),
-    //                ]
-    //            });
-    //            var searchResultCount = purchaseorderSearchObj.runPaged().count;
-    //            log.debug("purchaseorderSearchObj result count",searchResultCount);
-    //            purchaseorderSearchObj.run().each(function(result){
-    //                subsidiary = result.getValue('subsidiary');
-    //
-    //                return false;
-    //            });
-    //
-    //
-    //            //var subsidiary = poRec.getValue('subsidiary');
-    //            log.debug('decodeCredentials:subsidiary', subsidiary)
-    //
-    //            var myFilters2 = [];
-    //            myFilters2.push(nsSearch.createFilter({
-    //                name: 'custrecord_vc_subsidiary',
-    //                operator: nsSearch.Operator.IS,
-    //                values : subsidiary
-    //            }));
-    //            var results2 = nsSearch.create({
-    //                type: 'customrecord_vc_config',
-    //                filters: myFilters2
-    //            }).run().getRange({
-    //                start: 0,
-    //                end: 1
-    //            })
-    //            log.debug('decodeCredentials:results2', results2)
-    //            if (results2) {
-    //                cred = r.load({
-    //                    type: 'customrecord_vc_config',
-    //                    id: results2[0].id
-    //                });
-    //            }
-    //            else {
-    //                return null;
-    //            }
-    //
-    //
-    //        }
-    //        else {
-    //            cred = r.load({
-    //                type: 'customrecord_vc_config',
-    //                id: 1
-    //            });
-    //        }
-    //
-    //        if (company == 'Synnex'){
-    //            loginCreds.userName = cred.getValue({fieldId: 'custrecord_vc_synnex_user'});
-    //            loginCreds.password = cred.getValue({fieldId: 'custrecord_vc_synnex_pass'}).replace('&', '&amp;');
-    //            loginCreds.customerNum = cred.getValue({fieldId: 'custrecord_vc_synnex_customernum'});
-    //            return loginCreds;
-    //        }
-    //        else if (company == 'DandH'){
-    //            loginCreds.userName = cred.getValue({fieldId: 'custrecord_vc_dandh_user'});
-    //            loginCreds.password = cred.getValue({fieldId: 'custrecord_vc_dandh_pass'}).replace('&', '&amp;');
-    //            return loginCreds;
-    //        }
-    //        else if (company == 'IngramMicro'){
-    //            loginCreds.userName = cred.getValue({fieldId: 'custrecord_vc_ingrammicro_user'});
-    //            loginCreds.password = cred.getValue({fieldId: 'custrecord_vc_ingrammicro_pass'}).replace('&', '&amp;');
-    //            return loginCreds;
-    //        }
-    //        else if (company == 'TechData'){
-    //            loginCreds.userName = cred.getValue({fieldId: 'custrecord_vc_techdata_user'});
-    //            loginCreds.password = cred.getValue({fieldId: 'custrecord_vc_techdata_pass'}).replace('&', '&amp;');
-    //            log.debug({
-    //                title: 'TechData info',
-    //                details: 'user = '+ loginCreds.userName + ' pass = ' + loginCreds.password
-    //            });
-    //
-    //            return loginCreds;
-    //        }
-    //
-    //        return null;
-    //    };
-    //
-    //    function isEmpty (stValue)
-    //    {
-    //        if ((stValue == '') || (stValue == null) || (stValue == undefined))
-    //        {
-    //            return true;
-    //        }
-    //        else
-    //        {
-    //            if (typeof stValue == 'string')
-    //            {
-    //                if ((stValue == ''))
-    //                {
-    //                    return true;
-    //                }
-    //            }
-    //            else if (typeof stValue == 'object')
-    //
-    //            {
-    //                if (stValue.length == 0 || stValue.length == 'undefined')
-    //                {
-    //                    return true;
-    //                }
-    //            }
-    //
-    //            return false;
-    //        }
-    //    }
-
-    /**
-     * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
-     *
-     * Version - 0.99.00.beta
-     * Copyright (c) 2012 Vadim Kiryukhin
-     * vkiryukhin @ gmail.com
-     * http://www.eslinstructor.net/vkbeautify/
-     *
-     * Dual licensed under the MIT and GPL licenses:
-     *   http://www.opensource.org/licenses/mit-license.php
-     *   http://www.gnu.org/licenses/gpl.html
-     *
-     *   Pretty print
-     *
-     *        vkbeautify.xml(text [,indent_pattern]);
-     *        vkbeautify.json(text [,indent_pattern]);
-     *        vkbeautify.css(text [,indent_pattern]);
-     *        vkbeautify.sql(text [,indent_pattern]);
-     *
-     *        @text - String; text to beatufy;
-     *        @indent_pattern - Integer | String;
-     *                Integer:  number of white spaces;
-     *                String:   character string to visualize indentation ( can also be a set of white spaces )
-     *   Minify
-     *
-     *        vkbeautify.xmlmin(text [,preserve_comments]);
-     *        vkbeautify.jsonmin(text);
-     *        vkbeautify.cssmin(text [,preserve_comments]);
-     *        vkbeautify.sqlmin(text);
-     *
-     *        @text - String; text to minify;
-     *        @preserve_comments - Bool; [optional];
-     *                Set this flag to true to prevent removing comments from @text ( minxml and mincss functions only. )
-     *
-     *   Examples:
-     *        vkbeautify.xml(text); // pretty print XML
-     *        vkbeautify.json(text, 4 ); // pretty print JSON
-     *        vkbeautify.css(text, '. . . .'); // pretty print CSS
-     *        vkbeautify.sql(text, '----'); // pretty print SQL
-     *
-     *        vkbeautify.xmlmin(text, true);// minify XML, preserve comments
-     *        vkbeautify.jsonmin(text);// minify JSON
-     *        vkbeautify.cssmin(text);// minify CSS, remove comments ( default )
-     *        vkbeautify.sqlmin(text);// minify SQL
-     *
-     */
 
     (function () {
         function createShiftArr(step) {

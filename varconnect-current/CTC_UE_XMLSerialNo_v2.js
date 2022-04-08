@@ -38,7 +38,8 @@ define([
     'N/format',
     './VC_Globals.js'
 ], function (record, runtime, error, search, config, format, vcGlobals) {
-    var LogTitle = 'UE_SerialUpdate', LogPrefix='';
+    var LogTitle = 'UE_SerialUpdate',
+        LogPrefix = '';
 
     var dateFormat;
 
