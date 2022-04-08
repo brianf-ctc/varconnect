@@ -25,38 +25,37 @@ define([
     'N/record',
     'N/xml',
     'N/https',
+    './CTC_VC_Lib_Log.js',
     './VC_Globals.js',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities.js'
-], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
+], function (search, runtime, r, xml, https, vcLog, vcGlobals, constants, util) {
+    var LogTitle = 'WS:D&H';
+
     function processRequest(options) {
+        var logTitle = [LogTitle, 'processRequest'].join('::'),
+            returnValue;
+        log.audit(logTitle, options);
+
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
             requestURL = vendorConfig.endPoint,
             userName = vendorConfig.user,
             password = vendorConfig.password;
-        log.debug('request d and h');
 
-        var xmlorderStatus;
-        var xmlInvoiceByPOStatus;
-
-        var orderXMLLineData = [];
+        var xmlorderStatus,
+            xmlInvoiceByPOStatus,
+            orderXMLLineData = [];
 
         xmlorderStatus =
             '<XMLFORMPOST>' +
             '<REQUEST>orderStatus</REQUEST>' +
             '<LOGIN>' +
-            '<USERID>' +
-            userName +
-            '</USERID>' +
-            '<PASSWORD>' +
-            password +
-            '</PASSWORD>' +
+            ('<USERID>' + userName + '</USERID>') +
+            ('<PASSWORD>' + password + '</PASSWORD>') +
             '</LOGIN>' +
             '<STATUSREQUEST>' +
-            '<PONUM>' +
-            poNum +
-            '</PONUM>' +
+            ('<PONUM>' + poNum + '</PONUM>') +
             '</STATUSREQUEST>' +
             '</XMLFORMPOST>';
 
@@ -65,6 +64,17 @@ define([
             'Content-Length': 'length'
         };
 
+        vcLog.recordLog({
+            header: 'D&H OrderStatus Request',
+            body: JSON.stringify({
+                URL: requestURL,
+                HEADERS: headers,
+                BODY: xmlorderStatus
+            }),
+            transaction: options.poId,
+            status: constants.Lists.VC_LOG_STATUS.INFO
+        });
+
         var responseXML;
         try {
             var response = https.post({
@@ -72,16 +82,25 @@ define([
                 body: xmlorderStatus,
                 headers: headers
             });
+
             responseXML = response.body;
-            log.debug({
-                title: 'D and H Scheduled',
-                details: 'DandH response length ' + responseXML.length
+            log.audit(logTitle, '>>> response length: ' + responseXML.length);
+
+            vcLog.recordLog({
+                header: 'D&H OrderStatus Response',
+                body: responseXML,
+                transaction: options.poId,
+                status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
         } catch (err) {
-            log.debug({
-                title: 'D and H Scheduled',
-                details: 'DandH scheduled error = ' + err.message
+            log.audit(logTitle, err);
+            vcLog.recordLog({
+                header: 'D&H OrderStatus Response Error',
+                body: err.message,
+                transaction: options.poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
             });
+
             responseXML = null;
         }
 
@@ -89,11 +108,11 @@ define([
     }
 
     function processResponse(options) {
+        var logTitle = [LogTitle, 'processResponse'].join('::'),
+            returnValue;
+        log.audit(logTitle, options);
+
         var xmlString = options.responseXML;
-        log.debug({
-            title: 'D and H Scheduled',
-            details: 'ParseDandH'
-        });
 
         // Create XML object from XML text returned from vendor, using Netsuite XML parser
         var itemArray = [];
@@ -234,6 +253,13 @@ define([
                             }
                         }
                     }
+
+                    // brianff 12/14
+                    // use the same shipdate
+                    if (xml_items.ship_date) {
+                        xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+                    }
+
                     itemArray.push(xml_items);
                 }
             }
@@ -243,15 +269,16 @@ define([
     }
 
     function process(options) {
+        var logTitle = [LogTitle, 'process'].join('::'),
+            returnValue;
+        log.audit(logTitle, options);
+
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
             outputArray = null;
-        var responseXML = processRequest({
-            poNum: poNum,
-            vendorConfig: vendorConfig
-        });
 
-        log.debug('process responseXML ' + poNum, responseXML);
+        var responseXML = processRequest(options);
+
         if (responseXML)
             outputArray = processResponse({
                 vendorConfig: vendorConfig,
