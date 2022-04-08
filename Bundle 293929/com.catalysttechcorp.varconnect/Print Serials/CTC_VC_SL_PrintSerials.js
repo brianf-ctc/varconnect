@@ -165,7 +165,6 @@ define([
                             ? 'recmachcustrecordserialinvoice'
                             : 'recmachcustrecorditemfulfillment';
                 var renderer = render.create();
-                log.audit('print serials', JSON.stringify([scriptId, sublistId]));
 
                 if (scriptId && scriptId[0].value) {
                     renderer.setTemplateById(scriptId[0].value);
