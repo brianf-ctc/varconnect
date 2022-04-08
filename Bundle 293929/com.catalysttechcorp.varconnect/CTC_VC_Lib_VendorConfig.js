@@ -25,7 +25,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities'
 ], function (search, vcGlobals, constants, util) {
-    var LogTitle = 'VendorCFG',
+    var LogTitle = 'VendorCFG', 
         LogPrefix = LogPrefix || '';
 
     var vendorConfigFields = [
@@ -68,11 +68,7 @@ define([
             accessEndPoint: result.getValue({ name: vendorConfigFields[12] }),
             apiKey: result.getValue({ name: vendorConfigFields[13] }),
             apiSecret: result.getValue({ name: vendorConfigFields[14] }),
-            oauthScope: result.getValue({ name: vendorConfigFields[15] }),
-            country: result.getValue({
-                name: 'country',
-                join: 'custrecord_ctc_vc_vendor_subsidiary'
-            })
+            oauthScope: result.getValue({ name: vendorConfigFields[15] })
         };
     }
 
@@ -108,23 +104,6 @@ define([
                     values: subsidiary
                 })
             );
-
-        // log.audit(
-        //     logTitle,
-        //     '>> search option: ' +
-        //         JSON.stringify({
-        //             type: constants.Records.VENDOR_CONFIG,
-        //             filters: filter,
-        //             columns: vendorConfigFields
-        //         })
-        // );
-
-        vendorConfigFields.push(
-            search.createColumn({
-                name: 'country',
-                join: 'custrecord_ctc_vc_vendor_subsidiary'
-            })
-        );
 
         var vendorSearch = search.create({
             type: constants.Records.VENDOR_CONFIG,
@@ -243,16 +222,6 @@ define([
                     values: subsidiary
                 })
             );
-
-        log.audit(
-            logTitle,
-            '>> search option: ' +
-                JSON.stringify({
-                    type: constants.Records.VENDOR_CONFIG,
-                    filters: filter,
-                    columns: vendorConfigFields
-                })
-        );
 
         var vendorSearch = search.create({
             type: constants.Records.VENDOR_CONFIG,

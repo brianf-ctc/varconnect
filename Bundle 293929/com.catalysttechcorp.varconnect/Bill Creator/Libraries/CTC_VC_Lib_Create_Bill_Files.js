@@ -4,52 +4,15 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './fuse'], function (
+define(['N/search', 'N/record', 'N/log', 'N/format', './moment', './fuse'], function (
     search,
     record,
     log,
     format,
-    config,
     moment,
     Fuse
 ) {
     var LogTitle = 'LIB::BillFiles';
-
-    var dateFormat;
-
-    // TODO: a universal date parser with config
-
-    function parseDate(options) {
-        var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(options));
-
-        var dateString = options.dateString || options,
-            dateValue = '';
-
-        if (dateString && dateString.length > 0 && dateString != 'NA') {
-            try {
-                dateValue = moment(dateString).toDate();
-            } catch (e) {
-                log.error(logTitle, '>> !! ERROR !! ' + util.extractError(e));
-            }
-        }
-        log.audit(
-            logTitle,
-            'Parsed Date :' + dateString + ' : ' + JSON.stringify([dateValue, typeof dateValue])
-        );
-        // return date;
-        //Convert to string
-        if (dateValue) {
-            dateValue = format.format({
-                value: dateValue,
-                type: format.Type.DATE
-            });
-        }
-
-        log.audit(logTitle, 'return value :' + JSON.stringify([dateValue, typeof dateValue]));
-
-        return dateValue;
-    }
 
     function process(configObj, myArr, name) {
         var logTitle = [LogTitle, 'process'].join('::');
@@ -59,21 +22,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
         log.audit(logTitle, '>> myArr: ' + JSON.stringify(myArr));
         log.audit(logTitle, '>> name: ' + JSON.stringify(name));
 
-        // //4.01
-        if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
-            });
-            dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-
-        //TODO: Parse the date before searching
-
         for (var i = 0; i < myArr.length; i++) {
             log.audit(logTitle, '>>>> logfile: ' + JSON.stringify({ idx: i, data: myArr[i] }));
-
-            var parsedDate = parseDate({ dateString: myArr[i].ordObj.date });
 
             var billFileSearchObj = search.create({
                 type: 'customrecord_ctc_vc_bills',
@@ -84,7 +34,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                     //myArr[i].ordObj.date
                     ['custrecord_ctc_vc_bill_number', 'is', myArr[i].ordObj.invoice],
                     'AND',
-                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate]
+                    ['custrecord_ctc_vc_bill_date', 'on', myArr[i].ordObj.date]
                 ],
                 columns: [
                     search.createColumn({
@@ -213,12 +163,13 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 billFileNotes.push('PO Link is not found : [' + myArr[i].ordObj.po + ']');
             }
 
-            log.audit(logTitle, '>> due date: ' + JSON.stringify([dueDate, typeof dueDate]));
-
             if (dueDate !== null) {
                 objRecord.setValue({
                     fieldId: 'custrecord_ctc_vc_bill_due_date',
-                    value: moment(dueDate).toDate()
+                    value: format.parse({
+                        value: dueDate,
+                        type: format.Type.DATE
+                    })
                 });
 
                 if (manualDueDate == true) {
@@ -236,7 +187,10 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_date',
-                value: moment(myArr[i].ordObj.date).toDate()
+                value: format.parse({
+                    value: myArr[i].ordObj.date,
+                    type: format.Type.DATE
+                })
             });
 
             objRecord.setValue({
@@ -307,11 +261,11 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         arrMatchedSKU.push(matchedSku);
                         // billFileNotes.push('Matched SKU: ' + matchedSku);
                     }
-                }
+                    }
 
                 if (arrMatchedSKU.length) {
                     // billFileNotes.push('Matched SKU: (' + arrMatchedSKU.join(',') + ')');
-                    billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
+                    billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length );
                 }
             } else {
                 for (var l = 0; l < myArr[i].ordObj.lines.length; l++) {
@@ -336,7 +290,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_log',
-                value: moment().format(dateFormat) + ' - ' + billFileNotes.join(' | ')
+                value: moment().format('MM-DD-YY') + ' - ' + billFileNotes.join(' | ')
             });
 
             var record_id = objRecord.save();

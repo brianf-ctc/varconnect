@@ -14,77 +14,47 @@
  * Var Connect v2, Saves all xml Var Connect column fields from PO to SO and Invoice
  * When PO is saved, match lines on PO to parent SO and update VAR Connect fields,
  * then if invoice already exists, match lines on invoice to lines on SO and copy VAR Connect fields
- *
+ * 
  * Note: saved searches are used in both functions below, consider putting search id's in VCGlobals
- *
+ * 
  * Version	Date            Author		Remarks
- * 1.00		Aug 31, 2017    jcorrea
+ * 1.00		Aug 31, 2017    jcorrea		
  * 1.01		Sep 7, 2017		jcorrea		Removed call to updateFieldList function, just copying all of the data over now
  * 2.00     Jan 20, 2019    jcorrea     Updated to VR connect v2 and including all VAR Cnnect fields (not just serial nums)
  * 2.10     Feb 20, 2019    jcorrea     Updated isEmpty to use === when testing for empty string
- *
+ * 
  */
 
 /**
  *@NApiVersion 2.x
  *@NScriptType UserEventScript
  */
-define([
-    'N/record',
-    'N/runtime',
-    'N/error',
-    'N/search',
-    'N/config',
-    'N/format',
-    './VC_Globals.js'
-], function (record, runtime, error, search, config, format, vcGlobals) {
-    var LogTitle = 'UE_SerialUpdate',
-        LogPrefix = '';
-
-    var dateFormat;
+define(['N/record', 'N/runtime', 'N/error', 'N/search', './VC_Globals.js'],
+function(record, runtime, error, search, vcGlobals) {
 
     //  TODO put these field IDs in VCGlobals
     var xmlFields = [
-        'custcol_ctc_xml_carrier', //0
-        'custcol_ctc_xml_date_order_placed', //1
-        'custcol_ctc_xml_dist_order_num', //2
-        'custcol_ctc_xml_eta', //3
-        'custcol_ctc_xml_serial_num', //4
-        'custcol_ctc_xml_ship_date', //5
-        'custcol_ctc_xml_ship_method', //6
-        'custcol_ctc_xml_tracking_num', //7
-        'custcol_ctc_vc_order_placed_date', //8
-        'custcol_ctc_vc_eta_date', //9
-        'custcol_ctc_vc_shipped_date' //10
+        'custcol_ctc_xml_carrier',				//0
+        'custcol_ctc_xml_date_order_placed',	//1
+        'custcol_ctc_xml_dist_order_num',		//2
+        'custcol_ctc_xml_eta',					//3
+        'custcol_ctc_xml_serial_num',			//4
+        'custcol_ctc_xml_ship_date',			//5
+        'custcol_ctc_xml_ship_method',			//6
+        'custcol_ctc_xml_tracking_num',			//7
+        'custcol_ctc_vc_order_placed_date',		//8			
+        'custcol_ctc_vc_eta_date',				//9
+        'custcol_ctc_vc_shipped_date'			//10
     ];
 
-    var xmlFieldsDef = {
-        TEXT: [
-            'custcol_ctc_xml_carrier',
-            'custcol_ctc_xml_date_order_placed',
-            'custcol_ctc_xml_dist_order_num',
-            'custcol_ctc_xml_eta',
-            'custcol_ctc_xml_serial_num',
-            'custcol_ctc_xml_ship_date',
-            'custcol_ctc_xml_ship_method',
-            'custcol_ctc_xml_tracking_num'
-        ],
-        DATE: [
-            'custcol_ctc_vc_order_placed_date',
-            'custcol_ctc_vc_eta_date',
-            'custcol_ctc_vc_shipped_date'
-        ]
-    };
+    var SEARCH_PO_TO_SO = "customsearch_ctc_po_so_line_nums";
+    var SEARCH_INVOICE_MATCH_SO = "customsearch_ctc_invoice_search"
+    var SEARCH_INVOICE_TO_SO = "customsearch_ctc_invoice_line_ids"
 
-    var SEARCH_PO_TO_SO = 'customsearch_ctc_po_so_line_nums';
-    var SEARCH_INVOICE_MATCH_SO = 'customsearch_ctc_invoice_search';
-    var SEARCH_INVOICE_TO_SO = 'customsearch_ctc_invoice_line_ids';
 
     function afterSubmit(context) {
-        if (
-            context.type == context.UserEventType.CREATE ||
-            context.type == context.UserEventType.EDIT
-        ) {
+
+        if (context.type == context.UserEventType.CREATE || context.type == context.UserEventType.EDIT) {
             var current_rec = context.newRecord;
             var currentID = current_rec.id;
             var createdFromSO = current_rec.getValue({
@@ -100,21 +70,13 @@ define([
 
             log.debug({
                 title: 'CTC after submit',
-                details:
-                    'current rec id = ' +
-                    currentID +
-                    ', created from id = ' +
-                    createdFromSO +
-                    ', created from type = ' +
-                    JSON.stringify(createdFromType)
+                details: 'current rec id = ' + currentID + ', created from id = ' + createdFromSO + ', created from type = ' + JSON.stringify(createdFromType)
             });
 
-            if (
-                createdFromSO != null &&
-                createdFromSO != '' &&
-                (createdFromType === record.Type.SALES_ORDER ||
-                    createdFromType.recordtype === record.Type.SALES_ORDER)
-            ) {
+            if ((createdFromSO != null) &&
+                (createdFromSO != "") &&
+                ((createdFromType === record.Type.SALES_ORDER) ||
+                    (createdFromType.recordtype === record.Type.SALES_ORDER))) {
                 updateSO_v2(createdFromSO, currentID, current_rec);
             }
         } else {
@@ -155,7 +117,7 @@ define([
             });
             mySearch.filters.push(filters);
             // For each line item save serials to SO if needed
-            var searchresults = mySearch.run().each(function (result) {
+            var searchresults = mySearch.run().each(function(result) {
                 var transLineNum = result.getValue('linesequencenumber');
                 log.debug({
                     title: 'Update SO V2',
@@ -164,6 +126,7 @@ define([
                 log.debug({
                     title: 'Update SO V2',
                     details: 'result =  ' + JSON.stringify(result)
+
                 });
 
                 var soLineKey = result.getValue({
@@ -174,8 +137,7 @@ define([
                 var soLineNum = getLineNum(soRec, soLineKey);
                 log.debug({
                     title: 'Update SO V2',
-                    details:
-                        'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
+                    details: 'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
                 });
 
                 if (!isEmpty(transLineNum)) {
@@ -191,49 +153,36 @@ define([
 
                         for (var xmlField in xmlFields) {
                             var fieldValue = result.getValue(xmlFields[xmlField]);
+                            log.debug({
+                                title: 'Update SO V2',
+                                details: 'xmlField =  ' + xmlFields[xmlField] + ' value = ' + fieldValue
 
-                            var fieldType = inArray(xmlFields[xmlField], xmlFieldsDef.DATE)
-                                ? 'DATE'
-                                : inArray(xmlFields[xmlField], xmlFieldsDef.TEXT)
-                                ? 'TEXT'
-                                : 'TEXT';
-
-                            // log.debug({
-                            //     title: 'Update SO V2',
-                            //     details: JSON.stringify({
-                            //         field: xmlFields[xmlField],
-                            //         type: fieldType,
-                            //         value: fieldValue
-                            //     })
-                            // });
+                            });
 
                             if (!isEmpty(fieldValue)) {
-                                if (fieldType == 'DATE') {
-                                    fieldValue = parseDate({ dateString: fieldValue });
+                                if (xmlField > 7 && xmlField < 11) {
+                                    fieldValue = new Date(fieldValue);
+                                    if (!!fieldValue)
+                                    	fieldValue = '';
                                 }
-
-                                log.debug({
-                                    title: 'Update SO V2',
-                                    details: JSON.stringify({
-                                        field: xmlFields[xmlField],
-                                        type: fieldType,
-                                        value: fieldValue
-                                    })
-                                });
-
                                 soRec.setCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: xmlFields[xmlField],
                                     value: fieldValue
                                 });
-                            }
+                            } else
+                                soRec.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: xmlFields[xmlField],
+                                    value: ""
+                                });
                         }
 
                         try {
                             soUpdated = true;
                             if (soUpdated) {
                                 soRec.commitLine({
-                                    sublistId: 'item'
+                                    sublistId: "item"
                                 });
                                 log.debug({
                                     title: 'Update SO V2',
@@ -245,18 +194,21 @@ define([
                                 title: 'Update SO V2 - Error committing SO line',
                                 details: 'SO line ' + soLineNum + ' error = ' + err.message
                             });
+
                         }
                     } else {
                         log.debug({
                             title: 'Update SO V2',
                             details: 'soLineNum is EMPTY'
                         });
+
                     }
                 } else {
                     log.debug({
                         title: 'Update SO V2',
                         details: 'transLineNum is EMPTY'
                     });
+
                 }
 
                 return true;
@@ -273,10 +225,14 @@ define([
                         title: 'Update SO V2 - Error submitting SO',
                         details: 'error = ' + err.message
                     });
+
                 }
+
             }
         }
+
     }
+
 
     function updateInvoiceRecords(soID) {
         log.debug({
@@ -296,7 +252,7 @@ define([
         myInvoiceSearch.filters.push(filters);
 
         // For each invoice returned, loop through items and update XML fields from matching lines on the SO
-        var searchresults = myInvoiceSearch.run().each(function (result) {
+        var searchresults = myInvoiceSearch.run().each(function(result) {
             log.debug({
                 title: 'Update Invoice Records',
                 details: 'Updating invoice num = ' + result.getValue('internalid')
@@ -324,7 +280,7 @@ define([
                 });
                 myInvoiceLineSearch.filters.push(inv_filters);
 
-                var searchLineResults = myInvoiceLineSearch.run().each(function (result) {
+                var searchLineResults = myInvoiceLineSearch.run().each(function(result) {
                     var invLineKey = result.getValue({
                         name: 'lineuniquekey'
                     });
@@ -356,14 +312,14 @@ define([
                                 invRec.setCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: xmlFields[xmlField],
-                                    value: ''
+                                    value: ""
                                 });
                         }
 
                         try {
                             invUpdated = true;
                             invRec.commitLine({
-                                sublistId: 'item'
+                                sublistId: "item"
                             });
                         } catch (err) {
                             log.error({
@@ -371,9 +327,11 @@ define([
                                 details: 'Invoice line ' + invLineNum + ' error = ' + err.message
                             });
                         }
+
                     }
                     return true;
                 });
+
             }
             if (invUpdated) {
                 try {
@@ -390,6 +348,9 @@ define([
             }
             return true;
         });
+
+
+
     }
 
     function getLineNum(rec, lineKey) {
@@ -409,15 +370,18 @@ define([
         return null;
     }
 
+
     function isEmpty(stValue) {
-        if (stValue === '' || stValue == null || stValue == undefined) {
+        if ((stValue === '') || (stValue == null) || (stValue == undefined)) {
             return true;
         } else {
             if (typeof stValue == 'string') {
-                if (stValue == '') {
+                if ((stValue == '')) {
                     return true;
                 }
-            } else if (typeof stValue == 'object') {
+            } else if (typeof stValue == 'object')
+
+            {
                 if (stValue.length == 0 || stValue.length == 'undefined') {
                     return true;
                 }
@@ -427,73 +391,11 @@ define([
         }
     }
 
-    function inArray(stValue, arrValue) {
-        if (!stValue || !arrValue) return false;
-        for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
-        return i > -1;
-    }
 
-    function parseDate(options) {
-        var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(options));
-
-        // //4.01
-        if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
-            });
-            dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-
-        var dateString = options.dateString,
-            date = '';
-
-        if (dateString && dateString.length > 0 && dateString != 'NA') {
-            try {
-                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
-
-                for (var i = 0; i < stringToProcess.length; i++) {
-                    var singleString = stringToProcess[i];
-                    if (singleString) {
-                        var stringArr = singleString.split('T'); //handle timestamps with T
-                        singleString = stringArr[0];
-                        var convertedDate = new Date(singleString);
-
-                        if (!date || convertedDate > date) date = convertedDate;
-                    }
-                }
-            } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
-            }
-        }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
-        // return date;
-
-        //Convert to string
-        if (date) {
-            //set date
-            var year = date.getFullYear();
-            if (year < 2000) {
-                year += 100;
-                date.setFullYear(year);
-            }
-
-            date = format.format({
-                value: date,
-                type: dateFormat ? dateFormat : format.Type.DATE
-            });
-        }
-
-        log.audit(logTitle, 'return value :' + JSON.stringify(date));
-
-        return date;
-    }
-
-    //**********************************************************************************************************
+    //**********************************************************************************************************	
     //************ Don't think this code is needed but saving for now, not calling it at the moment ************
     function updateFieldList(newNumbers, rec, fieldID, line_num) {
-        var errorMsg = 'Maximum Field Length Exceeded';
+        var errorMsg = "Maximum Field Length Exceeded";
         var errorFound = false;
         var maxFieldLength = 3950;
         var recUpdated = false;
@@ -511,8 +413,8 @@ define([
             });
             /* 			log.debug({	title: 'CTC Update PO ', details: 'In updateFieldLIST currentNumbers = '+currentNumbers	}); */
             if (currentNumbers != null) {
-                if (currentNumbers == 'NA' || (currentNumbers.length = 0)) {
-                    var newValue = newNumbers.replace(/[","]+/g, '\n');
+                if ((currentNumbers == 'NA') || (currentNumbers.length = 0)) {
+                    var newValue = newNumbers.replace(/[","]+/g, "\n");
                     /* 					log.debug({ title: 'CTC Update PO ', details: 'In updateFieldLIST newValue ='+newValue }); */
 
                     rec.setCurrentSublistValue({
@@ -545,9 +447,9 @@ define([
                             if (!numFound && scannedNums[j] != 'NA') {
                                 /* OLD  newCurrent += ',' + scannedNums[j]; */
                                 newNumAdded = true;
-                                if (newCurrent.length + scannedNums[j].length < maxFieldLength) {
+                                if ((newCurrent.length + scannedNums[j].length) < maxFieldLength) {
                                     newCurrent += '\n' + scannedNums[j];
-                                    currentNumbersList.push(scannedNums[j]);
+                                    currentNumbersList.push(scannedNums[j])
                                 } else {
                                     newCurrent += '\n' + errorMsg;
                                     break;
@@ -569,16 +471,17 @@ define([
                     rec.setCurrentSublistValue({
                         sublistId: 'item',
                         fieldId: fieldID,
-                        value: newNumbers.replace(/[","]+/g, '\n')
+                        value: newNumbers.replace(/[","]+/g, "\n")
                     });
                     recUpdated = true;
                 } else {
-                    var newCurrent = '';
+                    var newCurrent = "";
                     for (var i = 0; i < scannedNums.length; i++) {
-                        if (newCurrent.length + scannedNums[i].length > maxFieldLength) {
+                        if ((newCurrent.length + scannedNums[i].length) > maxFieldLength) {
                             newCurrent += errorMsg;
                             break;
-                        } else newCurrent += scannedNums[i] + '\n';
+                        } else
+                            newCurrent += scannedNums[i] + "\n";
                     }
 
                     rec.setCurrentSublistValue({
@@ -603,9 +506,13 @@ define([
         		});
          */
     }
-    //**********************************************************************************************
+    //**********************************************************************************************	
+
 
     return {
+
         afterSubmit: afterSubmit
+
     };
+
 });

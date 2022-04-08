@@ -30,12 +30,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities.js'
 ], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
-    var LogTitle = 'WS:Ingram';
-
     function processRequest(options) {
-        var logTitle = [LogTitle, 'processRequest'].join('::');
-        log.audit(logTitle, options);
-
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
             country = options.country,
@@ -76,13 +71,21 @@ define([
             '<TransactionHeader>' +
             '<SenderID>123456789</SenderID>' +
             '<ReceiverID>987654321</ReceiverID>' +
-            ('<CountryCode>' + countryCode + '</CountryCode>') +
-            ('<LoginID>' + userName + '</LoginID>') +
-            ('<Password>' + password + '</Password>') +
+            '<CountryCode>' +
+            countryCode +
+            '</CountryCode>' +
+            '<LoginID>' +
+            userName +
+            '</LoginID>' +
+            '<Password>' +
+            password +
+            '</Password>' +
             '<TransactionID>54321</TransactionID>' +
             '</TransactionHeader>' +
             '<OrderHeaderInfo>' +
-            ('<CustomerPO>' + poNum + '</CustomerPO>') +
+            '<CustomerPO>' +
+            poNum +
+            '</CustomerPO>' +
             '</OrderHeaderInfo>' +
             '</OrderStatusRequest>';
         try {
@@ -207,9 +210,6 @@ define([
     }
 
     function processResponse(options) {
-        var logTitle = [LogTitle, 'processResponse'].join('::');
-        log.audit(logTitle, options);
-
         var xmlString = options.responseXML;
         log.debug({
             title: 'Ingram Micro Scheduled',
@@ -403,9 +403,6 @@ define([
     }
 
     function process(options) {
-        var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, options);
-
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
             outputArray = null;

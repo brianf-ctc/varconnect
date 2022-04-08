@@ -29,20 +29,13 @@
  *@NApiVersion 2.x
  *@NScriptType UserEventScript
  */
-define([
-    'N/record',
-    'N/runtime',
-    'N/error',
-    'N/search',
-    'N/config',
-    'N/format',
-    './VC_Globals.js'
-], function (record, runtime, error, search, config, format, vcGlobals) {
-    var LogTitle = 'UE_SerialUpdate',
-        LogPrefix = '';
-
-    var dateFormat;
-
+define(['N/record', 'N/runtime', 'N/error', 'N/search', './VC_Globals.js'], function (
+    record,
+    runtime,
+    error,
+    search,
+    vcGlobals
+) {
     //  TODO put these field IDs in VCGlobals
     var xmlFields = [
         'custcol_ctc_xml_carrier', //0
@@ -57,24 +50,6 @@ define([
         'custcol_ctc_vc_eta_date', //9
         'custcol_ctc_vc_shipped_date' //10
     ];
-
-    var xmlFieldsDef = {
-        TEXT: [
-            'custcol_ctc_xml_carrier',
-            'custcol_ctc_xml_date_order_placed',
-            'custcol_ctc_xml_dist_order_num',
-            'custcol_ctc_xml_eta',
-            'custcol_ctc_xml_serial_num',
-            'custcol_ctc_xml_ship_date',
-            'custcol_ctc_xml_ship_method',
-            'custcol_ctc_xml_tracking_num'
-        ],
-        DATE: [
-            'custcol_ctc_vc_order_placed_date',
-            'custcol_ctc_vc_eta_date',
-            'custcol_ctc_vc_shipped_date'
-        ]
-    };
 
     var SEARCH_PO_TO_SO = 'customsearch_ctc_po_so_line_nums';
     var SEARCH_INVOICE_MATCH_SO = 'customsearch_ctc_invoice_search';
@@ -191,42 +166,28 @@ define([
 
                         for (var xmlField in xmlFields) {
                             var fieldValue = result.getValue(xmlFields[xmlField]);
-
-                            var fieldType = inArray(xmlFields[xmlField], xmlFieldsDef.DATE)
-                                ? 'DATE'
-                                : inArray(xmlFields[xmlField], xmlFieldsDef.TEXT)
-                                ? 'TEXT'
-                                : 'TEXT';
-
-                            // log.debug({
-                            //     title: 'Update SO V2',
-                            //     details: JSON.stringify({
-                            //         field: xmlFields[xmlField],
-                            //         type: fieldType,
-                            //         value: fieldValue
-                            //     })
-                            // });
-
-                            if (!isEmpty(fieldValue)) {
-                                if (fieldType == 'DATE') {
-                                    fieldValue = parseDate({ dateString: fieldValue });
-                                }
-
                             log.debug({
                                 title: 'Update SO V2',
-                                    details: JSON.stringify({
-                                        field: xmlFields[xmlField],
-                                        type: fieldType,
-                                        value: fieldValue
-                                    })
+                                details:
+                                    'xmlField =  ' + xmlFields[xmlField] + ' value = ' + fieldValue
                             });
 
+                            if (!isEmpty(fieldValue)) {
+                                if (xmlField > 7 && xmlField < 11) {
+                                    fieldValue = new Date(fieldValue);
+                                    if (!!fieldValue) fieldValue = '';
+                                }
                                 soRec.setCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: xmlFields[xmlField],
                                     value: fieldValue
                                 });
-                            }
+                            } else
+                                soRec.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: xmlFields[xmlField],
+                                    value: ''
+                                });
                         }
 
                         try {
@@ -425,69 +386,6 @@ define([
 
             return false;
         }
-    }
-
-    function inArray(stValue, arrValue) {
-        if (!stValue || !arrValue) return false;
-        for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
-        return i > -1;
-    }
-
-    function parseDate(options) {
-        var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(options));
-
-        // //4.01
-        if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
-            });
-            dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-
-        var dateString = options.dateString,
-            date = '';
-
-        if (dateString && dateString.length > 0 && dateString != 'NA') {
-            try {
-                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
-
-                for (var i = 0; i < stringToProcess.length; i++) {
-                    var singleString = stringToProcess[i];
-                    if (singleString) {
-                        var stringArr = singleString.split('T'); //handle timestamps with T
-                        singleString = stringArr[0];
-                        var convertedDate = new Date(singleString);
-
-                        if (!date || convertedDate > date) date = convertedDate;
-                    }
-                }
-            } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
-            }
-        }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
-        // return date;
-
-        //Convert to string
-        if (date) {
-            //set date
-            var year = date.getFullYear();
-            if (year < 2000) {
-                year += 100;
-                date.setFullYear(year);
-            }
-
-            date = format.format({
-                value: date,
-                type: dateFormat ? dateFormat : format.Type.DATE
-            });
-        }
-
-        log.audit(logTitle, 'return value :' + JSON.stringify(date));
-
-        return date;
     }
 
     //**********************************************************************************************************

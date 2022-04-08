@@ -4,75 +4,71 @@
  *@NModuleScope Public
  */
 
-define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (
-    search,
-    https,
-    record,
-    dialog
-) {
-    // Searches NS for first customer occurrence of provided email
-    // If found return customer information, if not return null
-    // Note if multiple occurrences are found, only the first result is returned
-    function isNSCustomer(email) {
-        if (!isEmpty(email)) {
-            //                alert("in isNSCustomer email = "+email);
+define(['N/search','N/https','N/record', 'N/ui/dialog'],
+    function(search, https, record, dialog) {
 
-            var myFilters = [];
-            myFilters.push(
-                search.createFilter({
+
+        // Searches NS for first customer occurrence of provided email
+        // If found return customer information, if not return null
+        // Note if multiple occurrences are found, only the first result is returned
+        function isNSCustomer(email) {
+            if (!isEmpty(email)) {
+//                alert("in isNSCustomer email = "+email);
+
+                var myFilters = [];
+                myFilters.push(search.createFilter({
                     name: 'email',
                     operator: search.Operator.IS,
                     values: email
-                })
-            );
-            myFilters.push(
-                search.createFilter({
+                }));
+                myFilters.push(search.createFilter({
                     name: 'isinactive',
                     operator: search.Operator.IS,
                     values: 'F'
-                })
-            );
-            var results = search
-                .create({
+                }));
+                var results = search.create({
                     type: search.Type.CUSTOMER,
                     columns: ['email', 'firstname', 'lastname'],
                     filters: myFilters
-                })
-                .run()
-                .getRange({
+                }).run().getRange({
                     start: 0,
                     end: 1
                 });
-            if (results != '') {
-                return results[0].id;
+                if (results != "") {
+                    return results[0].id;
+                }
             }
+            return null;
         }
-        return null;
-    }
 
-    function pageInit(context) {
-        console.log('page init');
 
-        //alert('page init');
-        //            jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
-        //            jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
-        // var rdoLabelField = context.currentRecord.getField('donationlabelfield')
-        // var rdobehalfField = context.currentRecord.getField('rdoidentify')
-        // try {
-        // rdoLabelField.isDisplay = false;
-        // rdobehalfField.isDisplay = false;
-        // }
-        // catch (err){
-        // jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
-        // jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
-        // }
-    }
 
-    function fieldChanged(context) {
-        console.log(context);
-        //			alert ('field changed ' + context.fieldId)
+        function pageInit(context) {
+           console.log('page init');
+	   
 
-        /*
+            //alert('page init');
+//            jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
+//            jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
+            // var rdoLabelField = context.currentRecord.getField('donationlabelfield')
+            // var rdobehalfField = context.currentRecord.getField('rdoidentify')
+            // try {
+                // rdoLabelField.isDisplay = false;
+                // rdobehalfField.isDisplay = false;
+            // }
+            // catch (err){
+                // jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
+                // jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
+            // }
+
+        }
+
+
+        function fieldChanged(context){
+            console.log(context);
+//			alert ('field changed ' + context.fieldId)
+
+/*
             if (context.fieldId=='itemselectfield'){
                 var itemValue = context.currentRecord.getValue({
                     fieldId: context.fieldId
@@ -88,40 +84,57 @@ define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (
 
             }
 */
-    }
-
-    function saveRecord(context) {
-        console.log('Save Record');
-        //			alert ('field changed ' + context.fieldId)
-
-        var poNum = context.currentRecord.getValue({ fieldId: 'ponum' });
-        if (isEmpty(poNum)) {
-            alert('PO Number required');
-            return false;
         }
-        return true;
-    }
 
-    function isEmpty(stValue) {
-        if (stValue == '' || stValue == null || stValue == undefined) {
-            return true;
-        } else {
-            if (typeof stValue == 'string') {
-                if (stValue == '') {
-                    return true;
-                }
-            } else if (typeof stValue == 'object') {
-                if (stValue.length == 0 || stValue.length == 'undefined') {
-                    return true;
-                }
+
+        function saveRecord (context){
+            console.log("Save Record");
+//			alert ('field changed ' + context.fieldId)
+
+            var poNum = context.currentRecord.getValue({ fieldId:"ponum" });
+            if (isEmpty(poNum)){
+                alert ("PO Number required")
+                return false
             }
-
-            return false;
+            return true
         }
-    }
 
-    return {
-        pageInit: pageInit,
-        saveRecord: saveRecord
-    };
-});
+
+
+        function isEmpty (stValue)
+        {
+            if ((stValue == '') || (stValue == null) || (stValue == undefined))
+            {
+                return true;
+            }
+            else
+            {
+                if (typeof stValue == 'string')
+                {
+                    if ((stValue == ''))
+                    {
+                        return true;
+                    }
+                }
+                else if (typeof stValue == 'object')
+                {
+                    if (stValue.length == 0 || stValue.length == 'undefined')
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+
+
+
+        return {
+            pageInit: pageInit,
+            saveRecord: saveRecord
+
+        };
+    }
+);

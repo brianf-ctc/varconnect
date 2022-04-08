@@ -19,8 +19,6 @@
  *			Oct 1, 2020		paolodl		Auto Shipped status for Pick, Pack, Ship
  *			Feb 8, 2021		paolodl		Add population for new date columns
  * 2.00		May 28, 2021	paolodl		Also check for line number
- * 2.01		Mar 21, 2022	ccanaria	Add functionality for package
- * 2.02		Mar 31, 2022	ccanaria	Add functionality to put serials using standard inventiory details
  */
 
 /**
@@ -38,9 +36,8 @@ define([
     'N/config',
     './VC_Globals.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (search, runtime, rec, xml, format, config, vcGlobals, constants, vcLog, vc2Utils) {
+    './CTC_VC_Lib_Log.js'
+], function (search, runtime, rec, xml, format, config, vcGlobals, constants, vcLog) {
     var LogTitle = 'Create-ItemFF',
         LogPrefix = '';
 
@@ -133,47 +130,32 @@ define([
                 logTitle,
                 LogPrefix +
                     '>> params: ' +
-                    JSON.stringify({
-                        tempItemNum: tempItemNum,
-                        tempVendorSKU: tempVendorSKU,
-                        hashSpace: hashSpace,
-                        xmlVendor: xmlVendor,
-                        tempItemLine: tempItemLine,
-                        tempDAndH: tempDAndH
-                    })
+                    (' tempItemNum ' + tempItemNum) +
+                    (' |tempVendorSKU ' + tempVendorSKU)
             );
 
             var vendorList = constants.Lists.XML_VENDOR;
             var isInData = false;
             for (var i = 0; i < lineData.length; i++) {
-                if (!lineData[i]) continue;
-
+                //					log.debug(tempItemNum + ' = ' + lineData[i].item_num, tempVendorSKU + ' = ' + lineData[i].vendorSKU);
+                log.audit(logTitle, LogPrefix + '>>> line data: ' + JSON.stringify(lineData[i]));
                 // 2.00
                 if (
-                    !lineData[i].line_num || //note: ??
-                    lineData[i].line_num == 'NA' || //note: ??
-                    !tempItemLine ||
-                    lineData[i].line_num == tempItemLine ||
-                    tempItemNum == lineData[i].item_num ||
-                    vc2Utils.inArray(tempItemNum, [
-                        lineData[i].item_num,
-                        lineData[i].item_num_alt,
-                        lineData[i].vendorSKU
-                    ]) ||
-                    vc2Utils.inArray(tempVendorSKU, [
-                        lineData[i].item_num,
-                        lineData[i].item_num_alt,
-                        lineData[i].vendorSKU
-                    ])
+                    lineData[i] &&
+                    (!lineData[i].line_num ||
+                        lineData[i].line_num == 'NA' ||
+                        !tempItemLine ||
+                        lineData[i].line_num == tempItemLine ||
+                        tempItemNum == lineData[i].item_num)
                 ) {
                     if (tempVendorSKU) {
                         if (
                             tempVendorSKU == lineData[i].vendorSKU ||
-                            tempVendorSKU == lineData[i].item_num_alt ||
                             tempVendorSKU == lineData[i].item_num
                         ) {
                             //log.debug('matched vendor sku for line '+i)
                             isInData = true;
+                            break;
                         }
 
                         //Ingram Hash replacement
@@ -184,6 +166,7 @@ define([
                         ) {
                             if (lineData[i].vendorSKU.replace('#', ' ') == tempVendorSKU) {
                                 isInData = true;
+                                break;
                             }
                         }
                     }
@@ -191,11 +174,9 @@ define([
                         tempItemNum == lineData[i].item_num,
                         tempItemNum + ' = ' + lineData[i].item_num
                     );
-                    if (
-                        tempItemNum == lineData[i].item_num ||
-                        tempItemNum == lineData[i].item_num_alt
-                    ) {
+                    if (tempItemNum == lineData[i].item_num) {
                         isInData = true;
+                        break;
                     }
 
                     //Ingram Hash replacement
@@ -206,25 +187,19 @@ define([
                     ) {
                         if (lineData[i].item_num.replace('#', ' ') == tempItemNum) {
                             isInData = true;
+                            break;
                         }
                     }
 
                     //D&H Item replacement
                     if (tempDAndH == lineData[i].item_num && xmlVendor == vendorList.DandH) {
                         isInData = true;
+                        break;
                     }
-                }
-
-                if (isInData) {
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '... found line data: ' + JSON.stringify(lineData[i])
-                    );
-                    break;
                 }
             }
 
-            log.audit(logTitle, LogPrefix + '... is itemInLineData? ' + JSON.stringify(isInData));
+            log.audit(logTitle, LogPrefix + 'is itemInLineData? ' + JSON.stringify(isInData));
 
             return isInData;
         },
@@ -245,7 +220,7 @@ define([
 
         removeIFLine: function (rec, lineNum) {
             var logTitle = [LogTitle, 'removeIFLine'].join('::');
-            // log.audit(logTitle, LogPrefix + '>>> remove line: ' + JSON.stringify(lineNum));
+            log.audit(logTitle, LogPrefix + '>>> remove line: ' + JSON.stringify(lineNum));
 
             rec.selectLine({
                 sublistId: 'item',
@@ -261,7 +236,7 @@ define([
 
         addIFLine: function (rec, lineNum) {
             var logTitle = [LogTitle, 'addIFLine'].join('::');
-            // log.audit(logTitle, LogPrefix + '>>> add line: ' + JSON.stringify(lineNum));
+            log.audit(logTitle, LogPrefix + '>>> add line: ' + JSON.stringify(lineNum));
 
             rec.selectLine({
                 sublistId: 'item',
@@ -456,51 +431,6 @@ define([
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
             vcLog.recordLog(logOption);
             return true;
-        },
-
-        // Added by Clemen - 03/18/2022
-        getSerials: function (soId, itemId) {
-            var retVal;
-
-            var customrecordserialnumSearchObj = search.create({
-                type: 'customrecordserialnum',
-                filters: [
-                    ['custrecordserialsales', 'is', soId],
-                    'AND',
-                    ['custrecordserialitem', 'is', itemId]
-                ],
-                columns: ['name']
-            });
-
-            var snList = [];
-
-            var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-            log.debug('customrecordserialnumSearchObj result count', searchResultCount);
-
-            for (var x = 0; x < searchResultCount; x += 1000) {
-                var rangeStart = x;
-
-                var searchResult = customrecordserialnumSearchObj.run().getRange({
-                    start: rangeStart,
-                    end: rangeStart + 1000
-                });
-
-                for (var i = 0; i < searchResult.length; i++) {
-                    var snNum = searchResult[i].getValue({
-                        name: 'name'
-                    });
-                    var snId = searchResult[i].id;
-
-                    snList.push({
-                        snNum: snNum,
-                        snId: snId
-                    });
-                }
-            }
-
-            retVal = snList;
-
-            return retVal;
         }
     };
 
@@ -580,19 +510,8 @@ define([
 
                 // Build an array with all XML line data with the same order num
                 for (var x = 0; x < lineData.length; x++) {
-                    if (fulfillmentOrders[j] != lineData[x].order_num) continue;
-
-                    log.audit(logTitle, '... verifying line data: ' + JSON.stringify(lineData[x]));
-                    if (
-                        lineData[x].hasOwnProperty('is_shipped') &&
-                        lineData[x].is_shipped === false
-                    ) {
-                        log.audit(logTitle, '......skipping line: not yet shipped');
-                        continue;
-                    }
-
-                    log.audit(logTitle, '... adding to fulfillment lines');
-                    fulfillmentLines.push(lineData[x]);
+                    if (fulfillmentOrders[j] == lineData[x].order_num)
+                        fulfillmentLines.push(lineData[x]);
                 }
 
                 log.audit(
@@ -600,13 +519,11 @@ define([
                     LogPrefix + '>> fulfillmentLines = ' + JSON.stringify(fulfillmentLines)
                 );
                 if (!fulfillmentLines.length) {
-                    log.audit(logTitle, LogPrefix + '** No items to fulfill ** ');
+                    log.audit(logTitle, LogPrefix + '...empty fulfillment lines');
                     continue;
                 }
 
                 var objRecord;
-
-                log.audit(logTitle, LogPrefix + '****  Transform to Fulfillment ****');
 
                 try {
                     // create item fulfillment from sales order
@@ -617,17 +534,17 @@ define([
                         isDynamic: true
                     });
 
-                    log.audit(logTitle, LogPrefix + '...success');
+                    log.audit(logTitle, LogPrefix + '**  Transform to Fulfillment: success');
                 } catch (err) {
                     Helper.logMsg({
                         title: 'Transform Error on SO: ' + so_ID,
                         error: err
                     });
+
                     continue;
                 }
 
                 var rec_Changed = false;
-
                 var lineItemCount = objRecord.getLineCount({
                     sublistId: 'item'
                 });
@@ -658,6 +575,7 @@ define([
                             line: cnt
                         });
                     }
+
                     tempItemPO = objRecord.getSublistText({
                         sublistId: 'item',
                         fieldId: 'createdpo',
@@ -674,18 +592,6 @@ define([
                         line: cnt
                     });
 
-                    log.audit(
-                        logTitle,
-                        '..line values: ' +
-                            JSON.stringify({
-                                tempItemNum: tempItemNum,
-                                tempVendorSKU: tempVendorSKU,
-                                tempItemPO: tempItemPO,
-                                tempItemLine: tempItemLine,
-                                tempDAndH: tempDAndH
-                            })
-                    );
-
                     if (
                         !Helper.itemInLineData(
                             tempItemNum,
@@ -701,7 +607,7 @@ define([
                         log.audit(
                             logTitle,
                             LogPrefix +
-                                '.... item not in fulfillment line, removing line from item fulfillment: ' +
+                                '>> item not in fulfillment line, removing line from item fulfillment: ' +
                                 JSON.stringify({
                                     tempItemNum: tempItemNum,
                                     lineCnt: cnt
@@ -715,7 +621,7 @@ define([
                         log.audit(
                             logTitle,
                             LogPrefix +
-                                '.... item PO not the one being processed, removing line from item fulfillment: ' +
+                                '>> item PO not the one being processed, removing line from item fulfillment: ' +
                                 JSON.stringify({
                                     tempItemPO: tempItemPO,
                                     po_ID: po_ID
@@ -723,18 +629,24 @@ define([
                         );
 
                         Helper.removeIFLine(objRecord, cnt);
+
                         rec_Changed = true;
                     } else {
-                        log.audit(logTitle, LogPrefix + '.... adding line to item fulfillment.');
+                        log.audit(
+                            logTitle,
+                            LogPrefix +
+                                '>> adding line to item fulfillment : ' +
+                                JSON.stringify({
+                                    objRecordId: objRecord.id,
+                                    lineNum: cnt
+                                })
+                        );
+
                         Helper.addIFLine(objRecord, cnt);
                         rec_Changed = true;
                     }
                 }
                 // Build a list of unique items with their total quantities shipped for this shipment
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>>> Collect all items and add up the quantities....'
-                );
                 var uniqueItems = [];
                 log.audit(
                     logTitle,
@@ -753,6 +665,17 @@ define([
                         carrier: '',
                         all_serial_nums: ''
                     };
+
+                    // var tempItemLine;
+                    // try {
+                    //     tempItemLine = objRecord.getSublistText({
+                    //         sublistId: 'item',
+                    //         fieldId: 'poline',
+                    //         line: itemCnt
+                    //     });
+                    // } catch (e) {
+                    //     log.audit('WARN', 'poline not available');
+                    // }
 
                     if (
                         !Helper.itemInLineData(
@@ -797,11 +720,6 @@ define([
                         }
 
                         uniqueItems.push(el);
-
-                        log.audit(
-                            logTitle,
-                            LogPrefix + ' ... added line data - ' + JSON.stringify(el)
-                        );
                     } else {
                         for (var uniqueIndex = 0; uniqueIndex < uniqueItems.length; uniqueIndex++) {
                             if (
@@ -848,22 +766,11 @@ define([
                                             tempSerials[snIndex] + '\n';
                                     }
                                 }
-
-                                log.audit(
-                                    logTitle,
-                                    LogPrefix +
-                                        ' ... updated line data - ' +
-                                        JSON.stringify(uniqueItems[uniqueIndex])
-                                );
                                 break;
                             }
                         }
                     }
                 }
-                log.audit(
-                    logTitle,
-                    LogPrefix + ' ... uniqueItems - ' + JSON.stringify(uniqueItems)
-                );
 
                 // debug messages
                 // uniqueItems.forEach(function (entry) {
@@ -898,8 +805,6 @@ define([
                 });
 
                 var recordLines = [];
-                log.audit(logTitle, LogPrefix + '>>> Validate all the received line items....');
-
                 // loop through all items in item fulfillment
                 for (var cnt2 = 0; cnt2 < lineItemCount2; cnt2++) {
                     objRecord.selectLine({
@@ -934,17 +839,6 @@ define([
                             })
                         );
 
-                        log.audit(
-                            logTitle,
-                            LogPrefix +
-                                '... item/qty: ' +
-                                JSON.stringify({
-                                    currItemNum: currItemNum,
-                                    currItemQty: currItemQty,
-                                    itemField: vcGlobals.ITEM_FUL_ID_LOOKUP_COL
-                                })
-                        );
-
                         var currVendorSKU = '';
                         if (vcGlobals.VENDOR_SKU_LOOKUP_COL) {
                             currVendorSKU = objRecord.getCurrentSublistValue({
@@ -970,13 +864,6 @@ define([
                                     (currVendorSKU != '' &&
                                         currVendorSKU == uniqueItems[tmp2].vendorSKU)
                                 ) {
-                                    log.audit(
-                                        logTitle,
-                                        LogPrefix +
-                                            '... unique item : ' +
-                                            JSON.stringify(uniqueItems[tmp2])
-                                    );
-
                                     if (currItemQty < parseInt(uniqueItems[tmp2].totalShipped)) {
                                         uniqueItems[tmp2].totalShipped -= parseInt(currItemQty);
 
@@ -1085,109 +972,6 @@ define([
                                             };
                                             recordLines.push(item);
 
-                                            /*** Start Clem - Serial functionality 1 ***/
-                                            // Check if serialized
-                                            var isSerialized = objRecord.getCurrentSublistValue({
-                                                sublistId: 'item',
-                                                fieldId: 'isserial'
-                                            });
-
-                                            if (isSerialized || isSerialized === 'T') {
-                                                // Check if DropShip PO
-                                                var dropShipPO = objRecord.getCurrentSublistValue({
-                                                    sublistId: 'item',
-                                                    fieldId: 'createpo'
-                                                });
-
-                                                if (!Helper.isEmpty(dropShipPO)) {
-                                                    //Check if location is set on line level
-
-                                                    var lineLoc = objRecord.getCurrentSublistValue({
-                                                        sublistId: 'item',
-                                                        fieldId: 'location'
-                                                    });
-
-                                                    if (Helper.isEmpty(lineLoc)) {
-                                                        //Use SO's header level Location
-                                                        var locationLookup = search.lookupFields({
-                                                            type: 'salesorder',
-                                                            id: so_ID,
-                                                            columns: ['location']
-                                                        });
-
-                                                        if (locationLookup) {
-                                                            lineLoc =
-                                                                locationLookup.location[0].value;
-                                                        }
-                                                    }
-
-                                                    if (!Helper.isEmpty(lineLoc)) {
-                                                        objRecord.setCurrentSublistValue({
-                                                            sublistId: 'item',
-                                                            fieldId: 'location',
-                                                            value: lineLoc
-                                                        });
-
-                                                        var itemId =
-                                                            objRecord.getCurrentSublistValue({
-                                                                sublistId: 'item',
-                                                                fieldId: 'item'
-                                                            });
-
-                                                        // Get Serial numbers associated with the line item
-                                                        var snList = Helper.getSerials(
-                                                            so_ID,
-                                                            itemId
-                                                        );
-                                                        log.debug('snList', JSON.stringify(snList));
-
-                                                        if (!Helper.isEmpty(snList)) {
-                                                            var inventoryDetailRecord =
-                                                                objRecord.getCurrentSublistSubrecord(
-                                                                    {
-                                                                        sublistId: 'item',
-                                                                        fieldId: 'inventorydetail'
-                                                                    }
-                                                                );
-
-                                                            for (
-                                                                var y = 0;
-                                                                y < snList.length;
-                                                                y++
-                                                            ) {
-                                                                if (snList[y].snId > 0) {
-                                                                    inventoryDetailRecord.selectLine(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment',
-                                                                            line: y
-                                                                        }
-                                                                    );
-
-                                                                    inventoryDetailRecord.setCurrentSublistValue(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment',
-                                                                            fieldId:
-                                                                                'receiptinventorynumber',
-                                                                            value: snList[y].snNum
-                                                                        }
-                                                                    );
-
-                                                                    inventoryDetailRecord.commitLine(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment'
-                                                                        }
-                                                                    );
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            /*** End Clem - Serial functionality 1 ***/
-
                                             objRecord.commitLine({
                                                 sublistId: 'item'
                                             });
@@ -1288,96 +1072,6 @@ define([
                                         };
                                         recordLines.push(item);
 
-                                        /*** Start Clem - Serial functionality 2 ***/
-                                        // Check if serialized
-                                        var isSerialized = objRecord.getCurrentSublistValue({
-                                            sublistId: 'item',
-                                            fieldId: 'isserial'
-                                        });
-
-                                        if (isSerialized || isSerialized === 'T') {
-                                            // Check if DropShip PO
-                                            var dropShipPO = objRecord.getCurrentSublistValue({
-                                                sublistId: 'item',
-                                                fieldId: 'createpo'
-                                            });
-
-                                            if (!Helper.isEmpty(dropShipPO)) {
-                                                //Check if location is set on line level
-                                                var lineLoc = objRecord.getCurrentSublistValue({
-                                                    sublistId: 'item',
-                                                    fieldId: 'location'
-                                                });
-
-                                                if (Helper.isEmpty(lineLoc)) {
-                                                    //Use SO's header level Location
-                                                    var locationLookup = search.lookupFields({
-                                                        type: 'salesorder',
-                                                        id: so_ID,
-                                                        columns: ['location']
-                                                    });
-                                                    log.audit(
-                                                        'locationLookup',
-                                                        JSON.stringify(locationLookup)
-                                                    );
-
-                                                    if (locationLookup) {
-                                                        lineLoc = locationLookup.location[0].value;
-                                                    }
-                                                }
-
-                                                if (!Helper.isEmpty(lineLoc)) {
-                                                    objRecord.setCurrentSublistValue({
-                                                        sublistId: 'item',
-                                                        fieldId: 'location',
-                                                        value: lineLoc
-                                                    });
-
-                                                    var itemId = objRecord.getCurrentSublistValue({
-                                                        sublistId: 'item',
-                                                        fieldId: 'item'
-                                                    });
-
-                                                    // Get Serial numbers associated with the line item
-                                                    var snList = Helper.getSerials(so_ID, itemId);
-                                                    log.debug('snList', JSON.stringify(snList));
-
-                                                    if (!Helper.isEmpty(snList)) {
-                                                        var inventoryDetailRecord =
-                                                            objRecord.getCurrentSublistSubrecord({
-                                                                sublistId: 'item',
-                                                                fieldId: 'inventorydetail'
-                                                            });
-
-                                                        for (var y = 0; y < snList.length; y++) {
-                                                            if (snList[y].snId > 0) {
-                                                                inventoryDetailRecord.selectLine({
-                                                                    sublistId:
-                                                                        'inventoryassignment',
-                                                                    line: y
-                                                                });
-
-                                                                inventoryDetailRecord.setCurrentSublistValue(
-                                                                    {
-                                                                        sublistId:
-                                                                            'inventoryassignment',
-                                                                        fieldId:
-                                                                            'receiptinventorynumber',
-                                                                        value: snList[y].snNum
-                                                                    }
-                                                                );
-
-                                                                inventoryDetailRecord.commitLine({
-                                                                    sublistId: 'inventoryassignment'
-                                                                });
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        /*** End Clem - Serial functionality 2 ***/
-
                                         uniqueItems[tmp2].totalShipped = 0;
                                         uniqueItems[tmp2].all_serial_nums = '';
                                         objRecord.commitLine({ sublistId: 'item' });
@@ -1432,23 +1126,6 @@ define([
                             });
                             objRecord.commitLine({ sublistId: 'item' });
                             rec_Changed = true;
-
-                            /*** Start Clemen - Package 1***/
-                            objRecord.selectLine({
-                                sublistId: 'package',
-                                line: tmp3
-                            });
-
-                            objRecord.setCurrentSublistValue({
-                                sublistId: 'package',
-                                fieldId: 'packagetrackingnumber',
-                                value: uniqueItems[tmp3].all_tracking_nums
-                            });
-
-                            objRecord.commitLine({
-                                sublistId: 'package'
-                            });
-                            /*** End Clemen - Package 1***/
                         }
                     }
                     if (!found) {
@@ -1470,23 +1147,6 @@ define([
                             });
                             objRecord.commitLine({ sublistId: 'item' });
                             rec_Changed = true;
-
-                            /*** Start Clemen - Package 2***/
-                            objRecord.selectLine({
-                                sublistId: 'package',
-                                line: tmp3
-                            });
-
-                            objRecord.setCurrentSublistValue({
-                                sublistId: 'package',
-                                fieldId: 'packagetrackingnumber',
-                                value: uniqueItems[tmp3].all_tracking_nums
-                            });
-
-                            objRecord.commitLine({
-                                sublistId: 'package'
-                            });
-                            /*** End Clemen - Package 2***/
                         }
                     }
                 }
@@ -1518,18 +1178,10 @@ define([
                                 ('Item line count = ' + lineItemCountX)
                         );
 
-                        log.emergency(
-                            logTitle,
-                            LogPrefix +
-                                '**** ITEM FULFILLMENT CREATION ****' +
-                                JSON.stringify(recordLines)
-                        );
-
                         objId = objRecord.save({
                             enableSourcing: false,
                             ignoreMandatoryFields: true
                         });
-
                         responseData.push({
                             id: objId,
                             orderNum: fulfillmentOrders[j]
@@ -1557,7 +1209,7 @@ define([
                     log.error(
                         logTitle,
                         LogPrefix +
-                            ('## Fulfillment Creation Error:  ' + errMsg) +
+                            ('## Fulfillment Error:  ' + errMsg) +
                             ('|  Details: ' + JSON.stringify(err))
                     );
 

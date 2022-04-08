@@ -13,26 +13,15 @@ define([
     'N/https',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
-    './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (search, record, runtime, log, https, vcLog, constants, vc2Utils, moment) {
+], function (search, record, runtime, log, https, vcLog, constants, moment) {
     'use strict';
-    var LogTitle = 'WS:IngramV1';
-
-    var CONFIG = {
-        CountryCode: '',
-        WAITMS: 300
-    };
-
     /**
      * @memberOf CTC_VC_Lib_Ingram_v1
      * @param {object} obj
      * @returns string
      **/
     function generateToken(obj) {
-        var logTitle = [LogTitle, 'generateToken'].join('::');
-        log.audit(logTitle, obj);
-
         var headers = {
             'Content-Type': 'application/x-www-form-urlencoded'
         };
@@ -53,32 +42,36 @@ define([
 
         if (response) {
             var responseBody = JSON.parse(response.body);
-            log.audit(logTitle, '>> response body: ' + JSON.stringify(responseBody));
+
+            log.debug({
+                title: 'Response Body',
+                details: response.body
+            });
 
             if (response.code == 200) {
-                log.audit(
-                    logTitle,
-                    '>> Token generated: ' + JSON.stringify(responseBody.access_token)
-                );
-
+                log.debug({
+                    title: 'Token Generated',
+                    details: responseBody.access_token
+                });
                 return responseBody.access_token;
             } else {
                 // retry 1 more time
                 response = https.post({
-                    url: obj.accessEndPoint,
+                    url: obj.url,
                     body: body,
                     headers: headers
                 });
-                responseBody = JSON.parse(response.body);
-
                 if (response.code == 200) {
-                    log.audit(
-                        logTitle,
-                        '>> Token generated: ' + JSON.stringify(responseBody.access_token)
-                    );
+                    log.debug({
+                        title: 'Token Generated',
+                        details: responseBody.access_token
+                    });
                     return responseBody.access_token;
                 } else {
-                    log.error(logTitle, '>> generateToken Failure: ' + JSON.stringify(response));
+                    log.error({
+                        title: 'generateToken Failure',
+                        details: response
+                    });
                     return null;
                 }
             }
@@ -91,65 +84,73 @@ define([
      * @returns object
      **/
     function processRequest(obj) {
-        var logTitle = [LogTitle, 'processRequest'].join('::');
-        log.audit(logTitle, obj);
-
         var token = generateToken(obj.vendorConfig);
 
         //for debugging
         if (!obj.poId) obj.poId = obj.poNum;
 
-        CONFIG.CountryCode =
-            obj.countryCode || obj.vendorConfig.country || runtime.country == 'US' ? 'US' : 'CA';
-        log.audit(logTitle, '>> country code: ' + CONFIG.CountryCode);
+        var countryCode = 'US';
+        if (runtime.country == 'CA') countryCode = 'CA';
 
         var headers = {
             Authorization: 'Bearer ' + token,
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'IM-CustomerNumber': obj.vendorConfig.customerNo,
-            'IM-CountryCode': CONFIG.CountryCode,
+            'IM-CountryCode': countryCode,
             'IM-CustomerOrderNumber': obj.poNum,
             'IM-CorrelationID': obj.poId
         };
 
+        //      var body = {};
+        //      body['IM-CustomerNumber'] = obj.vendorConfig.customerNo;
+        //      body['IM-CountryCode'] = "US";
+        //      body.customerOrderNumber = obj.poNum;
+        //      body['IM-CorrelationID'] = '2938db67-620b-4b51-8ef484df4114ab44'//obj.poId;
+
         //https://api.ingrammicro.com:443/resellers/v6/orders/orderstatus
         var url = obj.vendorConfig.endPoint + '/search?customerOrderNumber=' + obj.poNum;
 
+        log.audit({
+            title: 'search request header ',
+            details: headers
+        });
+
         try {
             vcLog.recordLog({
-                header: 'Ingram V1 OrderStatus PO Request',
-                body: JSON.stringify({
-                    URL: url,
-                    HEADERS: headers
-                }),
+                header: 'Ingram V1 (Cisco) Search PO Request',
+                body: 'url='+ url + '\r\n' + 
+                'header ' + JSON.stringify(headers),
                 transaction: obj.poId,
                 status: constants.Lists.VC_LOG_STATUS.INFO
             });
         } catch (e) {
-            log.error(logTitle, e);
+            log.error('Error logging', e);
         }
 
         var response = https.get({
             url: url,
+            //        body: JSON.stringify(body),
             headers: headers
         });
 
         try {
             vcLog.recordLog({
-                header: 'Ingram V1 OrderStatus Response',
-                body: JSON.stringify(response.body || response),
+                header: 'Ingram V1 (Cisco) Search PO Response',
+                body: JSON.stringify(response),
                 transaction: obj.poId,
                 status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
         } catch (e) {
-            log.error(logTitle, e);
+            log.error('Error logging', e);
         }
 
         if (response) {
+            log.debug({
+                title: 'Search Response',
+                details: response
+            });
             var responseBody = JSON.parse(response.body);
-            // wait for 2
-            vc2Utils.waitMs(CONFIG.WAITMS);
 
             responseBody = _getOrderDetail({
                 responseBody: responseBody,
@@ -160,8 +161,6 @@ define([
 
             /// PRICE & AVAILABILITY /////
             if (responseBody) {
-                vc2Utils.waitMs(CONFIG.WAITMS);
-
                 _getItemAvailability({
                     responseBody: responseBody,
                     token: token,
@@ -171,14 +170,16 @@ define([
                 });
             }
 
+            log.debug({
+                title: 'Return Response Body',
+                details: responseBody
+            });
+
             return responseBody;
         }
     }
 
     function _getOrderDetail(options) {
-        var logTitle = [LogTitle, '_getOrderDetail'].join('::');
-        log.audit(logTitle, options);
-
         var response = options.responseBody,
             vendorConfig = options.vendorConfig,
             token = options.token,
@@ -186,7 +187,8 @@ define([
             responseBody;
 
         var orders = response.orders;
-        log.audit(logTitle, '>> orders = ' + JSON.stringify(orders));
+        log.debug('response body', response);
+        log.debug('orders', JSON.stringify(orders));
 
         var validOrder;
         if (orders && orders.length) {
@@ -200,44 +202,42 @@ define([
                 }
             }
         }
-        log.audit(logTitle, '>> validOrder' + JSON.stringify(validOrder));
+        log.debug('validOrder', JSON.stringify(validOrder));
         if (!validOrder) validOrder = orders[0];
 
         if (validOrder || orders.length) {
             var ingramOrderNumber = validOrder.ingramOrderNumber;
-            log.audit(logTitle, '>> ingramOrderNumber: ' + JSON.stringify(ingramOrderNumber));
+            log.debug('ingramOrderNumber', ingramOrderNumber);
 
-            // TODO: send the correct country code
-            // var countryCode = 'US';
-            // if (runtime.country == 'CA') countryCode = 'CA';
+            var countryCode = 'US';
+            if (runtime.country == 'CA') countryCode = 'CA';
 
             var headers = {
                 Authorization: 'Bearer ' + token,
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
                 'IM-CustomerNumber': vendorConfig.customerNo,
-                'IM-CountryCode': CONFIG.CountryCode,
+                'IM-CountryCode': countryCode,
                 'IM-CorrelationID': poId
                 //				'IM-SenderID': vendorConfig.customerNo
             };
 
             var url = vendorConfig.endPoint + '/' + ingramOrderNumber;
 
+            log.debug('requestUrl: ' + url, 'headers ' + JSON.stringify(headers));
+
             try {
                 vcLog.recordLog({
                     header: 'Ingram V6 PO Details Request',
-                    body: JSON.stringify({
-                        HEADER: headers,
-                        URL: url
-                    }),
+                    body: JSON.stringify(headers),
                     transaction: poId,
                     status: constants.Lists.VC_LOG_STATUS.INFO
                 });
             } catch (e) {
-                log.error(logTitle, e);
+                log.error('Error logging', e);
             }
 
-            response = https.get({
+            var response = https.get({
                 url: url,
                 headers: headers
             });
@@ -245,20 +245,20 @@ define([
             try {
                 vcLog.recordLog({
                     header: 'Ingram V6 PO Details Response',
-                    body: JSON.stringify(response.body || response),
+                    body: JSON.stringify(response),
                     transaction: poId,
                     status: constants.Lists.VC_LOG_STATUS.SUCCESS
                 });
             } catch (e) {
-                log.error(logTitle, e);
+                log.error('Error logging', e);
             }
 
             if (response) {
-                log.audit({
-                    title: logTitle,
+                log.debug({
+                    title: 'Details Response',
                     details: response
                 });
-                responseBody = JSON.parse(response.body);
+                var responseBody = JSON.parse(response.body);
             }
         }
 
@@ -266,17 +266,15 @@ define([
     }
 
     function _getItemAvailability(options) {
-        var logTitle = [LogTitle, '_getItemAvailability'].join('::');
-        log.audit(logTitle, options);
-
         var responseBody = options.responseBody,
             vendorConfig = options.vendorConfig,
             token = options.token,
             poId = options.poId,
-            poNum = options.poNum;
+            poNum = options.poNum,
+            logTitle = '::getItemAvailability::';
 
         var orderLines = responseBody.lines;
-        log.audit(logTitle, 'orderLines : ' + JSON.stringify(orderLines));
+        log.debug(logTitle, 'orderLines : ' + JSON.stringify(orderLines));
 
         if (!orderLines || !orderLines.length) return;
 
@@ -286,7 +284,7 @@ define([
             date: moment(ingramOrderDate).add(1, 'day').toDate(),
             text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
         };
-        log.audit(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
+        log.debug(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
 
         var arrItems = [],
             shipLocation = {},
@@ -298,7 +296,7 @@ define([
 
         for (i = 0, j = orderLines.length; i < j; i++) {
             orderLine = orderLines[i];
-            log.audit(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
+            log.debug(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
 
             var lineData = {
                 ingramPartNumber: orderLine.ingramPartNumber,
@@ -324,12 +322,12 @@ define([
                 }
             }
 
-            log.audit(logTitle, '>>>> lineData: ' + JSON.stringify(lineData));
+            log.debug(logTitle, '>>>> lineData: ' + JSON.stringify(lineData));
             arrItems.push(lineData);
         }
 
-        log.audit(logTitle, '>> arrItems: ' + JSON.stringify(arrItems));
-        log.audit(logTitle, '>> shipLocation: ' + JSON.stringify(shipLocation));
+        log.debug(logTitle, '>> arrItems: ' + JSON.stringify(arrItems));
+        log.debug(logTitle, '>> shipLocation: ' + JSON.stringify(shipLocation));
 
         // send the call
         var requestOption = {};
@@ -338,7 +336,7 @@ define([
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'IM-CustomerNumber': vendorConfig.customerNo,
-            'IM-CountryCode': CONFIG.CountryCode,
+            'IM-CountryCode': runtime.country == 'CA' ? 'CA' : 'US',
             'IM-CustomerOrderNumber': poNum,
             'IM-CorrelationID': poId
         };
@@ -354,10 +352,8 @@ define([
             vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
             'includeAvailability=true&includePricing=true&includeProductAttributes=true';
 
-        log.audit(logTitle, 'requestUrl: ' + url);
-        log.audit(logTitle, 'requestOption ' + JSON.stringify(requestOption));
-
-        requestOption.url = url;
+        log.debug(logTitle, 'requestUrl: ' + url);
+        log.debug(logTitle, 'requestOption ' + JSON.stringify(requestOption));
 
         try {
             vcLog.recordLog({
@@ -367,23 +363,23 @@ define([
                 status: constants.Lists.VC_LOG_STATUS.INFO
             });
         } catch (e) {
-            log.error(logTitle, e);
+            log.error('Error logging', e);
         }
 
+        requestOption.url = url;
         requestOption.body = JSON.stringify(requestOption.body);
 
-        vc2Utils.waitMs(CONFIG.WAITMS);
         var responseETA = https.post(requestOption);
 
         try {
             vcLog.recordLog({
                 header: 'Ingram V6 Item Availability (Response)',
-                body: JSON.stringify(responseETA.body || responseETA),
+                body: JSON.stringify(responseETA),
                 transaction: poId,
                 status: constants.Lists.VC_LOG_STATUS.SUCCESS
             });
         } catch (e) {
-            log.error(logTitle, e);
+            log.error('Error logging', e);
         }
 
         if (responseETA.body) {
@@ -394,7 +390,7 @@ define([
 
                 for (ii = 0, jj = responseBodyETA.length; ii < jj; ii++) {
                     var respLine = responseBodyETA[i];
-                    log.audit(logTitle, '>> respLine: ' + JSON.stringify(respLine));
+                    log.debug(logTitle, '>> respLine: ' + JSON.stringify(respLine));
 
                     if (
                         respLine.ingramPartNumber != orderLine.ingramPartNumber ||
@@ -410,7 +406,7 @@ define([
                         ? respLine.availability.availabilityByWarehouse || false
                         : false;
 
-                    log.audit(logTitle, '>> locationList: ' + JSON.stringify(locationList));
+                    log.debug(logTitle, '>> locationList: ' + JSON.stringify(locationList));
 
                     var arrDates = [];
                     for (var iii = 0, jjj = locationList.length; iii < jjj; iii++) {
@@ -422,7 +418,7 @@ define([
                             dateObj: moment(dateStr).toDate() //new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$3/$2/$1"))
                         });
                     }
-                    log.audit(logTitle, '>> arrDates: ' + JSON.stringify(arrDates));
+                    log.debug(logTitle, '>> arrDates: ' + JSON.stringify(arrDates));
                     if (arrDates.length) {
                         var nearestDate = arrDates.sort(function (a, b) {
                             return a.dateObj - b.dateObj;
@@ -449,118 +445,98 @@ define([
      * @returns object
      **/
     function processResponse(obj) {
-        var logTitle = [LogTitle, 'processResponse'].join('::');
-        log.audit(logTitle, obj);
+        log.debug('processResponse', JSON.stringify(obj));
+        var outputArray = [];
 
-        var outputArray = [],
-            poId = obj.poId;
-
-        var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-        var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-        var validShippedStatus = ['SHIPPED'];
-
-        try {
-            if (obj.responseBody === null || !obj.responseBody) {
-                throw 'Missing or invalid responseBody';
-            }
-            var objBody = obj.responseBody;
-
-            log.audit(logTitle, '>> objBody : ' + JSON.stringify(objBody));
-
-            var orderStatus = objBody.orderStatus;
-            if (orderStatus) orderStatus = orderStatus.toUpperCase();
-            log.audit(logTitle, '>> orderStatus : ' + JSON.stringify(orderStatus));
-
-            if (!vc2Utils.inArray(orderStatus, validOrderStatus)) {
-                throw 'Skipping Order - ' + orderStatus;
-            }
-
-            for (var i = 0; i < objBody.lines.length; i++) {
-                var orderLine = objBody.lines[i];
-                var lineStatus = orderLine.lineStatus;
-                if (lineStatus) lineStatus = lineStatus.toUpperCase();
-
-                log.audit(logTitle, '>> orderLine #' + i + ': ' + JSON.stringify(orderLine));
-
-                if (!vc2Utils.inArray(lineStatus, validLineStatus)) {
-                    log.audit(
-                        logTitle,
-                        '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']'
-                    );
-                }
-
-                var outputObj = {};
-
-                // get line details from order lines
-                outputObj.line_num = orderLine.customerLineNumber;
-                outputObj.item_num = orderLine.vendorPartNumber; ////orderLine.ingramPartNumber;//
-                outputObj.item_num_alt = orderLine.ingramPartNumber;
-                outputObj.is_shipped = vc2Utils.inArray(lineStatus, validShippedStatus);
-
-                //add shipment details
-                outputObj.ship_qty = 0;
-                var trackingNum = [];
-                var serials = [];
-                for (var shipLine = 0; shipLine < orderLine.shipmentDetails.length; shipLine++) {
-                    var shipment = orderLine.shipmentDetails[shipLine];
-
-                    outputObj.ship_qty += parseInt(shipment.quantity);
-                    outputObj.order_num = orderLine.subOrderNumber; //shipment.invoiceNumber;
-                    outputObj.order_date = shipment.invoiceDate;
-                    outputObj.ship_date = shipment.shippedDate;
-                    outputObj.order_eta = shipment.estimatedDeliveryDate || '';
-                    outputObj.order_eta_ship = shipment.estimatedDeliveryDate;
-
-                    //add carrier details
-                    //for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
-                    var carrier = shipment.carrierDetails;
-
-                    if (!outputObj.carrier) outputObj.carrier = carrier.carrierName;
-
-                    //add tracking details
-                    if (carrier.trackingDetails) {
-                        for (
-                            var trackingLine = 0;
-                            trackingLine < carrier.trackingDetails.length;
-                            trackingLine++
-                        ) {
-                            var tracking = carrier.trackingDetails[trackingLine];
-
-                            if (tracking.trackingNumber) trackingNum.push(tracking.trackingNumber);
-
-                            //add serials
-                            if (tracking.SerialNumbers)
-                                for (
-                                    var serialLine = 0;
-                                    serialLine < tracking.SerialNumbers.length;
-                                    serialLine++
-                                ) {
-                                    var serial = tracking.SerialNumbers[serialLine];
-
-                                    if (serial.serialNumber) serials.push(serial.serialNumber);
-                                }
-                        }
-                    }
-                    //		            	  }
-                }
-                outputObj.tracking_num = trackingNum.join(',');
-                outputObj.serial_num = serials.join(',');
-
-                log.audit(logTitle, '>> adding: ' + JSON.stringify(outputObj));
-                outputArray.push(outputObj);
-            }
-        } catch (error) {
-            log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
-
-            vcLog.recordLog({
-                header: 'Ingram Response Processing | ERROR',
-                body: vc2Utils.extractError(error),
-                transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR
-            });
+        if (obj.responseBody === null) {
+            return outputArray;
         }
 
-        log.audit(logTitle, '>> output array: ' + JSON.stringify(outputArray));
+        var objBody = obj.responseBody;
+        log.debug('objBody', objBody);
+        if (objBody) {
+            var status = objBody.orderStatus;
+
+            var validStatus = ['Shipped', 'Processing', 'Delivered', 'Backordered'];
+            if (['Shipped', 'Processing', 'Delivered', 'Backordered'].indexOf(status) >= 0) {
+                for (var i = 0; i < objBody.lines.length; i++) {
+                    var orderLine = objBody.lines[i];
+                    log.debug('line ' + i, JSON.stringify(orderLine));
+
+                    if (
+                        ['Shipped', 'In Progress', 'Delivered', 'Backordered'].indexOf(
+                            orderLine.lineStatus
+                        ) >= 0
+                    ) {
+                        var outputObj = {};
+
+                        // get line details from order lines
+                        outputObj.line_num = orderLine.customerLineNumber;
+                        outputObj.item_num = orderLine.vendorPartNumber; //orderLine.ingramPartNumber
+
+                        //add shipment details
+                        outputObj.ship_qty = 0;
+                        var trackingNum = [];
+                        var serials = [];
+                        for (
+                            var shipLine = 0;
+                            shipLine < orderLine.shipmentDetails.length;
+                            shipLine++
+                        ) {
+                            var shipment = orderLine.shipmentDetails[shipLine];
+
+                            outputObj.ship_qty += parseInt(shipment.quantity);
+                            outputObj.order_num = orderLine.subOrderNumber; //shipment.invoiceNumber;
+                            outputObj.order_date = shipment.invoiceDate;
+                            outputObj.ship_date = shipment.shippedDate;
+                            outputObj.order_eta = shipment.estimatedDeliveryDate || '';
+
+                            //add carrier details
+                            //		            	  for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
+                            var carrier = shipment.carrierDetails;
+
+                            if (!outputObj.carrier) outputObj.carrier = carrier.carrierName;
+
+                            //add tracking details
+                            if (carrier.trackingDetails) {
+                                for (
+                                    var trackingLine = 0;
+                                    trackingLine < carrier.trackingDetails.length;
+                                    trackingLine++
+                                ) {
+                                    var tracking = carrier.trackingDetails[trackingLine];
+
+                                    if (tracking.trackingNumber)
+                                        trackingNum.push(tracking.trackingNumber);
+
+                                    //add serials
+                                    if (tracking.SerialNumbers)
+                                        for (
+                                            var serialLine = 0;
+                                            serialLine < tracking.SerialNumbers.length;
+                                            serialLine++
+                                        ) {
+                                            var serial = tracking.SerialNumbers[serialLine];
+
+                                            if (serial.serialNumber)
+                                                serials.push(serial.serialNumber);
+                                        }
+                                }
+                            }
+                            //		            	  }
+                        }
+                        outputObj.tracking_num = trackingNum.join(',');
+                        outputObj.serial_num = serials.join(',');
+                        log.debug('adding', JSON.stringify(outputObj));
+                        outputArray.push(outputObj);
+                    }
+                }
+            }
+        }
+        log.audit({
+            title: 'outputArray',
+            details: outputArray
+        });
         return outputArray;
     }
 
@@ -570,7 +546,7 @@ define([
      * @returns object
      **/
     function convertToXWWW(json) {
-        // log.audit('convertToXWWW', JSON.stringify(json));
+        log.debug('convertToXWWW', JSON.stringify(json));
         if (typeof json !== 'object') {
             return null;
         }
@@ -585,34 +561,28 @@ define([
     }
 
     function process(options) {
-        var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, options);
-
+        log.audit({
+            title: 'options',
+            details: options
+        });
         var outputArray = null;
 
         var responseBody = processRequest({
             poNum: options.poNum,
             vendorConfig: options.vendorConfig,
-            poId: options.poId,
-            countryCode: options.countryCode
+            poId: options.poId
         });
-
-        CONFIG.CountryCode =
-            options.countryCode || options.vendorConfig.country || runtime.country == 'US'
-                ? 'US'
-                : 'CA';
-        log.audit(logTitle, '>> country code: ' + CONFIG.CountryCode);
 
         if (responseBody) {
             outputArray = processResponse({
-                poNum: options.poNum,
-                poId: options.poId,
                 vendorConfig: options.vendorConfig,
                 responseBody: responseBody
             });
         }
-        log.audit(logTitle, '>> outputArray: ' + JSON.stringify(outputArray));
-
+        log.emergency({
+            title: 'outputArray',
+            details: outputArray
+        });
         return outputArray;
     }
 

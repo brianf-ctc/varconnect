@@ -25,11 +25,7 @@ define([
 
         var vendorConfigSearch = search.create({
             type: 'customrecord_vc_bill_vendor_config',
-            filters: [
-                ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
+            filters: [['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API]],
             columns: ['internalid']
         });
 
@@ -62,10 +58,6 @@ define([
             columns: [
                 'internalid',
                 'tranid',
-                search.createColumn({
-                    name: 'country',
-                    join: 'subsidiary'
-                }),
                 search.createColumn({
                     name: 'custentity_vc_bill_config',
                     join: 'vendor'
@@ -102,7 +94,6 @@ define([
 
         var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            country: searchValues.values['country.subsidiary'].value,
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
             user_id: vendorConfig.custrecord_vc_bc_user,

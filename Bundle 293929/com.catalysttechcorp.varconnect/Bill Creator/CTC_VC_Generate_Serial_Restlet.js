@@ -2,64 +2,74 @@
  *@NApiVersion 2.x
  *@NScriptType Restlet
  */
-define(['N/record', 'N/log'], function (record, log) {
-    function _post(context) {
-        log.debug('restlet called', context);
+define(['N/record', 'N/log'],
+    function(record, log) {
 
-        var vcSerial = context.serialObj;
-        var lineToProcess = context.lineToProcess;
+        function _post(context) {
 
-        for (var i = 0; i < vcSerial.lines[lineToProcess].serials.length; i++) {
-            var serialRec = record.create({
-                type: 'customrecordserialnum',
-                isDynamic: true
-            });
+            log.debug ('restlet called', context);
 
-            serialRec.setValue({
-                fieldId: 'name',
-                value: vcSerial.lines[lineToProcess].serials[i]
-            });
+            var vcSerial = context.serialObj;
+            var lineToProcess = context.lineToProcess;
 
-            serialRec.setValue({
-                fieldId: 'custrecordserialpurchase',
-                value: vcSerial.poId
-            });
+            for (var i = 0; i < vcSerial.lines[lineToProcess].serials.length; i++){
 
-            serialRec.setValue({
-                fieldId: 'custrecordserialsales',
-                value: vcSerial.soId
-            });
-
-            serialRec.setValue({
-                fieldId: 'custrecordserialitem',
-                value: vcSerial.lines[lineToProcess].item
-            });
-
-            serialRec.setValue({
-                fieldId: 'custrecordcustomer',
-                value: vcSerial.custId
-            });
-
-            if (vcSerial.type == 'if') {
-                serialRec.setValue({
-                    fieldId: 'custrecorditemfulfillment',
-                    value: vcSerial.trxId
+                var serialRec = record.create({
+                    type: 'customrecordserialnum',
+                    isDynamic: true,
                 });
-            } else if (vcSerial.type == 'ir') {
+
                 serialRec.setValue({
-                    fieldId: 'custrecorditemreceipt',
-                    value: vcSerial.trxId
+                    fieldId: 'name',
+                    value: vcSerial.lines[lineToProcess].serials[i]
                 });
-            }
 
-            var record_id = serialRec.save();
+                serialRec.setValue({
+                    fieldId: 'custrecordserialpurchase',
+                    value: vcSerial.poId
+                });
 
-            log.debug('created', record_id);
+                serialRec.setValue({
+                    fieldId: 'custrecordserialsales',
+                    value: vcSerial.soId
+                });
+
+                serialRec.setValue({
+                    fieldId: 'custrecordserialitem',
+                    value: vcSerial.lines[lineToProcess].item
+                });
+    
+                serialRec.setValue({
+                    fieldId: 'custrecordcustomer',
+                    value: vcSerial.custId
+                });
+
+                if (vcSerial.type == 'if'){
+
+                    serialRec.setValue({
+                        fieldId: 'custrecorditemfulfillment',
+                        value: vcSerial.trxId
+                    });
+
+                } else if ( vcSerial.type == 'ir'){
+                   
+                    serialRec.setValue({
+                        fieldId: 'custrecorditemreceipt',
+                        value: vcSerial.trxId
+                    });
+
+                }
+
+                var record_id = serialRec.save();
+
+                log.debug('created', record_id);
+
+            }        
         }
-    }
 
-    return {
-        //get: _get,
-        post: _post
-    };
-});
+
+        return {
+            //get: _get,
+            post: _post
+        };
+    });

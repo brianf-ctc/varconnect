@@ -63,12 +63,12 @@ define([
 
         log.debug('im: token', input + ': ' + authJson.access_token);
 
-        var countryCode = config.country;
-        // if (runtime.country == 'CA') countryCode = 'CA';
+        var countryCode = 'US';
+        if (runtime.country == 'CA') countryCode = 'CA';
 
         log.debug(
-            '>> country',
-            JSON.stringify([runtime.country, config.country, countryCode, runtime.country == 'CA'])
+            'runtime.country',
+            JSON.stringify([runtime.country, countryCode, runtime.country == 'CA'])
         );
 
         headers['Content-Type'] = 'application/json';
@@ -139,9 +139,7 @@ define([
                     totalRecords: totalRecords,
                     pageSize: pageSize,
                     pageNum: pageNum,
-                    recordsFound: searchBody.recordsFound,
-                    imOrders: imOrders,
-                    imOrderNums: imOrderNums
+                    recordsFound: searchBody.recordsFound
                 })
             );
 
@@ -169,16 +167,10 @@ define([
             try {
                 var invoiceUrl =
                     imOrders[o] +
-                    ('?customerNumber=' + config.partner_id) +
-                    ('&isoCountryCode=' + countryCode);
-
-                log.debug(
-                    'im: invoice request',
-                    JSON.stringify({
-                        url: baseUrl + invoiceUrl,
-                        headers: headers
-                    })
-                );
+                    '?customerNumber=' +
+                    config.partner_id +
+                    '&isoCountryCode=' +
+                    countryCode;
 
                 var invoiceResponse = https.get({
                     url: baseUrl + invoiceUrl,

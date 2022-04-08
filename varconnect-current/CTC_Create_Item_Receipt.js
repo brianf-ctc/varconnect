@@ -29,9 +29,8 @@ define([
     'N/runtime',
     './VC_Globals.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (search, record, runtime, vcGlobals, constants, vcLog, vc2Utils) {
+    './CTC_VC_Lib_Log.js'
+], function (search, record, runtime, vcGlobals, constants, vcLog) {
     var LogTitle = 'Create-ItemRcpt',
         LogPrefix = '';
 
@@ -112,19 +111,18 @@ define([
 
         itemInLineData: function (tempItemNum, lineData, tempVendorSKU) {
             var logTitle = [LogTitle, 'itemInLineData'].join('::');
-
             log.audit(
                 logTitle,
                 LogPrefix +
                     '>> params: ' +
-                    JSON.stringify({
-                        tempItemNum: tempItemNum,
-                        tempVendorSKU: tempVendorSKU
-                    })
+                    (' tempItemNum ' + tempItemNum) +
+                    (' |tempVendorSKU ' + tempVendorSKU)
             );
 
             var isInData = false;
             for (var i = 0; i < lineData.length; i++) {
+                // log.audit(logTitle, '>>> line data: ' + JSON.stringify(lineData[i]));
+
                 if (tempVendorSKU) {
                     if (tempVendorSKU == lineData[i].vendorSKU) {
                         //log.debug('matched vendor sku for line '+i)
@@ -379,32 +377,18 @@ define([
                 var receiptLines = [];
                 // Build an array with all XML line data with the same order num
                 for (var x = 0; x < lineData.length; x++) {
-                    if (receiptOrders[j] !== lineData[x].order_num) continue;
-
-                    log.audit(logTitle, '... verifying line data: ' + JSON.stringify(lineData[x]));
-                    if (
-                        lineData[x].hasOwnProperty('is_shipped') &&
-                        lineData[x].is_shipped === false
-                    ) {
-                        log.audit(logTitle, '......skipping line: not yet shipped');
-                        continue;
-                    }
-
-                    log.audit(logTitle, '... adding to receipt lines');
-                    receiptLines.push(lineData[x]);
+                    if (receiptOrders[j] == lineData[x].order_num) receiptLines.push(lineData[x]);
                 }
                 log.audit(
                     logTitle,
                     LogPrefix + '>> receiptLines = ' + JSON.stringify(receiptLines)
                 );
                 if (!receiptLines.length) {
-                    log.audit(logTitle, LogPrefix + '** No items to receive ** ');
+                    log.audit(logTitle, LogPrefix + '...empty receipt lines');
                     continue;
                 }
 
                 var objRecord;
-
-                log.audit(logTitle, LogPrefix + '****  Transform to Item Receipt ****');
 
                 try {
                     // create item receipt from sales order
@@ -415,12 +399,13 @@ define([
                         isDynamic: true
                     });
 
-                    log.audit(logTitle, LogPrefix + '... success');
+                    log.audit(logTitle, LogPrefix + '**  Transform to Item Receipt: success');
                 } catch (err) {
                     Helper.logMsg({
                         title: 'Transform Error on PO: ' + po_ID,
                         error: err
                     });
+
                     continue;
                 }
 
