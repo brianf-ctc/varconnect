@@ -29,7 +29,11 @@ define([
 
         var vendorConfigSearch = search.create({
             type: 'customrecord_vc_bill_vendor_config',
-            filters: [['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.SFTP]],
+            filters: [
+                ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.SFTP],
+                'AND',
+                ['isinactive', 'is', 'F']
+            ],
             columns: ['internalid']
         });
 
@@ -80,13 +84,21 @@ define([
         };
         log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
 
-        var connection = sftp.createConnection({
+        var connection;
+
+        try {
+            connection = sftp.createConnection({
             username: configObj.user_id,
             passwordGuid: configObj.user_pass,
             url: configObj.url,
             directory: configObj.res_path,
             hostKey: configObj.host_key
         });
+        } catch (err) {
+            log.error(logTitle, err);
+        }
+
+        if (!connection) throw 'SFTP Connection error!!';
 
         var list = connection.list();
         log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));

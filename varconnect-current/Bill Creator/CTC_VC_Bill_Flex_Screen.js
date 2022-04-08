@@ -127,10 +127,9 @@ define([
                                 logTitle,
                                 '>> ERROR Generating Bill Record: ' + Helper.extractError(bill_err)
                             );
-                            Current.ErrorMessage.push(
+                            Current.ErrorMessage =
                                 'Unable to create Vendor Bill due to - ' +
-                                    Helper.extractError(bill_err)
-                            );
+                                Helper.extractError(bill_err);
                         }
                     }
                 }

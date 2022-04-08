@@ -24,8 +24,22 @@ define([
     hljsXmlLanguage,
     hljsJsonLanguage
 ) {
-    hljs.registerLanguage('xml', hljsXmlLanguage);
-    hljs.registerLanguage('json', hljsJsonLanguage);
+    if (!hljs) {
+        require([
+            'SuiteScripts/VAR Connect/highlight/highlight.js',
+            'SuiteScripts/VAR Connect/highlight/languages/xml.min.js',
+            'SuiteScripts/VAR Connect/highlight/languages/json.min.js'
+        ], function (rehljs, rehljsXmlLanguage, rehljsJsonLanguage) {
+            hljs = rehljs;
+            hljsXmlLanguage = rehljsXmlLanguage;
+            hljsJsonLanguage = rehljsJsonLanguage;
+            hljs.registerLanguage('xml', hljsXmlLanguage);
+            hljs.registerLanguage('json', hljsJsonLanguage);
+        });
+    } else {
+        hljs.registerLanguage('xml', hljsXmlLanguage);
+        hljs.registerLanguage('json', hljsJsonLanguage);
+    }
 
     function _getPODetails(poNum) {
         var columns = [nsSearch.createColumn({ name: 'entity' })];
@@ -104,13 +118,25 @@ define([
                 console.log('debug lib: Calling library webservice');
                 try {
                     outputObj = libWebService.handleRequest({
-                    vendorConfig: vendorConfig,
-                    poNum: ponum,
-                    country: country
-                });
+                        vendorConfig: vendorConfig,
+                        poNum: ponum,
+                        country: country
+                    });
                 } catch (processErr) {
-                    outputObj = 'Invalid response received (id: ' + ponum + ')';
-                    console.log(JSON.stringify(processErr));
+                    outputObj =
+                        'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
+                        processErr.name +
+                        ': ' +
+                        processErr.message +
+                        ']';
+                    console.log(
+                        'debug lib: ' +
+                            processErr.name +
+                            '- ' +
+                            processErr.message +
+                            '==\n' +
+                            processErr.stack
+                    );
                 }
                 console.log('debug lib: webservice return ' + JSON.stringify(outputObj));
                 if (outputObj) {
@@ -150,8 +176,8 @@ define([
                             xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
                             elementIdToShow = 'custpage_xml__viewer';
                             elementIdToHide = 'custpage_json__viewer';
-                }
-            } else {
+                        }
+                    } else {
                         xmlContent = outputObj;
                         if (typeof xmlContent == 'string') {
                             try {

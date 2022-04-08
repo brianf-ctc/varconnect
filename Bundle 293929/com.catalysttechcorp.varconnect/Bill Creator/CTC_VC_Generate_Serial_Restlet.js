@@ -2,74 +2,64 @@
  *@NApiVersion 2.x
  *@NScriptType Restlet
  */
-define(['N/record', 'N/log'],
-    function(record, log) {
+define(['N/record', 'N/log'], function (record, log) {
+    function _post(context) {
+        log.debug('restlet called', context);
 
-        function _post(context) {
+        var vcSerial = context.serialObj;
+        var lineToProcess = context.lineToProcess;
 
-            log.debug ('restlet called', context);
+        for (var i = 0; i < vcSerial.lines[lineToProcess].serials.length; i++) {
+            var serialRec = record.create({
+                type: 'customrecordserialnum',
+                isDynamic: true
+            });
 
-            var vcSerial = context.serialObj;
-            var lineToProcess = context.lineToProcess;
+            serialRec.setValue({
+                fieldId: 'name',
+                value: vcSerial.lines[lineToProcess].serials[i]
+            });
 
-            for (var i = 0; i < vcSerial.lines[lineToProcess].serials.length; i++){
+            serialRec.setValue({
+                fieldId: 'custrecordserialpurchase',
+                value: vcSerial.poId
+            });
 
-                var serialRec = record.create({
-                    type: 'customrecordserialnum',
-                    isDynamic: true,
-                });
+            serialRec.setValue({
+                fieldId: 'custrecordserialsales',
+                value: vcSerial.soId
+            });
 
+            serialRec.setValue({
+                fieldId: 'custrecordserialitem',
+                value: vcSerial.lines[lineToProcess].item
+            });
+
+            serialRec.setValue({
+                fieldId: 'custrecordcustomer',
+                value: vcSerial.custId
+            });
+
+            if (vcSerial.type == 'if') {
                 serialRec.setValue({
-                    fieldId: 'name',
-                    value: vcSerial.lines[lineToProcess].serials[i]
+                    fieldId: 'custrecorditemfulfillment',
+                    value: vcSerial.trxId
                 });
-
+            } else if (vcSerial.type == 'ir') {
                 serialRec.setValue({
-                    fieldId: 'custrecordserialpurchase',
-                    value: vcSerial.poId
+                    fieldId: 'custrecorditemreceipt',
+                    value: vcSerial.trxId
                 });
+            }
 
-                serialRec.setValue({
-                    fieldId: 'custrecordserialsales',
-                    value: vcSerial.soId
-                });
+            var record_id = serialRec.save();
 
-                serialRec.setValue({
-                    fieldId: 'custrecordserialitem',
-                    value: vcSerial.lines[lineToProcess].item
-                });
-    
-                serialRec.setValue({
-                    fieldId: 'custrecordcustomer',
-                    value: vcSerial.custId
-                });
-
-                if (vcSerial.type == 'if'){
-
-                    serialRec.setValue({
-                        fieldId: 'custrecorditemfulfillment',
-                        value: vcSerial.trxId
-                    });
-
-                } else if ( vcSerial.type == 'ir'){
-                   
-                    serialRec.setValue({
-                        fieldId: 'custrecorditemreceipt',
-                        value: vcSerial.trxId
-                    });
-
-                }
-
-                var record_id = serialRec.save();
-
-                log.debug('created', record_id);
-
-            }        
+            log.debug('created', record_id);
         }
+    }
 
-
-        return {
-            //get: _get,
-            post: _post
-        };
-    });
+    return {
+        //get: _get,
+        post: _post
+    };
+});

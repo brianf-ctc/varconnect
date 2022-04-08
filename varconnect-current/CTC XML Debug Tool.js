@@ -3,7 +3,7 @@
  *@NScriptType Suitelet
  *@NModuleScope Public
  */
-define(['N/ui/serverWidget', 'N/search'], function (serverWidget, search) {
+define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, search, file) {
     var logTitle = 'CTC XML Debug Tool';
     var searchUtil = {
         getAllResults: function (searchObject, maxResults) {
@@ -121,8 +121,38 @@ define(['N/ui/serverWidget', 'N/search'], function (serverWidget, search) {
                 label: 'XML Viewer',
                 container: 'custpage_xml_tab'
             });
+            var xmlViewerStylesheet = {
+                url: ''
+            };
+            try {
+                xmlViewerStylesheet = file.load({
+                    id: './highlight/styles/github.min.css'
+                });
+            } catch (fileLoadErr) {
+                // VC might not recognize folders not in the original bundle
+                try {
+                    xmlViewerStylesheet = file.load({
+                        id: 'SuiteScripts/VAR Connect/highlight/styles/github.min.css'
+                    });
+                } catch (missingLibErr) {
+                    log.error(logTitle, 'Failed to load css stylesheet for syntax highlighting.');
+                }
+            }
             xmlViewer.defaultValue =
-                '<span class="smallgraytextnolink">RETRIEVED ORDER STATUS</span><iframe id="custpage_xml_viewer_frame" src="/c.TSTDRV1716438/suiteapp/com.catalysttechcorp.varconnect/highlight/xmlViewer.html" width=100% height=720px scrolling=yes allowTransparency="true" />';
+                '<span class="smallgraytextnolink">RETRIEVED ORDER STATUS</span><iframe id="custpage_xml_viewer_frame" srcdoc="' +
+                [
+                    '<html>' + '<head>',
+                    xmlViewerStylesheet.url
+                        ? "<link rel='stylesheet' href='" + xmlViewerStylesheet.url + "'>"
+                        : '',
+                    '</head>' +
+                        '<body>' +
+                        "<pre id='custpage_xml__viewer' lang='xml'><code id='custpage_xml__viewer_content' class='language-xml' /></pre>" +
+                        "<pre id='custpage_json__viewer' lang='json' style='display:none;'><code id='custpage_json__viewer_content' class='language-json' /></pre>" +
+                        '</body>' +
+                        '</html>'
+                ].join('') +
+                '" width=100% height=720px scrolling=yes allowTransparency="true" />';
             xmlViewer.updateBreakType({
                 breakType: serverWidget.FieldBreakType.STARTROW
             });

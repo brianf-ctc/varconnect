@@ -1,8 +1,10 @@
 define([
     'N/https',
     'N/search',
+    'N/format',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities',
+    './CTC_VC2_Lib_Utils',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_Synnex',
     './CTC_VC_Lib_TechData',
@@ -17,8 +19,10 @@ define([
 ], function (
     https,
     search,
+    format,
     constants,
     util,
+    vc2Utils,
     libVendorConfig,
     libSynnex,
     libTechData,
@@ -35,7 +39,7 @@ define([
 
     function _validateVendorConfig(options) {
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
 
         var poNum = options.poNum,
             vendorConfig = options.vendorConfig,
@@ -106,7 +110,7 @@ define([
 
     function _getVendorLibrary(options) {
         var logTitle = [LogTitle, '_getVendorLibrary'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
 
         var vendorConfig = options.vendorConfig,
             xmlVendor = vendorConfig.xmlVendor,
@@ -163,18 +167,21 @@ define([
             tranDate = options.tranDate,
             xmlVendorText = options.xmlVendorText;
 
-        // log.debug(
-        //     xmlVendorText + ' ' + poNum + ' dates',
-        //     'startDate ' + startDate + ' tranDate ' + tranDate
-        // );
-        // log.debug('check dates', new Date(startDate) < new Date(tranDate));
+        var dtStartDate = vc2Utils.parseDate(startDate),
+            dtTranDate = vc2Utils.parseDate(tranDate);
 
-        return new Date(startDate) < new Date(tranDate);
+        log.audit(
+            logTitle,
+            '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
+        );
+
+        return dtStartDate <= dtTranDate;
     }
 
     function _handleSingleVendor(options) {
         var logTitle = [LogTitle, '_handleSingleVendor'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+
+        log.audit(logTitle, options);
 
         var vendorConfig = options.vendorConfig,
             poNum = options.poNum,
@@ -184,10 +191,6 @@ define([
             xmlVendorText = vendorConfig.xmlVendorText,
             outputArray;
 
-        //		log.debug(poNum + ' dates', 'startDate ' + startDate + ' tranDate ' + tranDate);
-        //		log.debug('check dates', new Date(startDate) < new Date(tranDate));
-
-        //		if (new Date(startDate) < new Date(tranDate)) {
         var dateCheck = _checkDates({
             poNum: poNum,
             startDate: startDate,
@@ -195,20 +198,36 @@ define([
             xmlVendorText: xmlVendorText
         });
 
-        if (dateCheck) {
-            var libVendor = _getVendorLibrary({
-                vendorConfig: vendorConfig
+        if (!dateCheck) {
+            vcLog.recordLog({
+                header: 'WebService',
+                body:
+                    'Invalid transaction date -- ' +
+                    JSON.stringify({
+                        'config startdate': startDate,
+                        'transaction date': tranDate
+                    }),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
             });
 
-            if (libVendor) {
-                _validateVendorConfig({
-                    poNum: poNum,
-                    vendorConfig: vendorConfig
-                });
+            return false;
+        }
+
+        var libVendor = _getVendorLibrary({
+            vendorConfig: vendorConfig
+        });
+
+        if (libVendor) {
+            _validateVendorConfig({
+                poNum: poNum,
+                vendorConfig: vendorConfig
+            });
                 try {
                     outputArray = libVendor.process({
                         poNum: poNum,
                         poId: poId,
+                    countryCode: options.countryCode,
                         vendorConfig: vendorConfig
                     });
                 } catch (e) {
@@ -225,11 +244,8 @@ define([
                     });
                 }
             }
-        } else {
-            log.audit(logTitle, '>> Invalid Date ');
-        }
 
-        log.audit(logTitle, '>> Output Array: ' + JSON.stringify(outputArray));
+        // log.audit(logTitle, '>> Order Lines: ' + JSON.stringify(outputArray));
 
         return outputArray;
     }
@@ -264,18 +280,39 @@ define([
                     xmlVendorText: xmlVendorText
                 });
 
-                if (dateCheck) {
-                    itemArray = itemArray.concat(
-                        _handleSingleVendor({
-                            vendorConfig: config,
-                            poNum: poNum,
-                            poId: poId,
-                            tranDate: tranDate
-                        })
-                    );
+                if (!dateCheck) {
+                    vcLog.recordLog({
+                        header: 'WebService',
+                        body:
+                            'Invalid transaction date -- ' +
+                            JSON.stringify({
+                                'config startdate': startDate,
+                                'transaction date': tranDate
+                            }),
+                        transaction: poId,
+                        status: constants.Lists.VC_LOG_STATUS.ERROR
+                    });
+
+                    continue;
                 }
+
+                itemArray = itemArray.concat(
+                    _handleSingleVendor({
+                        vendorConfig: config,
+                        poNum: poNum,
+                        poId: poId,
+                        tranDate: tranDate
+                    })
+                );
             } catch (e) {
-                log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+                log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+
+                vcLog.recordLog({
+                    header: 'WebService',
+                    body: 'Error encountered: ' + vc2Utils.extractError(e),
+                    transaction: poId,
+                    status: constants.Lists.VC_LOG_STATUS.ERROR
+                });
             }
         }
 
@@ -284,20 +321,21 @@ define([
 
     function process(options) {
         var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, options);
+
+        var mainConfig = options.mainConfig,
+            vendorConfig = options.vendorConfig,
+            vendor = options.vendor,
+            poNum = options.poNum,
+            poId = options.poId,
+            tranDate = options.tranDate,
+            subsidiary = options.subsidiary,
+            vendorList = constants.Lists.XML_VENDOR,
+            xmlVendor = vendorConfig.xmlVendor,
+            countryCode = options.countryCode,
+            outputArray = null;
 
         try {
-            var mainConfig = options.mainConfig,
-                vendorConfig = options.vendorConfig,
-                vendor = options.vendor,
-                poNum = options.poNum,
-                poId = options.poId,
-                tranDate = options.tranDate,
-                subsidiary = options.subsidiary,
-                vendorList = constants.Lists.XML_VENDOR,
-                xmlVendor = vendorConfig.xmlVendor,
-                outputArray = null;
-
             if (vendorConfig) {
                 if (
                     mainConfig.multipleIngram &&
@@ -309,6 +347,7 @@ define([
                         subsidiary: subsidiary,
                         poNum: poNum,
                         poId: poId,
+                        countryCode: countryCode,
                         tranDate: tranDate
                     });
                 } else {
@@ -316,6 +355,7 @@ define([
                         vendorConfig: vendorConfig,
                         poNum: poNum,
                         poId: poId,
+                        countryCode: countryCode,
                         tranDate: tranDate
                     });
                 }
@@ -326,7 +366,14 @@ define([
                 prefix: vendorConfig.fulfillmentPrefix
             };
         } catch (e) {
-            log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+            log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+
+            vcLog.recordLog({
+                header: 'WebService::process',
+                body: 'Error encountered: ' + vc2Utils.extractError(e),
+                transaction: poId,
+                status: constants.Lists.VC_LOG_STATUS.ERROR
+            });
         }
     }
 

@@ -107,14 +107,18 @@ define([
             });
 
             if (itemNumbers) {
-                log.debug('itemNumbers', itemNumbers);
+                log.debug('itemname / itemNumbers', JSON.stringify([itemNumbers, itemName]));
                 var valToSave;
 
-                if (itemNumbers.itemNum == itemName) valToSave = itemNumbers.partNum;
-                else if (itemNumbers.partNum == itemName) valToSave = itemNumbers.itemNum;
+                if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
+                    valToSave = itemNumbers.partNum;
+                else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
+                    valToSave = itemNumbers.itemNum;
 
                 values = {};
                 values[constants.Fields.Item.DH_MPN] = valToSave;
+
+                log.debug('values to update:', JSON.stringify([valToSave, values]));
 
                 if (valToSave) {
                     try {
@@ -123,6 +127,7 @@ define([
                             id: item,
                             values: values
                         });
+                        log.debug('update :', '>> updated INVENTORY_ITEM: ' + item);
                     } catch (e) {
                         //If error, try another item type
                         record.submitFields({
@@ -130,6 +135,7 @@ define([
                             id: item,
                             values: values
                         });
+                        log.debug('update :', '>> updated SERIALIZED_INVENTORY_ITEM: ' + item);
                     }
                 }
             }
