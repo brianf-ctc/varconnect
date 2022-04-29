@@ -115,7 +115,8 @@ define([], function () {
                 INGRAM_MICRO_V_ONE: '11',
                 TECH_DATA_API: '12',
                 JENNE: '13',
-                SCANSOURCE: '14'
+                SCANSOURCE: '14',
+                DELL_API: '15'
             },
             VC_LOG_STATUS: {
                 SUCCESS: '1',
