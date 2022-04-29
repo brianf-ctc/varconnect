@@ -21,7 +21,6 @@
  * 2.00		May 28, 2021	paolodl		Also check for line number
  * 2.01		Mar 21, 2022	ccanaria	Add functionality for package
  * 2.02		Mar 31, 2022	ccanaria	Add functionality to put serials using standard inventiory details
- * 2.03		Apr 22, 2022	christian	Limit text serial numbers to 4000 chars
  */
 
 /**
@@ -43,8 +42,7 @@ define([
     './CTC_VC2_Lib_Utils.js'
 ], function (search, runtime, rec, xml, format, config, vcGlobals, constants, vcLog, vc2Utils) {
     var LogTitle = 'Create-ItemFF',
-        LogPrefix = '',
-        _TEXT_AREA_MAX_LENGTH = 4000;
+        LogPrefix = '';
 
     var PO_ID, dateFormat;
 
@@ -120,6 +118,7 @@ define([
 
             return found;
         },
+
         itemInLineData: function (option) {
             var logTitle = [LogTitle, 'itemInLineData'].join('::');
             log.audit(logTitle, LogPrefix + '>> params: ' + JSON.stringify(option));
@@ -216,119 +215,6 @@ define([
             }
 
             log.audit(logTitle, LogPrefix + '... is itemInLineData? ' + JSON.stringify(isInData));
-
-            return isInData;
-        },
-
-        itemInLineData_old: function (
-            tempItemNum,
-            lineData,
-            tempVendorSKU,
-            hashSpace,
-            xmlVendor,
-            tempItemLine,
-            tempDAndH
-        ) {
-            var logTitle = [LogTitle, 'itemInLineData_old'].join('::');
-            log.audit(
-                logTitle,
-                LogPrefix +
-                    '>> params: ' +
-                    JSON.stringify({
-                        tempItemNum: tempItemNum,
-                        tempVendorSKU: tempVendorSKU,
-                        hashSpace: hashSpace,
-                        xmlVendor: xmlVendor,
-                        tempItemLine: tempItemLine,
-                        tempDAndH: tempDAndH
-                    })
-            );
-
-            var vendorList = constants.Lists.XML_VENDOR;
-            var isInData = false;
-            for (var i = 0; i < lineData.length; i++) {
-                if (!lineData[i]) continue;
-
-                // 2.00
-                if (
-                    !lineData[i].line_num || //note: ??
-                    lineData[i].line_num == 'NA' || //note: ??
-                    !tempItemLine ||
-                    lineData[i].line_num == tempItemLine ||
-                    tempItemNum == lineData[i].item_num ||
-                    vc2Utils.inArray(tempItemNum, [
-                        lineData[i].item_num,
-                        lineData[i].item_num_alt,
-                        lineData[i].vendorSKU
-                    ]) ||
-                    vc2Utils.inArray(tempVendorSKU, [
-                        lineData[i].item_num,
-                        lineData[i].item_num_alt,
-                        lineData[i].vendorSKU
-                    ])
-                ) {
-                    if (tempVendorSKU) {
-                        if (
-                            tempVendorSKU == lineData[i].vendorSKU ||
-                            tempVendorSKU == lineData[i].item_num_alt ||
-                            tempVendorSKU == lineData[i].item_num
-                        ) {
-                            //log.debug('matched vendor sku for line '+i)
-                            isInData = true;
-                        }
-
-                        //Ingram Hash replacement
-                        if (
-                            hashSpace &&
-                            (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                                xmlVendor == vendorList.INGRAM_MICRO)
-                        ) {
-                            if (lineData[i].vendorSKU.replace('#', ' ') == tempVendorSKU) {
-                                isInData = true;
-                            }
-                        }
-                    }
-                    log.debug(
-                        tempItemNum == lineData[i].item_num,
-                        tempItemNum + ' = ' + lineData[i].item_num
-                    );
-                    if (
-                        tempItemNum == lineData[i].item_num ||
-                        tempItemNum == lineData[i].item_num_alt
-                    ) {
-                        isInData = true;
-                    }
-
-                    //Ingram Hash replacement
-                    if (
-                        hashSpace &&
-                        (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                            xmlVendor == vendorList.INGRAM_MICRO)
-                    ) {
-                        if (lineData[i].item_num.replace('#', ' ') == tempItemNum) {
-                            isInData = true;
-                        }
-                    }
-
-                    //D&H Item replacement
-                    if (tempDAndH == lineData[i].item_num && xmlVendor == vendorList.DandH) {
-                        isInData = true;
-                    }
-                }
-
-                if (isInData) {
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '... found line data: ' + JSON.stringify(lineData[i])
-                    );
-                    break;
-                }
-            }
-
-            log.audit(
-                logTitle,
-                LogPrefix + '... is itemInLineData_old? ' + JSON.stringify(isInData)
-            );
 
             return isInData;
         },
@@ -513,7 +399,7 @@ define([
             return outputString;
         },
 
-        sortLineData: function (lineData) {
+        sortLineData: function (arrLineData) {
             var sort_by = function (field, reverse, primer) {
                 var key = primer
                     ? function (x) {
@@ -530,13 +416,13 @@ define([
                 };
             };
 
-            lineData.sort(
+            arrLineData.sort(
                 sort_by('order_num', false, function (a) {
                     return a.toUpperCase();
                 })
             );
 
-            return lineData;
+            return arrLineData;
         },
 
         extractError: function (option) {
@@ -628,19 +514,19 @@ define([
     function updateItemFulfillments(option) {
         var logTitle = [LogTitle, 'updateItemFulfillments'].join('::');
         log.audit(logTitle, '>> option: ' + JSON.stringify(option));
-        //			po_ID, so_ID, lineData, vendor
+        //			po_ID, so_ID, arrLineData, vendor
         var mainConfig = option.mainConfig,
             vendorConfig = option.vendorConfig,
             po_ID = option.poId,
             so_ID = option.soId,
-            lineData = option.lineData,
+            arrLineData = option.arrLineData,
             vendor = option.vendor;
 
         PO_ID = po_ID;
         LogPrefix = '[purchaseorder:' + po_ID + ']';
 
         /******
-                lineData definition {	line_num:"NA",
+                arrLineData definition {	line_num:"NA",
                                     item_num = "NA',1
                                     order_num:"NA",
                                     order_date:"NA",
@@ -659,7 +545,7 @@ define([
                 throw 'Invalid PO Date : ' + PO_Valid_Date;
             }
 
-            if (lineData == null || !lineData.length) {
+            if (arrLineData == null || !arrLineData.length) {
                 throw 'Empty Line Data';
             }
 
@@ -668,25 +554,27 @@ define([
                 throw 'Config Error: Missing Fulfillment Prefix';
             }
 
-            lineData = Helper.sortLineData(lineData);
-
-            var fulfillmentOrders = [];
+            arrLineData = Helper.sortLineData(arrLineData);
+            var arrFulfillOrderNums = [];
 
             // Build a non-repeating array of order nums
-            for (var i = 0; i < lineData.length; i++) {
-                if (lineData[i].order_num && fulfillmentOrders.indexOf(lineData[i].order_num) < 0)
-                    fulfillmentOrders.push(lineData[i].order_num);
+            for (var i = 0; i < arrLineData.length; i++) {
+                if (
+                    arrLineData[i].order_num &&
+                    arrFulfillOrderNums.indexOf(arrLineData[i].order_num) < 0
+                )
+                    arrFulfillOrderNums.push(arrLineData[i].order_num);
             }
 
             log.audit(
                 logTitle,
-                LogPrefix + '>> fulfillmentOrders = ' + JSON.stringify(fulfillmentOrders)
+                LogPrefix + '>> Fulfillment Orders: ' + JSON.stringify(arrFulfillOrderNums)
             );
             var responseData = [];
 
             // Loop through each unique order num checking to see if it does not already exist as an item fulfillment
-            for (var j = 0; j < fulfillmentOrders.length; j++) {
-                var fulfillOrderNum = fulfillmentOrders[j],
+            for (var j = 0; j < arrFulfillOrderNums.length; j++) {
+                var fulfillOrderNum = arrFulfillOrderNums[j],
                     vendorOrderNum = numPrefix + fulfillOrderNum;
 
                 // skip any existing orders
@@ -695,38 +583,42 @@ define([
                     continue;
                 }
 
-                var fulfillmentLines = [];
+                var arrLinesToFulfill = [];
 
                 // Build an array with all XML line data with the same order num
-                for (var x = 0; x < lineData.length; x++) {
-                    if (fulfillmentOrders[j] != lineData[x].order_num) continue;
+                for (var x = 0; x < arrLineData.length; x++) {
+                    if (fulfillOrderNum != arrLineData[x].order_num) continue;
 
-                    log.audit(logTitle, '... verifying line data: ' + JSON.stringify(lineData[x]));
+                    log.audit(
+                        logTitle,
+                        '... verifying line data: ' + JSON.stringify(arrLineData[x])
+                    );
                     if (
-                        lineData[x].hasOwnProperty('is_shipped') &&
-                        lineData[x].is_shipped === false
+                        arrLineData[x].hasOwnProperty('is_shipped') &&
+                        arrLineData[x].is_shipped === false
                     ) {
                         log.audit(logTitle, '......skipping line: not yet shipped');
                         continue;
                     }
 
                     log.audit(logTitle, '... adding to fulfillment lines');
-                    fulfillmentLines.push(lineData[x]);
+                    arrLinesToFulfill.push(arrLineData[x]);
                 }
 
                 log.audit(
                     logTitle,
-                    LogPrefix + '>> fulfillmentLines = ' + JSON.stringify(fulfillmentLines)
+                    LogPrefix + '>> arrLinesToFulfill = ' + JSON.stringify(arrLinesToFulfill)
                 );
-                if (!fulfillmentLines.length) {
+
+                if (!arrLinesToFulfill.length) {
                     log.audit(logTitle, LogPrefix + '** No items to fulfill ** ');
                     continue;
                 }
 
+                /////////////////////////////////////////////
                 var recItemFF;
-
-                log.audit(logTitle, LogPrefix + '****  Transform to Fulfillment ****');
                 try {
+                    log.audit(logTitle, LogPrefix + '****  Transform to Fulfillment ****');
                     // create item fulfillment from sales order
                     recItemFF = rec.transform({
                         fromType: rec.Type.SALES_ORDER,
@@ -742,125 +634,82 @@ define([
                     });
                     continue;
                 }
+                /////////////////////////////////////////////
 
-                var rec_Changed = false;
-                var lineItemCount = recItemFF.getLineCount({
-                    sublistId: 'item'
-                });
-
-                log.audit(logTitle, LogPrefix + '>> line count: ' + lineItemCount);
-
-                var tempItemNum,
-                    tempVendorSKU,
-                    tempItemPO,
-                    tempItemLine,
-                    tempDAndH,
-                    tempTrackingNums,
-                    tempSerials;
+                var isRecordChanged = false;
+                var lineCount = recItemFF.getLineCount({ sublistId: 'item' });
+                log.audit(logTitle, LogPrefix + '>> line count: ' + lineCount);
 
                 // remove IF line if not in XML line date
-                for (var cnt = 0; cnt < lineItemCount; cnt++) {
-                    /** FOR DELETION */
-                    tempItemNum = recItemFF.getSublistText({
-                        sublistId: 'item',
-                        fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
-                        line: cnt
-                    });
-                    tempVendorSKU = '';
-
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null) {
-                        tempVendorSKU = recItemFF.getSublistText({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                            line: cnt
-                        });
-                    }
-
-                    tempItemPO = recItemFF.getSublistText({
-                        sublistId: 'item',
-                        fieldId: 'createdpo',
-                        line: cnt
-                    });
-                    tempItemLine = recItemFF.getSublistText({
-                        sublistId: 'item',
-                        fieldId: 'poline',
-                        line: cnt
-                    });
-                    tempDAndH = recItemFF.getSublistText({
-                        sublistId: 'item',
-                        fieldId: constants.Columns.DH_MPN,
-                        line: cnt
-                    });
-                    /** FOR DELETION */
-
+                for (var line = 0; line < lineCount; line++) {
                     // fetch line item data
                     var itemLineData = {
-                        line: cnt,
+                        line: line,
                         itemNum: recItemFF.getSublistText({
                             sublistId: 'item',
                             fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
-                            line: cnt
+                            line: line
                         }),
                         skuName: vcGlobals.VENDOR_SKU_LOOKUP_COL
                             ? recItemFF.getSublistText({
                                   sublistId: 'item',
                                   fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                                  line: cnt
+                                  line: line
                               })
                             : '',
                         itemPO: recItemFF.getSublistText({
                             sublistId: 'item',
                             fieldId: 'createdpo',
-                            line: cnt
+                            line: line
                         }),
                         poLine: recItemFF.getSublistText({
                             sublistId: 'item',
                             fieldId: 'poline',
-                            line: cnt
+                            line: line
                         }),
                         dandh: recItemFF.getSublistText({
                             sublistId: 'item',
                             fieldId: constants.Columns.DH_MPN,
-                            line: cnt
+                            line: line
                         })
                     };
 
                     log.audit(
                         logTitle,
-                        LogPrefix + '>>>.. line data: ' + JSON.stringify(itemLineData)
+                        LogPrefix + '>>> line item data: ' + JSON.stringify(itemLineData)
                     );
 
                     if (
                         !Helper.itemInLineData({
                             lineData: itemLineData,
-                            lineDataSet: fulfillmentLines,
+                            lineDataSet: arrLinesToFulfill,
                             hashSpace: mainConfig.ingramHashSpace,
                             vendor: vendorConfig.xmlVendor
                         })
                     ) {
-                        // remove line from item fulfillment not in current fulfillmentLines
+                        // remove line from item fulfillment not in current arrLinesToFulfill
                         log.audit(
                             logTitle,
                             LogPrefix +
-                                '.... item not in fulfillment line, removing line from item fulfillment.'
+                                '>>>.... item not in fulfillment line, removing line from item fulfillment '
                         );
 
-                        Helper.removeIFLine(recItemFF, cnt);
-                        rec_Changed = true;
-                    } else if (tempItemPO != po_ID) {
+                        Helper.removeIFLine(recItemFF, line);
+                        isRecordChanged = true;
+                    } else if (itemLineData.itemPO != po_ID) {
                         // remove line from item fulfillment if the item's PO is not the one being processed
                         log.audit(
                             logTitle,
                             LogPrefix +
-                                '.... item PO not the one being processed, removing line from item fulfillment: '
+                                '>>>.... item PO not the one being processed, removing line from item fulfillment '
                         );
 
-                        Helper.removeIFLine(recItemFF, cnt);
-                        rec_Changed = true;
+                        Helper.removeIFLine(recItemFF, line);
+                        isRecordChanged = true;
                     } else {
-                        log.audit(logTitle, LogPrefix + '.... adding line to item fulfillment.');
-                        Helper.addIFLine(recItemFF, cnt);
-                        rec_Changed = true;
+                        log.audit(logTitle, LogPrefix + '>>>.... adding line to item fulfillment.');
+                        Helper.addIFLine(recItemFF, line);
+                        isRecordChanged = true;
                     }
                 }
 
@@ -869,26 +718,16 @@ define([
                     logTitle,
                     LogPrefix + '>>> Collect all items and add up the quantities....'
                 );
-                var uniqueItems = [];
+
                 log.audit(
                     logTitle,
-                    LogPrefix + '>> fulfillmentLines: ' + JSON.stringify(fulfillmentLines)
+                    LogPrefix + '>> arrLinesToFulfill: ' + JSON.stringify(arrLinesToFulfill)
                 );
+                var arrUniqueItems = [];
 
-                for (var itemCnt = 0; itemCnt < fulfillmentLines.length; itemCnt++) {
-                    var el = {
-                        item_num: '',
-                        totalShipped: '0',
-                        order_num: '',
-                        order_date: '',
-                        order_eta: '',
-                        ship_date: '',
-                        all_tracking_nums: '',
-                        carrier: '',
-                        all_serial_nums: ''
-                    };
+                for (var itemCnt = 0; itemCnt < arrLinesToFulfill.length; itemCnt++) {
+                    var lineToFulfill = arrLinesToFulfill[itemCnt];
 
-                    var lineToFulfill = fulfillmentLines[itemCnt];
                     var currentItem = {
                         item_num: lineToFulfill.item_num,
                         totalShipped: parseInt(lineToFulfill.ship_qty),
@@ -913,100 +752,51 @@ define([
                     if (
                         !Helper.itemInLineData({
                             lineData: lineToFulfill,
-                            lineDataSet: uniqueItems,
+                            lineDataSet: arrUniqueItems,
                             hashSpace: mainConfig.ingramHashSpace,
                             vendor: vendorConfig.xmlVendor
                         })
                     ) {
-                        el.item_num = fulfillmentLines[itemCnt].item_num;
-                        el.totalShipped = parseInt(fulfillmentLines[itemCnt].ship_qty);
-                        el.order_num = fulfillmentOrders[j];
-                        el.order_date = fulfillmentLines[itemCnt].order_date;
-                        el.order_eta = fulfillmentLines[itemCnt].order_eta;
-                        el.ship_date = fulfillmentLines[itemCnt].ship_date;
-                        el.carrier = fulfillmentLines[itemCnt].carrier;
+                        arrUniqueItems.push(currentItem);
+                        log.audit(logTitle, LogPrefix + ' ... added line data');
+                        continue;
+                    }
 
-                        el.all_tracking_nums = Helper.uniqueList({
-                            value: lineToFulfill.tracking_num
+                    for (var uniqIdx = 0; uniqIdx < arrUniqueItems.length; uniqIdx++) {
+                        if (currentItem.item_num != arrUniqueItems[uniqIdx].item_num) continue;
+
+                        arrUniqueItems[uniqIdx].totalShipped += parseInt(lineToFulfill.ship_qty);
+
+                        var tmpTrackList = Helper.uniqueList({ value: lineToFulfill.tracking_num });
+                        if (!Helper.isEmpty(arrUniqueItems[uniqIdx].all_tracking_nums)) {
+                            tmpTrackList += '\n' + arrUniqueItems[uniqIdx].all_tracking_nums;
+                        }
+                        arrUniqueItems[uniqIdx].all_tracking_nums = Helper.uniqueList({
+                            value: tmpTrackList,
+                            splitStr: '\n'
                         });
-                        el.all_serial_nums = Helper.uniqueList({
-                            value: lineToFulfill.serial_num
+
+                        var tmpSerialList = Helper.uniqueList({ value: lineToFulfill.serial_num });
+                        if (!Helper.isEmpty(arrUniqueItems[uniqIdx].all_serial_nums)) {
+                            tmpSerialList += '\n' + arrUniqueItems[uniqIdx].all_serial_nums;
+                        }
+                        arrUniqueItems[uniqIdx].all_serial_nums = Helper.uniqueList({
+                            value: tmpSerialList,
+                            splitStr: '\n'
                         });
-
-                        // tempTrackingNums = Array();
-                        // if (fulfillmentLines[itemCnt].tracking_num)
-                        //     tempTrackingNums = fulfillmentLines[itemCnt].tracking_num;
-                        // if (typeof tempTrackingNums == 'string')
-                        //     tempTrackingNums = fulfillmentLines[itemCnt].tracking_num.split(',');
-
-                        // tempTrackingNums = vc2Utils.uniqueArray(tempTrackingNums);
-                        // el.all_tracking_nums = tempTrackingNums.join('\n');
-
-                        // tempSerials = [];
-
-                        // if (fulfillmentLines[itemCnt].serial_num)
-                        //     tempSerials = fulfillmentLines[itemCnt].serial_num;
-                        // if (typeof tempSerials == 'string')
-                        //     tempSerials = fulfillmentLines[itemCnt].serial_num.split(',');
-
-                        // tempSerials = vc2Utils.uniqueArray(tempSerials);
-                        // el.all_serial_nums = tempSerials.join('\n');
-
-                        uniqueItems.push(el);
 
                         log.audit(
                             logTitle,
-                            LogPrefix + ' ... added line data - ' + JSON.stringify(el)
+                            LogPrefix +
+                                ' ... updated line data: - ' +
+                                JSON.stringify(arrUniqueItems[uniqIdx])
                         );
-                    } else {
-                        for (var uniqueIndex = 0; uniqueIndex < uniqueItems.length; uniqueIndex++) {
-                            if (
-                                fulfillmentLines[itemCnt].item_num ==
-                                uniqueItems[uniqueIndex].item_num
-                            ) {
-                                uniqueItems[uniqueIndex].totalShipped += parseInt(
-                                    fulfillmentLines[itemCnt].ship_qty
-                                );
-
-                                var tmpTrackList = Helper.uniqueList({
-                                    value: fulfillmentLines[itemCnt].tracking_num
-                                });
-                                if (!Helper.isEmpty(uniqueItems[uniqueIndex].all_tracking_nums)) {
-                                    tmpTrackList +=
-                                        '\n' + uniqueItems[uniqueIndex].all_tracking_nums;
-                                }
-                                uniqueItems[uniqueIndex].all_tracking_nums = Helper.uniqueList({
-                                    value: tmpTrackList,
-                                    splitStr: '\n'
-                                });
-
-
-                                var tmpSerialList = Helper.uniqueList({
-                                    value: fulfillmentLines[itemCnt].serial_num
-                                });
-                                if (!Helper.isEmpty(uniqueItems[uniqueIndex].all_serial_nums)) {
-                                    tmpTrackList +=
-                                        '\n' + uniqueItems[uniqueIndex].all_serial_nums;
-                                }
-                                uniqueItems[uniqueIndex].all_serial_nums = Helper.uniqueList({
-                                    value: tmpSerialList,
-                                    splitStr: '\n'
-                                });
-
-                                log.audit(
-                                    logTitle,
-                                    LogPrefix +
-                                        ' ... updated line data - ' +
-                                        JSON.stringify(uniqueItems[uniqueIndex])
-                                );
-                                break;
-                            }
-                        }
+                        break;
                     }
                 }
                 log.audit(
                     logTitle,
-                    LogPrefix + ' ... uniqueItems - ' + JSON.stringify(uniqueItems)
+                    LogPrefix + ' ... arrUniqueItems - ' + JSON.stringify(arrUniqueItems)
                 );
 
                 var lineItemCount2 = recItemFF.getLineCount({
@@ -1077,104 +867,104 @@ define([
                                 })
                         );
 
-                        for (var tmp2 = 0; tmp2 < uniqueItems.length; tmp2++) {
+                        for (var tmp2 = 0; tmp2 < arrUniqueItems.length; tmp2++) {
                             if (
-                                !uniqueItems[tmp2].line_num ||
-                                uniqueItems[tmp2].line_num == 'NA' ||
-                                uniqueItems[tmp2].line_num == tempItemLine
+                                !arrUniqueItems[tmp2].line_num ||
+                                arrUniqueItems[tmp2].line_num == 'NA' ||
+                                arrUniqueItems[tmp2].line_num == tempItemLine
                             ) {
                                 if (
-                                    currItemNum == uniqueItems[tmp2].item_num ||
+                                    currItemNum == arrUniqueItems[tmp2].item_num ||
                                     (currVendorSKU != '' &&
-                                        currVendorSKU == uniqueItems[tmp2].vendorSKU)
+                                        currVendorSKU == arrUniqueItems[tmp2].vendorSKU)
                                 ) {
                                     log.audit(
                                         logTitle,
                                         LogPrefix +
                                             '... unique item : ' +
-                                            JSON.stringify(uniqueItems[tmp2])
+                                            JSON.stringify(arrUniqueItems[tmp2])
                                     );
 
-                                    if (currItemQty < parseInt(uniqueItems[tmp2].totalShipped)) {
-                                        uniqueItems[tmp2].totalShipped -= parseInt(currItemQty);
+                                    if (currItemQty < parseInt(arrUniqueItems[tmp2].totalShipped)) {
+                                        arrUniqueItems[tmp2].totalShipped -= parseInt(currItemQty);
 
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_num,
+                                            arrUniqueItems[tmp2].order_num,
                                             'custcol_ctc_xml_dist_order_num'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_date,
+                                            arrUniqueItems[tmp2].order_date,
                                             'custcol_ctc_xml_date_order_placed'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_eta,
+                                            arrUniqueItems[tmp2].order_eta,
                                             'custcol_ctc_xml_eta'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].ship_date,
+                                            arrUniqueItems[tmp2].ship_date,
                                             'custcol_ctc_xml_ship_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].carrier,
+                                            arrUniqueItems[tmp2].carrier,
                                             'custcol_ctc_xml_carrier'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].order_eta
+                                                dateString: arrUniqueItems[tmp2].order_eta
                                             }),
                                             'custcol_ctc_vc_eta_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].order_date
+                                                dateString: arrUniqueItems[tmp2].order_date
                                             }),
                                             'custcol_ctc_vc_order_placed_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].ship_date
+                                                dateString: arrUniqueItems[tmp2].ship_date
                                             }),
                                             'custcol_ctc_vc_shipped_date'
                                         );
 
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_eta_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].order_eta }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].order_eta }),
                                         //     rec: recItemFF
                                         // });
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_order_placed_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].order_date }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].order_date }),
                                         //     rec: recItemFF
                                         // });
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_shipped_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].ship_date }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].ship_date }),
                                         //     rec: recItemFF
                                         // });
-                                        rec_Changed = true;
+                                        isRecordChanged = true;
 
                                         log.audit(
                                             logTitle,
                                             '>> serials/qty: ' +
                                                 JSON.stringify([
-                                                    uniqueItems[tmp2].all_serial_nums,
+                                                    arrUniqueItems[tmp2].all_serial_nums,
                                                     currItemQty
                                                 ])
                                         );
 
-                                        if (uniqueItems[tmp2].all_serial_nums.length > 0) {
+                                        if (arrUniqueItems[tmp2].all_serial_nums.length > 0) {
                                             // var tempSerials = '';
                                             var arrTempSerials =
-                                                uniqueItems[tmp2].all_serial_nums.split('\n');
+                                                arrUniqueItems[tmp2].all_serial_nums.split('\n');
                                             var arrTempSerials2 = arrTempSerials.splice(
                                                 parseInt(currItemQty)
                                             );
@@ -1193,7 +983,7 @@ define([
                                             //     if (snSplit[i2].length > 0)
                                             //         tempSerials2 += snSplit[i2] + '\n';
                                             // }
-                                            uniqueItems[tmp2].all_serial_nums =
+                                            arrUniqueItems[tmp2].all_serial_nums =
                                                 arrTempSerials.join('\n');
 
                                             recItemFF.setCurrentSublistValue({
@@ -1205,245 +995,232 @@ define([
                                             item = {
                                                 item_num: currItemNum,
                                                 totalShipped: currItemQty,
-                                                order_num: uniqueItems[tmp2].order_num,
-                                                order_date: uniqueItems[tmp2].order_date,
-                                                order_eta: uniqueItems[tmp2].order_eta,
-                                                ship_date: uniqueItems[tmp2].ship_date,
+                                                order_num: arrUniqueItems[tmp2].order_num,
+                                                order_date: arrUniqueItems[tmp2].order_date,
+                                                order_eta: arrUniqueItems[tmp2].order_eta,
+                                                ship_date: arrUniqueItems[tmp2].ship_date,
                                                 //															"all_tracking_nums": "",
-                                                carrier: uniqueItems[tmp2].carrier,
+                                                carrier: arrUniqueItems[tmp2].carrier,
                                                 all_serial_nums: arrTempSerials2.join('\n')
                                             };
-
-                                            
                                             recordLines.push(item);
 
                                             /*** Start Clem - Serial functionality 1 ***/
-                                            // Check if serialized
-                                            var isSerialized = recItemFF.getCurrentSublistValue({
-                                                sublistId: 'item',
-                                                fieldId: 'isserial'
-                                            });
-                                            log.audit(
-                                                logTitle,
-                                                '>> is serialized: ' + isSerialized
-                                            );
+                                            // // Check if serialized
+                                            // var isSerialized = recItemFF.getCurrentSublistValue({
+                                            //     sublistId: 'item',
+                                            //     fieldId: 'isserial'
+                                            // });
+                                            // log.audit(
+                                            //     logTitle,
+                                            //     '>> is serialized: ' + isSerialized
+                                            // );
 
-                                            if (isSerialized || isSerialized === 'T') {
+                                            // if (isSerialized || isSerialized === 'T') {
+                                            //     // Check if DropShip PO
+                                            //     var dropShipPO = recItemFF.getCurrentSublistValue({
+                                            //         sublistId: 'item',
+                                            //         fieldId: 'createpo'
+                                            //     });
 
-                                                Helper.addNativeSerials({
-                                                    record: recItemFF, 
-                                                    serials: arrTempSerials2,
-                                                })
+                                            //     if (!Helper.isEmpty(dropShipPO)) {
+                                            //         //Check if location is set on line level
 
-                                                // Check if DropShip PO
-                                                var dropShipPO = recItemFF.getCurrentSublistValue({
-                                                    sublistId: 'item',
-                                                    fieldId: 'createpo'
-                                                });
+                                            //         var lineLoc = recItemFF.getCurrentSublistValue({
+                                            //             sublistId: 'item',
+                                            //             fieldId: 'location'
+                                            //         });
 
-                                                if (!Helper.isEmpty(dropShipPO)) {
-                                                    //Check if location is set on line level
+                                            //         if (Helper.isEmpty(lineLoc)) {
+                                            //             //Use SO's header level Location
+                                            //             var locationLookup = search.lookupFields({
+                                            //                 type: 'salesorder',
+                                            //                 id: so_ID,
+                                            //                 columns: ['location']
+                                            //             });
 
-                                                    var lineLoc = recItemFF.getCurrentSublistValue({
-                                                        sublistId: 'item',
-                                                        fieldId: 'location'
-                                                    });
+                                            //             if (
+                                            //                 locationLookup &&
+                                            //                 locationLookup.location &&
+                                            //                 locationLookup.location[0]
+                                            //             ) {
+                                            //                 lineLoc =
+                                            //                     locationLookup.location[0].value;
+                                            //             }
+                                            //         }
 
-                                                    if (Helper.isEmpty(lineLoc)) {
-                                                        //Use SO's header level Location
-                                                        var locationLookup = search.lookupFields({
-                                                            type: 'salesorder',
-                                                            id: so_ID,
-                                                            columns: ['location']
-                                                        });
+                                            //         if (!Helper.isEmpty(lineLoc)) {
+                                            //             recItemFF.setCurrentSublistValue({
+                                            //                 sublistId: 'item',
+                                            //                 fieldId: 'location',
+                                            //                 value: lineLoc
+                                            //             });
 
-                                                        if (
-                                                            locationLookup &&
-                                                            locationLookup.location &&
-                                                            locationLookup.location[0]
-                                                        ) {
-                                                            lineLoc =
-                                                                locationLookup.location[0].value;
-                                                        }
-                                                    }
+                                            //             var itemId =
+                                            //                 recItemFF.getCurrentSublistValue({
+                                            //                     sublistId: 'item',
+                                            //                     fieldId: 'item'
+                                            //                 });
 
-                                                    if (!Helper.isEmpty(lineLoc)) {
-                                                        recItemFF.setCurrentSublistValue({
-                                                            sublistId: 'item',
-                                                            fieldId: 'location',
-                                                            value: lineLoc
-                                                        });
+                                            //             // Get Serial numbers associated with the line item
+                                            //             var snList = Helper.getSerials(
+                                            //                 so_ID,
+                                            //                 itemId
+                                            //             );
+                                            //             log.debug(
+                                            //                 logTitle,
+                                            //                 '>> Serial List: ' +
+                                            //                     JSON.stringify(snList)
+                                            //             );
 
-                                                        var itemId =
-                                                            recItemFF.getCurrentSublistValue({
-                                                                sublistId: 'item',
-                                                                fieldId: 'item'
-                                                            });
+                                            //             if (!Helper.isEmpty(snList)) {
+                                            //                 var inventoryDetailRecord =
+                                            //                     recItemFF.getCurrentSublistSubrecord(
+                                            //                         {
+                                            //                             sublistId: 'item',
+                                            //                             fieldId: 'inventorydetail'
+                                            //                         }
+                                            //                     );
 
-                                                        // Get Serial numbers associated with the line item
-                                                        // var snList = Helper.getSerials(
-                                                        //     so_ID,
-                                                        //     itemId
-                                                        // );
-                                                        var snList = arrTempSerials;
+                                            //                 for (
+                                            //                     var y = 0;
+                                            //                     y < snList.length;
+                                            //                     y++
+                                            //                 ) {
+                                            //                     if (snList[y].snId > 0) {
+                                            //                         inventoryDetailRecord.selectLine(
+                                            //                             {
+                                            //                                 sublistId:
+                                            //                                     'inventoryassignment',
+                                            //                                 line: y
+                                            //                             }
+                                            //                         );
 
-                                                        log.debug(
-                                                            logTitle,
-                                                            '>> Serial List: ' +
-                                                                JSON.stringify(snList)
-                                                        );
+                                            //                         inventoryDetailRecord.setCurrentSublistValue(
+                                            //                             {
+                                            //                                 sublistId:
+                                            //                                     'inventoryassignment',
+                                            //                                 fieldId:
+                                            //                                     'receiptinventorynumber',
+                                            //                                 value: snList[y].snNum
+                                            //                             }
+                                            //                         );
 
-                                                        if (!Helper.isEmpty(snList)) {
-                                                            var inventoryDetailRecord =
-                                                                recItemFF.getCurrentSublistSubrecord(
-                                                                    {
-                                                                        sublistId: 'item',
-                                                                        fieldId: 'inventorydetail'
-                                                                    }
-                                                                );
-
-                                                            for (
-                                                                var y = 0;
-                                                                y < snList.length;
-                                                                y++
-                                                            ) {
-                                                                if (snList[y].snId > 0) {
-                                                                    inventoryDetailRecord.selectLine(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment',
-                                                                            line: y
-                                                                        }
-                                                                    );
-
-                                                                    inventoryDetailRecord.setCurrentSublistValue(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment',
-                                                                            fieldId:
-                                                                                'receiptinventorynumber',
-                                                                            value: snList[y].snNum
-                                                                        }
-                                                                    );
-
-                                                                    inventoryDetailRecord.commitLine(
-                                                                        {
-                                                                            sublistId:
-                                                                                'inventoryassignment'
-                                                                        }
-                                                                    );
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            //                         inventoryDetailRecord.commitLine(
+                                            //                             {
+                                            //                                 sublistId:
+                                            //                                     'inventoryassignment'
+                                            //                             }
+                                            //                         );
+                                            //                     }
+                                            //                 }
+                                            //             }
+                                            //         }
+                                            //     }
+                                            // }
                                             /*** End Clem - Serial functionality 1 ***/
 
                                             recItemFF.commitLine({
                                                 sublistId: 'item'
                                             });
                                         }
-                                    } else if (parseInt(uniqueItems[tmp2].totalShipped) == 0) {
+                                    } else if (parseInt(arrUniqueItems[tmp2].totalShipped) == 0) {
                                         recItemFF.setCurrentSublistValue({
                                             sublistId: 'item',
                                             fieldId: 'itemreceive',
                                             value: false
                                         });
                                         recItemFF.commitLine({ sublistId: 'item' });
-                                        rec_Changed = true;
+                                        isRecordChanged = true;
                                     } else {
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_num,
+                                            arrUniqueItems[tmp2].order_num,
                                             'custcol_ctc_xml_dist_order_num'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_date,
+                                            arrUniqueItems[tmp2].order_date,
                                             'custcol_ctc_xml_date_order_placed'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].order_eta,
+                                            arrUniqueItems[tmp2].order_eta,
                                             'custcol_ctc_xml_eta'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].ship_date,
+                                            arrUniqueItems[tmp2].ship_date,
                                             'custcol_ctc_xml_ship_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
-                                            uniqueItems[tmp2].carrier,
+                                            arrUniqueItems[tmp2].carrier,
                                             'custcol_ctc_xml_carrier'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].order_eta
+                                                dateString: arrUniqueItems[tmp2].order_eta
                                             }),
                                             'custcol_ctc_vc_eta_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].order_date
+                                                dateString: arrUniqueItems[tmp2].order_date
                                             }),
                                             'custcol_ctc_vc_order_placed_date'
                                         );
                                         Helper.updateXMLField(
                                             recItemFF,
                                             Helper.parseDate({
-                                                dateString: uniqueItems[tmp2].ship_date
+                                                dateString: arrUniqueItems[tmp2].ship_date
                                             }),
                                             'custcol_ctc_vc_shipped_date'
                                         );
 
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_eta_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].order_eta }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].order_eta }),
                                         //     rec: recItemFF
                                         // });
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_order_placed_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].order_date }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].order_date }),
                                         //     rec: recItemFF
                                         // });
                                         // Helper.setColumnDate({
                                         //     fieldId: 'custcol_ctc_vc_shipped_date',
-                                        //     value: Helper.parseDate({ dateString: uniqueItems[tmp2].ship_date }),
+                                        //     value: Helper.parseDate({ dateString: arrUniqueItems[tmp2].ship_date }),
                                         //     rec: recItemFF
                                         // });
 
                                         recItemFF.setCurrentSublistValue({
                                             sublistId: 'item',
                                             fieldId: 'quantity',
-                                            value: parseInt(uniqueItems[tmp2].totalShipped)
+                                            value: parseInt(arrUniqueItems[tmp2].totalShipped)
                                         });
                                         recItemFF.setCurrentSublistValue({
                                             sublistId: 'item',
                                             fieldId: 'custcol_ctc_xml_serial_num',
-                                            value: uniqueItems[tmp2].all_serial_nums.substr(
-                                                0,
-                                                _TEXT_AREA_MAX_LENGTH
-                                            )
+                                            value: arrUniqueItems[tmp2].all_serial_nums
                                         });
 
                                         item = {
                                             item_num: currItemNum,
                                             totalShipped: currItemQty,
-                                            order_num: uniqueItems[tmp2].order_num,
-                                            order_date: uniqueItems[tmp2].order_date,
-                                            order_eta: uniqueItems[tmp2].order_eta,
-                                            ship_date: uniqueItems[tmp2].ship_date,
+                                            order_num: arrUniqueItems[tmp2].order_num,
+                                            order_date: arrUniqueItems[tmp2].order_date,
+                                            order_eta: arrUniqueItems[tmp2].order_eta,
+                                            ship_date: arrUniqueItems[tmp2].ship_date,
                                             //															"all_tracking_nums": "",
-                                            carrier: uniqueItems[tmp2].carrier,
+                                            carrier: arrUniqueItems[tmp2].carrier,
                                             all_serial_nums: tempSerials
                                         };
                                         recordLines.push(item);
 
-                                        // // /*** Start Clem - Serial functionality 2 ***/
+                                        // /*** Start Clem - Serial functionality 2 ***/
                                         // // Check if serialized
                                         // var isSerialized = recItemFF.getCurrentSublistValue({
                                         //     sublistId: 'item',
@@ -1537,10 +1314,10 @@ define([
                                         // }
                                         // /*** End Clem - Serial functionality 2 ***/
 
-                                        uniqueItems[tmp2].totalShipped = 0;
-                                        uniqueItems[tmp2].all_serial_nums = '';
+                                        arrUniqueItems[tmp2].totalShipped = 0;
+                                        arrUniqueItems[tmp2].all_serial_nums = '';
                                         recItemFF.commitLine({ sublistId: 'item' });
-                                        rec_Changed = true;
+                                        isRecordChanged = true;
                                     }
                                 }
                             }
@@ -1569,13 +1346,13 @@ define([
                         ('Item line count = ' + lineItemCountX)
                 );
 
-                for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
+                for (var tmp3 = 0; tmp3 < arrUniqueItems.length; tmp3++) {
                     var found = false;
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
+                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL && arrUniqueItems[tmp3].vendorSKU != 'NA') {
                         var index = recItemFF.findSublistLineWithValue({
                             sublistId: 'item',
                             fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                            value: uniqueItems[tmp3].vendorSKU
+                            value: arrUniqueItems[tmp3].vendorSKU
                         });
 
                         if (index >= 0) {
@@ -1587,10 +1364,10 @@ define([
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'item',
                                 fieldId: 'custcol_ctc_xml_tracking_num',
-                                value: uniqueItems[tmp3].all_tracking_nums
+                                value: arrUniqueItems[tmp3].all_tracking_nums
                             });
                             recItemFF.commitLine({ sublistId: 'item' });
-                            rec_Changed = true;
+                            isRecordChanged = true;
 
                             /*** Start Clemen - Package 1***/
                             /*
@@ -1602,7 +1379,7 @@ define([
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'package',
                                 fieldId: 'packagetrackingnumber',
-                                value: uniqueItems[tmp3].all_tracking_nums
+                                value: arrUniqueItems[tmp3].all_tracking_nums
                             });
 
                             recItemFF.commitLine({
@@ -1616,7 +1393,7 @@ define([
                         var index = recItemFF.findSublistLineWithValue({
                             sublistId: 'item',
                             fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
-                            value: uniqueItems[tmp3].item_num
+                            value: arrUniqueItems[tmp3].item_num
                         });
 
                         if (index >= 0) {
@@ -1627,10 +1404,10 @@ define([
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'item',
                                 fieldId: 'custcol_ctc_xml_tracking_num',
-                                value: uniqueItems[tmp3].all_tracking_nums
+                                value: arrUniqueItems[tmp3].all_tracking_nums
                             });
                             recItemFF.commitLine({ sublistId: 'item' });
-                            rec_Changed = true;
+                            isRecordChanged = true;
 
                             /*** Start Clemen - Package 2***/
                             /*
@@ -1642,7 +1419,7 @@ define([
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'package',
                                 fieldId: 'packagetrackingnumber',
-                                value: uniqueItems[tmp3].all_tracking_nums
+                                value: arrUniqueItems[tmp3].all_tracking_nums
                             });
 
                             recItemFF.commitLine({
@@ -1657,7 +1434,7 @@ define([
                 try {
                     var objId;
 
-                    if (rec_Changed) {
+                    if (isRecordChanged) {
                         if (vcGlobals.PICK_PACK_SHIP) {
                             recItemFF.setValue({
                                 fieldId: 'shipstatus',
@@ -1696,13 +1473,13 @@ define([
 
                         responseData.push({
                             id: objId,
-                            orderNum: fulfillmentOrders[j]
+                            orderNum: fulfillOrderNum
                         });
                     } else {
                         objId = recItemFF.id;
                         responseData.push({
                             id: objId,
-                            orderNum: fulfillmentOrders[j]
+                            orderNum: fulfillOrderNum
                         });
                     }
 
