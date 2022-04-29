@@ -20,6 +20,8 @@
  * 3.00		Feb 8, 2021		paolodl@nscatalyst.com	Add popylation for new date columns
  * 4.00		Jun 3, 2021		paolodl@nscatalyst.com	Add get order line function
  * 4.01		Jul 21,2021		paolodl@nscatalyst.com	Dynamic date parse
+ * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
+ *                                                      Updating fields overwrite value if append failed
  *
  */
 
@@ -166,7 +168,10 @@ define([
 
                     var nsDate = parseDate({ dateString: lineData[i].order_date });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
-                    nsDate = parseDate({ dateString: lineData[i].order_eta });
+                    nsDate = parseDate({
+                        dateString: lineData[i].order_eta,
+                        returnClosestDate: true
+                    });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
 
                     //  Don't use XML serial numbers on special order POs, warehouse will scan them in
@@ -246,47 +251,29 @@ define([
             return null;
         }
 
-            var lineItemCount = po_record.getLineCount({
-                sublistId: 'item'
-            });
-            if (lineItemCount > 0) {
-                for (var i = 0; i < lineItemCount; i++) {
-                    var tempItemNum = po_record.getSublistText({
+        var lineItemCount = po_record.getLineCount({
+            sublistId: 'item'
+        });
+        if (lineItemCount > 0) {
+            for (var i = 0; i < lineItemCount; i++) {
+                var tempItemNum = po_record.getSublistText({
+                    sublistId: 'item',
+                    fieldId: vcGlobals.ITEM_ID_LOOKUP_COL,
+                    line: i
+                });
+                //					log.debug('CTC Update PO line ' + i, tempItemNum + '=' + itemNum + ' | ' + tempVendorSKU + '=' + vendorSKU);
+
+                if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null && vendorSKU != '') {
+                    var tempVendorSKU = po_record.getSublistText({
                         sublistId: 'item',
-                        fieldId: vcGlobals.ITEM_ID_LOOKUP_COL,
+                        fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
                         line: i
                     });
-                    //					log.debug('CTC Update PO line ' + i, tempItemNum + '=' + itemNum + ' | ' + tempVendorSKU + '=' + vendorSKU);
 
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null && vendorSKU != '') {
-                        var tempVendorSKU = po_record.getSublistText({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                            line: i
-                        });
-
-                        if (tempVendorSKU == vendorSKU) {
+                    if (tempVendorSKU == vendorSKU) {
                         log.audit(logTitle, LogPrefix + '>>> matched vendor sku for line :' + i);
-                            return i;
-                        }
-
-                        //Ingram Hash replacement
-                        if (
-                            hashSpace &&
-                            (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                                xmlVendor == vendorList.INGRAM_MICRO)
-                        ) {
-                            if (vendorSKU.replace('#', ' ') == tempVendorSKU) {
-                                log.audit(
-                                    logTitle,
-                                    LogPrefix + '>>> matched vendor sku for line :' + i
-                                );
-                                return i;
-                            }
-                        }
+                        return i;
                     }
-
-                    if (tempItemNum == itemNum) return i;
 
                     //Ingram Hash replacement
                     if (
@@ -294,20 +281,38 @@ define([
                         (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
                             xmlVendor == vendorList.INGRAM_MICRO)
                     ) {
-                        if (itemNum.replace('#', ' ') == tempItemNum) return i;
+                        if (vendorSKU.replace('#', ' ') == tempVendorSKU) {
+                            log.audit(
+                                logTitle,
+                                LogPrefix + '>>> matched vendor sku for line :' + i
+                            );
+                            return i;
+                        }
                     }
-
-                    //D&H Item replacement
-                    var dAndhItem = po_record.getSublistValue({
-                        sublistId: 'item',
-                        fieldId: constants.Columns.DH_MPN,
-                        line: i
-                    });
-
-                    if (dAndhItem == itemNum && xmlVendor == vendorList.DandH) return i;
                 }
-                return null;
-            } else return null;
+
+                if (tempItemNum == itemNum) return i;
+
+                //Ingram Hash replacement
+                if (
+                    hashSpace &&
+                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
+                        xmlVendor == vendorList.INGRAM_MICRO)
+                ) {
+                    if (itemNum.replace('#', ' ') == tempItemNum) return i;
+                }
+
+                //D&H Item replacement
+                var dAndhItem = po_record.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: constants.Columns.DH_MPN,
+                    line: i
+                });
+
+                if (dAndhItem == itemNum && xmlVendor == vendorList.DandH) return i;
+            }
+            return null;
+        } else return null;
     }
 
     /**
@@ -347,6 +352,19 @@ define([
                     fieldId: fieldID,
                     value: currentFieldValue
                 });
+
+                var returnedFieldValue = po_record.getCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: fieldID
+                });
+
+                if (!returnedFieldValue || returnedFieldValue != currentFieldValue) {
+                    po_record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fieldID,
+                        value: xmlVal
+                    });
+                }
             }
         } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
             po_record.setCurrentSublistValue({
@@ -607,6 +625,7 @@ define([
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
                 var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
+                var currentDate = new Date();
 
                 for (var i = 0; i < stringToProcess.length; i++) {
                     var singleString = stringToProcess[i];
@@ -614,8 +633,18 @@ define([
                         var stringArr = singleString.split('T'); //handle timestamps with T
                         singleString = stringArr[0];
                         var convertedDate = new Date(singleString);
+                        date = date || convertedDate;
 
-                        if (!date || convertedDate > date) date = convertedDate;
+                        // returnClosestDate gets date nearest current date vs default latest date
+                        if (
+                            options.returnClosestDate &&
+                            ((convertedDate >= currentDate && convertedDate < date) ||
+                                (convertedDate < currentDate && convertedDate > date))
+                        ) {
+                            date = convertedDate;
+                        } else if (!options.returnClosestDate && convertedDate > date) {
+                            date = convertedDate;
+                        }
                     }
                 }
             } catch (e) {
