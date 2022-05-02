@@ -253,6 +253,7 @@ define([
                     switch (itemChildNodes[j].nodeName) {
                         case 'Code':
                             itemCode = itemChildNodes[j].textContent;
+                            itemRow.statusCode = itemCode;
                             break;
                         case 'OrderNumber':
                             itemRow.order_num = itemChildNodes[j].textContent;
@@ -277,6 +278,7 @@ define([
                             break;
                         case 'Packages':
                             packageNodes = itemChildNodes[j].childNodes;
+                            // itemRow.tracking_num = '';
                             for (var x = 0; x < packageNodes.length; x++) {
                                 if (packageNodes[x].nodeName == 'Package') {
                                     var packageChildNodes = packageNodes[x].childNodes;
@@ -306,13 +308,21 @@ define([
                     }
                 }
 
+                // ShipQuantity //
+                if (!parseInt(itemRow.ship_qty, 10) ) {
+                    itemRow.is_shipped = false;
+                }
+
+                if (itemCode == 'invoiced') {
+                    itemRow.is_shipped = true;
+                } else {
+                    itemRow.is_shipped = false;
+                }
+
                 // ignore items unles they have been invoiced or accepted
                 if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
                     itemArray.push(itemRow);
                 }
-                // if (itemCode == 'invoiced') {
-                //     itemArray.push(itemRow);
-                // }
             }
         } catch (err) {
             log.error(logTitle + '::ERROR', '!! ERROR !! ' + vc2Utils.extractError(err));
@@ -348,7 +358,9 @@ define([
 
         vcLog.recordLog({
             header: [LogTitle, 'Lines'].join(' - '),
-            body: !vc2Utils.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
+            body: !vc2Utils.isEmpty(outputArray)
+                ? JSON.stringify(outputArray)
+                : '-no lines to process-',
             transaction: poId,
             status: vcGlobal.Lists.VC_LOG_STATUS.INFO
         });
