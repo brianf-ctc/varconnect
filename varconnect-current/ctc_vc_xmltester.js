@@ -3,7 +3,12 @@
  *@NScriptType Suitelet
  *@NModuleScope Public
  */
-define(['N/ui/serverWidget', 'N/xml', 'N/record'], function (serverWidget, ns_xml, ns_record) {
+define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
+    serverWidget,
+    ns_xml,
+    ns_record,
+    ns_search
+) {
     var LogTitle = 'XML Tester';
 
     var NodeType = {
@@ -227,6 +232,112 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record'], function (serverWidget, ns_xm
 
     return {
         onRequest: function (context) {
+            var billFileId = context.request.parameters.billfileid || 7072;
+
+            var rec = ns_record.load({
+                type: 'customrecord_ctc_vc_bills',
+                id: billFileId
+            });
+
+            var recData = ns_search.lookupFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: billFileId,
+                columns: ['custrecord_ctc_vc_bill_log']
+            });
+
+            context.response.writeLine({
+                output: JSON.stringify(recData.custrecord_ctc_vc_bill_log)
+            });
+            var dataStr = recData.custrecord_ctc_vc_bill_log;
+            dataStr =
+                '4/29/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' +
+                dataStr;
+            dataStr =
+                '4/30/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' +
+                dataStr;
+
+            var noteHelper = {
+                splitByDate: function (allNotesStr) {
+                    var arr = allNotesStr
+                        .split(/(\d{1,2}\/\d{1,2}\/\d{4})\s-\s/gm)
+                        .filter(function (str) {
+                            return !!str;
+                        });
+                    var arrNotes = [];
+                    while (arr.length) {
+                        var dateStr = arr.shift();
+                        if (!new Date(dateStr)) continue;
+
+                        var note = {
+                            date: dateStr,
+                            dateVal: new Date(dateStr),
+                            msg: arr.shift()
+                        };
+                        note.msg = note.msg.replace(/[\r\n]/gm, '');
+                        arrNotes.push(note);
+                    }
+                    return arrNotes.sort(function (a, b) {
+                        return b.dateVal - a.dateVal;
+                    });
+                },
+                removeDuplicates: function (notesList) {
+                    var arrNotes = [];
+                    notesList.map(function (noteOut) {
+                        var isFound = false;
+                        arrNotes.forEach(function (noteIn) {
+                            if (isFound) return false;
+                            if (noteOut.date == noteIn.date && noteOut.msg == noteIn.msg) {
+                                isFound = true;
+                                return false;
+                            }
+                            return true;
+                        });
+                        if (!isFound) arrNotes.push(noteOut);
+                    });
+                    return arrNotes;
+                },
+                removeSameSucceedingLogs: function (notesList) {
+                    var arrNotes = [];
+                    notesList.map(function (note) {
+                        var isSameNote = false;
+                        if (arrNotes.length && arrNotes[arrNotes.length - 1]) {
+                            var lastEntry = arrNotes[arrNotes.length - 1];
+                            isSameNote = lastEntry.msg == note.msg;
+                        }
+                        if (!isSameNote) {
+                            arrNotes.push(note);
+                        }
+                    });
+                    return arrNotes;
+                },
+                flatten: function (notesList) {
+                    return notesList.map(function (note) {
+                        return [note.date, note.msg].join(' - ');
+                    });
+                }
+            };
+
+            var arrNotesList = noteHelper.splitByDate(dataStr);
+            context.response.writeLine({ output: '===' });
+            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+
+            arrNotesList = noteHelper.removeDuplicates(arrNotesList);
+            context.response.writeLine({ output: '===' });
+            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+
+            arrNotesList = noteHelper.removeSameSucceedingLogs(arrNotesList);
+            context.response.writeLine({ output: '===' });
+            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+
+            arrNotesList = noteHelper.flatten(arrNotesList);
+            context.response.writeLine({ output: '===' });
+            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+            context.response.writeLine({ output: arrNotesList.join('\r\n\r\n') });
+
+            return true;
+        },
+
+        onRequest_1: function (context) {
             var billFileId = context.request.parameters.billfileid || 6004;
 
             var rec = ns_record.load({

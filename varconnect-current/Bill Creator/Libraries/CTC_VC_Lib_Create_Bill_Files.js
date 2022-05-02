@@ -5,8 +5,8 @@
  */
 
 define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './fuse'], function (
-    search,
-    record,
+    ns_search,
+    ns_record,
     log,
     format,
     config,
@@ -75,7 +75,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
             var parsedDate = parseDate({ dateString: myArr[i].ordObj.date });
 
-            var billFileSearchObj = search.create({
+            var billFileSearchObj = ns_search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
                     // ["custrecord_ctc_vc_bill_po", "is", myArr[i].ordObj.po],
@@ -87,7 +87,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                     ['custrecord_ctc_vc_bill_date', 'on', parsedDate]
                 ],
                 columns: [
-                    search.createColumn({
+                    ns_search.createColumn({
                         name: 'id'
                     })
                 ]
@@ -104,7 +104,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 continue;
             }
 
-            var objRecord = record.create({
+            var objRecord = ns_record.create({
                 type: 'customrecord_ctc_vc_bills',
                 isDynamic: true
             });
@@ -124,7 +124,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
             var poName = myArr[i].ordObj.po.trim();
             log.audit(logTitle, '>>>> PO search: ' + JSON.stringify([poName, myArr[i].ordObj.po]));
 
-            var purchaseorderSearchObj = search.create({
+            var purchaseorderSearchObj = ns_search.create({
                 type: 'purchaseorder',
                 filters: [
                     ['numbertext', 'is', poName],
@@ -188,8 +188,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
                 var vendorTerms = 0;
 
-                var searchTerms = search.lookupFields({
-                    type: search.Type.VENDOR,
+                var searchTerms = ns_search.lookupFields({
+                    type: ns_search.Type.VENDOR,
                     id: entityId,
                     columns: ['terms']
                 });
@@ -199,8 +199,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 }
 
                 if (manualDueDate == false) {
-                    var daysToPay = search.lookupFields({
-                        type: search.Type.TERM,
+                    var daysToPay = ns_search.lookupFields({
+                        type: ns_search.Type.TERM,
                         id: vendorTerms,
                         columns: ['daysuntilnetdue']
                     }).daysuntilnetdue;
@@ -248,11 +248,11 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 // match payload items to transaction items
                 var availableSkus = [];
 
-                var transactionSearchObj = search.create({
+                var transactionSearchObj = ns_search.create({
                     type: 'transaction',
                     filters: [['internalid', 'anyof', poId], 'AND', ['mainline', 'is', 'F']],
                     columns: [
-                        search.createColumn({
+                        ns_search.createColumn({
                             name: 'item',
                             summary: 'GROUP'
                         })
@@ -336,7 +336,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_log',
-                value: moment().format(dateFormat) + ' - ' + billFileNotes.join(' | ')
+                value: addNote({ note: billFileNotes.join(' | ') })
             });
 
             var record_id = objRecord.save();
@@ -349,8 +349,128 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
         return null;
     }
 
+    function addNote(option) {
+        var logTitle = [LogTitle, 'addNote'].join('::');
+
+        var billFileId = option.billFileId || option.billId || option.id,
+            notes = option.note || option.notes || option.content, 
+            allNotes = option.all || option.allNotes || option.current || '';
+
+        // if (!billFileId) return false;
+        // if (!notes) return false;
+
+        // //4.01
+        if (!dateFormat) {
+            var generalPref = config.load({
+                type: config.Type.COMPANY_PREFERENCES
+            });
+            dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+        }
+
+        // get the current notes
+        if (billFileId) {
+            var recData = ns_search.lookupFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: billFileId,
+                columns: ['custrecord_ctc_vc_bill_log']
+            });
+            allNotes = recData.custrecord_ctc_vc_bill_log;
+        }
+        if (notes) allNotes = moment().format(dateFormat) + ' - ' + notes + '\r\n' + allNotes;
+
+        ////////////////////////////////////////
+        var noteHelper = {
+            splitByDate: function (allNotesStr) {
+                var arr = allNotesStr
+                    .split(/(\d{1,2}\/\d{1,2}\/\d{4})\s-\s/gm)
+                    .filter(function (str) {
+                        return !!str;
+                    });
+                var arrNotes = [];
+                while (arr.length) {
+                    var dateStr = arr.shift();
+                    if (!new Date(dateStr)) continue;
+
+                    var note = {
+                        date: dateStr,
+                        dateVal: new Date(dateStr),
+                        msg: arr.shift()
+                    };
+                    note.msg = note.msg.replace(/[\r\n]/gm, '');
+                    arrNotes.push(note);
+                }
+                return arrNotes.sort(function (a, b) {
+                    return b.dateVal - a.dateVal;
+                });
+            },
+            removeDuplicates: function (notesList) {
+                var arrNotes = [];
+                notesList.map(function (noteOut) {
+                    var isFound = false;
+                    arrNotes.forEach(function (noteIn) {
+                        if (isFound) return false;
+                        if (noteOut.date == noteIn.date && noteOut.msg == noteIn.msg) {
+                            isFound = true;
+                            return false;
+                        }
+                        return true;
+                    });
+                    if (!isFound) arrNotes.push(noteOut);
+                });
+                return arrNotes;
+            },
+            removeSameSucceedingLogs: function (notesList) {
+                var arrNotes = [];
+                notesList.map(function (note) {
+                    var isSameNote = false;
+                    if (arrNotes.length && arrNotes[arrNotes.length - 1]) {
+                        var lastEntry = arrNotes[arrNotes.length - 1];
+                        isSameNote = lastEntry.msg == note.msg;
+                    }
+                    if (!isSameNote) {
+                        arrNotes.push(note);
+                    }
+                });
+                return arrNotes;
+            },
+            flatten: function (notesList) {
+                return notesList.map(function (note) {
+                    return [note.date, note.msg].join(' - ');
+                });
+            }
+        };
+        ////////////////////////////////////////
+
+        // lets simplify ///
+        // first, split up the notes by date, and make each an object
+        var arrNotes = noteHelper.splitByDate(allNotes);
+        arrNotes = noteHelper.removeDuplicates(arrNotes);
+        arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
+        arrNotes = noteHelper.flatten(arrNotes);
+
+        var newNoteStr = arrNotes.join('\r\n\r\n');
+
+        if (billFileId) {
+            // update
+            ns_record.submitFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: billFileId,
+                values: {
+                    custrecord_ctc_vc_bill_log: newNoteStr
+                },
+                options: {
+                    ignoreMandatoryFields: true
+                }
+            });
+        }
+
+        return newNoteStr;
+    }
+
     // Add the return statement that identifies the entry point function.
     return {
-        process: process
+        process: process,
+        addNote: addNote
     };
 });

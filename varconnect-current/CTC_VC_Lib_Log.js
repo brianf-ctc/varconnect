@@ -8,14 +8,6 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  */
-
-/**
- * Module Description
- *
- * Version	Date            Author		Remarks
- * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
- *
- */
 /**
  * @NApiVersion 2.x
  * @NModuleScope SameAccount

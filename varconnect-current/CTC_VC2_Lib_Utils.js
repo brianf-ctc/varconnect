@@ -115,7 +115,6 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             log.audit('---datestring ' + dateString, date);
             return date;
         },
-
         forceInt: function (stValue) {
             var intValue = parseInt(stValue, 10);
 
