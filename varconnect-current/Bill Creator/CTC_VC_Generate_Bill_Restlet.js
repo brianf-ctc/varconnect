@@ -366,7 +366,7 @@ define([
             recBill.setValue({
                 fieldId: 'trandate',
                 value: format.parse({
-                    value: billPayload.date,
+                    value: moment(billPayload.date).toDate(),
                     type: format.Type.DATE
                 })
             });
@@ -374,7 +374,7 @@ define([
                 recBill.setValue({
                     fieldId: 'duedate',
                     value: format.parse({
-                        value: billPayload.duedate,
+                        value: moment(billPayload.duedate).toDate(),
                         type: format.Type.DATE
                     })
                 });
@@ -835,7 +835,7 @@ define([
                 allowableVarianceThreshold = param.allowedThreshold,
                 totalVarianceAmount = 0;
 
-            param.allowedThreshold;
+            // param.allowedThreshold;
 
             if (allowableVarianceThreshold && listVarianceDetails.length) {
                 listVarianceDetails.forEach(function (variance) {
@@ -850,7 +850,8 @@ define([
                     '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
                 );
 
-                allowBillVariance = totalVarianceAmount <= allowableVarianceThreshold;
+                allowBillVariance =
+                    Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
                 log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
             }
 
