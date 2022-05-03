@@ -280,7 +280,7 @@ define([
 
             var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
             var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-            var validShippedStatus = ['SHIPPED','DELIVERED'];
+            var validShippedStatus = ['SHIPPED', 'DELIVERED'];
 
             try {
                 if (vc2Utils.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
@@ -303,12 +303,14 @@ define([
                             /// get the lines
                             dellOrder.productInfo.forEach(function (prodInfo, prodIdx) {
                                 lineData = {
-                                    line_num: prodIdx+1,
+                                    line_num: prodIdx + 1,
                                     item_num: prodInfo.skuNumber,
                                     ship_qty:
                                         (lineData.ship_qty || 0) + parseInt(prodInfo.itemQuantity),
-                                    serial_num: prodInfo.serviceTags && prodInfo.serviceTags.length ?
-                                        prodInfo.serviceTags.join(',') : ''
+                                    serial_num:
+                                        prodInfo.serviceTags && prodInfo.serviceTags.length
+                                            ? prodInfo.serviceTags.join(',')
+                                            : ''
                                 };
 
                                 return true;
@@ -345,7 +347,6 @@ define([
                     transaction: option.poId,
                     status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
                 });
-    
             } finally {
             }
 

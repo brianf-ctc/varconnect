@@ -467,7 +467,7 @@ define([
                 log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
             }
         }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date) );
+        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
         // return date;
 
         //Convert to string
@@ -485,7 +485,7 @@ define([
             });
         }
 
-        log.audit(logTitle, 'return value :' + JSON.stringify(date) );
+        log.audit(logTitle, 'return value :' + JSON.stringify(date));
 
         return date;
     }

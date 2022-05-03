@@ -166,7 +166,9 @@ define([
                 idx: i + 1,
                 list: list.length
             };
-            currentFile.ext_rgx = currentFile.ext_rgx ? currentFile.ext_rgx.toLowerCase() : currentFile.ext_rgx;
+            currentFile.ext_rgx = currentFile.ext_rgx
+                ? currentFile.ext_rgx.toLowerCase()
+                : currentFile.ext_rgx;
 
             if (!currentFile.is90days) {
                 currentFile.skippedReason = 'older than 90days';

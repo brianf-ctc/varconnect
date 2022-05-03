@@ -246,8 +246,6 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
             });
         }
 
-
-
         log.debug('returnArr', returnArr);
         return returnArr;
     }

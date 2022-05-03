@@ -211,9 +211,8 @@ define([
                 status: constants.Lists.VC_LOG_STATUS.ERROR
             });
 
-            return false;            
+            return false;
         }
-
 
         var libVendor = _getVendorLibrary({
             vendorConfig: vendorConfig
@@ -297,14 +296,14 @@ define([
                     continue;
                 }
 
-                    itemArray = itemArray.concat(
-                        _handleSingleVendor({
-                            vendorConfig: config,
-                            poNum: poNum,
-                            poId: poId,
-                            tranDate: tranDate
-                        })
-                    );
+                itemArray = itemArray.concat(
+                    _handleSingleVendor({
+                        vendorConfig: config,
+                        poNum: poNum,
+                        poId: poId,
+                        tranDate: tranDate
+                    })
+                );
             } catch (e) {
                 log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
 
@@ -324,17 +323,17 @@ define([
         var logTitle = [LogTitle, 'process'].join('::');
         log.audit(logTitle, options);
 
-            var mainConfig = options.mainConfig,
-                vendorConfig = options.vendorConfig,
-                vendor = options.vendor,
-                poNum = options.poNum,
-                poId = options.poId,
-                tranDate = options.tranDate,
-                subsidiary = options.subsidiary,
-                vendorList = constants.Lists.XML_VENDOR,
-                xmlVendor = vendorConfig.xmlVendor,
-                countryCode = options.countryCode,
-                outputArray = null;
+        var mainConfig = options.mainConfig,
+            vendorConfig = options.vendorConfig,
+            vendor = options.vendor,
+            poNum = options.poNum,
+            poId = options.poId,
+            tranDate = options.tranDate,
+            subsidiary = options.subsidiary,
+            vendorList = constants.Lists.XML_VENDOR,
+            xmlVendor = vendorConfig.xmlVendor,
+            countryCode = options.countryCode,
+            outputArray = null;
 
         try {
             if (vendorConfig) {

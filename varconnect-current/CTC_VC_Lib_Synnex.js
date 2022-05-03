@@ -309,7 +309,7 @@ define([
                 }
 
                 // ShipQuantity //
-                if (!parseInt(itemRow.ship_qty, 10) ) {
+                if (!parseInt(itemRow.ship_qty, 10)) {
                     itemRow.is_shipped = false;
                 }
 

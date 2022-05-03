@@ -204,7 +204,6 @@ define([], function () {
         }
     };
 
-
     VC_CONSTANTS.Bill_Creator = Bill_Creator;
     return VC_CONSTANTS;
 });

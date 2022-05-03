@@ -199,7 +199,7 @@ define([
                     poId: docid,
                     poNum: docnum,
                     tranDate: tranDate,
-                    subsidiary: subsidiary, 
+                    subsidiary: subsidiary,
                     countryCode: countryCode
                 });
                 log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));

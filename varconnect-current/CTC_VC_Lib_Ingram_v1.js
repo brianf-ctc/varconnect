@@ -612,7 +612,9 @@ define([
 
         vcLog.recordLog({
             header: [LogTitle, 'Lines'].join(' - '),
-            body: !vc2Utils.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
+            body: !vc2Utils.isEmpty(outputArray)
+                ? JSON.stringify(outputArray)
+                : '-no lines to process-',
             transaction: option.poId,
             status: vcGlobal.Lists.VC_LOG_STATUS.INFO
         });
