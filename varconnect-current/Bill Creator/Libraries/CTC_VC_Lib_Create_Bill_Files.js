@@ -353,7 +353,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
         var logTitle = [LogTitle, 'addNote'].join('::');
 
         var billFileId = option.billFileId || option.billId || option.id,
-            notes = option.note || option.notes || option.content, 
+            notes = option.note || option.notes || option.content,
             allNotes = option.all || option.allNotes || option.current || '';
 
         // if (!billFileId) return false;
@@ -397,7 +397,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         dateVal: new Date(dateStr),
                         msg: arr.shift()
                     };
-                    note.msg = note.msg.replace(/[\r\n]/gm, '');
+                    note.msg = note.msg.replace(/\r\n\r\n/gm, '');
                     arrNotes.push(note);
                 }
                 return arrNotes.sort(function (a, b) {
