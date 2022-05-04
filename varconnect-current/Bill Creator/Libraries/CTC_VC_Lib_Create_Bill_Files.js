@@ -397,7 +397,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         dateVal: new Date(dateStr),
                         msg: arr.shift()
                     };
-                    note.msg = note.msg.replace(/\r\n\r\n/gm, '');
+                    note.msg = note.msg.replace(/\r\n/gm, '');
                     arrNotes.push(note);
                 }
                 return arrNotes.sort(function (a, b) {
