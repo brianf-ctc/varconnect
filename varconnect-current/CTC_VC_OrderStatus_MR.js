@@ -236,7 +236,7 @@ define([
         try {
             Params = {
                 searchId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
-                vendorId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                // vendorId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 internalid: runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
@@ -285,6 +285,15 @@ define([
 
         var totalResults = returnValue.runPaged().count;
         log.audit(logTitle, '>> Total Orders to Process: ' + totalResults);
+
+        vcLog.recordLog({
+            header: 'VAR Connect START',
+            body:
+                'VAR Connect START' +
+                ('\n\nTotal Orders: ' + totalResults) +
+                ('\n\nParameters: ' + JSON.stringify(Params)),
+            status: constants.Lists.VC_LOG_STATUS.INFO
+        });
 
         return returnValue;
     };
@@ -721,11 +730,11 @@ define([
             return true;
         });
         log.audit('REDUCE keys processed', reduceKeys);
-        // vcLog.recordLog({
-        //     header: 'VAR Connect END',
-        //     body: 'VAR Connect END',
-        //     status: constants.Lists.VC_LOG_STATUS.INFO
-        // });
+        vcLog.recordLog({
+            header: 'VAR Connect END',
+            body: 'VAR Connect END',
+            status: constants.Lists.VC_LOG_STATUS.INFO
+        });
 
         log.debug(logTitle, '###### END OF SCRIPT ###### ');
     };
