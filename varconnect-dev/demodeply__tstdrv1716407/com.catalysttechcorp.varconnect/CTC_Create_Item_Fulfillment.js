@@ -622,7 +622,7 @@ define([
         },
 
         // Added by Clemen - 04/28/2022
-        addNativeSerials: function(data) {
+        addNativeSerials: function (data) {
             var ifRec = data.record;
 
             // Check if DropShip PO
@@ -704,7 +704,7 @@ define([
             return ifRec;
         },
 
-        addNativePackages: function(data) {
+        addNativePackages: function (data) {
             var ifRec = data.record;
             var trackingNums = data.trackingnumbers;
 
@@ -1083,13 +1083,11 @@ define([
                                     splitStr: '\n'
                                 });
 
-
                                 var tmpSerialList = Helper.uniqueList({
                                     value: fulfillmentLines[itemCnt].serial_num
                                 });
                                 if (!Helper.isEmpty(uniqueItems[uniqueIndex].all_serial_nums)) {
-                                    tmpTrackList +=
-                                        '\n' + uniqueItems[uniqueIndex].all_serial_nums;
+                                    tmpTrackList += '\n' + uniqueItems[uniqueIndex].all_serial_nums;
                                 }
                                 uniqueItems[uniqueIndex].all_serial_nums = Helper.uniqueList({
                                     value: tmpSerialList,
@@ -1317,7 +1315,6 @@ define([
                                                 all_serial_nums: arrTempSerials2.join('\n')
                                             };
 
-
                                             recordLines.push(item);
 
                                             /*** Start Clem - Serial functionality 1 ***/
@@ -1332,13 +1329,11 @@ define([
                                             );
 
                                             if (isSerialized || isSerialized === 'T') {
-
                                                 recItemFF = Helper.addNativeSerials({
                                                     record: recItemFF,
                                                     serials: arrTempSerials2,
                                                     soid: so_ID
-                                                })
-
+                                                });
                                             }
                                             /*** End Clem - Serial functionality 1 ***/
 
@@ -1451,19 +1446,14 @@ define([
                                             sublistId: 'item',
                                             fieldId: 'isserial'
                                         });
-                                        log.audit(
-                                            logTitle,
-                                            '>> is serialized: ' + isSerialized
-                                        );
+                                        log.audit(logTitle, '>> is serialized: ' + isSerialized);
 
                                         if (isSerialized || isSerialized === 'T') {
-
                                             recItemFF = Helper.addNativeSerials({
                                                 record: recItemFF,
                                                 serials: arrTempSerials2,
                                                 soid: so_ID
-                                            })
-
+                                            });
                                         }
                                         // /*** End Clem - Serial functionality 2 ***/
 
@@ -1548,7 +1538,7 @@ define([
                     /*** Start Clemen - Package ***/
                     recItemFF = Helper.addNativePackages({
                         record: recItemFF,
-                        trackingnumbers: uniqueItems[tmp3].all_tracking_nums,
+                        trackingnumbers: uniqueItems[tmp3].all_tracking_nums
                     });
                     /*** End Clemen - Package ***/
                 }

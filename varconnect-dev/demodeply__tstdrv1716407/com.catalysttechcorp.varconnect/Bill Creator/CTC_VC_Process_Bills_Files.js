@@ -20,7 +20,7 @@ define([
 
     function _getDateFormat() {
         var logTitle = [LOG_TITLE, '_getDateFormat'].join(':');
-        
+
         var generalPref = config.load({
             type: config.Type.COMPANY_PREFERENCES
         });

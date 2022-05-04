@@ -360,9 +360,8 @@ define([
             var recBill = record.transform(transformOption);
 
             if (param.defaultBillForm) {
-                recBill.setValue({fieldId:'customform', value: param.defaultBillForm});
+                recBill.setValue({ fieldId: 'customform', value: param.defaultBillForm });
             }
-
 
             // store the current posting period
             var postingPeriod = recBill.getValue({ fieldId: 'postingperiod' });

@@ -119,13 +119,12 @@ define([
                     '>> params: ' +
                     JSON.stringify({
                         tempItemNum: tempItemNum,
-                        tempVendorSKU: tempVendorSKU,
+                        tempVendorSKU: tempVendorSKU
                     })
             );
 
             var isInData = false;
             for (var i = 0; i < lineData.length; i++) {
-
                 if (tempVendorSKU) {
                     if (tempVendorSKU == lineData[i].vendorSKU) {
                         //log.debug('matched vendor sku for line '+i)
@@ -406,7 +405,6 @@ define([
                 var objRecord;
 
                 log.audit(logTitle, LogPrefix + '****  Transform to Item Receipt ****');
-
 
                 try {
                     // create item receipt from sales order

@@ -483,7 +483,10 @@ define([
                 log.audit(logTitle, '>> orderLine #' + i + ': ' + JSON.stringify(orderLine));
 
                 if (!vc2Utils.inArray(lineStatus, validLineStatus)) {
-                    log.audit(logTitle, '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']');
+                    log.audit(
+                        logTitle,
+                        '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']'
+                    );
                 }
 
                 var outputObj = {};

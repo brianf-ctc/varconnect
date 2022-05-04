@@ -205,7 +205,6 @@ define([
 
                 log.audit(logTitle, '>> query option: ' + JSON.stringify(queryOption));
 
-
                 // log the request //
                 vcLog.recordLog({
                     header: [LogTitle, 'Order Status - Request'].join(' | '),
@@ -240,7 +239,6 @@ define([
                 option.responseBody = responseBody;
 
                 returnValue = this.processResponse(option);
-
             } catch (error) {
                 throw error; //vc2Utils.extractError(error);
             } finally {
