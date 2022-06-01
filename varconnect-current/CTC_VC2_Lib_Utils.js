@@ -193,9 +193,64 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             var str = new Date().getTime().toString();
             return str.substring(str.length - len, str.length);
         },
-        // getTaskStatus: function (taskId) {
-        //     return NS_Task.checkStatus({ taskId: taskId });
-        // },
+        roundOff: function (value) {
+            var flValue = this.forceFloat(value || '0');
+            if (!flValue || isNaN(flValue)) return 0;
+
+            return Math.round(flValue * 100) / 100;
+        },
+        vcLog: function (option) {
+            var logTitle = [LogTitle, 'vcLog'].join('::');
+
+            var VC_LOG = VC2_Global.RECORD.VC_LOG,
+                LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
+
+            try {
+                var logOption = {};
+                logOption.APPLICATION = option.appName || VC2_Global.LOG_APPLICATION;
+                logOption.HEADER = option.title || logOption.APPLICATION;
+                logOption.BODY =
+                    option.body ||
+                    option.content ||
+                    option.message ||
+                    option.errorMessage ||
+                    option.errorMsg ||
+                    (option.error ? Util.extractError(option.error) : '');
+
+                logOption.STATUS =
+                    option.status ||
+                    option.isError ||
+                    option.error ||
+                    option.errorMessage ||
+                    option.errorMsg
+                        ? LOG_STATUS.ERROR
+                        : option.isSucces
+                        ? LOG_STATUS.SUCCESS
+                        : LOG_STATUS.INFO;
+
+                logOption.TRANSACTION =
+                    option.recordId || option.transaction || option.id || option.internalid || '';
+
+                logOption.DATE = new Date();
+
+                if (option.doLog || option.doScriptLog) {
+                    log.audit(logTitle, logOption);
+                }
+
+                // create the log
+                var recLog = NS_Record.create({ type: VC_LOG.ID });
+                for (var fieldName in VC_LOG.FIELD) {
+                    recLog.setValue({
+                        fieldId: fieldName,
+                        value: logOption[fieldName] || ''
+                    });
+                }
+                recLog.save();
+            } catch (error) {
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + Util.extractError(error));
+            }
+            return true;
+        },
         extractError: function (option) {
             var errorMessage = util.isString(option)
                 ? option
@@ -205,6 +260,160 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
+        },
+        convertToQuery: function (json) {
+            if (typeof json !== 'object') return;
+
+            var qry = [];
+            for (var key in json) {
+                var qryVal = encodeURIComponent(json[key]);
+                var qryKey = encodeURIComponent(key);
+                qry.push([qryKey, qryVal].join('='));
+            }
+
+            return qry.join('&');
+        },
+        loadModule: function (mod) {
+            var returnValue;
+            require([mod], function (modObj) {
+                returnValue = modObj;
+                return true;
+            });
+            return returnValue;
+        },
+        sendRequest: function (option) {
+            var logTitle = [LogTitle, 'sendRequest'].join('::'),
+                returnValue = {};
+
+            log.audit(logTitle, option);
+
+            var _DEFAULT = {
+                validMethods: ['post', 'get'],
+                maxRetries: 3,
+                maxWaitMs: 3000
+            };
+            var ns_https = Util.loadModule('N/https');
+
+            var queryOption = option.query || option.queryOption;
+            if (!queryOption || LibUtil.isEmpty(queryOption)) throw 'Missing query option';
+
+            option.method = (option.method || 'get').toLowerCase();
+            var response,
+                responseBody,
+                param = {
+                    noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
+                    doLogRequest: option.hasOwnProperty('doLogRequest')
+                        ? option.doLogRequest
+                        : false,
+                    doLogResponse: option.hasOwnProperty('doLogResponse')
+                        ? option.doLogResponse
+                        : false,
+
+                    doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
+                    retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 0,
+                    maxRetry: option.hasOwnProperty('maxRetry')
+                        ? option.maxRetry
+                        : _DEFAULT.maxRetries || 0,
+
+                    logHeader: option.header || logTitle,
+                    logTranId: option.internalId || option.transactionId || option.recordId,
+
+                    waitMs: option.waitMs || _DEFAULT.maxWaitMs,
+                    method: LibUtil.inArray(option.method, _DEFAULT.validMethods)
+                        ? option.method
+                        : 'get'
+                };
+
+            log.audit(logTitle, '>> param: ' + JSON.stringify(param));
+
+
+            var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
+
+
+            try {
+                if (param.doLogRequest || !param.noLogs) {
+                    Util.vcLog({
+                        title: [param.logHeader, 'Request'].join(' - '),
+                        content: JSON.stringify(queryOption),
+                        transaction: param.logTranId,
+                        status: LOG_STATUS.INFO
+                    });
+                }
+
+                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
+                returnValue.REQUEST = queryOption;
+
+                //// SEND THE REQUEST //////
+                response = ns_https[param.method](queryOption);
+                returnValue.RESPONSE = response;
+                responseBody = response.body;
+
+                if (!response.code || response.code != 200) {
+                    throw 'Failed Response Found';
+                }
+                if (!response || !response.body) {
+                    throw 'Empty or Missing Response !';
+                }
+
+                ////////////////////////////
+            } catch (error) {
+                var errorMsg = LibUtil.extractError(error);
+                returnValue.isError = true;
+                returnValue.errorMsg = errorMsg;
+                returnValue.error = error;
+
+                Util.vcLog({
+                    title:
+                        [param.logHeader + ': Error', errorMsg].join(' - ') +
+                        (' (retry:' + param.retryCount + '/' + param.maxRetry + ')'),
+                    content: JSON.stringify(error),
+                    transaction: param.logTranId,
+                    isError: true
+                });
+
+                log.error(logTitle, '## ERROR ##' + errorMsg + '\n' + JSON.stringify(error));
+
+                if (param.doRetry && param.maxRetry > param.retryCount) {
+                    log.audit(logTitle, '... retrying in ' + param.waitMs);
+                    option.retryCount = param.retryCount + 1;
+                    LibUtil.waitMs(param.waitMs);
+                    returnValue = LibUtil.sendRequest(option);
+                }
+            } finally {
+                log.audit(
+                    logTitle,
+                    '>> RESPONSE ' +
+                        JSON.stringify({
+                            code: response.code || '-no response-',
+                            body: response.body || '-empty response-'
+                        })
+                );
+
+                if (param.doLogResponse || !param.noLogs) {
+                    Util.vcLog({
+                        title: [param.logHeader, 'Response'].join(' - '),
+                        content: JSON.stringify(responseBody || response),
+                        transaction: param.logTranId,
+                        status: LOG_STATUS.INFO
+                    });
+                }
+            }
+
+            return returnValue;
+        },
+        safeParse: function (response) {
+            var logTitle = [LogTitle, 'safeParse'].join('::'),
+                returnValue;
+
+            log.audit(logTitle, response);
+            try {
+                returnValue = JSON.parse(response.body || response);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ##' + LibUtil.extractError(error));
+                returnValue = null;
+            }
+
+            return returnValue;
         }
     };
 

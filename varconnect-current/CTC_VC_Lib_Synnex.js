@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -14,6 +14,8 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
+ * 1.10		April 19, 2022	christian	Updated library to new standards/ Updated logs
+ * 1.11		May 17, 2022	christian	Add shipped status
  *
  */ /**
  * @NApiVersion 2.1
@@ -313,14 +315,12 @@ define([
                     itemRow.is_shipped = false;
                 }
 
-                if (itemCode == 'invoiced') {
-                    itemRow.is_shipped = true;
-                } else {
-                    itemRow.is_shipped = false;
+                if (itemRow.is_shipped) {
+                    itemRow.is_shipped = vc2Utils.inArray(itemCode, ['invoiced', 'shipped']);
                 }
 
-                // ignore items unles they have been invoiced or accepted
-                if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
+                // ignore items unles they have been invoiced or accepted or shipped
+                if (vc2Utils.inArray(itemCode, ['invoiced', 'accepted', 'shipped'])) {
                     itemArray.push(itemRow);
                 }
             }

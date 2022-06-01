@@ -22,125 +22,6 @@ define([
         CountryCode: ''
     };
 
-    var Helper = {
-        sendRequest: function (option) {
-            var logTitle = [LogTitle, 'sendRequest'].join('::'),
-                returnValue;
-            log.audit(logTitle, option);
-
-            var ValidMethods = ['post', 'get'];
-
-            var method = (option.method || 'get').toLowerCase();
-            method = vc2Utils.inArray(method, ValidMethods) ? method : 'get';
-
-            var queryOption = option.query || option.queryOption;
-            if (!queryOption || vc2Utils.isEmpty(queryOption)) throw 'Missing query option';
-
-            var response, responseBody;
-
-            var paramFlags = {
-                noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
-                doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
-                maxRetry: option.hasOwnProperty('maxRetry')
-                    ? option.maxRetry
-                    : Config.NumRetries || 0,
-                countRetry: option.hasOwnProperty('retryCount') ? option.retryCount : 0
-            };
-
-            log.audit(logTitle, '>> paramFlags: ' + JSON.stringify(paramFlags));
-
-            try {
-                if (option.doLogRequest || !paramFlags.noLogs) {
-                    vcLog.recordLog({
-                        header: [option.header || LogTitle, 'Request'].join(' - '),
-                        body: JSON.stringify(queryOption),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
-                    });
-                }
-
-                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
-
-                //// SEND THE REQUEST //////
-                response = ns_https[method](queryOption);
-                responseBody = Helper.safeParse(response.body);
-
-                if (!response.code || response.code != 200) {
-                    throw 'Failed Response Found';
-                }
-                if (!response || !response.body) {
-                    throw 'Empty or Missing Response !';
-                }
-
-                ////////////////////////////
-
-                returnValue = responseBody;
-            } catch (error) {
-                if (!paramFlags.doRetry || paramFlags.maxRetry >= paramFlags.countRetry) {
-                    var errorMsg = vc2Utils.extractError(error);
-                    vcLog.recordLog({
-                        header: [(option.header || LogTitle) + ': Error', errorMsg].join(' - '),
-                        body: JSON.stringify(error),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
-                    });
-
-                    throw error;
-                }
-
-                option.retryCount = paramFlags.countRetry + 1;
-                vc2Utils.waitMs(Config.WaitMS);
-
-                returnValue = Helper.sendRequest(option);
-            } finally {
-                log.audit(
-                    logTitle,
-                    '>> RESPONSE ' +
-                        JSON.stringify({
-                            code: response.code || '-no response-',
-                            body: responseBody || response.body || '-empty response-'
-                        })
-                );
-                if (option.doLogResponse || !paramFlags.noLogs) {
-                    vcLog.recordLog({
-                        header: [option.header || LogTitle, 'Response'].join(' - '),
-                        body: JSON.stringify(responseBody || response),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
-                    });
-                }
-            }
-
-            return returnValue;
-        },
-        safeParse: function (response) {
-            var logTitle = [LogTitle, 'safeParse'].join('::'),
-                returnValue;
-
-            log.audit(logTitle, response);
-            try {
-                returnValue = JSON.parse(response.body || response);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ##' + vc2Utils.extractError(error));
-                returnValue = null;
-            }
-
-            return returnValue;
-        },
-        convertToQuery: function (json) {
-            if (typeof json !== 'object') return;
-
-            var qry = [];
-            for (var key in json) {
-                var qryVal = encodeURIComponent(json[key]);
-                var qryKey = encodeURIComponent(key);
-                qry.push([qryKey, qryVal].join('='));
-            }
-
-            return qry.join('&');
-        }
-    };
-
     /**
      * @memberOf CTC_VC_Lib_Ingram_v1
      * @param {object} option
@@ -150,12 +31,13 @@ define([
         var logTitle = [LogTitle, 'generateToken'].join('::');
         log.audit(logTitle, option);
 
-        var response = Helper.sendRequest({
-            header: [LogTitle, 'GenerateToken'].join(' : '),
+        var tokenReq = vc2Utils.sendRequest({
+            header: [LogTitle, 'GenerateToken'].join(' '),
             method: 'post',
             recordId: option.recordId,
             doRetry: true,
             maxRetry: 3,
+            vcLog: vcLog,
             query: {
                 url: option.vendorConfig.accessEndPoint,
                 body: Helper.convertToQuery({
@@ -168,11 +50,12 @@ define([
                 }
             }
         });
-        log.audit(logTitle, '>> response: ' + JSON.stringify(response));
 
-        if (!response || !response.access_token) throw 'Unable to generate token';
+        if (tokenReq.isError) throw tokenReq.errorMsg;
+        var tokenResp = vc2Utils.safeParse(tokenReq.RESPONSE);
+        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
-        return response.access_token;
+        return tokenResp.access_token;
     }
 
     /**
@@ -191,8 +74,9 @@ define([
                 vendorConfig: option.vendorConfig,
                 recordId: option.poId
             });
+            if (!token) throw 'Missing token for authentication.';
 
-            var response = Helper.sendRequest({
+            var orderStatusReq = vc2Utils.sendRequest({
                 header: [LogTitle, 'Order Status'].join(' : '),
                 method: 'get',
                 doRetry: false,
@@ -214,11 +98,14 @@ define([
                 recordId: option.poId
             });
 
-            if (!response) throw 'Unable to fetch server response';
+            if ( orderStatusReq.isError) throw orderStatusReq.errorMsg;
+            var orderStatusResp = vc2Utils.safeParse( orderStatusReq.RESPONSE );
+
+            if (! orderStatusResp) throw 'Unable to fetch server response';
 
             // get the Order Details
             var orderDetails = _getOrderDetail({
-                responseBody: response,
+                responseBody: orderStatusResp,
                 token: token,
                 vendorConfig: option.vendorConfig,
                 poId: option.poId
@@ -282,8 +169,8 @@ define([
 
             var url = vendorConfig.endPoint + '/' + ingramOrderNumber;
 
-            responseBody = Helper.sendRequest({
-                header: [LogTitle, 'OrderDetails'].join(' : '),
+            var orderDetailReq = vc2Utils.sendRequest({
+                header: [LogTitle, 'OrderDetails'].join(' '),
                 method: 'get',
                 doRetry: false,
                 recordId: poId,

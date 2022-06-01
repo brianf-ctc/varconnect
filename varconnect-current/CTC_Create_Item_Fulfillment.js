@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -26,6 +26,7 @@
  *                                      removed the 'NA' on native serial settings
  *                                      fixed bug on determing unique line items to fulfill
  *                                      code cleanup, updated variable names
+ * 2.06		 May 18, 2022	christian	Location lookup can have empty array
  */
 
 /**
@@ -655,7 +656,7 @@ define([
                     columns: ['location']
                 });
 
-                if (locationLookup && locationLookup.location) {
+                if (locationLookup && locationLookup.location && locationLookup.location[0]) {
                     lineLoc = locationLookup.location[0].value;
                 }
 

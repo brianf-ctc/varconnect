@@ -4,9 +4,15 @@
  *@NModuleScope Public
  */
 
-define(['N/search', 'N/runtime', 'N/record'], function (search, runtime, record) {
+define(['N/search', 'N/record'], function (search, record) {
     function createSerial(serial, poId, itemId, soId) {
-        var rs = search.global({ keywords: serial });
+        var rs = search
+            .create({
+                type: 'customrecordserialnum',
+                filters: [['name', 'is', serial], 'and', ['custrecordserialitem', 'anyof', itemId]]
+            })
+            .run()
+            .getRange(0, 1);
         log.debug('Global search result', rs);
 
         if (rs.length == 0) {

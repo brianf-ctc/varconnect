@@ -22,6 +22,7 @@
  * 4.01		Jul 21,2021		paolodl@nscatalyst.com	Dynamic date parse
  * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
  *                                                      Updating fields overwrite value if append failed
+ * 4.03		May 10,2022		christian@nscatalyst.com	Carrier info should not append to itself
  *
  */
 
@@ -180,7 +181,8 @@ define([
                         //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
                     }
 
-                    updateFieldList(lineData[i].carrier, po_record, 'custcol_ctc_xml_carrier');
+                    updateField(po_record, 'custcol_ctc_xml_carrier', lineData[i].carrier);
+
                     updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
 
                     if (isDropPO || !mainConfig.useInboundTrackingNumbers)
@@ -341,29 +343,41 @@ define([
             currentFieldValue != 'NA'
         ) {
             if (
-                currentFieldValue.indexOf(xmlVal) < 0 &&
+                ['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0 ||
+                (currentFieldValue.indexOf(xmlVal) < 0 &&
                 currentFieldValue.length < maxFieldLength &&
-                xmlVal != 'NA'
+                    xmlVal != 'NA')
             ) {
-                currentFieldValue += '\n' + xmlVal;
+                var newFieldValue = null;
+                // some fields should just be overwritten
+                if (['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0) {
+                    newFieldValue = xmlVal;
+                } else {
+                    newFieldValue = currentFieldValue + '\n' + xmlVal;
+                }
 
+                if (newFieldValue != currentFieldValue) {
                 po_record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: fieldID,
-                    value: currentFieldValue
+                        value: newFieldValue
                 });
 
-                var returnedFieldValue = po_record.getCurrentSublistValue({
+                    var returnedNewFieldValue = po_record.getCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: fieldID
                 });
 
-                if (!returnedFieldValue || returnedFieldValue != currentFieldValue) {
+                    if (
+                        !returnedNewFieldValue ||
+                        (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)
+                    ) {
                     po_record.setCurrentSublistValue({
                         sublistId: 'item',
                         fieldId: fieldID,
                         value: xmlVal
                     });
+                    }
                 }
             }
         } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
