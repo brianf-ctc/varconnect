@@ -16,113 +16,202 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */ /**
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope SameAccount
  */
 define([
-    'N/search',
-    'N/runtime',
-    'N/record',
     'N/xml',
     'N/https',
-    './VC_Globals.js',
+    './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Utilities.js',
-    './CTC_VC_Lib_Log.js'
-], function (search, runtime, r, xml, https, vcGlobals, constants, util, vcLog) {
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, ns_https, vcLog, vcGlobal, vc2Utils, moment) {
     var LogTitle = 'WS:Synnex';
 
-    function processRequest(options) {
-        var logTitle = [LogTitle, 'processRequest'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+    var Config = {
+        AllowRetry: true,
+        NumRetries: 3,
+        WaitMS: 500,
+        CountryCode: ''
+    };
 
-        var poNum = options.poNum,
-            poId = options.poId,
-            vendorConfig = options.vendorConfig,
+    var Helper = {
+        sendRequest: function (option) {
+            var logTitle = [LogTitle, 'sendRequest'].join('::'),
+                returnValue;
+            log.audit(logTitle, option);
+
+            var ValidMethods = ['post', 'get'];
+
+            var method = (option.method || 'get').toLowerCase();
+            method = vc2Utils.inArray(method, ValidMethods) ? method : 'get';
+
+            var queryOption = option.query || option.queryOption;
+            if (!queryOption || vc2Utils.isEmpty(queryOption)) throw 'Missing query option';
+
+            var response, responseBody;
+
+            var paramFlags = {
+                noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
+                doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
+                maxRetry: option.hasOwnProperty('maxRetry')
+                    ? option.maxRetry
+                    : Config.NumRetries || 0,
+                countRetry: option.hasOwnProperty('retryCount') ? option.retryCount : 0
+            };
+
+            log.audit(logTitle, '>> paramFlags: ' + JSON.stringify(paramFlags));
+
+            try {
+                if (option.doLogRequest || !paramFlags.noLogs) {
+                    vcLog.recordLog({
+                        header: [option.header || LogTitle, 'Request'].join(' - '),
+                        body: JSON.stringify(queryOption),
+                        transaction: option.internalId || option.transactionId || option.recordId,
+                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
+                    });
+                }
+
+                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
+
+                //// SEND THE REQUEST //////
+                response = ns_https[method](queryOption);
+                responseBody = response.body; //Helper.safeParse(response.body);
+
+                if (!response.code || response.code != 200) {
+                    throw 'Failed Response Found';
+                }
+                if (!response || !response.body) {
+                    throw 'Empty or Missing Response !';
+                }
+                ////////////////////////////
+
+                returnValue = response;
+            } catch (error) {
+                if (!paramFlags.doRetry || paramFlags.maxRetry >= paramFlags.countRetry) {
+                    var errorMsg = vc2Utils.extractError(error);
+                    vcLog.recordLog({
+                        header: [(option.header || LogTitle) + ': Error', errorMsg].join(' - '),
+                        body: JSON.stringify(error),
+                        transaction: option.internalId || option.transactionId || option.recordId,
+                        status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                    });
+
+                    throw error;
+                }
+
+                option.retryCount = paramFlags.countRetry + 1;
+                vc2Utils.waitMs(Config.WaitMS);
+
+                returnValue = Helper.sendRequest(option);
+            } finally {
+                log.audit(
+                    logTitle,
+                    '>> RESPONSE ' +
+                        JSON.stringify({
+                            code: response.code || '-no response-',
+                            body: responseBody || response.body || '-empty response-'
+                        })
+                );
+                if (option.doLogResponse || !paramFlags.noLogs) {
+                    vcLog.recordLog({
+                        header: [option.header || LogTitle, 'Response'].join(' - '),
+                        body: JSON.stringify(responseBody || response),
+                        transaction: option.internalId || option.transactionId || option.recordId,
+                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
+                    });
+                }
+            }
+
+            return returnValue;
+        },
+        safeParse: function (response) {
+            var logTitle = [LogTitle, 'safeParse'].join('::'),
+                returnValue;
+
+            log.audit(logTitle, response);
+            try {
+                returnValue = JSON.parse(response.body || response);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ##' + vc2Utils.extractError(error));
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        convertToQuery: function (json) {
+            if (typeof json !== 'object') return;
+
+            var qry = [];
+            for (var key in json) {
+                var qryVal = encodeURIComponent(json[key]);
+                var qryKey = encodeURIComponent(key);
+                qry.push([qryKey, qryVal].join('='));
+            }
+
+            return qry.join('&');
+        }
+    };
+
+    function processRequest(option) {
+        var logTitle = [LogTitle, 'processRequest'].join('::');
+        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
+
+        var poNum = option.poNum,
+            poId = option.poId,
+            vendorConfig = option.vendorConfig,
             requestURL = vendorConfig.endPoint,
             userName = vendorConfig.user,
             password = vendorConfig.password,
             customerNo = vendorConfig.customerNo;
 
-        var orderXMLLineData = [];
+        var orderXMLLineData = [],
+            responseXml,
+            response;
 
-        var xmlorderStatus =
-            '<?xml version="1.0" encoding="UTF-8" ?>' +
-            '<SynnexB2B version="2.2">' +
-            '<Credential>' +
-            ('<UserID>' + userName + '</UserID>') +
-            ('<Password>' + password + '</Password>') +
-            '</Credential>' +
-            '<OrderStatusRequest>' +
-            ('<CustomerNumber>' + customerNo + '</CustomerNumber>') +
-            ('<PONumber>' + poNum + '</PONumber>') +
-            '</OrderStatusRequest>' +
-            '</SynnexB2B>';
-
-        var headers = {
-            'Content-Type': 'text/xml; charset=utf-8',
-            'Content-Length': 'length'
-        };
-
-        vcLog.recordLog({
-            header: 'Synnex OrderStatus:Request',
-            body: JSON.stringify({
-                URL: requestURL,
-                Header: headers,
-                Body: xmlorderStatus
-            }),
-            transaction: poId,
-            status: constants.Lists.VC_LOG_STATUS.INFO
+        response = Helper.sendRequest({
+            header: [LogTitle, 'Order Status'].join(':'),
+            method: 'post',
+            doRetry: false,
+            recordId: poId,
+            query: {
+                url: requestURL,
+                headers: {
+                    'Content-Type': 'text/xml; charset=utf-8',
+                    'Content-Length': 'length'
+                },
+                body:
+                    '<?xml version="1.0" encoding="UTF-8" ?>' +
+                    '<SynnexB2B version="2.2">' +
+                    '<Credential>' +
+                    ('<UserID>' + userName + '</UserID>') +
+                    ('<Password>' + password + '</Password>') +
+                    '</Credential>' +
+                    '<OrderStatusRequest>' +
+                    ('<CustomerNumber>' + customerNo + '</CustomerNumber>') +
+                    ('<PONumber>' + poNum + '</PONumber>') +
+                    '</OrderStatusRequest>' +
+                    '</SynnexB2B>'
+            }
         });
 
-        var responseXML;
-        // log.debug('prerequest ' + poNum);
-        try {
-            var response = https.post({
-                url: requestURL,
-                body: xmlorderStatus,
-                headers: headers
-            });
-            responseXML = response.body;
+        if (!response || !response.body) throw 'Unable to retrieve response';
+        responseXml = response.body;
 
-            vcLog.recordLog({
-                header: 'Synnex OrderStatus:Response',
-                body: JSON.stringify(responseXML),
-                transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.SUCCESS
-            });
-
-            // log.debug({
-            //     title: 'Synnex Scheduled',
-            //     details: 'length of response ' + responseXML.length
-            // });
-        } catch (err) {
-            vcLog.recordLog({
-                header: 'Synnex OrderStatus:Error',
-                body: JSON.stringify({
-                    error: util.extractError(err),
-                    details: JSON.stringify(err)
-                }),
-                transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR
-            });
-            log.error(logTitle + '::ERROR', '!! ERROR !! ' + util.extractError(err));
-            responseXML = null;
-        }
-
-        return responseXML;
+        return responseXml;
     }
 
-    function processResponse(options) {
+    function processResponse(option) {
         var logTitle = [LogTitle, 'processResponse'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
-        var xmlString = options.responseXML;
+        var xmlString = option.responseXML;
         // log.audit('parseSynnex', xmlString);
         var itemArray = [];
 
         try {
-            var xmlDoc = xml.Parser.fromString({
+            var xmlDoc = ns_xml.Parser.fromString({
                 text: xmlString
             });
 
@@ -151,11 +240,20 @@ define([
                 itemRow.order_date = orderDateTime[0].textContent;
 
                 var itemChildNodes = itemNode.childNodes;
+
                 var packageNodes;
+
+                // for (let childNode of itemChildNodes) {
+                //     log.audit(logTitle, '>> childNode: ' + JSON.stringify(childNode));
+                // }
+
                 for (var j = 0; j < itemChildNodes.length; j++) {
+                    // log.audit(logTitle, '>> itemChildNodes: ' + JSON.stringify(itemChildNodes[j]));
+
                     switch (itemChildNodes[j].nodeName) {
                         case 'Code':
                             itemCode = itemChildNodes[j].textContent;
+                            itemRow.statusCode = itemCode;
                             break;
                         case 'OrderNumber':
                             itemRow.order_num = itemChildNodes[j].textContent;
@@ -180,6 +278,7 @@ define([
                             break;
                         case 'Packages':
                             packageNodes = itemChildNodes[j].childNodes;
+                            // itemRow.tracking_num = '';
                             for (var x = 0; x < packageNodes.length; x++) {
                                 if (packageNodes[x].nodeName == 'Package') {
                                     var packageChildNodes = packageNodes[x].childNodes;
@@ -209,46 +308,62 @@ define([
                     }
                 }
 
+                // ShipQuantity //
+                if (!parseInt(itemRow.ship_qty, 10)) {
+                    itemRow.is_shipped = false;
+                }
+
+                if (itemCode == 'invoiced') {
+                    itemRow.is_shipped = true;
+                } else {
+                    itemRow.is_shipped = false;
+                }
+
                 // ignore items unles they have been invoiced or accepted
                 if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
                     itemArray.push(itemRow);
                 }
-                // if (itemCode == 'invoiced') {
-                //     itemArray.push(itemRow);
-                // }
             }
         } catch (err) {
-            log.error(logTitle + '::ERROR', '!! ERROR !! ' + util.extractError(err));
+            log.error(logTitle + '::ERROR', '!! ERROR !! ' + vc2Utils.extractError(err));
         }
-        log.debug('exiting Parse Synnex', itemArray);
+
+        // log.debug(logTitle, itemArray);
         return itemArray;
     }
 
-    function process(options) {
+    function process(option) {
         var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
-        var poNum = options.poNum,
-            poId = options.poId,
-            vendorConfig = options.vendorConfig,
+        var poNum = option.poNum,
+            poId = option.poId,
+            vendorConfig = option.vendorConfig,
             outputArray = null;
         var responseXML = processRequest({
             poNum: poNum,
+            poId: poId,
             vendorConfig: vendorConfig
         });
 
-        // vcLog.recordLog({
-        //     header: 'Response',
-        //     body: responseXML,
-        //     transaction: poId
-        // });
-
-        // log.debug('process responseXML ' + poNum, responseXML);
         if (responseXML)
             outputArray = processResponse({
+                poNum: poNum,
+                poId: poId,
                 vendorConfig: vendorConfig,
                 responseXML: responseXML
             });
+
+        log.audit(logTitle, '>> outputArray: ' + JSON.stringify(outputArray));
+
+        vcLog.recordLog({
+            header: [LogTitle, 'Lines'].join(' - '),
+            body: !vc2Utils.isEmpty(outputArray)
+                ? JSON.stringify(outputArray)
+                : '-no lines to process-',
+            transaction: poId,
+            status: vcGlobal.Lists.VC_LOG_STATUS.INFO
+        });
 
         return outputArray;
     }

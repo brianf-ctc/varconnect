@@ -100,7 +100,9 @@ define([
 
         if (!connection) throw 'SFTP Connection error!!';
 
-        var list = connection.list();
+        var list = connection.list({
+            sort: sftp.Sort.DATE_DESC
+        });
         log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));
 
         // create an array of files created in the last 90 days
@@ -137,33 +139,50 @@ define([
         }
         log.audit(logTitle, '>> ..existing Files: ' + JSON.stringify(existingFiles.length));
 
-        for (var i = 0; i < list.length; i++) {
-            log.audit(logTitle, '>>> Current File <<< ' + JSON.stringify(list[i]));
+        var currentFile,
+            addedFiles = [];
 
+        for (i = 0; i <= list.length; i++) {
+            if (i > 0) log.audit(logTitle, '>>> File <<< ' + JSON.stringify(currentFile));
+            if (!list[i]) break;
+            currentFile = { data: list[i] };
             if (list[i].directory) {
-                log.audit(logTitle, '>>> ...skipping directories. ');
+                log.audit(logTitle, '>>> ...skipping directories - ' + list[i].name);
                 continue;
             }
 
-            var is90days = moment(list[i].lastModified).isSameOrAfter(
-                moment().subtract(90, 'days'),
-                'day'
-            );
-            log.audit(logTitle, '>>> is 90 days old? ' + JSON.stringify(is90days));
+            currentFile = {
+                data: list[i],
+                entry_function: configObj.entry_function,
+                ext: list[i].name.slice(-3),
+                ext_rgx:
+                    list[i].name.split('.') && list[i].name.split('.').length > 1
+                        ? list[i].name.split('.').pop()
+                        : '-no-ext-',
+                is90days: moment(list[i].lastModified).isSameOrAfter(
+                    moment().subtract(90, 'days'),
+                    'day'
+                ),
+                idx: i + 1,
+                list: list.length
+            };
+            currentFile.ext_rgx = currentFile.ext_rgx
+                ? currentFile.ext_rgx.toLowerCase()
+                : currentFile.ext_rgx;
 
-            if (!is90days) {
-                log.audit(logTitle, '>>> ...skipping older than 90 days. ');
+            if (!currentFile.is90days) {
+                currentFile.skippedReason = 'older than 90days';
                 continue;
             }
 
             if (configObj.entry_function == 'synnex_sftp') {
-                if (list[i].name == '..' || list[i].name.slice(-3) !== 'xml') {
-                    log.audit(logTitle, '>>> ...skipping non xml files. ');
+                if (list[i].name == '..' || currentFile.ext_rgx !== 'xml') {
+                    currentFile.skippedReason = 'non xml file';
                     continue;
                 }
             } else if (configObj.entry_function == 'dh_sftp') {
-                if (list[i].name == '..' || list[i].name.slice(-3) !== 'txt') {
-                    log.audit(logTitle, '>>> ...skipping non txt files. ');
+                if (list[i].name == '..' || currentFile.ext_rgx !== 'txt') {
+                    currentFile.skippedReason = 'non txt file';
                     continue;
                 }
             }
@@ -176,20 +195,23 @@ define([
                 }
             }
             if (isAlreadyProcessed) {
-                log.audit(
-                    logTitle,
-                    '... skipping, already processed. ' +
-                        JSON.stringify([list[i].name, existingFiles[e]])
-                );
+                currentFile.skippedReason = 'already processed';
                 continue;
             }
 
-            log.audit(logTitle, '>>> adding file: ' + JSON.stringify(list[i].name));
+            log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));
+
+            addedFiles.push(list[i].name);
             context.write({
                 key: list[i].name,
                 value: JSON.stringify(configObj)
             });
         }
+
+        log.audit(
+            logTitle,
+            '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles])
+        );
     }
 
     function reduce(context) {

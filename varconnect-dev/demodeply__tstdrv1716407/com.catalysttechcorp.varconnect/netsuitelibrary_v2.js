@@ -20,6 +20,8 @@
  * 3.00		Feb 8, 2021		paolodl@nscatalyst.com	Add popylation for new date columns
  * 4.00		Jun 3, 2021		paolodl@nscatalyst.com	Add get order line function
  * 4.01		Jul 21,2021		paolodl@nscatalyst.com	Dynamic date parse
+ * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
+ *                                                      Updating fields overwrite value if append failed
  *
  */
 
@@ -166,7 +168,10 @@ define([
 
                     var nsDate = parseDate({ dateString: lineData[i].order_date });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
-                    nsDate = parseDate({ dateString: lineData[i].order_eta });
+                    nsDate = parseDate({
+                        dateString: lineData[i].order_eta,
+                        returnClosestDate: true
+                    });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
 
                     //  Don't use XML serial numbers on special order POs, warehouse will scan them in
@@ -214,6 +219,7 @@ define([
             }
         } else {
             log.error(logTitle, LogPrefix + '!! ERROR !! Could not update PO ');
+
             return null;
         }
     }
@@ -346,6 +352,19 @@ define([
                     fieldId: fieldID,
                     value: currentFieldValue
                 });
+
+                var returnedFieldValue = po_record.getCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: fieldID
+                });
+
+                if (!returnedFieldValue || returnedFieldValue != currentFieldValue) {
+                    po_record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fieldID,
+                        value: xmlVal
+                    });
+                }
             }
         } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
             po_record.setCurrentSublistValue({
@@ -606,6 +625,7 @@ define([
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
                 var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
+                var currentDate = new Date();
 
                 for (var i = 0; i < stringToProcess.length; i++) {
                     var singleString = stringToProcess[i];
@@ -613,8 +633,18 @@ define([
                         var stringArr = singleString.split('T'); //handle timestamps with T
                         singleString = stringArr[0];
                         var convertedDate = new Date(singleString);
+                        date = date || convertedDate;
 
-                        if (!date || convertedDate > date) date = convertedDate;
+                        // returnClosestDate gets date nearest current date vs default latest date
+                        if (
+                            options.returnClosestDate &&
+                            ((convertedDate >= currentDate && convertedDate < date) ||
+                                (convertedDate < currentDate && convertedDate > date))
+                        ) {
+                            date = convertedDate;
+                        } else if (!options.returnClosestDate && convertedDate > date) {
+                            date = convertedDate;
+                        }
                     }
                 }
             } catch (e) {
