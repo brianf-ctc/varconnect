@@ -148,7 +148,11 @@ define([
             soId = createdFrom;
         }
 
-        if (!soId) throw new Error('No source Sales Order');
+        if (!soId) {
+            log.error('No source Sales Order');
+            return false;
+            // throw new Error('No source Sales Order');
+        }
 
         var filters = [
             {
