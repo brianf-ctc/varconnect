@@ -43,6 +43,31 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
             return arrNew;
         },
+        getNodeTextContent: function (node) {
+            // log.debug('node', node);
+            if (!Util.isUndefined(node)) return node.textContent;
+            else return null;
+        },
+        generateSerialLink: function (params) {
+            var NS_Url = Util.loadModule('N/url');
+
+            var protocol = 'https://';
+            var domain = NS_Url.resolveDomain({
+                hostType: NS_Url.HostType.APPLICATION
+            });
+            var linkUrl = NS_Url.resolveScript({
+                scriptId: constants.Scripts.Script.VIEW_SERIALS_SL,
+                deploymentId: constants.Scripts.Deployment.VIEW_SERIALS_SL,
+                params: params
+            });
+
+            return protocol + domain + linkUrl;
+        },
+        isUndefined: function (value) {
+            // Obtain `undefined` value that's guaranteed to not have been re-assigned
+            var undefined = void 0;
+            return value === undefined;
+        },
         parseFloat: function (stValue) {
             return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
         },
@@ -201,6 +226,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         },
         vcLog: function (option) {
             var logTitle = [LogTitle, 'vcLog'].join('::');
+            log.audit(logTitle, option);
 
             var VC_LOG = VC2_Global.RECORD.VC_LOG,
                 LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
@@ -217,35 +243,43 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                     option.errorMsg ||
                     (option.error ? Util.extractError(option.error) : '');
 
-                logOption.STATUS =
-                    option.status ||
-                    option.isError ||
-                    option.error ||
-                    option.errorMessage ||
-                    option.errorMsg
-                        ? LOG_STATUS.ERROR
-                        : option.isSucces
-                        ? LOG_STATUS.SUCCESS
-                        : LOG_STATUS.INFO;
+                if (
+                    option.status &&
+                    Util.inArray(option.status, [
+                        LOG_STATUS.ERROR,
+                        LOG_STATUS.INFO,
+                        LOG_STATUS.SUCCESS
+                    ])
+                )
+                    logOption.STATUS = option.status;
+                else if (option.isError || option.error || option.errorMessage || option.errorMsg)
+                    logOption.STATUS = LOG_STATUS.ERROR;
+                else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
+                else logOption.STATUS = LOG_STATUS.INFO;
 
                 logOption.TRANSACTION =
                     option.recordId || option.transaction || option.id || option.internalid || '';
 
                 logOption.DATE = new Date();
-
-                if (option.doLog || option.doScriptLog) {
-                    log.audit(logTitle, logOption);
-                }
+                // log.audit(logTitle, logOption);
 
                 // create the log
                 var recLog = NS_Record.create({ type: VC_LOG.ID });
-                for (var fieldName in VC_LOG.FIELD) {
+                for (var field in VC_LOG.FIELD) {
+                    var fieldName = VC_LOG.FIELD[field];
+                    // log.audit(
+                    //     logTitle,
+                    //     '>> set log field: ' +
+                    //         JSON.stringify([field, fieldName, logOption[field] || ''])
+                    // );
+
                     recLog.setValue({
                         fieldId: fieldName,
-                        value: logOption[fieldName] || ''
+                        value: logOption[field] || ''
                     });
                 }
                 recLog.save();
+                log.audit(logOption.HEADER, logOption.BODY);
             } catch (error) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + Util.extractError(error));
             }
@@ -281,6 +315,36 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             });
             return returnValue;
         },
+
+        // webRequest: function (option) {
+        //     var logTitle = [LogTitle, 'webRequest'].join('::');
+        //     log.audit(logTitle, option);
+
+        //     var _DEFAULT = {
+        //         validMethods: ['post', 'get'],
+        //         maxRetries: 3,
+        //         maxWaitMs: 3000
+        //     };
+        //     var ns_https = Util.loadModule('N/https');
+
+        //     var queryOption = option.query || option.queryOption,
+        //         response,
+        //         requestObj = {
+        //             hasErrors: false,
+        //             errorMessage: '',
+
+        //             send: function (option) {}
+        //         };
+
+
+        //     var request = Util.webRequest();
+        //     request.send({});
+
+        //     request.get
+
+        //     return requestObj;
+        // },
+
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
@@ -295,22 +359,19 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             var ns_https = Util.loadModule('N/https');
 
             var queryOption = option.query || option.queryOption;
-            if (!queryOption || LibUtil.isEmpty(queryOption)) throw 'Missing query option';
+            if (!queryOption || Util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
             var response,
                 responseBody,
+                parsedResponse,
                 param = {
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
-                    doLogRequest: option.hasOwnProperty('doLogRequest')
-                        ? option.doLogRequest
-                        : false,
-                    doLogResponse: option.hasOwnProperty('doLogResponse')
-                        ? option.doLogResponse
-                        : false,
-
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
                     retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 0,
+                    responseType: option.hasOwnProperty('responseType')
+                        ? option.responseType
+                        : 'JSON',
                     maxRetry: option.hasOwnProperty('maxRetry')
                         ? option.maxRetry
                         : _DEFAULT.maxRetries || 0,
@@ -319,19 +380,15 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                     logTranId: option.internalId || option.transactionId || option.recordId,
 
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: LibUtil.inArray(option.method, _DEFAULT.validMethods)
+                    method: Util.inArray(option.method, _DEFAULT.validMethods)
                         ? option.method
                         : 'get'
                 };
 
             log.audit(logTitle, '>> param: ' + JSON.stringify(param));
-
-
             var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
-
-
             try {
-                if (param.doLogRequest || !param.noLogs) {
+                if (!param.noLogs) {
                     Util.vcLog({
                         title: [param.logHeader, 'Request'].join(' - '),
                         content: JSON.stringify(queryOption),
@@ -346,10 +403,14 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 //// SEND THE REQUEST //////
                 response = ns_https[param.method](queryOption);
                 returnValue.RESPONSE = response;
+
+                parsedResponse = Util.safeParse(response);
+                returnValue.PARSED_RESPONSE = parsedResponse;
+
                 responseBody = response.body;
 
                 if (!response.code || response.code != 200) {
-                    throw 'Failed Response Found';
+                    throw 'Received invalid response code - ' + response.code;
                 }
                 if (!response || !response.body) {
                     throw 'Empty or Missing Response !';
@@ -357,7 +418,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
                 ////////////////////////////
             } catch (error) {
-                var errorMsg = LibUtil.extractError(error);
+                var errorMsg = Util.extractError(error);
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
@@ -365,7 +426,9 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 Util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
-                        (' (retry:' + param.retryCount + '/' + param.maxRetry + ')'),
+                        (param.doRetry
+                            ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
+                            : ''),
                     content: JSON.stringify(error),
                     transaction: param.logTranId,
                     isError: true
@@ -376,8 +439,8 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
                     option.retryCount = param.retryCount + 1;
-                    LibUtil.waitMs(param.waitMs);
-                    returnValue = LibUtil.sendRequest(option);
+                    Util.waitMs(param.waitMs);
+                    returnValue = Util.sendRequest(option);
                 }
             } finally {
                 log.audit(
@@ -389,10 +452,10 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                         })
                 );
 
-                if (param.doLogResponse || !param.noLogs) {
+                if (!param.noLogs) {
                     Util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
-                        content: JSON.stringify(responseBody || response),
+                        content: JSON.stringify(parsedResponse || responseBody || response),
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
                     });
@@ -405,15 +468,19 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;
 
-            log.audit(logTitle, response);
+            // log.audit(logTitle, response);
             try {
                 returnValue = JSON.parse(response.body || response);
             } catch (error) {
-                log.error(logTitle, '## ERROR ##' + LibUtil.extractError(error));
+                log.error(logTitle, '## ERROR ##' + Util.extractError(error));
                 returnValue = null;
             }
 
             return returnValue;
+        },
+
+        isOneWorld: function () {
+            return NS_Runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
         }
     };
 

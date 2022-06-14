@@ -664,12 +664,15 @@ define([
                     logTitle,
                     LogPrefix + '>> lookup search: ' + JSON.stringify([locationLookup, lineLoc])
                 );
+
                 // set the line item
-                record.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'location',
-                    value: lineLoc
-                });
+                if ( lineLoc ) {
+                    record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        value: lineLoc
+                    });
+                }
             }
 
             // check if the location isempty

@@ -6,21 +6,13 @@
  * @description Helper file for Ingram Micro V1 (Cisco) to Get PO Status
  */
 define([
-    'N/https',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (ns_https, vcLog, vcGlobal, vc2Utils, moment) {
+], function (vcLog, VC_Global, VC2_Utils, moment) {
     'use strict';
     var LogTitle = 'WS:IngramV1';
-
-    var Config = {
-        AllowRetry: true,
-        NumRetries: 3,
-        WaitMS: 500,
-        CountryCode: ''
-    };
 
     /**
      * @memberOf CTC_VC_Lib_Ingram_v1
@@ -31,16 +23,15 @@ define([
         var logTitle = [LogTitle, 'generateToken'].join('::');
         log.audit(logTitle, option);
 
-        var tokenReq = vc2Utils.sendRequest({
+        var tokenReq = VC2_Utils.sendRequest({
             header: [LogTitle, 'GenerateToken'].join(' '),
             method: 'post',
             recordId: option.recordId,
             doRetry: true,
             maxRetry: 3,
-            vcLog: vcLog,
             query: {
                 url: option.vendorConfig.accessEndPoint,
-                body: Helper.convertToQuery({
+                body: VC2_Utils.convertToQuery({
                     client_id: option.vendorConfig.apiKey,
                     client_secret: option.vendorConfig.apiSecret,
                     grant_type: 'client_credentials'
@@ -52,7 +43,7 @@ define([
         });
 
         if (tokenReq.isError) throw tokenReq.errorMsg;
-        var tokenResp = vc2Utils.safeParse(tokenReq.RESPONSE);
+        var tokenResp = VC2_Utils.safeParse(tokenReq.RESPONSE);
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;
@@ -76,10 +67,9 @@ define([
             });
             if (!token) throw 'Missing token for authentication.';
 
-            var orderStatusReq = vc2Utils.sendRequest({
+            var orderStatusReq = VC2_Utils.sendRequest({
                 header: [LogTitle, 'Order Status'].join(' : '),
                 method: 'get',
-                doRetry: false,
                 query: {
                     url:
                         option.vendorConfig.endPoint +
@@ -98,10 +88,10 @@ define([
                 recordId: option.poId
             });
 
-            if ( orderStatusReq.isError) throw orderStatusReq.errorMsg;
-            var orderStatusResp = vc2Utils.safeParse( orderStatusReq.RESPONSE );
+            if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
+            var orderStatusResp = VC2_Utils.safeParse(orderStatusReq.RESPONSE);
 
-            if (! orderStatusResp) throw 'Unable to fetch server response';
+            if (!orderStatusResp) throw 'Unable to fetch server response';
 
             // get the Order Details
             var orderDetails = _getOrderDetail({
@@ -124,12 +114,12 @@ define([
                 poNum: option.poNum
             });
         } catch (error) {
-            var errorMsg = vc2Utils.extractError(error);
+            var errorMsg = VC2_Utils.extractError(error);
             vcLog.recordLog({
                 header: [LogTitle + ': Error', errorMsg].join(' - '),
                 body: JSON.stringify(error),
                 transaction: option.poId,
-                status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
             });
         }
         return orderDetails;
@@ -143,7 +133,7 @@ define([
             vendorConfig = option.vendorConfig,
             token = option.token,
             poId = option.poId,
-            responseBody;
+            returnValue;
 
         var orders = response.orders;
         log.audit(logTitle, '>> orders = ' + JSON.stringify(orders));
@@ -167,9 +157,7 @@ define([
             var ingramOrderNumber = validOrder.ingramOrderNumber;
             log.audit(logTitle, '>> ingramOrderNumber: ' + JSON.stringify(ingramOrderNumber));
 
-            var url = vendorConfig.endPoint + '/' + ingramOrderNumber;
-
-            var orderDetailReq = vc2Utils.sendRequest({
+            var orderDetailReq = VC2_Utils.sendRequest({
                 header: [LogTitle, 'OrderDetails'].join(' '),
                 method: 'get',
                 doRetry: false,
@@ -187,10 +175,14 @@ define([
                 }
             });
 
-            if (!responseBody) throw 'Unable to get order details';
+            if (orderDetailReq.isError) throw orderDetailReq.errorMsg;
+            var orderDetailRespBody = VC2_Utils.safeParse(orderDetailReq.RESPONSE);
+            if (!orderDetailRespBody) throw 'Unable to fetch server response';
+
+            returnValue = orderDetailRespBody;
         }
 
-        return responseBody;
+        return returnValue;
     }
 
     function _getItemAvailability(option) {
@@ -260,63 +252,55 @@ define([
         log.audit(logTitle, '>> shipLocation: ' + JSON.stringify(shipLocation));
 
         // send the call
-        var requestOption = {};
-        requestOption.headers = {
-            Authorization: 'Bearer ' + token,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'IM-CustomerNumber': vendorConfig.customerNo,
-            'IM-CountryCode': vendorConfig.country,
-            'IM-CustomerOrderNumber': poNum,
-            'IM-CorrelationID': [option.poNum, option.poId].join('-')
-        };
-
-        requestOption.body = {
-            showAvailableDiscounts: true,
-            showReserveInventoryDetails: true,
-            specialBidNumber: '',
-            products: arrItems
-        };
-
-        var url =
-            vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
-            'includeAvailability=true&includePricing=true&includeProductAttributes=true';
-
-        log.audit(logTitle, 'requestUrl: ' + url);
-        log.audit(logTitle, 'requestOption ' + JSON.stringify(requestOption));
-
-        requestOption.url = url;
-        requestOption.body = JSON.stringify(requestOption.body);
-
-        var responseETA = Helper.sendRequest({
+        var itemAvailReq = VC2_Utils.sendRequest({
             header: [LogTitle, 'Item Availability'].join(' : '),
             method: 'post',
             doRetry: false,
-            query: requestOption,
+            query: {
+                url:
+                    vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
+                    'includeAvailability=true&includePricing=true&includeProductAttributes=true',
+                headers: {
+                    Authorization: 'Bearer ' + token,
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'IM-CustomerNumber': vendorConfig.customerNo,
+                    'IM-CountryCode': vendorConfig.country,
+                    'IM-CustomerOrderNumber': poNum,
+                    'IM-CorrelationID': [option.poNum, option.poId].join('-')
+                },
+                body: JSON.stringify({
+                    showAvailableDiscounts: true,
+                    showReserveInventoryDetails: true,
+                    specialBidNumber: '',
+                    products: arrItems
+                })
+            },
             recordId: poId
         });
-
-        if (!responseETA) throw 'Unable to retrieve the item availability';
+        if (itemAvailReq.isError) throw itemAvailReq.errorMsg;
+        var itemAvailRespBody = VC2_Utils.safeParse(itemAvailReq.RESPONSE);
+        if (!itemAvailRespBody) throw 'Unable to retrieve the item availability';
 
         for (i = 0, j = orderLines.length; i < j; i++) {
             orderLine = orderLines[i];
 
-            for (ii = 0, jj = responseETA.length; ii < jj; ii++) {
-                var respLine = responseETA[i];
-                log.audit(logTitle, '>> respLine: ' + JSON.stringify(respLine));
+            for (ii = 0, jj = itemAvailRespBody.length; ii < jj; ii++) {
+                var itemAvailLine = itemAvailRespBody[i];
+                log.audit(logTitle, '>> itemAvailLine: ' + JSON.stringify(itemAvailLine));
 
                 if (
-                    respLine.ingramPartNumber != orderLine.ingramPartNumber ||
-                    respLine.upc != orderLine.upcCode ||
-                    respLine.vendorPartNumber != orderLine.vendorPartNumber
+                    itemAvailLine.ingramPartNumber != orderLine.ingramPartNumber ||
+                    itemAvailLine.upc != orderLine.upcCode ||
+                    itemAvailLine.vendorPartNumber != orderLine.vendorPartNumber
                 )
                     continue;
 
                 // search for location
-                if (!respLine.availability) continue;
+                if (!itemAvailLine.availability) continue;
 
-                var locationList = respLine.availability
-                    ? respLine.availability.availabilityByWarehouse || false
+                var locationList = itemAvailLine.availability
+                    ? itemAvailLine.availability.availabilityByWarehouse || false
                     : false;
 
                 log.audit(logTitle, '>> locationList: ' + JSON.stringify(locationList));
@@ -379,7 +363,7 @@ define([
             if (orderStatus) orderStatus = orderStatus.toUpperCase();
             log.audit(logTitle, '>> orderStatus : ' + JSON.stringify(orderStatus));
 
-            if (!vc2Utils.inArray(orderStatus, validOrderStatus)) {
+            if (!VC2_Utils.inArray(orderStatus, validOrderStatus)) {
                 throw 'Skipping Order - ' + orderStatus;
             }
 
@@ -390,7 +374,7 @@ define([
 
                 log.audit(logTitle, '>> orderLine #' + i + ': ' + JSON.stringify(orderLine));
 
-                if (!vc2Utils.inArray(lineStatus, validLineStatus)) {
+                if (!VC2_Utils.inArray(lineStatus, validLineStatus)) {
                     log.audit(
                         logTitle,
                         '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']'
@@ -403,7 +387,7 @@ define([
                 outputObj.line_num = orderLine.customerLineNumber;
                 outputObj.item_num = orderLine.vendorPartNumber; ////orderLine.ingramPartNumber;//
                 outputObj.item_num_alt = orderLine.ingramPartNumber;
-                outputObj.is_shipped = vc2Utils.inArray(lineStatus, validShippedStatus);
+                outputObj.is_shipped = VC2_Utils.inArray(lineStatus, validShippedStatus);
 
                 //add shipment details
                 outputObj.ship_qty = 0;
@@ -461,9 +445,9 @@ define([
 
             vcLog.recordLog({
                 header: 'Ingram Response Processing | ERROR',
-                body: vc2Utils.extractError(error),
+                body: VC2_Utils.extractError(error),
                 transaction: poId,
-                status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
             });
         }
 
@@ -499,11 +483,11 @@ define([
 
         vcLog.recordLog({
             header: [LogTitle, 'Lines'].join(' - '),
-            body: !vc2Utils.isEmpty(outputArray)
+            body: !VC2_Utils.isEmpty(outputArray)
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
             transaction: option.poId,
-            status: vcGlobal.Lists.VC_LOG_STATUS.INFO
+            status: VC_Global.Lists.VC_LOG_STATUS.INFO
         });
 
         return outputArray;
