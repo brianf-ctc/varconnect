@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,16 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType MapReduceScript
+ * @Description Links all serial numbers from the createdfrom SO to the new Invoice
+ */
+
+/**
  * Project Number: 001225
  * Script Name: VAR Connect Link All SO Serial MR
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType MapReduceScript
- * @NModuleScope SameAccount
- * @Description Links all serial numbers from the createdfrom SO to the new Invoice
  *
  * CHANGELOGS
  *

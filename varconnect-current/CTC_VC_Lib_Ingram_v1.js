@@ -1,9 +1,22 @@
 /**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @description Helper file for Ingram Micro V1 (Cisco) to Get PO Status
+ */
+
+/**
  * Project Number:
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
- * @NApiVersion 2.x
- * @description Helper file for Ingram Micro V1 (Cisco) to Get PO Status
  */
 define([
     './CTC_VC_Lib_Log.js',

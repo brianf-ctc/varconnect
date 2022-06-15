@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,10 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType UserEventScript
  */
 
 /**
@@ -15,11 +19,8 @@
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Enables and disables fields depending on current selection
  *
- */ /**
- * @NApiVersion 2.x
- * @NScriptType UserEventScript
- * @NModuleScope SameAccount
  */
+
 define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
     serverWidget,
     constants,

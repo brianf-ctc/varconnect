@@ -1,11 +1,22 @@
+/**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Suitelet
+ */
+
 //*************************************************************************
 //* 1/10/19	JKC		Added redirect and error handling code in doPost
 //*************************************************************************
 
-/**
- *@NApiVersion 2.x
- *@NScriptType Suitelet
- */
 define([
     'N/ui/serverWidget',
     'N/log',

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,19 +8,20 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType MapReduceScript
+ * @Description Syncs D&H Item information for use with VAR Connect
+ */
+/**
  * Project Number: TODO-001225
  * Script Name: CTC MR DandH Item Request
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType MapReduceScript
- * @NModuleScope SameAccount
- * @Description Syncs D&H Item information for use with VAR Connect
  *
  * CHANGELOGS
  *
  * Version	Date            Author		    		Remarks
  * 1.00		Jan 1, 2020	    paolodl@nscatalyst.com	Initial Build
- *
  */
 define([
     'N/search',

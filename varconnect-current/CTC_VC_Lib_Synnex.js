@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
@@ -17,10 +20,8 @@
  * 1.10		April 19, 2022	christian	Updated library to new standards/ Updated logs
  * 1.11		May 17, 2022	christian	Add shipped status
  *
- */ /**
- * @NApiVersion 2.1
- * @NModuleScope SameAccount
  */
+
 define([
     'N/xml',
     'N/https',

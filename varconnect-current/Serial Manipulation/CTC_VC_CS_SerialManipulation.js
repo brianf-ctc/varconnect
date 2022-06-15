@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,15 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType ClientScript
+ * @Description Validates the entered serial numbers and checks if there are duplicates
+ */
+/**
  * Project Number: 001225
  * Script Name: CTC CS Serial Manipulation
  * Author: paolodl@nstacalyst.com
- * @NApiVersion 2.x
- * @NScriptType ClientScript
- * @NModuleScope SameAccount
- * @Description Validates the entered serial numbers and checks if there are duplicates
  *
  * CHANGELOGS
  *

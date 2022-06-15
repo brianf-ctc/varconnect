@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,21 +7,19 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
+ * CTC_Create_Item_receipt.js
  * Module Description
  *
  * Version	Date            Author		Remarks
  * 1.00		Apr 13, 2019	ocorrea		Creates Item Receipt after receiving XML data for special order POs
  * 1.01		Apr 22, 2022	christian	Limit text serial numbers to 4000 chars
  *
- */
-
-/**
- *CTC_Create_Item_receipt.js
- *@NApiVersion 2.x
- *@NModuleScope Public
  */
 
 define([

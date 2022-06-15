@@ -1,19 +1,21 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
- * Catalyst Tech Corp. ('Confidential Information'). You shall not
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Suitelet
+ */
+
+/**
  * Script Name: CTC | PDF Macro Serials (SL)
  * Author: brianf@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType Suitelet
- * @NModuleScope SameAccount
- * @Description Pulls the serials data as Adv PDF Macro
  */
 define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, NS_Record) {
     'use strict';

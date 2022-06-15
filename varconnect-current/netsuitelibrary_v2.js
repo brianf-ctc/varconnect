@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -9,9 +9,11 @@
  * with Catalyst Tech.
  *
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  * @Description VAR Connect library for netsuit record handling
- *
+ */
+
+/**
  * CHANGELOGS
  *
  * Version	Date            Author		    		Remarks
@@ -23,7 +25,6 @@
  * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
  *                                                      Updating fields overwrite value if append failed
  * 4.03		May 10,2022		christian@nscatalyst.com	Carrier info should not append to itself
- *
  */
 
 define([
@@ -345,7 +346,7 @@ define([
             if (
                 ['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0 ||
                 (currentFieldValue.indexOf(xmlVal) < 0 &&
-                currentFieldValue.length < maxFieldLength &&
+                    currentFieldValue.length < maxFieldLength &&
                     xmlVal != 'NA')
             ) {
                 var newFieldValue = null;
@@ -357,26 +358,26 @@ define([
                 }
 
                 if (newFieldValue != currentFieldValue) {
-                po_record.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID,
+                    po_record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fieldID,
                         value: newFieldValue
-                });
+                    });
 
                     var returnedNewFieldValue = po_record.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID
-                });
+                        sublistId: 'item',
+                        fieldId: fieldID
+                    });
 
                     if (
                         !returnedNewFieldValue ||
                         (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)
                     ) {
-                    po_record.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: fieldID,
-                        value: xmlVal
-                    });
+                        po_record.setCurrentSublistValue({
+                            sublistId: 'item',
+                            fieldId: fieldID,
+                            value: xmlVal
+                        });
                     }
                 }
             }

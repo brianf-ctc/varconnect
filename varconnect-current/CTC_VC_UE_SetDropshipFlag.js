@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,10 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType UserEventScript
  */
 
 /**
@@ -14,13 +18,8 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		Sep 12, 2019	paolodl		Sets the is dropship flag depending
- *
  */
-/**
- * @NApiVersion 2.x
- * @NScriptType UserEventScript
- * @NModuleScope SameAccount
- */
+
 define(['N/record', 'N/search'], function (record, search) {
     /**
      * Function definition to be triggered before record is loaded.

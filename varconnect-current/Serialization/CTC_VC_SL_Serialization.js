@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,16 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Suitelet
+ * @Description Provides a page to manually schedule the Serialization MR
+ */
+
+/**
  * Project Number:
  * Script Name: CTC VC SL Serialization
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType Suitelet
- * @NModuleScope SameAccount
- * @Description Provides a page to manually schedule the Serialization MR
  *
  * CHANGELOGS
  *

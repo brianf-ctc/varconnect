@@ -1,3 +1,14 @@
+/**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ */
+
 var PRODUCT_CODE = 2, //VAR Connect
     LICENSE_AES_SECRET = '636174616C79737434615870300B0B0B';
 

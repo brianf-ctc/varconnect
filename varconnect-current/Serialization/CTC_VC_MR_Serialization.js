@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,16 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType MapReduceScript
+ * @Description Async process to sync native serials to custom serialnumber record
+ */
+/**
+ *
  * Project Number:
  * Script Name: CTC VC MR Serialization
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType MapReduceScript
- * @NModuleScope SameAccount
- * @Description Async process to sync native serials to custom serialnumber record
  *
  * CHANGELOGS
  *

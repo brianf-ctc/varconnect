@@ -7,10 +7,14 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
- * Module Description
+* CTC_Create_Item_Fulfillment.js
+* Module Description
  *
  * Version	Date            Author		Remarks
  * 1.00		Sep 8, 2017		jcorrea		Creates Item Fulfillment after receiving XML data
@@ -29,11 +33,6 @@
  * 2.06		 May 18, 2022	christian	Location lookup can have empty array
  */
 
-/**
- *CTC_Create_Item_Fulfillment.js
- *@NApiVersion 2.x
- *@NModuleScope Public
- */
 
 define([
     'N/search',

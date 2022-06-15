@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,9 +7,13 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
+ * CTC_Create_Item_Fulfillment.js
  * Module Description
  *
  * Version	Date            Author		Remarks
@@ -21,12 +25,6 @@
  * 2.00		May 28, 2021	paolodl		Also check for line number
  * 2.01		Mar 21, 2022	ccanaria	Add functionality for package
  * 2.02		Mar 31, 2022	ccanaria	Add functionality to put serials using standard inventiory details
- */
-
-/**
- *CTC_Create_Item_Fulfillment.js
- *@NApiVersion 2.x
- *@NModuleScope Public
  */
 
 define([

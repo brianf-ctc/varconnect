@@ -1,17 +1,19 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp All Rights Reserved.
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
  *
- * This software is the confidential and proprietary information of Catalyst
- * Tech Corp. ("Confidential Information"). You shall not disclose such
- * Confidential Information and shall use it only in accordance with the terms
- * of the license agreement you entered into with Catalyst Tech.
- *
- * Author: paolodl@nscatalyst.com
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
  *
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  * @Description Contains the reusable functions for linking serials to the lines
- *
+ */
+
+/**
  * CHANGELOGS
  *
  * Version Date Author Remarks 1.00 May 13, 2020 paolodl@nscatalyst.com Initial
