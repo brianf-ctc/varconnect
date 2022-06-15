@@ -1,11 +1,22 @@
+/**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Suitelet
+ */
+
 //*************************************************************************
 //* 1/10/19	JKC		Added redirect and error handling code in doPost
 //*************************************************************************
 
-/**
- *@NApiVersion 2.x
- *@NScriptType Suitelet
- */
 define([
     'N/ui/serverWidget',
     'N/log',
@@ -15,7 +26,6 @@ define([
     'N/task',
     'N/http',
     'N/config',
-    'N/url',
     './CTC_VC_Lib_MainConfiguration.js',
     './VC_Globals.js',
     './CTC_VC_Lib_Utilities.js',
@@ -29,7 +39,6 @@ define([
     task,
     http,
     config,
-    url,
     libMainConfig,
     vcGlobals,
     util,
@@ -122,23 +131,25 @@ define([
             });
 
             for (var i = 0; i < itemList.length; i++) {
+                var itemId = itemList[i].id;
+                if (itemId <= 0) continue;
                 itemselect.addSelectOption({
-                    value: itemList[i].id,
+                    value: itemId,
                     text: itemList[i].name
                 });
 
-                var currentSNList = getCurrentSNList(poNum, itemList[i].id);
+                var currentSNList = getCurrentSNList(poNum, itemId);
                 var snCount = isEmpty(currentSNList) ? 0 : currentSNList.split(',').length;
 
                 var labelcountfield = form.addField({
-                    id: 'custpage_label_sncount_' + itemList[i].id,
+                    id: 'custpage_label_sncount_' + itemId,
                     type: ui.FieldType.LABEL,
                     label: 'Count of Existing Serial Numbers : ' + snCount,
                     container: 'itemgroup'
                 });
 
                 var currentField = form.addField({
-                    id: 'custpage_currentsn_' + itemList[i].id,
+                    id: 'custpage_currentsn_' + itemId,
                     type: ui.FieldType.LONGTEXT,
                     label: 'Existing Serial Numbers:',
                     container: 'itemgroup'
@@ -149,18 +160,18 @@ define([
                 });
 
                 var newField = form.addField({
-                    id: 'custpage_newsn_' + itemList[i].id,
+                    id: 'custpage_newsn_' + itemId,
                     type: ui.FieldType.LONGTEXT,
                     label: 'New Serial Numbers:',
                     container: 'itemgroup'
                 });
 
                 var lineKeyID = form.addField({
-                    id: 'custpage_linekey_' + itemList[i].id,
+                    id: 'custpage_linekey_' + itemId,
                     type: ui.FieldType.TEXT,
                     label: 'Line Unique Key:'
                 });
-                lineKeyID.defaultValue = itemList[i].id;
+                lineKeyID.defaultValue = itemId;
                 lineKeyID.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
             }
 
@@ -198,7 +209,7 @@ define([
             outputObj.poId = itemsField[0].poID;
             if (!isEmpty(itemsField)) {
                 if (!isEmpty(outputObj.poId)) {
-                    //setSNLineLink (outputObj.poId)
+                    setSNLineLink(outputObj.poId);
                 }
                 outputObj.soId = itemsField[0].soID;
                 log.debug({ title: 'In POST code', details: 'SO Num = ' + outputObj.soId });
@@ -425,20 +436,17 @@ define([
                 fieldId: 'item',
                 line: i
             });
-            //                var snLineLink = vcGlobals.SN_VIEW_SL_URL+'&sonum='+soNum+'&ponum='+poNum+'&itemid='+itemId+'&itemname='+itemName+'&compid='+accountId;
             var lineLinkUrl = util.generateSerialLink({
                 sonum: soNum,
                 ponum: poNum,
                 itemid: itemId,
                 itemname: itemName
             });
-
-            log.debug('snLINK', snLineLink);
             poRec.setSublistValue({
                 sublistId: 'item',
                 fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
                 line: i,
-                value: snLineLink
+                value: lineLinkUrl
             });
         }
         poRec.save({

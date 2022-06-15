@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,16 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType MapReduceScript
+ * @Description Creates and/or updates serial nunmbrs and associates them to the speicifed transaction/s
+ */
+
+/**
  * Project Number: 001225
  * Script Name: CT MR Serial Manipulation
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType MapReduceScript
- * @NModuleScope SameAccount
- * @Description Creates and/or updates serial nunmbrs and associates them to the speicifed transaction/s
  *
  * CHANGELOGS
  *

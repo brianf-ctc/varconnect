@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 define([], function () {
@@ -159,47 +162,47 @@ define([], function () {
     Bill_Creator.Code = {
         MISSING_PO: {
             code: 'MISSING_PO',
-            msg: 'Unable to find the PO record',
+            msg: 'Unable to find the PO record. ',
             status: Bill_Creator.Status.ERROR
         },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
-            msg: 'PO is not ready for billing',
-            status: Bill_Creator.Status.ERROR
+            msg: 'PO is not ready for billing. ',
+            status: Bill_Creator.Status.PENDING
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
-            msg: 'Could not fully process Bill File',
+            msg: 'Could not fully process Bill File. ',
             status: Bill_Creator.Status.ERROR
         },
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',
-            msg: 'Items are already billed',
+            msg: 'Items are already billed. ',
             status: Bill_Creator.Status.CLOSED
         },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
-            msg: 'Linked to existing Bill',
+            msg: 'Linked to existing Bill. ',
             status: Bill_Creator.Status.CLOSED
         },
         HAS_VARIANCE: {
             code: 'HAS_VARIANCE',
-            msg: 'One or More Variances in Vendor Bill ',
+            msg: 'One or More Variances in Vendor Bill.',
             status: Bill_Creator.Status.VARIANCE
         },
         BILL_CREATED: {
             code: 'BILL_CREATED',
-            msg: 'Created Vendor Bill',
+            msg: 'Created Vendor Bill. ',
             status: Bill_Creator.Status.PROCESSED
         },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
-            msg: 'Failed to create the Vendor Bill',
+            msg: 'Failed to create the Vendor Bill. ',
             status: Bill_Creator.Status.ERROR
         },
         BILL_CREATE_DISABLED: {
             code: 'BILL_CREATE_DISABLED',
-            msg: 'Vendor Bill creation is disabled',
+            msg: 'Vendor Bill creation is disabled. ',
             status: Bill_Creator.Status.PENDING
         }
     };

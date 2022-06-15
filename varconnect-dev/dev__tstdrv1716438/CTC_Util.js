@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -11,6 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
+
 define(['N/format', 'N/record', 'N/search', 'N/task'], function (
     NS_Format,
     NS_Record,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of

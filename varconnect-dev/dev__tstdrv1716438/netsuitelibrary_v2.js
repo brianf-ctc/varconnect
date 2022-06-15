@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -9,9 +9,11 @@
  * with Catalyst Tech.
  *
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  * @Description VAR Connect library for netsuit record handling
- *
+ */
+
+/**
  * CHANGELOGS
  *
  * Version	Date            Author		    		Remarks
@@ -20,7 +22,9 @@
  * 3.00		Feb 8, 2021		paolodl@nscatalyst.com	Add popylation for new date columns
  * 4.00		Jun 3, 2021		paolodl@nscatalyst.com	Add get order line function
  * 4.01		Jul 21,2021		paolodl@nscatalyst.com	Dynamic date parse
- *
+ * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
+ *                                                      Updating fields overwrite value if append failed
+ * 4.03		May 10,2022		christian@nscatalyst.com	Carrier info should not append to itself
  */
 
 define([
@@ -166,7 +170,10 @@ define([
 
                     var nsDate = parseDate({ dateString: lineData[i].order_date });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
-                    nsDate = parseDate({ dateString: lineData[i].order_eta });
+                    nsDate = parseDate({
+                        dateString: lineData[i].order_eta,
+                        returnClosestDate: true
+                    });
                     if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
 
                     //  Don't use XML serial numbers on special order POs, warehouse will scan them in
@@ -175,7 +182,8 @@ define([
                         //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
                     }
 
-                    updateFieldList(lineData[i].carrier, po_record, 'custcol_ctc_xml_carrier');
+                    updateField(po_record, 'custcol_ctc_xml_carrier', lineData[i].carrier);
+
                     updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
 
                     if (isDropPO || !mainConfig.useInboundTrackingNumbers)
@@ -214,6 +222,7 @@ define([
             }
         } else {
             log.error(logTitle, LogPrefix + '!! ERROR !! Could not update PO ');
+
             return null;
         }
     }
@@ -335,17 +344,42 @@ define([
             currentFieldValue != 'NA'
         ) {
             if (
-                currentFieldValue.indexOf(xmlVal) < 0 &&
-                currentFieldValue.length < maxFieldLength &&
-                xmlVal != 'NA'
+                ['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0 ||
+                (currentFieldValue.indexOf(xmlVal) < 0 &&
+                    currentFieldValue.length < maxFieldLength &&
+                    xmlVal != 'NA')
             ) {
-                currentFieldValue += '\n' + xmlVal;
+                var newFieldValue = null;
+                // some fields should just be overwritten
+                if (['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0) {
+                    newFieldValue = xmlVal;
+                } else {
+                    newFieldValue = currentFieldValue + '\n' + xmlVal;
+                }
 
-                po_record.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID,
-                    value: currentFieldValue
-                });
+                if (newFieldValue != currentFieldValue) {
+                    po_record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fieldID,
+                        value: newFieldValue
+                    });
+
+                    var returnedNewFieldValue = po_record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fieldID
+                    });
+
+                    if (
+                        !returnedNewFieldValue ||
+                        (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)
+                    ) {
+                        po_record.setCurrentSublistValue({
+                            sublistId: 'item',
+                            fieldId: fieldID,
+                            value: xmlVal
+                        });
+                    }
+                }
             }
         } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
             po_record.setCurrentSublistValue({
@@ -606,6 +640,7 @@ define([
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
                 var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
+                var currentDate = new Date();
 
                 for (var i = 0; i < stringToProcess.length; i++) {
                     var singleString = stringToProcess[i];
@@ -613,8 +648,18 @@ define([
                         var stringArr = singleString.split('T'); //handle timestamps with T
                         singleString = stringArr[0];
                         var convertedDate = new Date(singleString);
+                        date = date || convertedDate;
 
-                        if (!date || convertedDate > date) date = convertedDate;
+                        // returnClosestDate gets date nearest current date vs default latest date
+                        if (
+                            options.returnClosestDate &&
+                            ((convertedDate >= currentDate && convertedDate < date) ||
+                                (convertedDate < currentDate && convertedDate > date))
+                        ) {
+                            date = convertedDate;
+                        } else if (!options.returnClosestDate && convertedDate > date) {
+                            date = convertedDate;
+                        }
                     }
                 }
             } catch (e) {

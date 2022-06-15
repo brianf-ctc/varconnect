@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
@@ -18,293 +21,218 @@
  *
  */
 define([
-    'N/https',
-    //        'N/encode',
+    'N/runtime',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Log.js'
-], function (https, encode, constants, vcLog) {
-    function authenticate(options) {
-        var key = options.key,
-            secret = options.secret,
-            url = options.url,
-            grantType = options.grantType;
-        log.debug('auth: options', options);
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_runtime, vcGlobal, vcLog, vc2Utils, libMoment) {
+    'use strict';
+    var LogTitle = 'WS:Dellv2';
 
-        //		var token = btoa(key+':'+secret);
-        var token = encode.convert({
-            string: key + ':' + secret,
-            inputEncoding: encode.Encoding.UTF_8,
-            outputEncoding: encode.Encoding.BASE_64_URL_SAFE
-        });
+    var WS_Dell = {
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
 
-        try {
-            var responseObj = https.post({
-                url: url,
-                headers: {
-                    authorization: 'Basic ' + token,
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: {
-                    grant_type: 'client_credentials'
-                }
-            });
-            log.debug('auth', responseObj);
-        } catch (e) {
-            log.error('Error getting authorization', e);
-        }
+            log.audit(logTitle, option);
 
-        return JSON.parse(responseObj.body);
-    }
-
-    function _generateURL(options) {
-        var configUrl = options.url,
-            partnerID = options.partnerID,
-            poNum = options.poNum;
-
-        return configUrl + '/' + partnerID + '/' + poNum;
-    }
-
-    function _processRequest(options) {
-        var auth = options.auth,
-            url = options.url,
-            partnerID = options.partnerId,
-            poNum = options.poNum,
-            poId = options.poId,
-            apiKey = options.apiKey,
-            tokenType = auth.token_type,
-            accessToken = auth.access_token,
-            url = _generateURL({
-                url: options.url,
-                partnerID: partnerID,
-                poNum: poNum
-            }),
-            response;
-
-        log.debug('Dell process request options', options);
-
-        url += '?apikey=' + apiKey;
-
-        var responseObj = https.get({
-            url: url,
-            headers: {
-                Authorization: tokenType + ' ' + accessToken,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (poId)
-            vcLog.recordLog({
-                header: 'Response',
-                body: JSON.stringify(responseObj),
-                transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.SUCCESS
-            });
-
-        if (responseObj) response = JSON.parse(responseObj.body);
-
-        return response;
-    }
-
-    function _getSampleResponse(options) {
-        var sampleResponse = {
-            PurchaseOrderNumber: 'PONum1',
-            Dpids: ['Dpid1'],
-            Status: 'Shipped',
-            PurchaseOrderDate: '1/1/2020',
-            ShipToInformation: {
-                ShippingMethod: 'ShipMethod1',
-                CompanyName: 'ShipComp1',
-                ContactName: 'ShipCont1',
-                ContactAddres: 'ShipAdd1',
-                City: 'ShipCity1',
-                PostalCode: 'ShipZip1',
-                State: 'ShipState1'
-            },
-            Lines: [
-                {
-                    LineNumber: '1',
-                    Status: 'Shipped',
-                    QuantityOrdered: 1,
-                    ProductOrdered: {
-                        ManufacturerPartNumber: '3070SFF',
-                        BuyerPartNumber: 'ProdOrdBuyPart1',
-                        UnitPrice: 1.0,
-                        Description: 'ProdOrdDesc1',
-                        BaseSku: 'ProdOrdBaseSku1',
-                        BaseSkuDescription: 'ProdOrdBaseSkuDesc1'
+            var tokenReq = vc2Utils.sendRequest({
+                header: [LogTitle, 'GenerateToken'].join(' '),
+                method: 'POST',
+                query: {
+                    url: option.vendorConfig.accessEndPoint,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    ManufacturerOrderStatus: [
-                        {
-                            OrderNumber: 'ManOrdNum1',
-                            Status: 'Shipped',
-                            EstimatedShipmentDate: 'ManOrdEstShipDate1',
-                            EstimatedDeliveryDate: 'ManOrdEstDelDate1',
-                            Waybills: ['ManOrdWayBill1', 'ManOrdWayBill2'],
-                            CarrierName: 'ManOrdCarrier1',
-                            ServiceTags: ['ManOrdSerTag1', 'ManOrdSerTag2']
-                        }
-                    ]
-                }
-            ]
-        };
+                    body: vc2Utils.convertToQuery({
+                        client_id: option.vendorConfig.apiKey,
+                        client_secret: option.vendorConfig.apiSecret,
+                        grant_type: 'client_credentials'
+                    })
+                },
+                recordId: option.recordId,
+                doRetry: true,
+                maxRetry: 3
+            });
 
-        return sampleResponse;
-    }
+            if (tokenReq.isError && tokenReq.errorMsg) throw tokenReq.errorMsg;
+            var tokenResp = vc2Utils.safeParse(tokenReq.RESPONSE);
 
-    function _parseResponseLines(options) {
-        var itemRow = options.itemRow,
-            line = options.line;
+            if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+            return tokenResp.access_token;
+        },
 
-        itemRow.line_num = line.LineNumber; // 2.00
-        itemRow.item_num = line.ProductOrdered.ManufacturerPartNumber;
-        itemRow.ship_qty = line.QuantityOrdered;
-        itemRow.vendorSKU = line.ProductOrdered.BaseSku;
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue;
 
-        for (var i = 0; i < line.ManufacturerOrderStatus.length; i++) {
-            var mos = line.ManufacturerOrderStatus[i];
+            log.audit(logTitle, option);
 
-            if ((!itemRow.order_eta || itemRow.order_eta == 'NA') && mos.EstimatedDelivertDate)
-                itemRow.order_eta = mos.EstimatedDelivertDate;
+            var responseBody, orderLines;
 
-            if ((!itemRow.ship_date || itemRow.ship_date == 'NA') && mos.EstimatedShipmentDate)
-                itemRow.ship_date = mos.EstimatedShipmentDate;
+            responseBody = this.processRequest({
+                poNum: option.poNum,
+                poId: option.poId,
+                vendorConfig: option.vendorConfig
+            });
 
-            if ((!itemRow.carrier || itemRow.carrier == 'NA') && mos.CarrierName)
-                itemRow.carrier = mos.CarrierName;
+            if (responseBody) {
+                orderLines = this.processResponse({
+                    responseBody: responseBody,
+                    poNum: option.poNum,
+                    poId: option.poId,
+                    vendorConfig: option.vendorConfig
+                });
 
-            if (mos.Waybills && mos.Waybills.length > 0) {
-                if (!itemRow.tracking_num || itemRow.tracking_num == 'NA')
-                    itemRow.tracking_num = [];
-
-                itemRow.tracking_num = itemRow.tracking_num.concat(mos.Waybills);
+                log.audit(logTitle, '>> orderLines: ' + JSON.stringify(orderLines));
             }
 
-            if (mos.ServiceTags && mos.ServiceTags.length > 0) {
-                if (!itemRow.serial_num || itemRow.serial_num == 'NA') itemRow.serial_num = [];
+            if (!orderLines || vc2Utils.isEmpty(orderLines)) throw 'No lines to processed';
+            returnValue = orderLines;
 
-                itemRow.serial_num = itemRow.serial_num.concat(mos.ServiceTags);
-            }
-        }
+            return returnValue;
+        },
 
-        return itemRow;
-    }
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue;
 
-    function _processResponse(options) {
-        var jsonResponse = options.response,
-            itemArray = [];
+            log.audit(logTitle, option);
 
-        log.debug('jsonResponse', jsonResponse);
-        if (jsonResponse) {
-            var orderNum = jsonResponse.PurchaseOrderNumber
-                    ? jsonResponse.PurchaseOrderNumber
-                    : 'NA',
-                orderDate = jsonResponse.PurchaseOrderDate ? jsonResponse.PurchaseOrderDate : 'NA',
-                status = jsonResponse.Status,
-                lines = jsonResponse.Lines;
+            var tokenId,
+                response,
+                queryOption = {};
 
-            log.debug('status', status);
-            if (status == 'Shipped') {
-                for (var i = 0; i < lines.length; i++) {
-                    var itemRow = {
-                        line_num: 'NA',
-                        item_num: 'NA',
-                        order_num: orderNum,
-                        order_date: orderDate,
-                        order_eta: 'NA',
-                        ship_qty: 'NA',
-                        ship_date: 'NA',
-                        tracking_num: 'NA',
-                        vendorSKU: 'NA',
-                        carrier: 'NA',
-                        serial_num: 'NA'
-                    };
-                    itemArray.push(
-                        _parseResponseLines({
-                            itemRow: itemRow,
-                            line: lines[i]
+            try {
+                tokenId = this.generateToken({
+                    vendorConfig: option.vendorConfig,
+                    recordId: option.poId
+                });
+                if (!tokenId) throw 'Missing token for authentication';
+
+                var orderStatusReq = vc2Utils.sendRequest({
+                    header: [LogTitle, 'Order Status'].join(' '),
+                    method: 'post',
+                    query: {
+                        url: option.vendorConfig.endPoint,
+                        headers: {
+                            Authorization: 'Bearer ' + tokenId,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            searchParameter: [
+                                {
+                                    key: 'po_numbers',
+                                    values: [option.poNum]
+                                }
+                            ]
                         })
-                    );
-                }
+                    },
+                    recordId: option.poId
+                });
+
+                if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
+
+                var orderStatusResp = vc2Utils.safeParse(orderStatusReq.RESPONSE);
+                if (!orderStatusResp) throw 'Unable to fetch Order Status';
+
+                option.responseBody = orderStatusResp;
+                returnValue = orderStatusResp;
+            } catch (error) {
+                var errorMsg = vc2Utils.extractError(error);
+                vcLog.recordLog({
+                    header: [LogTitle + ': Error', errorMsg].join(' - '),
+                    body: JSON.stringify(error),
+                    transaction: option.poId,
+                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                });
+            } finally {
             }
-            log.debug('itemArray', itemArray);
+
+            return returnValue;
+        },
+        processResponse: function (option) {
+            var logTitle = [LogTitle, 'processResponse'].join('::'),
+                returnValue;
+            log.audit(logTitle, option);
+
+            var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
+            var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
+            var validShippedStatus = ['SHIPPED', 'DELIVERED'];
+
+            try {
+                if (vc2Utils.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
+                if (vc2Utils.isEmpty(option.responseBody.purchaseOrderDetails))
+                    throw 'Missing Purchase Order Details';
+
+                var arrPODetails = option.responseBody.purchaseOrderDetails;
+
+                var orderLines = [];
+
+                arrPODetails.forEach(function (poDetails) {
+                    if (vc2Utils.isEmpty(poDetails.dellOrders)) return false;
+                    poDetails.dellOrders.forEach(function (dellOrder) {
+                        log.audit(logTitle, '>> dell order: ' + JSON.stringify(dellOrder));
+
+                        var orderStatus = dellOrder.orderStatus.toUpperCase();
+                        if (vc2Utils.inArray(orderStatus, validShippedStatus)) {
+                            var lineData = {};
+
+                            /// get the lines
+                            dellOrder.productInfo.forEach(function (prodInfo, prodIdx) {
+                                lineData = {
+                                    line_num: prodIdx + 1,
+                                    item_num: prodInfo.skuNumber,
+                                    ship_qty:
+                                        (lineData.ship_qty || 0) + parseInt(prodInfo.itemQuantity),
+                                    serial_num:
+                                        prodInfo.serviceTags && prodInfo.serviceTags.length
+                                            ? prodInfo.serviceTags.join(',')
+                                            : ''
+                                };
+
+                                return true;
+                            });
+
+                            lineData.order_num = dellOrder.orderNumber;
+                            lineData.order_date = poDetails.purchaseOrderDate;
+                            lineData.ship_date = dellOrder.actualShipmentDate;
+                            lineData.order_eta = dellOrder.estimatedDeliveryDate;
+                            lineData.carrier = dellOrder.carrierName;
+                            lineData.serial_num =
+                                dellOrder.waybills && dellOrder.waybills.length
+                                    ? dellOrder.waybills.join(',')
+                                    : '';
+
+                            log.audit(logTitle, '>> lineData: ' + JSON.stringify(lineData));
+                            orderLines.push(lineData);
+                        }
+
+                        return true;
+                    });
+
+                    return true;
+                });
+
+                log.audit(logTitle, '>> order lines: ' + JSON.stringify(orderLines));
+                returnValue = orderLines;
+            } catch (error) {
+                log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
+
+                vcLog.recordLog({
+                    header: [LogTitle, 'Processing'].join(' | ') + ' - ERROR',
+                    body: vc2Utils.extractError(error),
+                    transaction: option.poId,
+                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                });
+            } finally {
+            }
+
+            return returnValue;
         }
-
-        return itemArray;
-    }
-
-    function processDebugRequest(options) {
-        var recVendorConfig = options.vendorConfig,
-            key = recVendorConfig.apiKey,
-            secret = recVendorConfig.apiSecret,
-            url = recVendorConfig.endPoint,
-            accessUrl = recVendorConfig.accessEndPoint,
-            grantType = recVendorConfig.grantType,
-            partnerID = recVendorConfig.customerNo,
-            poNum = options.poNum,
-            poId;
-
-        var auth = authenticate({
-            key: key,
-            secret: secret,
-            url: accessUrl,
-            grantType: grantType
-        });
-
-        var responseObj = _processRequest({
-            auth: auth,
-            url: url,
-            partnerId: partnerID,
-            poNum: poNum,
-            apiKey: key
-        });
-
-        //		var responseObj = _getSampleResponse();
-
-        return responseObj;
-    }
-
-    function process(options) {
-        var recVendorConfig = options.vendorConfig,
-            key = recVendorConfig.apiKey,
-            secret = recVendorConfig.apiSecret,
-            url = recVendorConfig.endPoint,
-            accessUrl = recVendorConfig.accessEndPoint,
-            grantType = recVendorConfig.grantType,
-            partnerID = recVendorConfig.customerNo,
-            poNum = options.poNum,
-            poId = options.poId,
-            recPO = options.recPO;
-
-        var auth = authenticate({
-            key: key,
-            secret: secret,
-            url: accessUrl,
-            grantType: grantType
-        });
-
-        log.debug('Dell auth', auth);
-
-        var responseObj = _processRequest({
-            auth: auth,
-            url: url,
-            partnerId: partnerID,
-            poNum: poNum,
-            poId: poId,
-            apiKey: key
-        });
-
-        //		var responseObj = _getSampleResponse();
-
-        var outputArray = _processResponse({
-            response: responseObj
-        });
-
-        return outputArray;
-    }
-
-    return {
-        authenticate: authenticate,
-        processRequest: processDebugRequest,
-        process: process
     };
+
+    return WS_Dell;
 });

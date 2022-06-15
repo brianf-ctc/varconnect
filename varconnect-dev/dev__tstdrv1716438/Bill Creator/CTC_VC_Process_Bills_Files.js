@@ -1,5 +1,15 @@
 /**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
  * @NApiVersion 2.x
+ * @NModuleScope Public
  * @NScriptType MapReduceScript
  */
 define([
@@ -10,9 +20,19 @@ define([
     'N/https',
     'N/config',
     './Libraries/moment',
-    './../CTC_VC_Constants',
-    './../CTC_Util'
-], function (search, record, runtime, error, https, config, moment, VC_Constants, CTC_Util) {
+    './Libraries/CTC_VC_Lib_Create_Bill_Files',
+    './../CTC_VC_Constants'
+], function (
+    ns_search,
+    ns_record,
+    ns_runtime,
+    ns_error,
+    ns_https,
+    ns_config,
+    moment,
+    vcBillFile,
+    VC_Constants
+) {
     var LOG_TITLE = 'VC_PROC_BILL_MR',
         LOG_APP = 'Process Bills (MR)',
         BILL_CREATOR = VC_Constants.Bill_Creator,
@@ -21,8 +41,8 @@ define([
     function _getDateFormat() {
         var logTitle = [LOG_TITLE, '_getDateFormat'].join(':');
 
-        var generalPref = config.load({
-            type: config.Type.COMPANY_PREFERENCES
+        var generalPref = ns_config.load({
+            type: ns_config.Type.COMPANY_PREFERENCES
         });
         var dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
         log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
@@ -34,7 +54,7 @@ define([
 
         log.debug(logTitle, '*** START SCRIPT ***');
 
-        var billInAdvance = runtime.getCurrentScript().getParameter({
+        var billInAdvance = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_in_adv'
         });
 
@@ -54,7 +74,7 @@ define([
 
         // added isolate bill file id //
         // @bfeliciano
-        var billFileId = runtime.getCurrentScript().getParameter({
+        var billFileId = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_fileid'
         });
 
@@ -65,7 +85,7 @@ define([
 
             // log.debug(logTitle, '>> updateValues: ' + JSON.stringify(updateValues));
 
-            record.submitFields({
+            ns_record.submitFields({
                 type: 'customrecord_ctc_vc_bills',
                 id: billFileId,
                 values: updateValues,
@@ -109,7 +129,7 @@ define([
         // filters.push(['custrecord_ctc_vc_bill_linked_po','anyof','@NONE@']);
         log.debug(logTitle, '>> filters: ' + JSON.stringify({ filters: filters }));
 
-        return search.create({
+        return ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: filters,
             columns: [
@@ -125,7 +145,7 @@ define([
     function reduce(context) {
         var logTitle = [LOG_TITLE, 'reduce'].join(':');
 
-        var billInAdvance = runtime.getCurrentScript().getParameter({
+        var billInAdvance = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_in_adv'
         });
 
@@ -150,7 +170,7 @@ define([
             var record_id = searchValues.id;
 
             try {
-                var rec = search.lookupFields({
+                var rec = ns_search.lookupFields({
                     type: 'customrecord_ctc_vc_bills',
                     id: record_id,
                     columns: parentSearchFields
@@ -169,7 +189,7 @@ define([
 
                 requestObj.billInAdvance = billInAdvance;
 
-                var createBillResponse = https.requestRestlet({
+                var createBillResponse = ns_https.requestRestlet({
                     headers: restletHeaders,
                     scriptId: 'customscript_vc_bill_creator_restlet',
                     deploymentId: 'customdeploy1',
@@ -185,10 +205,15 @@ define([
                 }
 
                 if (r.msg) {
-                    var currentMessages = rec.custrecord_ctc_vc_bill_log;
-                    var newMessage = moment().format(_getDateFormat()) + ' - ' + r.msg;
-                    updateValues.custrecord_ctc_vc_bill_log = newMessage + '\r\n' + currentMessages;
+                    // var currentMessages = rec.custrecord_ctc_vc_bill_log;
+                    // var newMessage = moment().format(_getDateFormat()) + ' - ' + r.msg;
+                    // updateValues.custrecord_ctc_vc_bill_log = newMessage + '\r\n' + currentMessages;
+                    updateValues.custrecord_ctc_vc_bill_log = vcBillFile.addNote({
+                        note: r.msg,
+                        current: rec.custrecord_ctc_vc_bill_log
+                    });
                 }
+
                 if (r.id) {
                     updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
                 }
@@ -197,7 +222,7 @@ define([
 
                 //if the updateValues object isn't empty update the record
                 if (JSON.stringify(updateValues).length > 2) {
-                    record.submitFields({
+                    ns_record.submitFields({
                         type: 'customrecord_ctc_vc_bills',
                         id: record_id,
                         values: updateValues
@@ -219,7 +244,7 @@ define([
         var mapSummary = summary.mapSummary;
         var reduceSummary = summary.reduceSummary;
         if (inputSummary.error) {
-            var e = error.create({
+            var e = ns_error.create({
                 name: 'INPUT_STAGE_FAILED',
                 message: inputSummary.error
             });
@@ -239,7 +264,7 @@ define([
     function createSummaryRecord(summary) {
         try {
             var summaryJson = {
-                script: runtime.getCurrentScript().id,
+                script: ns_runtime.getCurrentScript().id,
                 seconds: summary.seconds,
                 usage: summary.usage,
                 yields: summary.yields

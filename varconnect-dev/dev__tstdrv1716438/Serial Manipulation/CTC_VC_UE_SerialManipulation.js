@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,13 +8,15 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType UserEventScript
+ * @Description Runs the corresponding MR script depending on the required process for creating serial numbers
+ */
+/**
  * Project Number: 001225
  * Script Name: VAR Connect Serial Manipulation UE
  * Author: paolodl@nscatalyst.com
- * @NApiVersion 2.x
- * @NScriptType UserEventScript
- * @NModuleScope SameAccount
- * @Description Runs the corresponding MR script depending on the required process for creating serial numbers
  *
  * CHANGELOGS
  *
@@ -23,11 +25,6 @@
  *
  */
 
-/**
- * @NApiVersion 2.x
- * @NScriptType UserEventScript
- * @NModuleScope SameAccount
- */
 define([
     'N/task',
     'N/ui/serverWidget',

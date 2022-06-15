@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
@@ -15,9 +18,6 @@
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Main Configuration record
  *
- */ /**
- * @NApiVersion 2.x
- * @NModuleScope SameAccount
  */
 define(['N/search', './VC_Globals', './CTC_VC_Constants.js'], function (
     search,

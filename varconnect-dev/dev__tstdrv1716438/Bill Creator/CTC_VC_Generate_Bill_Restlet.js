@@ -1,15 +1,26 @@
 /**
- *@NApiVersion 2.x
- *@NScriptType Restlet
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Restlet
  */
 define([
     'N/record',
     'N/search',
     'N/format',
     'N/runtime',
+    './Libraries/moment',
     './../CTC_VC_Constants',
     './../CTC_VC_Lib_Log'
-], function (record, search, format, runtime, VC_Constants, VC_Log) {
+], function (record, search, format, runtime, moment, VC_Constants, VC_Log) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
@@ -175,7 +186,7 @@ define([
         },
         roundOff: function (value) {
             var flValue = parseFloat(value || '0');
-            if (!flValue || isNaN(flValue)) return false;
+            if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
         }
@@ -237,9 +248,7 @@ define([
 
             ///////////////////
             if (!currentData.poId) {
-                returnObj.details = ['PO ID:', currentData.poId, ' is missing or inactive'].join(
-                    ''
-                );
+                returnObj.details = ' PO ID:' + currentData.poId + ' is missing or inactive.';
                 throw BILL_CREATOR.Code.MISSING_PO;
             }
             ///////////////////
@@ -254,8 +263,8 @@ define([
             currentData.poNum = recPO.getValue({ fieldId: 'tranid' });
             currentData.poEntity = recPO.getValue({ fieldId: 'entity' });
             currentData.taxTotal =
-                parseFloat(recPO.getValue({ fieldId: 'taxtotal' })) +
-                parseFloat(recPO.getValue({ fieldId: 'tax2total' }));
+                parseFloat(recPO.getValue({ fieldId: 'taxtotal' }) || 0) +
+                parseFloat(recPO.getValue({ fieldId: 'tax2total' }) || 0);
 
             var billPayload = JSON.parse(context.custrecord_ctc_vc_bill_json);
 
@@ -278,7 +287,7 @@ define([
 
                 returnObj = JSON.parse(JSON.stringify(billRec));
                 returnObj.existingBills = JSON.stringify(arrExistingBills);
-                returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' )';
+                returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
                 util.extend(returnObj, BILL_CREATOR.Code.EXISTING_BILLS);
 
                 return returnObj;
@@ -293,7 +302,7 @@ define([
             log.debug(logTitle, 'Lines to bill..' + JSON.stringify(arrLinesToBill));
 
             if (!arrLinesToBill || !arrLinesToBill.length) {
-                returnObj.details = 'All items on the bill are already billed';
+                returnObj.details = 'All items on the bill are already billed.';
                 util.extend(returnObj, BILL_CREATOR.Code.ITEMS_ALREADY_BILLED);
                 return returnObj;
             }
@@ -326,11 +335,9 @@ define([
                 );
 
                 returnObj.details = [
-                    'PO#',
-                    currentData.poNum,
-                    ' current status: ' + poStatus.statusRef
+                    'PO #' + currentData.poNum,
+                    ' - current status: ' + poStatus.status
                 ].join('');
-
                 throw BILL_CREATOR.Code.NOT_BILLABLE;
             }
             ///////////////////////////////////
@@ -354,7 +361,7 @@ define([
 
             log.debug(
                 logTitle,
-                '** Vendor Bill record creation:start **' + JSON.stringify(transformOption)
+                '***** Vendor Bill record creation:start *****' + JSON.stringify(transformOption)
             );
 
             var recBill = record.transform(transformOption);
@@ -369,7 +376,7 @@ define([
             recBill.setValue({
                 fieldId: 'trandate',
                 value: format.parse({
-                    value: billPayload.date,
+                    value: moment(billPayload.date).toDate(),
                     type: format.Type.DATE
                 })
             });
@@ -377,7 +384,7 @@ define([
                 recBill.setValue({
                     fieldId: 'duedate',
                     value: format.parse({
-                        value: billPayload.duedate,
+                        value: moment(billPayload.duedate).toDate(),
                         type: format.Type.DATE
                     })
                 });
@@ -656,8 +663,8 @@ define([
             taxTotal = Helper.roundOff(taxTotal) || 0;
 
             var vbTaxTotal =
-                parseFloat(recBill.getValue({ fieldId: 'taxtotal' })) +
-                parseFloat(recBill.getValue({ fieldId: 'tax2total' }));
+                parseFloat(recBill.getValue({ fieldId: 'taxtotal' }) || 0) +
+                parseFloat(recBill.getValue({ fieldId: 'tax2total' }) || 0);
 
             var deltaCharges = {
                 tax: Helper.roundOff(billPayload.charges.tax - taxTotal)
@@ -838,7 +845,7 @@ define([
                 allowableVarianceThreshold = param.allowedThreshold,
                 totalVarianceAmount = 0;
 
-            param.allowedThreshold;
+            // param.allowedThreshold;
 
             if (allowableVarianceThreshold && listVarianceDetails.length) {
                 listVarianceDetails.forEach(function (variance) {
@@ -853,7 +860,8 @@ define([
                     '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
                 );
 
-                allowBillVariance = totalVarianceAmount <= allowableVarianceThreshold;
+                allowBillVariance =
+                    Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
                 log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
             }
 
@@ -946,7 +954,7 @@ define([
             returnObj.msg = [
                 returnObj.msg,
                 returnObj.details != returnObj.msg ? returnObj.details : ''
-            ].join('\r\n');
+            ].join(' ');
 
             log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
@@ -956,7 +964,7 @@ define([
                 body: [
                     returnObj.msg,
                     returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' -- '),
+                ].join(' '),
                 status: returnObj.isError
                     ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
                     : VC_Constants.Lists.VC_LOG_STATUS.INFO

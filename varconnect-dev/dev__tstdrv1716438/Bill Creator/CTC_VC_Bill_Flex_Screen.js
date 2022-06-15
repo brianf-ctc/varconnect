@@ -1,5 +1,15 @@
 /**
- * @NApiVersion 2.1
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  * @NScriptType Suitelet
  */
 
@@ -106,8 +116,11 @@ define([
                         'closed'
                     ])
                 ) {
+                    // Current.WarnMessage.push(
+                    //     'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
+                    // );
                     Current.WarnMessage.push(
-                        'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
+                        'Purchase Order is not ready for billing: ' + Current.PO_DATA.statusText
                     );
                     returnValue = false;
                 }
@@ -1697,8 +1710,19 @@ define([
                 });
             }
 
-            if (!CTC_Util.isEmpty(Current.WarnMessage)) {
+            if (
+                !CTC_Util.isEmpty(Current.WarnMessage) &&
+                CTC_Util.inArray(Current.BILLFILE_DATA.status, [
+                    BILL_CREATOR.Status.PENDING,
+                    BILL_CREATOR.Status.ERROR,
+                    // BILL_CREATOR.Status.CLOSED,
+                    BILL_CREATOR.Status.HOLD,
+                    BILL_CREATOR.Status.VARIANCE
+                ])
+            ) {
                 log.debug(logTitle, '>> WarnMessage: ' + JSON.stringify(Current.WarnMessage));
+
+                // only show warn message if in edit mode
                 Current.Form.addPageInitMessage({
                     title: 'Warning',
                     message: Current.WarnMessage,

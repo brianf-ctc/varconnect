@@ -1,5 +1,15 @@
 /**
- * @NApiVersion 2.1
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  * @NScriptType MapReduceScript
  */
 
@@ -7,11 +17,11 @@ define([
     'N/search',
     'N/runtime',
     'N/error',
-    'N/log',
     './Libraries/moment',
+    '../CTC_VC2_Lib_Utils',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map'
-], function (search, runtime, error, log, moment, vp, vm) {
+], function (ns_search, ns_runtime, ns_error, moment, VC2_Utils, VCLib_BillFile, VCLib_VendorMap) {
     var LogTitle = 'MR_BillFiles-API';
 
     function getInputData() {
@@ -23,7 +33,7 @@ define([
             },
             validVendorCfg = [];
 
-        var vendorConfigSearch = search.create({
+        var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
             filters: [
                 ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API],
@@ -40,7 +50,7 @@ define([
 
         log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
 
-        return search.create({
+        var searchOption = {
             type: 'purchaseorder',
             filters: [
                 ['vendor.custentity_vc_bill_config', 'anyof', validVendorCfg],
@@ -62,28 +72,40 @@ define([
             columns: [
                 'internalid',
                 'tranid',
-                search.createColumn({
-                    name: 'country',
-                    join: 'subsidiary'
-                }),
-                search.createColumn({
+                // ns_search.createColumn({
+                //     name: 'country',
+                //     join: 'subsidiary'
+                // }),
+                ns_search.createColumn({
                     name: 'custentity_vc_bill_config',
                     join: 'vendor'
                 })
             ]
-        });
+        };
+
+        if (VC2_Utils.isOneWorld()) {
+            searchOption.columns.push(
+                ns_search.createColumn({
+                    name: 'country',
+                    join: 'subsidiary'
+                })
+            );
+        }
+        log.debug(logTitle, '>> searchOption : ' + JSON.stringify(searchOption));
+
+        return ns_search.create(searchOption);
     }
 
     function reduce(context) {
         var logTitle = [LogTitle, 'reduce'].join(':');
-        //var scriptObj = runtime.getCurrentScript();
+        //var scriptObj = ns_runtime.getCurrentScript();
 
         var searchValues = JSON.parse(context.values);
 
         //var record_id = searchValues.id;
         log.audit(logTitle, '>> searchValues: ' + JSON.stringify(searchValues));
 
-        var vendorConfig = search.lookupFields({
+        var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
             columns: [
@@ -102,7 +124,7 @@ define([
 
         var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            country: searchValues.values['country.subsidiary'].value,
+            // country: searchValues.values['country.subsidiary'].value,
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
             user_id: vendorConfig.custrecord_vc_bc_user,
@@ -113,8 +135,15 @@ define([
             res_path: vendorConfig.custrecord_vc_bc_res_path,
             ack_path: vendorConfig.custrecord_vc_bc_ack_path
         };
-        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj));
 
+        if (VC2_Utils.isOneWorld()) {
+            configObj.country = searchValues.values['country.subsidiary'].value;
+        } else {
+            // get it from ns runtime
+            configObj.country = ns_runtime.country;
+        }
+
+        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj));
         try {
             var entryFunction = configObj.entry_function;
 
@@ -122,13 +151,13 @@ define([
 
             switch (entryFunction) {
                 case 'arrow_api':
-                    myArr = vm.arrow_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.arrow_api(context.key, configObj);
                     break;
                 case 'ingram_api':
-                    myArr = vm.ingram_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.ingram_api(context.key, configObj);
                     break;
                 case 'techdata_api':
-                    myArr = vm.techdata_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
                     break;
             }
 
@@ -136,7 +165,7 @@ define([
 
             log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr));
 
-            vp.process(configObj, myArr, moment().unix());
+            VCLib_BillFile.process(configObj, myArr, moment().unix());
         } catch (e) {
             log.error(context.key + ': ' + 'Error encountered in reduce', e);
         }
@@ -152,7 +181,7 @@ define([
         var mapSummary = summary.mapSummary;
         var reduceSummary = summary.reduceSummary;
         if (inputSummary.error) {
-            var e = error.create({
+            var e = ns_error.create({
                 name: 'INPUT_STAGE_FAILED',
                 message: inputSummary.error
             });
@@ -172,7 +201,7 @@ define([
     function createSummaryRecord(summary) {
         try {
             var summaryJson = {
-                script: runtime.getCurrentScript().id,
+                script: ns_runtime.getCurrentScript().id,
                 seconds: summary.seconds,
                 usage: summary.usage,
                 yields: summary.yields

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,20 +7,19 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
+ * CTC_Create_Item_receipt.js
  * Module Description
  *
  * Version	Date            Author		Remarks
  * 1.00		Apr 13, 2019	ocorrea		Creates Item Receipt after receiving XML data for special order POs
+ * 1.01		Apr 22, 2022	christian	Limit text serial numbers to 4000 chars
  *
- */
-
-/**
- *CTC_Create_Item_receipt.js
- *@NApiVersion 2.x
- *@NModuleScope Public
  */
 
 define([
@@ -33,7 +32,8 @@ define([
     './CTC_VC2_Lib_Utils.js'
 ], function (search, record, runtime, vcGlobals, constants, vcLog, vc2Utils) {
     var LogTitle = 'Create-ItemRcpt',
-        LogPrefix = '';
+        LogPrefix = '',
+        _TEXT_AREA_MAX_LENGTH = 4000;
 
     var PO_ID;
 
@@ -112,7 +112,6 @@ define([
 
         itemInLineData: function (tempItemNum, lineData, tempVendorSKU) {
             var logTitle = [LogTitle, 'itemInLineData'].join('::');
-
             log.audit(
                 logTitle,
                 LogPrefix +
@@ -421,6 +420,7 @@ define([
                         title: 'Transform Error on PO: ' + po_ID,
                         error: err
                     });
+
                     continue;
                 }
 
@@ -660,7 +660,7 @@ define([
                                             objRecord.setCurrentSublistValue({
                                                 sublistId: 'item',
                                                 fieldId: 'custcol_ctc_xml_serial_num',
-                                                value: tempSerials
+                                                value: tempSerials.substr(0, _TEXT_AREA_MAX_LENGTH)
                                             });
                                             objRecord.commitLine({
                                                 sublistId: 'item'
@@ -711,7 +711,10 @@ define([
                                         objRecord.setCurrentSublistValue({
                                             sublistId: 'item',
                                             fieldId: 'custcol_ctc_xml_serial_num',
-                                            value: uniqueItems[tmp2].all_serial_nums
+                                            value: uniqueItems[tmp2].all_serial_nums.substr(
+                                                0,
+                                                _TEXT_AREA_MAX_LENGTH
+                                            )
                                         });
                                     }
                                     uniqueItems[tmp2].totalShipped = 0;
