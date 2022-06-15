@@ -118,10 +118,10 @@ define([
                 console.log('debug lib: Calling library webservice');
                 try {
                     outputObj = libWebService.handleRequest({
-                        vendorConfig: vendorConfig,
-                        poNum: ponum,
-                        country: country
-                    });
+                    vendorConfig: vendorConfig,
+                    poNum: ponum,
+                    country: country
+                });
                 } catch (processErr) {
                     outputObj =
                         'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
@@ -206,7 +206,7 @@ define([
                                 elementIdToHide = 'custpage_json__viewer';
                             }
                         }
-                    }
+                }
                     xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
                     xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
                 }

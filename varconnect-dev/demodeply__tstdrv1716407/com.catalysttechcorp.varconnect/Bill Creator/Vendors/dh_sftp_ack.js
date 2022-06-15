@@ -4,68 +4,77 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
-    search,
-    sftp,
-    file,
-    moment
-) {
-    function sendAck(input, config, billId) {
-        //log.debug('input', input)
-        //log.debug('config', config)
-        //log.debug('billId', billId)
 
-        var transaction = search.lookupFields({
-            type: search.Type.TRANSACTION,
-            id: billId,
-            columns: ['entity', 'tranid']
-        });
 
-        log.audit('transaction', transaction);
+define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'],
+    function(search, sftp, file, moment) {
 
-        var parent = search.lookupFields({
-            type: search.Type.TRANSACTION,
-            id: input,
-            columns: ['entity', 'tranid']
-        });
+        function sendAck(input, config, billId) {
 
-        log.audit('parent', parent);
 
-        var connection = sftp.createConnection({
-            username: config.user_id,
-            passwordGuid: config.user_pass,
-            url: config.url,
-            directory: config.ack_path,
-            hostKey: config.host_key
-        });
+            //log.debug('input', input)
+            //log.debug('config', config)
+            //log.debug('billId', billId)
 
-        // specify the file to upload using the N/file module
+            var transaction = search.lookupFields({
+                type: search.Type.TRANSACTION,
+                id: billId,
+                columns: [
+                    'entity',
+                    'tranid'
+                ]
+            });
 
-        //ErgonomicGroup_InvoiceAck_{DateTime}.txt
-        //PONumber1|InvoiceNumber1|DateTimeoftheinvoicereceived
+            log.audit('transaction', transaction)
 
-        var ackString = parent.tranid + '|';
-        ackString += transaction.tranid + '|';
-        ackString += moment().format();
+            var parent = search.lookupFields({
+                type: search.Type.TRANSACTION,
+                id: input,
+                columns: [
+                    'entity',
+                    'tranid'
+                ]
+            });
 
-        var ackFile = file.create({
-            name: 'ErgonomicGroup_InvoiceAck_' + moment().format('YYYYMMDDTHHmmssS') + '.txt',
-            fileType: file.Type.PLAINTEXT,
-            contents: ackString
-        });
+            log.audit('parent', parent)
 
-        // upload the file to the remote server
+            var connection = sftp.createConnection({
+                username: config.user_id,
+                passwordGuid: config.user_pass,
+                url: config.url,
+                directory: config.ack_path,
+                hostKey: config.host_key
+            });
 
-        connection.upload({
-            file: ackFile,
-            replaceExisting: true
-        });
+            // specify the file to upload using the N/file module
 
-        return;
+            //ErgonomicGroup_InvoiceAck_{DateTime}.txt
+            //PONumber1|InvoiceNumber1|DateTimeoftheinvoicereceived
+            
+            var ackString = parent.tranid + '|';
+                ackString += transaction.tranid  + '|';
+                ackString += moment().format();
+
+                var ackFile = file.create({
+                    name: 'ErgonomicGroup_InvoiceAck_' + moment().format("YYYYMMDDTHHmmssS") + '.txt',
+                    fileType: file.Type.PLAINTEXT,
+                    contents: ackString
+                });
+
+            // upload the file to the remote server
+
+            connection.upload({
+                file: ackFile,
+                replaceExisting: true
+            });
+
+            return;
+        }
+
+
+        // Add the return statement that identifies the entry point function.
+        return {
+            sendAck: sendAck
+        }
     }
-
-    // Add the return statement that identifies the entry point function.
-    return {
-        sendAck: sendAck
-    };
-});
+);

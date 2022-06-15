@@ -38,8 +38,7 @@ define([
     'N/format',
     './VC_Globals.js'
 ], function (record, runtime, error, search, config, format, vcGlobals) {
-    var LogTitle = 'UE_SerialUpdate',
-        LogPrefix = '';
+    var LogTitle = 'UE_SerialUpdate', LogPrefix='';
 
     var dateFormat;
 
@@ -467,7 +466,7 @@ define([
                 log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
             }
         }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
+        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date) );
         // return date;
 
         //Convert to string
@@ -485,7 +484,7 @@ define([
             });
         }
 
-        log.audit(logTitle, 'return value :' + JSON.stringify(date));
+        log.audit(logTitle, 'return value :' + JSON.stringify(date) );
 
         return date;
     }

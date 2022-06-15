@@ -4,168 +4,173 @@
  * @NModuleScope Public
  */
 
-define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/search'], function (
-    log,
-    https,
-    moment,
-    lodash,
-    search
-) {
+
+define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/search'],
+  function(log, https, moment, lodash, search) {
+
     function processXml(input, config) {
-        //var config = JSON.parse(configStr)
 
-        //log.debug('arrow config', config.user_id);
+      //var config = JSON.parse(configStr)
 
-        var tranNsid = input;
+      //log.debug('arrow config', config.user_id);
 
-        log.debug('ar: input', tranNsid);
+      var tranNsid = input;
 
-        var findDocumentNumber = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
-            id: tranNsid,
-            columns: ['tranid']
-        });
+      log.debug('ar: input', tranNsid);
 
-        var docNum = findDocumentNumber.tranid;
+      var findDocumentNumber = search.lookupFields({
+        type: search.Type.PURCHASE_ORDER,
+        id: tranNsid,
+        columns: ['tranid']
+      });
 
-        log.debug('ar: docNum', input + ': ' + docNum);
+      var docNum = findDocumentNumber.tranid;
 
-        var headers = {};
+      log.debug('ar: docNum', input + ': ' + docNum);
 
-        headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        headers['Accept'] = '*/*';
+      var headers = {};
 
-        var baseUrl = config.url;
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      headers['Accept'] = '*/*';
 
-        var authUrl = '/api/oauth/token';
+      var baseUrl = config.url;
 
-        var authBody = {
-            grant_type: 'client_credentials',
-            client_id: config.user_id,
-            client_secret: config.user_pass
-        };
+      var authUrl = '/api/oauth/token'
 
-        var authResponse = https.post({
-            url: baseUrl + authUrl,
-            headers: headers,
-            body: authBody
-        });
+      var authBody = {
+        'grant_type': 'client_credentials',
+        'client_id': config.user_id,
+        'client_secret': config.user_pass
+      };
 
-        log.debug('ar: authBody', input + ': ' + JSON.stringify(authBody));
+      var authResponse = https.post({
+        url: baseUrl + authUrl,
+        headers: headers,
+        body: authBody
+      });
 
-        log.debug('ar: authResponse', input + ': ' + JSON.stringify(authResponse));
+      log.debug('ar: authBody', input + ': ' + JSON.stringify(authBody));
 
-        var authJson = JSON.parse(authResponse.body);
+      log.debug('ar: authResponse', input + ': ' + JSON.stringify(authResponse));
 
-        headers['Content-Type'] = 'application/json';
-        headers['Accept'] = 'application/json';
-        headers['Authorization'] = 'Bearer ' + authJson.access_token;
+      var authJson = JSON.parse(authResponse.body);
 
-        var searchUrl = '/ArrowECS/Invoice_RS/Status';
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
+      headers['Authorization'] = 'Bearer ' + authJson.access_token;
 
-        var searchBody = {
-            Header: {
-                TransactionType: 'RESELLER_INV_SEARCH',
-                Region: 'NORTH_AMERICAS',
-                Country: 'US',
-                PartnerID: config.partner_id
-            },
-            InvoiceRequest: {
-                CUSTPONUMBERS: {
-                    CustPONumbers: [
-                        {
-                            PONumber: docNum
-                        }
-                    ]
-                }
-            }
-        };
+      var searchUrl = '/ArrowECS/Invoice_RS/Status';
 
-        var invoiceResponse = https.post({
-            url: baseUrl + searchUrl,
-            headers: headers,
-            body: JSON.stringify(searchBody)
-        });
-
-        var invBody = JSON.parse(invoiceResponse.body);
-
-        log.debug('ar: invoiceBody', input + ': ' + invoiceResponse.body);
-
-        var myArr = [];
-
-        if (!invBody.ResponseHeader.hasOwnProperty('TotalPages') || invoiceResponse.code !== 200) {
-            log.debug('ar: ' + invoiceResponse.code, input + ': ' + 'No Records Returned');
-            return myArr;
+      var searchBody = {
+        "Header": {
+          "TransactionType": "RESELLER_INV_SEARCH",
+          "Region": "NORTH_AMERICAS",
+          "Country": "US",
+          "PartnerID": config.partner_id
+        },
+        "InvoiceRequest": {
+          "CUSTPONUMBERS": {
+            "CustPONumbers": [{
+              "PONumber": docNum
+            }]
+          }
         }
+      }
 
-        for (var r = 0; r < invBody.InvoiceResponse.length; r++) {
-            for (var d = 0; d < invBody.InvoiceResponse[r].InvoiceDetails.length; d++) {
-                var xmlObj = invBody.InvoiceResponse[r].InvoiceDetails[d];
+      var invoiceResponse = https.post({
+        url: baseUrl + searchUrl,
+        headers: headers,
+        body: JSON.stringify(searchBody)
+      });
 
-                log.debug('ar: invoice reponse', input + ': ' + JSON.stringify(xmlObj));
+      var invBody = JSON.parse(invoiceResponse.body);
 
-                var myObj = {};
-                myObj.po = docNum;
+      log.debug('ar: invoiceBody', input + ': ' + invoiceResponse.body);
 
-                myObj.date = moment(xmlObj.InvoiceDate, 'DD-MMM-YY').format('MM/DD/YYYY');
-                log.debug('ar: date', myObj.date);
-                myObj.invoice = xmlObj.InvoiceNumber;
-                myObj.total = xmlObj.TotalInvAmount * 1;
+      var myArr = [];
 
-                myObj.charges = {};
-
-                myObj.charges.tax = xmlObj.TotalTaxAmount * 1;
-                myObj.charges.shipping = xmlObj.TotalFrieghtAmt * 1;
-                myObj.charges.other =
-                    xmlObj.TotalPSTAmount * 1 +
-                    xmlObj.TotalHSTAmount * 1 +
-                    xmlObj.TotalGSTAmount * 1;
-
-                myObj.lines = [];
-
-                for (var i = 0; i < xmlObj.LineDetails.DetailRecord.length; i++) {
-                    //xmlObj.LineDetails.DetailRecord[i]
-
-                    var item = xmlObj.LineDetails.DetailRecord[i].CustPartNumber;
-
-                    if (!item || item == '' || item == null) {
-                        continue;
-                    }
-
-                    var itemIdx = lodash.findIndex(myObj.lines, {
-                        ITEMNO: item
-                    });
-
-                    if (itemIdx !== -1) {
-                        myObj.lines[itemIdx].QUANTITY +=
-                            xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
-                    } else {
-                        var lineObj = {};
-
-                        lineObj.processed = false;
-                        lineObj.ITEMNO = item;
-                        lineObj.PRICE = xmlObj.LineDetails.DetailRecord[i].UnitPrice * 1;
-                        lineObj.QUANTITY = xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
-                        lineObj.DESCRIPTION = xmlObj.LineDetails.DetailRecord[i].PartDescription;
-
-                        myObj.lines.push(lineObj);
-                    }
-                }
-
-                var returnObj = {};
-                returnObj.ordObj = myObj;
-                returnObj.xmlStr = xmlObj;
-
-                //return myObj;
-                myArr.push(returnObj);
-            }
-        }
-
+      if (!invBody.ResponseHeader.hasOwnProperty("TotalPages") || invoiceResponse.code !== 200 ){
+        log.debug('ar: ' + invoiceResponse.code, input + ': ' + 'No Records Returned');
         return myArr;
+      }
+
+      for (var r = 0; r < invBody.InvoiceResponse.length; r++) {
+
+        for (var d = 0; d < invBody.InvoiceResponse[r].InvoiceDetails.length; d++) {
+
+          var xmlObj = invBody.InvoiceResponse[r].InvoiceDetails[d];
+
+          log.debug('ar: invoice reponse', input + ': ' + JSON.stringify(xmlObj));
+
+          var myObj = {};
+          myObj.po = docNum;
+
+          myObj.date = moment(xmlObj.InvoiceDate, 'DD-MMM-YY').format('MM/DD/YYYY');
+          log.debug('ar: date', myObj.date);
+          myObj.invoice = xmlObj.InvoiceNumber;
+          myObj.total = xmlObj.TotalInvAmount * 1;
+
+          myObj.charges = {};
+
+          myObj.charges.tax = xmlObj.TotalTaxAmount * 1;
+          myObj.charges.shipping = xmlObj.TotalFrieghtAmt * 1;
+          myObj.charges.other = (xmlObj.TotalPSTAmount * 1) + (xmlObj.TotalHSTAmount * 1) + (xmlObj.TotalGSTAmount * 1);
+
+          myObj.lines = [];
+
+          for (var i = 0; i < xmlObj.LineDetails.DetailRecord.length; i++) {
+
+            //xmlObj.LineDetails.DetailRecord[i]
+
+            var item = xmlObj.LineDetails.DetailRecord[i].CustPartNumber;
+
+            if (!item || item == '' || item == null) {
+
+              continue;
+
+            }
+
+            var itemIdx = lodash.findIndex(myObj.lines, {
+              ITEMNO: item
+            })
+
+            if (itemIdx !== -1) {
+
+              myObj.lines[itemIdx].QUANTITY += xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
+
+            } else {
+
+              var lineObj = {};
+
+              lineObj.processed = false
+              lineObj.ITEMNO = item;
+              lineObj.PRICE = xmlObj.LineDetails.DetailRecord[i].UnitPrice * 1;
+              lineObj.QUANTITY = xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
+              lineObj.DESCRIPTION = xmlObj.LineDetails.DetailRecord[i].PartDescription;
+
+              myObj.lines.push(lineObj);
+            }
+          }
+
+          var returnObj = {};
+          returnObj.ordObj = myObj;
+          returnObj.xmlStr = xmlObj;
+                   
+
+          //return myObj;
+          myArr.push(returnObj);
+
+        }
+
+      }
+
+      return myArr;
+
     }
 
     // Add the return statement that identifies the entry point function.
     return {
-        processXml: processXml
-    };
-});
+      processXml: processXml
+    }
+  }
+);

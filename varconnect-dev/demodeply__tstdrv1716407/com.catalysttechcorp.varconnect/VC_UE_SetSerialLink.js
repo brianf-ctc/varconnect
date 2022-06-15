@@ -12,11 +12,11 @@
 /**
  * Module Description
  * Var Connect v2, Adds a standard link for serial numbers to transaction lines
- *
- *
+ * 
+ * 
  * Version	Date            Author		Remarks
- * 1.00		Feb 7, 2019    ocorrea
- *
+ * 1.00		Feb 7, 2019    ocorrea		
+ * 
  */
 
 /**
@@ -25,73 +25,85 @@
  */
 
 define([
-    'N/record',
-    'N/runtime',
-    'N/error',
-    'N/config',
-    'N/search',
-    'N/url',
-    './VC_Globals.js',
-    './CTC_VC_Lib_Utilities.js',
-    './CTC_VC_Constants.js'
-], function (record, runtime, error, config, search, url, vcGlobals, util, constants) {
-    //        vcGlobals.SN_LINE_FIELD_LINK_ID
+        'N/record', 
+        'N/runtime', 
+        'N/error', 
+        'N/config', 
+        'N/search', 
+        'N/url', 
+        './VC_Globals.js',
+        './CTC_VC_Lib_Utilities.js',
+        './CTC_VC_Constants.js'],
+function(record, 
+		runtime, 
+		error, 
+		config, 
+		search, 
+		url, 
+		vcGlobals,
+		util,
+		constants) {
 
-    function beforeSubmit(context) {
-        if (context.type == context.UserEventType.EDIT) {
-            var current_rec = context.newRecord;
-            var currentID = current_rec.id;
-            var currentType = current_rec.type;
+ //        vcGlobals.SN_LINE_FIELD_LINK_ID
+ 
+ 
+	function beforeSubmit (context) {
+		
+		if (context.type == context.UserEventType.EDIT){
+			var current_rec = context.newRecord;
+			var currentID = current_rec.id;
+            var currentType = current_rec.type
             log.debug({
-                title: 'Running for ' + currentType + ' - ' + currentID
+                title: 'Running for '+currentType+ " - "+currentID
             });
             // var companyObj = config.load({
             //     type: config.Type.COMPANY_INFORMATION
             // });
             // var accountId = companyObj.getValue('companyid')
 
-            var lineCount = current_rec.getLineCount({ sublistId: 'item' });
+            var lineCount = current_rec.getLineCount({sublistId: 'item'});
             if (lineCount > 900) return;
-            for (var i = 0; i < lineCount; i++) {
+            for (var i = 0; i < lineCount; i++){
                 var itemId = current_rec.getSublistValue({
                     sublistId: 'item',
                     fieldId: 'item',
                     line: i
-                });
+                });  
                 var itemType = current_rec.getSublistValue({
                     sublistId: 'item',
                     fieldId: 'itemtype',
                     line: i
                 });
-                log.debug('itemtype', itemType);
-                if (itemType == 'EndGroup') continue;
+                log.debug('itemtype', itemType)
+                if (itemType == "EndGroup") continue;
 
-                /**  OLD Version
+/**  OLD Version
                 var itemTxtField = currentType == record.Type.ITEM_FULFILLMENT ? 'itemname' : 'item';
                 var itemName = encodeURIComponent(current_rec.getSublistText({
                     sublistId: 'item',
                     fieldId: itemTxtField,
                     line: i
                 }));
-**/
+**/                
                 var fieldLookUp = search.lookupFields({
                     type: search.Type.ITEM,
                     id: itemId,
                     columns: ['itemid']
                 });
-                var itemName = encodeURIComponent(fieldLookUp.itemid);
+                var itemName = encodeURIComponent(fieldLookUp.itemid)
 
-                // + '&compid='+accountId
-                //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
+// + '&compid='+accountId
+//                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
                 var lineLinkUrl = util.generateSerialLink({
-                    transType: currentType,
-                    transId: currentID,
-                    itemId: itemId,
-                    itemName: itemName
+    				transType: currentType,
+    				transId: currentID,
+    				itemId: itemId,
+    				itemName: itemName
+                	
                 });
 
                 log.debug({
-                    title: 'Setting line ' + i,
+                    title: 'Setting line '+i,
                     details: lineLinkUrl
                 });
                 current_rec.setSublistValue({
@@ -99,64 +111,70 @@ define([
                     fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
                     line: i,
                     value: lineLinkUrl
-                });
+                })
+
             }
-        } else {
-            return;
-        }
-    }
+			
+			
+		}
+		else {
+			return;
+		}
+	}
 
-    function afterSubmit(context) {
-        if (context.type == context.UserEventType.CREATE) {
-            var currentID = context.newRecord.id;
-            var currentType = context.newRecord.type;
 
-            var current_rec = record.load({
-                type: currentType,
+    function afterSubmit (context) {
+		
+		if (context.type == context.UserEventType.CREATE ){
+			var currentID = context.newRecord.id;
+            var currentType = context.newRecord.type
+
+            var current_rec = record.load ({
+                type: currentType, 
                 id: currentID,
                 isDynamic: false
-            });
+            })
 
             log.debug({
-                title: 'Running for ' + currentType + ' - ' + currentID
+                title: 'Running for '+currentType+ " - "+currentID
             });
             // var companyObj = config.load({
             //     type: config.Type.COMPANY_INFORMATION
             // });
             // var accountId = companyObj.getValue('companyid')
 
-            var lineCount = current_rec.getLineCount({ sublistId: 'item' });
-            for (var i = 0; i < lineCount; i++) {
+            var lineCount = current_rec.getLineCount({sublistId: 'item'});
+            for (var i = 0; i < lineCount; i++){
                 var itemId = current_rec.getSublistValue({
                     sublistId: 'item',
                     fieldId: 'item',
                     line: i
-                });
+                });  
                 var itemType = current_rec.getSublistValue({
                     sublistId: 'item',
                     fieldId: 'itemtype',
                     line: i
                 });
-                log.debug('itemtype', itemType);
-                if (itemType == 'EndGroup') continue;
+                log.debug('itemtype', itemType)
+                if (itemType == "EndGroup") continue;
                 var fieldLookUp = search.lookupFields({
                     type: search.Type.ITEM,
                     id: itemId,
                     columns: ['itemid']
                 });
-                var itemName = encodeURIComponent(fieldLookUp.itemid);
+                var itemName = encodeURIComponent(fieldLookUp.itemid)
 
-                // + '&compid='+accountId
-                //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
+// + '&compid='+accountId
+//                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
                 var lineLinkUrl = util.generateSerialLink({
-                    transType: currentType,
-                    transId: currentID,
-                    itemId: itemId,
-                    itemName: itemName
+    				transType: currentType,
+    				transId: currentID,
+    				itemId: itemId,
+    				itemName: itemName
                 });
 
                 log.debug({
-                    title: 'Setting line ' + i,
+                    title: 'Setting line '+i,
                     details: lineLinkUrl
                 });
                 current_rec.setSublistValue({
@@ -164,26 +182,35 @@ define([
                     fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
                     line: i,
                     value: lineLinkUrl
-                });
-            }
-            current_rec.save({
-                enableSourcing: false,
-                ignoreMandatoryFields: true
-            });
-        } else {
-            return;
-        }
-    }
+                })
 
-    function isEmpty(stValue) {
-        if (stValue == '' || stValue == null || stValue == undefined) {
+            }
+			current_rec.save({
+				enableSourcing: false,
+				ignoreMandatoryFields: true
+			});
+			
+		}
+		else {
+			return;
+		}
+	}
+
+
+
+
+    function isEmpty (stValue)
+    {
+        if ((stValue == '') || (stValue == null) || (stValue == undefined)) {
             return true;
-        } else {
+        }
+        else {
             if (typeof stValue == 'string') {
-                if (stValue == '') {
+                if ((stValue == '')) {
                     return true;
                 }
-            } else if (typeof stValue == 'object') {
+            }
+            else if (typeof stValue == 'object') {
                 if (stValue.length == 0 || stValue.length == 'undefined') {
                     return true;
                 }
@@ -193,8 +220,14 @@ define([
         }
     }
 
-    return {
-        beforeSubmit: beforeSubmit,
+
+
+	
+	return {
+
+		beforeSubmit: beforeSubmit,
         afterSubmit: afterSubmit
-    };
+
+	};	
+
 });

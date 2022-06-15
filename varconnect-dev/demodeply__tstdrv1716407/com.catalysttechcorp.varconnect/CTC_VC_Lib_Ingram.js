@@ -30,9 +30,11 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities.js'
 ], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
-    var LogTitle = 'WS:Ingram';
 
+    var LogTitle = 'WS:Ingram';
+    
     function processRequest(options) {
+
         var logTitle = [LogTitle, 'processRequest'].join('::');
         log.audit(logTitle, options);
 
@@ -44,6 +46,8 @@ define([
             password = vendorConfig.password,
             customerNo = vendorConfig.customerNo;
 
+
+            
         log.debug({
             title: 'Ingram Micro Scheduled',
             details: 'requestIngramMicro'
