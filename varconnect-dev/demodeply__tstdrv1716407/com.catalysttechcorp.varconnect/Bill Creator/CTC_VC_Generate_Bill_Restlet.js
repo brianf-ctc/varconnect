@@ -1,6 +1,16 @@
 /**
- *@NApiVersion 2.x
- *@NScriptType Restlet
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType Restlet
  */
 define([
     'N/record',
@@ -176,7 +186,7 @@ define([
         },
         roundOff: function (value) {
             var flValue = parseFloat(value || '0');
-            if (!flValue || isNaN(flValue)) return false;
+            if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
         }
@@ -253,8 +263,8 @@ define([
             currentData.poNum = recPO.getValue({ fieldId: 'tranid' });
             currentData.poEntity = recPO.getValue({ fieldId: 'entity' });
             currentData.taxTotal =
-                parseFloat(recPO.getValue({ fieldId: 'taxtotal' })) +
-                parseFloat(recPO.getValue({ fieldId: 'tax2total' }));
+                parseFloat(recPO.getValue({ fieldId: 'taxtotal' }) || 0) +
+                parseFloat(recPO.getValue({ fieldId: 'tax2total' }) || 0);
 
             var billPayload = JSON.parse(context.custrecord_ctc_vc_bill_json);
 
@@ -653,8 +663,8 @@ define([
             taxTotal = Helper.roundOff(taxTotal) || 0;
 
             var vbTaxTotal =
-                parseFloat(recBill.getValue({ fieldId: 'taxtotal' })) +
-                parseFloat(recBill.getValue({ fieldId: 'tax2total' }));
+                parseFloat(recBill.getValue({ fieldId: 'taxtotal' }) || 0) +
+                parseFloat(recBill.getValue({ fieldId: 'tax2total' }) || 0);
 
             var deltaCharges = {
                 tax: Helper.roundOff(billPayload.charges.tax - taxTotal)

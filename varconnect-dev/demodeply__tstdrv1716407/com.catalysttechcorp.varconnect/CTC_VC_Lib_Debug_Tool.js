@@ -1,6 +1,15 @@
 /**
- *@NApiVersion 2.x
- *@NModuleScope Public
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 define([
@@ -118,10 +127,10 @@ define([
                 console.log('debug lib: Calling library webservice');
                 try {
                     outputObj = libWebService.handleRequest({
-                    vendorConfig: vendorConfig,
-                    poNum: ponum,
-                    country: country
-                });
+                        vendorConfig: vendorConfig,
+                        poNum: ponum,
+                        country: country
+                    });
                 } catch (processErr) {
                     outputObj =
                         'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
@@ -206,7 +215,7 @@ define([
                                 elementIdToHide = 'custpage_json__viewer';
                             }
                         }
-                }
+                    }
                     xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
                     xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
                 }

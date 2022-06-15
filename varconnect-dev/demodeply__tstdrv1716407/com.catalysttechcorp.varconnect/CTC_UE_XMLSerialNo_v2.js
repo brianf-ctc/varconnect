@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,10 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType UserEventScript
  */
 
 /**
@@ -22,12 +26,6 @@
  * 1.01		Sep 7, 2017		jcorrea		Removed call to updateFieldList function, just copying all of the data over now
  * 2.00     Jan 20, 2019    jcorrea     Updated to VR connect v2 and including all VAR Cnnect fields (not just serial nums)
  * 2.10     Feb 20, 2019    jcorrea     Updated isEmpty to use === when testing for empty string
- *
- */
-
-/**
- *@NApiVersion 2.x
- *@NScriptType UserEventScript
  */
 define([
     'N/record',
@@ -38,7 +36,8 @@ define([
     'N/format',
     './VC_Globals.js'
 ], function (record, runtime, error, search, config, format, vcGlobals) {
-    var LogTitle = 'UE_SerialUpdate', LogPrefix='';
+    var LogTitle = 'UE_SerialUpdate',
+        LogPrefix = '';
 
     var dateFormat;
 
@@ -466,7 +465,7 @@ define([
                 log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
             }
         }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date) );
+        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
         // return date;
 
         //Convert to string
@@ -484,7 +483,7 @@ define([
             });
         }
 
-        log.audit(logTitle, 'return value :' + JSON.stringify(date) );
+        log.audit(logTitle, 'return value :' + JSON.stringify(date));
 
         return date;
     }

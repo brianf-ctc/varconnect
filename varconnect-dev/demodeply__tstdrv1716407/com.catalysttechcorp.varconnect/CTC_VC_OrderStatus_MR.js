@@ -1,15 +1,22 @@
 /**
- *@NApiVersion 2.x
- *@NScriptType MapReduceScript
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @NScriptType MapReduceScript
  */
 
 define([
     'N/search',
     'N/runtime',
     'N/record',
-    'N/log',
-    'N/xml',
-    'N/https',
     './CTC_VC2_Lib_Utils',
     './VC_Globals',
     './CTC_Create_Item_Fulfillment',
@@ -23,22 +30,19 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js'
 ], function (
-    search,
-    runtime,
-    r,
-    log,
-    xml,
-    https,
+    ns_search,
+    ns_runtime,
+    ns_record,
     vc2Utils,
     vcGlobals,
-    createIF,
-    createIR,
-    libcode,
-    libMainConfig,
-    libVendorConfig,
-    libWebService,
-    libLicenseValidator,
-    util,
+    vcCreateIF,
+    vcCreateIR,
+    vcRecord,
+    vcMainCfg,
+    vcVendorCfg,
+    vcWebSvc,
+    vcLicense,
+    vcUtil,
     constants,
     vcLog
 ) {
@@ -56,7 +60,7 @@ define([
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? util.extractError(option.error) : option.errorMsg),
+                    (option.error ? vcUtil.extractError(option.error) : option.errorMsg),
                 status:
                     option.status ||
                     (option.error || option.isError
@@ -70,14 +74,14 @@ define([
             vcLog.recordLog(logOption);
             return true;
         },
-        validateLicense: function (options) {
+        validateLicense: function (option) {
             var logTitle = [LogTitle, 'validateLicense'].join('::');
-            // log.audit(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+            // log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
             // return true;
 
-            var mainConfig = options.mainConfig,
+            var mainConfig = option.mainConfig,
                 license = mainConfig.license,
-                response = libLicenseValidator.callValidationSuitelet({
+                response = vcLicense.callValidationSuitelet({
                     license: license,
                     external: true
                 });
@@ -88,19 +92,19 @@ define([
                 );
         },
         loadMainConfig: function () {
-            var mainConfig = libMainConfig.getMainConfiguration();
+            var mainConfig = vcMainCfg.getMainConfiguration();
             if (!mainConfig) {
-                log.error('No Coniguration available');
-                throw new Error('No Coniguration available');
+                log.error('No Configuration available');
+                throw new Error('No Configuration available');
             } else return mainConfig;
         },
-        loadVendorConfig: function (options) {
+        loadVendorConfig: function (option) {
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
-            // log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+            // log.debug(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
 
-            var vendor = options.vendor,
-                subsidiary = options.subsidiary,
-                vendorConfig = libVendorConfig.getVendorConfiguration({
+            var vendor = option.vendor,
+                subsidiary = option.subsidiary,
+                vendorConfig = vcVendorCfg.getVendorConfiguration({
                     vendor: vendor,
                     subsidiary: subsidiary
                 });
@@ -109,7 +113,13 @@ define([
                 log.error(
                     'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
                 );
-            } else return vendorConfig;
+                // log.error(
+                //     'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
+                // );
+            }
+
+            log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
+            return vendorConfig;
         },
         getSubsidiary: function (poId) {
             var logTitle = [LogTitle, 'getSubsidiary'].join('::');
@@ -118,8 +128,8 @@ define([
             var subsidiary = null;
 
             if (vcGlobals.ENABLE_SUBSIDIARIES) {
-                var lookupObj = search.lookupFields({
-                    type: search.Type.TRANSACTION,
+                var lookupObj = ns_search.lookupFields({
+                    type: ns_search.Type.TRANSACTION,
                     id: poId,
                     columns: 'subsidiary'
                 });
@@ -128,17 +138,17 @@ define([
 
             return subsidiary;
         },
-        processDropshipsAndSpecialOrders: function (options) {
+        processDropshipsAndSpecialOrders: function (option) {
             var logTitle = [LogTitle, 'processDropshipsAndSpecialOrders'].join('::');
-            log.debug(logTitle, LogPrefix + '>> options: ' + JSON.stringify(options));
+            log.debug(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
 
-            var mainConfig = options.mainConfig,
-                vendorConfig = options.vendorConfig,
-                isDropPO = options.isDropPO,
-                docid = options.docid,
-                so_ID = options.soID,
-                itemArray = options.itemArray,
-                vendor = options.vendor,
+            var mainConfig = option.mainConfig,
+                vendorConfig = option.vendorConfig,
+                isDropPO = option.isDropPO,
+                docid = option.docid,
+                so_ID = option.soID,
+                itemArray = option.itemArray,
+                vendor = option.vendor,
                 fulfillmentData = false;
 
             try {
@@ -161,7 +171,7 @@ define([
                         vendorConfig.processDropships &&
                         mainConfig.createIF
                     ) {
-                        fulfillmentData = createIF.updateItemFulfillments({
+                        fulfillmentData = vcCreateIF.updateItemFulfillments({
                             mainConfig: mainConfig,
                             vendorConfig: vendorConfig,
                             poId: docid,
@@ -192,7 +202,7 @@ define([
                         vendorConfig.processSpecialOrders &&
                         mainConfig.createIR
                     ) {
-                        fulfillmentData = createIR.updateIR({
+                        fulfillmentData = vcCreateIR.updateIR({
                             mainConfig: mainConfig,
                             vendorConfig: vendorConfig,
                             poId: docid,
@@ -235,9 +245,11 @@ define([
 
         try {
             Params = {
-                searchId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
-                vendorId: runtime.getCurrentScript().getParameter('custscript_searchid2'),
-                internalid: runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid')
+                searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                // vendorId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                internalid: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_orderstatus_tranid')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
@@ -256,19 +268,19 @@ define([
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
             if (!Params.internalid) {
-                returnValue = search.load({ id: Params.searchId });
+                returnValue = ns_search.load({ id: Params.searchId });
             } else {
-                var searchRec = search.load({ id: Params.searchId });
+                var searchRec = ns_search.load({ id: Params.searchId });
                 // log.audit(logTitle, '>> search type: ' + JSON.stringify(searchRec));
 
-                var searchNew = search.create({
+                var searchNew = ns_search.create({
                     type: searchRec.searchType,
                     filters: searchRec.filters,
                     columns: searchRec.columns
                 });
 
                 searchNew.filters.push(
-                    search.createFilter({
+                    ns_search.createFilter({
                         name: 'internalid',
                         operator: 'anyof',
                         values: Params.internalid
@@ -279,12 +291,21 @@ define([
             }
         } catch (error) {
             log.error(logTitle, ' ## ERROR ## ' + JSON.stringify(error));
-            throw util.extractError(error);
+            throw vcUtil.extractError(error);
             returnValue = false;
         }
 
         var totalResults = returnValue.runPaged().count;
         log.audit(logTitle, '>> Total Orders to Process: ' + totalResults);
+
+        vcLog.recordLog({
+            header: 'VAR Connect START',
+            body:
+                'VAR Connect START' +
+                ('\n\nTotal Orders: ' + totalResults) +
+                ('\n\nParameters: ' + JSON.stringify(Params)),
+            status: constants.Lists.VC_LOG_STATUS.INFO
+        });
 
         return returnValue;
     };
@@ -341,7 +362,7 @@ define([
             // looup the country
             var countryCode = vendorConfig.countryCode;
 
-            var po_record = r.load({
+            var po_record = ns_record.load({
                 type: 'purchaseorder',
                 id: docid,
                 isDynamic: true
@@ -367,7 +388,7 @@ define([
 
             log.debug(logTitle, LogPrefix + '>> Initiating library webservice ....');
 
-            outputObj = libWebService.process({
+            outputObj = vcWebSvc.process({
                 mainConfig: mainConfig,
                 vendorConfig: vendorConfig,
                 vendor: vendor,
@@ -386,7 +407,7 @@ define([
                 return true;
             }
 
-            so_ID = libcode.updatepo({
+            so_ID = vcRecord.updatepo({
                 po_record: po_record,
                 poNum: docid,
                 lineData: outputObj.itemArray,
@@ -397,8 +418,8 @@ define([
             log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(so_ID));
 
             if (!vc2Utils.isEmpty(so_ID)) {
-                var so_rec = r.load({
-                    type: r.Type.SALES_ORDER,
+                var so_rec = ns_record.load({
+                    type: ns_record.Type.SALES_ORDER,
                     id: so_ID
                 });
                 custID = so_rec.getValue('entity');
@@ -433,10 +454,10 @@ define([
 
                 // Move the searches outside of the for loop for governance issues
                 var arrFulfillments = [];
-                var ifSearch = search.load({ id: 'customsearch_ctc_if_vendor_orders' });
-                var ifFilters = search.createFilter({
+                var ifSearch = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+                var ifFilters = ns_search.createFilter({
                     name: 'custbody_ctc_if_vendor_order_match',
-                    operator: search.Operator.STARTSWITH,
+                    operator: ns_search.Operator.STARTSWITH,
                     values: numPrefix
                 });
                 ifSearch.filters.push(ifFilters);
@@ -453,10 +474,10 @@ define([
                 // );
 
                 var arrReceipts = [];
-                var ifSearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
-                var ifFilters = search.createFilter({
+                var ifSearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+                var ifFilters = ns_search.createFilter({
                     name: 'custbody_ctc_if_vendor_order_match',
-                    operator: search.Operator.STARTSWITH,
+                    operator: ns_search.Operator.STARTSWITH,
                     values: numPrefix
                 });
                 ifSearch.filters.push(ifFilters);
@@ -584,7 +605,7 @@ define([
 
         log.debug(logTitle, LogPrefix + '>> serial data: ' + JSON.stringify(data));
 
-        var po_record = r.load({
+        var po_record = ns_record.load({
             type: 'purchaseorder',
             id: poId,
             isDynamic: true
@@ -605,7 +626,7 @@ define([
             if (!vendorConfig) throw 'Vendor Config not found';
             // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
-            // var lineNum = libcode.validateline(
+            // var lineNum = vcRecord.validateline(
             //     po_record,
             //     itemNum,
             //     null,
@@ -613,7 +634,7 @@ define([
             //     vendorConfig.xmlVendor
             // );
 
-            var lineNum = libcode.validateline({
+            var lineNum = vcRecord.validateline({
                 po_record: po_record,
                 lineData: data.lineData,
                 ingramHashSpace: mainConfig.ingramHashSpace,
@@ -634,14 +655,14 @@ define([
 
             log.debug(logTitle, LogPrefix + '>> SalesOrder Id: ' + JSON.stringify(soId));
 
-            var rs = search.global({ keywords: serial });
+            var rs = ns_search.global({ keywords: serial });
             //log.debug("Global search result", rs);
             log.debug(logTitle, LogPrefix + '>> Global Search - serial: ' + serial);
 
             if (rs.length == 0) {
                 // log.debug('xml app v2: saveSerial', serial);
 
-                var sn_record = r.create({
+                var sn_record = ns_record.create({
                     type: 'customrecordserialnum'
                 });
                 sn_record.setValue({
@@ -721,11 +742,11 @@ define([
             return true;
         });
         log.audit('REDUCE keys processed', reduceKeys);
-        // vcLog.recordLog({
-        //     header: 'VAR Connect END',
-        //     body: 'VAR Connect END',
-        //     status: constants.Lists.VC_LOG_STATUS.INFO
-        // });
+        vcLog.recordLog({
+            header: 'VAR Connect END',
+            body: 'VAR Connect END',
+            status: constants.Lists.VC_LOG_STATUS.INFO
+        });
 
         log.debug(logTitle, '###### END OF SCRIPT ###### ');
     };

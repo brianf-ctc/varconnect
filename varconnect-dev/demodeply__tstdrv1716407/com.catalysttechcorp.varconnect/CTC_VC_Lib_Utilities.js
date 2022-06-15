@@ -1,3 +1,16 @@
+/**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ */
 define(['N/url', './CTC_VC_Constants.js'], function (url, constants) {
     var Util = {
         isEmpty: function (stValue) {
@@ -17,7 +30,6 @@ define(['N/url', './CTC_VC_Constants.js'], function (url, constants) {
                 return false;
             }
         },
-
         getNodeTextContent: function (node) {
             // log.debug('node', node);
             if (!Util.isUndefined(node)) return node.textContent;
@@ -36,7 +48,6 @@ define(['N/url', './CTC_VC_Constants.js'], function (url, constants) {
 
             return protocol + domain + linkUrl;
         },
-
         isUndefined: function (value) {
             // Obtain `undefined` value that's guaranteed to not have been re-assigned
             var undefined = void 0;

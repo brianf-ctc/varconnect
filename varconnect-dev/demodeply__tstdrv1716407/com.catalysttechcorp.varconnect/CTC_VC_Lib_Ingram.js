@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
@@ -16,9 +19,6 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  * 2.00		May 5, 2021		paolodl		Country code added for Canada
  *
- */ /**
- * @NApiVersion 2.x
- * @NModuleScope SameAccount
  */
 define([
     'N/search',
@@ -30,11 +30,9 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Utilities.js'
 ], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
-
     var LogTitle = 'WS:Ingram';
-    
-    function processRequest(options) {
 
+    function processRequest(options) {
         var logTitle = [LogTitle, 'processRequest'].join('::');
         log.audit(logTitle, options);
 
@@ -46,8 +44,6 @@ define([
             password = vendorConfig.password,
             customerNo = vendorConfig.customerNo;
 
-
-            
         log.debug({
             title: 'Ingram Micro Scheduled',
             details: 'requestIngramMicro'

@@ -1,7 +1,17 @@
 /**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
+
 define([], function () {
     var VC_CONSTANTS = {
         LOG_APPLICATION: 'VAR Connect'
@@ -183,7 +193,7 @@ define([], function () {
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.PENDING
         },
         BILL_CREATE_DISABLED: {
             code: 'BILL_CREATE_DISABLED',

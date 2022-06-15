@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,9 +7,13 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
+ * CTC_Create_Item_Fulfillment.js
  * Module Description
  *
  * Version	Date            Author		Remarks
@@ -26,12 +30,7 @@
  *                                      removed the 'NA' on native serial settings
  *                                      fixed bug on determing unique line items to fulfill
  *                                      code cleanup, updated variable names
- */
-
-/**
- *CTC_Create_Item_Fulfillment.js
- *@NApiVersion 2.x
- *@NModuleScope Public
+ * 2.06		 May 18, 2022	christian	Location lookup can have empty array
  */
 
 define([
@@ -655,7 +654,7 @@ define([
                     columns: ['location']
                 });
 
-                if (locationLookup && locationLookup.location) {
+                if (locationLookup && locationLookup.location && locationLookup.location[0]) {
                     lineLoc = locationLookup.location[0].value;
                 }
 
@@ -663,12 +662,15 @@ define([
                     logTitle,
                     LogPrefix + '>> lookup search: ' + JSON.stringify([locationLookup, lineLoc])
                 );
+
                 // set the line item
-                record.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'location',
-                    value: lineLoc
-                });
+                if (lineLoc) {
+                    record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        value: lineLoc
+                    });
+                }
             }
 
             // check if the location isempty
