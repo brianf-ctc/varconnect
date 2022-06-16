@@ -24,138 +24,11 @@
 
 define([
     'N/xml',
-    'N/https',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
-    './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_xml, ns_https, vcLog, vcGlobal, vc2Utils, moment) {
+    './CTC_VC2_Lib_Utils.js'
+], function (ns_xml, vcLog, VC_Global, VC2_Utils) {
     var LogTitle = 'WS:Synnex';
-
-    var Config = {
-        AllowRetry: true,
-        NumRetries: 3,
-        WaitMS: 500,
-        CountryCode: ''
-    };
-
-    var Helper = {
-        sendRequest: function (option) {
-            var logTitle = [LogTitle, 'sendRequest'].join('::'),
-                returnValue;
-            log.audit(logTitle, option);
-
-            var ValidMethods = ['post', 'get'];
-
-            var method = (option.method || 'get').toLowerCase();
-            method = vc2Utils.inArray(method, ValidMethods) ? method : 'get';
-
-            var queryOption = option.query || option.queryOption;
-            if (!queryOption || vc2Utils.isEmpty(queryOption)) throw 'Missing query option';
-
-            var response, responseBody;
-
-            var paramFlags = {
-                noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
-                doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
-                maxRetry: option.hasOwnProperty('maxRetry')
-                    ? option.maxRetry
-                    : Config.NumRetries || 0,
-                countRetry: option.hasOwnProperty('retryCount') ? option.retryCount : 0
-            };
-
-            log.audit(logTitle, '>> paramFlags: ' + JSON.stringify(paramFlags));
-
-            try {
-                if (option.doLogRequest || !paramFlags.noLogs) {
-                    vcLog.recordLog({
-                        header: [option.header || LogTitle, 'Request'].join(' - '),
-                        body: JSON.stringify(queryOption),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
-                    });
-                }
-
-                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
-
-                //// SEND THE REQUEST //////
-                response = ns_https[method](queryOption);
-                responseBody = response.body; //Helper.safeParse(response.body);
-
-                if (!response.code || response.code != 200) {
-                    throw 'Failed Response Found';
-                }
-                if (!response || !response.body) {
-                    throw 'Empty or Missing Response !';
-                }
-                ////////////////////////////
-
-                returnValue = response;
-            } catch (error) {
-                if (!paramFlags.doRetry || paramFlags.maxRetry >= paramFlags.countRetry) {
-                    var errorMsg = vc2Utils.extractError(error);
-                    vcLog.recordLog({
-                        header: [(option.header || LogTitle) + ': Error', errorMsg].join(' - '),
-                        body: JSON.stringify(error),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
-                    });
-
-                    throw error;
-                }
-
-                option.retryCount = paramFlags.countRetry + 1;
-                vc2Utils.waitMs(Config.WaitMS);
-
-                returnValue = Helper.sendRequest(option);
-            } finally {
-                log.audit(
-                    logTitle,
-                    '>> RESPONSE ' +
-                        JSON.stringify({
-                            code: response.code || '-no response-',
-                            body: responseBody || response.body || '-empty response-'
-                        })
-                );
-                if (option.doLogResponse || !paramFlags.noLogs) {
-                    vcLog.recordLog({
-                        header: [option.header || LogTitle, 'Response'].join(' - '),
-                        body: JSON.stringify(responseBody || response),
-                        transaction: option.internalId || option.transactionId || option.recordId,
-                        status: vcGlobal.Lists.VC_LOG_STATUS.INFO
-                    });
-                }
-            }
-
-            return returnValue;
-        },
-        safeParse: function (response) {
-            var logTitle = [LogTitle, 'safeParse'].join('::'),
-                returnValue;
-
-            log.audit(logTitle, response);
-            try {
-                returnValue = JSON.parse(response.body || response);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ##' + vc2Utils.extractError(error));
-                returnValue = null;
-            }
-
-            return returnValue;
-        },
-        convertToQuery: function (json) {
-            if (typeof json !== 'object') return;
-
-            var qry = [];
-            for (var key in json) {
-                var qryVal = encodeURIComponent(json[key]);
-                var qryKey = encodeURIComponent(key);
-                qry.push([qryKey, qryVal].join('='));
-            }
-
-            return qry.join('&');
-        }
-    };
 
     function processRequest(option) {
         var logTitle = [LogTitle, 'processRequest'].join('::');
@@ -164,45 +37,52 @@ define([
         var poNum = option.poNum,
             poId = option.poId,
             vendorConfig = option.vendorConfig,
-            requestURL = vendorConfig.endPoint,
-            userName = vendorConfig.user,
-            password = vendorConfig.password,
-            customerNo = vendorConfig.customerNo;
+            returnValue;
 
-        var orderXMLLineData = [],
-            responseXml,
-            response;
+        try {
+            var orderStatusReq = VC2_Utils.sendRequest({
+                header: [LogTitle, 'Order Status'].join(':'),
+                method: 'post',
+                recordId: poId,
+                query: {
+                    url: vendorConfig.endPoint,
+                    headers: {
+                        'Content-Type': 'text/xml; charset=utf-8',
+                        'Content-Length': 'length'
+                    },
+                    body:
+                        '<?xml version="1.0" encoding="UTF-8" ?>' +
+                        '<SynnexB2B version="2.2">' +
+                        '<Credential>' +
+                        ('<UserID>' + vendorConfig.user + '</UserID>') +
+                        ('<Password>' + vendorConfig.password + '</Password>') +
+                        '</Credential>' +
+                        '<OrderStatusRequest>' +
+                        ('<CustomerNumber>' + vendorConfig.customerNo + '</CustomerNumber>') +
+                        ('<PONumber>' + poNum + '</PONumber>') +
+                        '</OrderStatusRequest>' +
+                        '</SynnexB2B>'
+                }
+            });
 
-        response = Helper.sendRequest({
-            header: [LogTitle, 'Order Status'].join(':'),
-            method: 'post',
-            doRetry: false,
-            recordId: poId,
-            query: {
-                url: requestURL,
-                headers: {
-                    'Content-Type': 'text/xml; charset=utf-8',
-                    'Content-Length': 'length'
-                },
-                body:
-                    '<?xml version="1.0" encoding="UTF-8" ?>' +
-                    '<SynnexB2B version="2.2">' +
-                    '<Credential>' +
-                    ('<UserID>' + userName + '</UserID>') +
-                    ('<Password>' + password + '</Password>') +
-                    '</Credential>' +
-                    '<OrderStatusRequest>' +
-                    ('<CustomerNumber>' + customerNo + '</CustomerNumber>') +
-                    ('<PONumber>' + poNum + '</PONumber>') +
-                    '</OrderStatusRequest>' +
-                    '</SynnexB2B>'
-            }
-        });
+            if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
+            if (!orderStatusReq.RESPONSE.body) throw 'Unable to fetch server response';
 
-        if (!response || !response.body) throw 'Unable to retrieve response';
-        responseXml = response.body;
+            returnValue = orderStatusReq.RESPONSE.body;
+        } catch (error) {
+            var errorMsg = VC2_Utils.extractError(error);
+            vcLog.recordLog({
+                header: [LogTitle + ': Error', errorMsg].join(' - '),
+                body: JSON.stringify(error),
+                transaction: option.poId,
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+            });
+        }
 
-        return responseXml;
+        // if (!response || !response.body) throw 'Unable to retrieve response';
+        // responseXml = response.body;
+
+        return returnValue;
     }
 
     function processResponse(option) {
@@ -317,16 +197,16 @@ define([
                 }
 
                 if (itemRow.is_shipped) {
-                    itemRow.is_shipped = vc2Utils.inArray(itemCode, ['invoiced', 'shipped']);
+                    itemRow.is_shipped = VC2_Utils.inArray(itemCode, ['invoiced', 'shipped']);
                 }
 
                 // ignore items unles they have been invoiced or accepted or shipped
-                if (vc2Utils.inArray(itemCode, ['invoiced', 'accepted', 'shipped'])) {
+                if (VC2_Utils.inArray(itemCode, ['invoiced', 'accepted', 'shipped'])) {
                     itemArray.push(itemRow);
                 }
             }
         } catch (err) {
-            log.error(logTitle + '::ERROR', '!! ERROR !! ' + vc2Utils.extractError(err));
+            log.error(logTitle + '::ERROR', '!! ERROR !! ' + VC2_Utils.extractError(err));
         }
 
         // log.debug(logTitle, itemArray);
@@ -341,6 +221,7 @@ define([
             poId = option.poId,
             vendorConfig = option.vendorConfig,
             outputArray = null;
+
         var responseXML = processRequest({
             poNum: poNum,
             poId: poId,
@@ -359,11 +240,11 @@ define([
 
         vcLog.recordLog({
             header: [LogTitle, 'Lines'].join(' - '),
-            body: !vc2Utils.isEmpty(outputArray)
+            body: !VC2_Utils.isEmpty(outputArray)
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
             transaction: poId,
-            status: vcGlobal.Lists.VC_LOG_STATUS.INFO
+            status: VC_Global.Lists.VC_LOG_STATUS.INFO
         });
 
         return outputArray;
