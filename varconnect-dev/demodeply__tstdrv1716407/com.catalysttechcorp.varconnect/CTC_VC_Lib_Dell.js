@@ -141,6 +141,7 @@ define([
                 option.responseBody = orderStatusResp;
                 returnValue = orderStatusResp;
             } catch (error) {
+                
                 var errorMsg = vc2Utils.extractError(error);
                 vcLog.recordLog({
                     header: [LogTitle + ': Error', errorMsg].join(' - '),

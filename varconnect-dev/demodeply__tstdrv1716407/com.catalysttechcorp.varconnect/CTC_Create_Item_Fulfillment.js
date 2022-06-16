@@ -545,7 +545,10 @@ define([
                 'Create-ItemFF::addNativeSerials',
                 '>> Valid Serials: ' + JSON.stringify(validSerialList)
             );
-            if (Helper.isEmpty(validSerialList) || !validSerialList.length) return ifRec;
+            if (Helper.isEmpty(validSerialList) || !validSerialList.length) {
+                // unset the location
+                return false;
+            }
 
             var inventoryDetailRecord = ifRec.getCurrentSublistSubrecord({
                 sublistId: 'item',
@@ -558,18 +561,20 @@ define([
                     line: i
                 });
 
+                if (validSerialList[i] && validSerialList[i] !== 'NA') {
                 inventoryDetailRecord.setCurrentSublistValue({
                     sublistId: 'inventoryassignment',
                     fieldId: 'receiptinventorynumber',
                     value: validSerialList[i]
                 });
+                }
 
                 inventoryDetailRecord.commitLine({
                     sublistId: 'inventoryassignment'
                 });
             }
 
-            return ifRec;
+            return true;
         },
         addNativePackages: function (data) {
             var ifRec = data.record;
@@ -1200,14 +1205,32 @@ define([
                                             sublistId: 'item',
                                             fieldId: 'isserial'
                                         });
-                                        log.audit(logTitle, '>> is serialized1: ' + isSerialized);
+                                        var isInvDetailReqd = recItemFF.getCurrentSublistValue({
+                                            sublistId: 'item',
+                                            fieldId: 'inventorydetailreq'
+                                        });
+
+                                        log.audit(
+                                            logTitle,
+                                            '>> is serialized1 / required: ' +
+                                                JSON.stringify([isSerialized, isInvDetailReqd])
+                                        );
+                                        // log.audit(logTitle, '>> is serialized1: ' + isSerialized);
 
                                         if (isSerialized && isSerialized === 'T') {
-                                            recItemFF = Helper.addNativeSerials({
+                                            var resultSerials = Helper.addNativeSerials({
                                                 record: recItemFF,
                                                 serials: item.all_serial_nums
                                                 // soid: so_ID
                                             });
+
+                                            if (!resultSerials) {
+                                                recItemFF.setCurrentSublistValue({
+                                                    sublistId: 'item',
+                                                    fieldId: 'location',
+                                                    value: ''
+                                                });
+                                            }
                                         }
                                         /*** End Clem - Serial functionality 1 ***/
 
@@ -1319,14 +1342,33 @@ define([
                                         sublistId: 'item',
                                         fieldId: 'isserial'
                                     });
-                                    log.audit(logTitle, '>> is serialized2: ' + isSerialized);
+
+                                    var isInvDetailReqd = recItemFF.getCurrentSublistValue({
+                                        sublistId: 'item',
+                                        fieldId: 'inventorydetailreq'
+                                    });
+
+                                    log.audit(
+                                        logTitle,
+                                        '>> is serialized2 / required: ' +
+                                            JSON.stringify([isSerialized, isInvDetailReqd])
+                                    );
 
                                     if (isSerialized && isSerialized === 'T') {
-                                        recItemFF = Helper.addNativeSerials({
+                                        resultSerials = Helper.addNativeSerials({
                                             record: recItemFF,
                                             serials: item.all_serial_nums.split('\n')
                                             // soid: so_ID
                                         });
+
+                                        if (!resultSerials) {
+                                            recItemFF.setCurrentSublistValue({
+                                                sublistId: 'item',
+                                                fieldId: 'location',
+                                                value: ''
+                                            });
+                                        }
+
                                     }
                                     /*** End Clem - Serial functionality 2 ***/
 

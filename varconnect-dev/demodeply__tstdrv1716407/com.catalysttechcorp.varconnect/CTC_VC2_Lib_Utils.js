@@ -22,7 +22,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
-    var Util = {
+    var VC2_Util = {
         CACHE: {},
         isEmpty: function (stValue) {
             return (
@@ -47,7 +47,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         uniqueArray: function (arrVar) {
             var arrNew = [];
             for (var i = 0, j = arrVar.length; i < j; i++) {
-                if (Util.inArray(arrVar[i], arrNew)) continue;
+                if (VC2_Util.inArray(arrVar[i], arrNew)) continue;
                 arrNew.push(arrVar[i]);
             }
 
@@ -55,11 +55,11 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         },
         getNodeTextContent: function (node) {
             // log.debug('node', node);
-            if (!Util.isUndefined(node)) return node.textContent;
+            if (!VC2_Util.isUndefined(node)) return node.textContent;
             else return null;
         },
         generateSerialLink: function (params) {
-            var NS_Url = Util.loadModule('N/url');
+            var NS_Url = VC2_Util.loadModule('N/url');
 
             var protocol = 'https://';
             var domain = NS_Url.resolveDomain({
@@ -86,7 +86,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
             var dateString = option.dateString || option,
-                dateFormat = Util.CACHE.DATE_FORMAT,
+                dateFormat = VC2_Util.CACHE.DATE_FORMAT,
                 date = '';
 
             if (!dateFormat) {
@@ -106,7 +106,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                     } catch (e) {}
                     // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
                 }
-                Util.CACHE.DATE_FORMAT = dateFormat;
+                VC2_Util.CACHE.DATE_FORMAT = dateFormat;
                 log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
             }
 
@@ -251,11 +251,15 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                     option.message ||
                     option.errorMessage ||
                     option.errorMsg ||
-                    (option.error ? Util.extractError(option.error) : '');
+                    (option.error ? VC2_Util.extractError(option.error) : '');
+
+                logOption.BODY = util.isString(logOption.BODY)
+                    ? logOption.BODY
+                    : JSON.stringify(logOption.BODY);
 
                 if (
                     option.status &&
-                    Util.inArray(option.status, [
+                    VC2_Util.inArray(option.status, [
                         LOG_STATUS.ERROR,
                         LOG_STATUS.INFO,
                         LOG_STATUS.SUCCESS
@@ -291,7 +295,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 recLog.save();
                 log.audit(logOption.HEADER, logOption.BODY);
             } catch (error) {
-                log.error(logTitle, LogPrefix + '## ERROR ## ' + Util.extractError(error));
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + VC2_Util.extractError(error));
             }
             return true;
         },
@@ -335,7 +339,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         //         maxRetries: 3,
         //         maxWaitMs: 3000
         //     };
-        //     var ns_https = Util.loadModule('N/https');
+        //     var ns_https = VC2_Util.loadModule('N/https');
 
         //     var queryOption = option.query || option.queryOption,
         //         response,
@@ -346,7 +350,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         //             send: function (option) {}
         //         };
 
-        //     var request = Util.webRequest();
+        //     var request = VC2_Util.webRequest();
         //     request.send({});
 
         //     request.get
@@ -365,10 +369,10 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 maxRetries: 3,
                 maxWaitMs: 3000
             };
-            var ns_https = Util.loadModule('N/https');
+            var ns_https = VC2_Util.loadModule('N/https');
 
             var queryOption = option.query || option.queryOption;
-            if (!queryOption || Util.isEmpty(queryOption)) throw 'Missing query option';
+            if (!queryOption || VC2_Util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
             var response,
@@ -389,7 +393,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                     logTranId: option.internalId || option.transactionId || option.recordId,
 
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: Util.inArray(option.method, _DEFAULT.validMethods)
+                    method: VC2_Util.inArray(option.method, _DEFAULT.validMethods)
                         ? option.method
                         : 'get'
                 };
@@ -398,9 +402,9 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
             try {
                 if (!param.noLogs) {
-                    Util.vcLog({
+                    VC2_Util.vcLog({
                         title: [param.logHeader, 'Request'].join(' - '),
-                        content: JSON.stringify(queryOption),
+                        content: queryOption,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
                     });
@@ -413,7 +417,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 response = ns_https[param.method](queryOption);
                 returnValue.RESPONSE = response;
 
-                parsedResponse = Util.safeParse(response);
+                parsedResponse = VC2_Util.safeParse(response);
                 returnValue.PARSED_RESPONSE = parsedResponse;
 
                 responseBody = response.body;
@@ -427,18 +431,18 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
                 ////////////////////////////
             } catch (error) {
-                var errorMsg = Util.extractError(error);
+                var errorMsg = VC2_Util.extractError(error);
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
 
-                Util.vcLog({
+                VC2_Util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
                         (param.doRetry
                             ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
                             : ''),
-                    content: JSON.stringify(error),
+                    content: error,
                     transaction: param.logTranId,
                     isError: true
                 });
@@ -448,8 +452,8 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
                     option.retryCount = param.retryCount + 1;
-                    Util.waitMs(param.waitMs);
-                    returnValue = Util.sendRequest(option);
+                    VC2_Util.waitMs(param.waitMs);
+                    returnValue = VC2_Util.sendRequest(option);
                 }
             } finally {
                 log.audit(
@@ -462,9 +466,9 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 );
 
                 if (!param.noLogs) {
-                    Util.vcLog({
+                    VC2_Util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
-                        content: JSON.stringify(parsedResponse || responseBody || response),
+                        content: parsedResponse || responseBody || response,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
                     });
@@ -481,7 +485,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             try {
                 returnValue = JSON.parse(response.body || response);
             } catch (error) {
-                log.error(logTitle, '## ERROR ##' + Util.extractError(error));
+                log.error(logTitle, '## ERROR ##' + VC2_Util.extractError(error));
                 returnValue = null;
             }
 
@@ -493,5 +497,5 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
         }
     };
 
-    return Util;
+    return VC2_Util;
 });
