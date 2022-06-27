@@ -1,9 +1,22 @@
 /**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ * @description Library File for Arrow PO Creation
+ */
+
+/**
  * Project Number:
  * Script Name: CTC VCSP Lib Arrow
  * Author: john.ramonel
- * @NApiVersion 2.x
- * @description Library File for Arrow PO Creation
  */
 define([
     'N/search',

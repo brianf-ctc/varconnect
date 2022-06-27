@@ -1,3 +1,16 @@
+/**
+ * Copyright (c) 2022 Catalyst Tech Corp
+ * All Rights Reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Catalyst Tech Corp. ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ */
 define(['N/url', 'N/https', './CTC_VCSP_Constants'], function (url, https, constants) {
     function callValidationSuitelet(options) {
         var license = options.license,
@@ -16,6 +29,8 @@ define(['N/url', 'N/https', './CTC_VCSP_Constants'], function (url, https, const
             link = protocol + domain + linkUrl;
 
         if (external) link = linkUrl;
+
+        log.debug('link', link);
 
         var res = https.get({
             url: link
