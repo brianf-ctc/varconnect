@@ -53,6 +53,64 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
             return arrNew;
         },
+        searchAllPaged: function (option) {
+            var objSearch, arrResults = [], logTitle = 'CTC_Utils:searchAllPaged';
+            option = option || {};
+
+            try {
+                var searchId = option.id || option.searchId;
+                var searchType = option.recordType || option.type;
+
+                objSearch = option.searchObj ? option.searchObj :
+                    searchId ? NS_Search.load({
+                        id: searchId
+                    }) :
+                    searchType ? NS_Search.create({
+                        type: searchType
+                    }) : null;
+
+                if (!objSearch) throw "Invalid search identifier";
+                if (!objSearch.filters) objSearch.filters = [];
+                if (!objSearch.columns) objSearch.columns = [];
+
+                if (option.filters) objSearch.filters = objSearch.filters.concat(option.filters);
+                if (option.filterExpression) objSearch.filterExpression = option.filterExpression;
+                if (option.columns) objSearch.columns = objSearch.columns.concat(option.columns);
+
+                var maxResults = option.maxResults || 0;
+                var pageSize = maxResults && maxResults <= 1000 ? maxResults : 1000;
+
+                // run the search
+                var objPagedResults = objSearch.runPaged({
+                    pageSize: pageSize
+                });
+                // set the max results to the search length, if not defined;
+                maxResults = maxResults || objPagedResults.count;
+
+
+                for (var i = 0, j = objPagedResults.pageRanges.length; i < j; i++) {
+                    var pagedResults = objPagedResults.fetch({
+                        index: objPagedResults.pageRanges[i].index
+                    });
+
+                    // test if we need to get all the paged results,
+                    // .. or just a slice, of maxResults is less than the pageSize
+                    arrResults = arrResults.concat(maxResults > pageSize ?
+                        pagedResults.data :
+                        pagedResults.data.slice(0, maxResults));
+
+                    // reduce the max results
+                    maxResults = maxResults - pageSize;
+                    if (maxResults < 0) break;
+                }
+
+            } catch (e) {
+                log.debug(logTitle, '>> error: ' + JSON.stringify(e));
+                throw e.message;
+            }
+
+            return arrResults;
+        },        
         getNodeTextContent: function (node) {
             // log.debug('node', node);
             if (!VC2_Util.isUndefined(node)) return node.textContent;

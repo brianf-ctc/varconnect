@@ -562,11 +562,11 @@ define([
                 });
 
                 if (validSerialList[i] && validSerialList[i] !== 'NA') {
-                inventoryDetailRecord.setCurrentSublistValue({
-                    sublistId: 'inventoryassignment',
-                    fieldId: 'receiptinventorynumber',
-                    value: validSerialList[i]
-                });
+                    inventoryDetailRecord.setCurrentSublistValue({
+                        sublistId: 'inventoryassignment',
+                        fieldId: 'receiptinventorynumber',
+                        value: validSerialList[i]
+                    });
                 }
 
                 inventoryDetailRecord.commitLine({

@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
@@ -296,25 +297,37 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         '>>>>>> initial SKU: ' + JSON.stringify(myArr[i].ordObj.lines[l].ITEMNO)
                     );
 
-                    // try to autoselect item using fuse;
+                    var matchedSku;
+                    availableSkus.forEach(function (sku) {
+                        if (myArr[i].ordObj.lines[l].ITEMNO == sku.text ) {
+                            matchedSku = sku.value;
+                        }
+                        return true;
+                    });
 
-                    const options = {
-                        includeScore: true,
-                        threshold: 0.4,
-                        keys: ['text']
-                    };
-
-                    var fuse = new Fuse(availableSkus, options);
-
-                    var fuseOutput = fuse.search(myArr[i].ordObj.lines[l].ITEMNO);
-
-                    if (fuseOutput.length > 0) {
-                        var matchedSku = fuseOutput[0].item.value;
-
+                    if (matchedSku) {
                         myArr[i].ordObj.lines[l].NSITEM = matchedSku;
                         arrMatchedSKU.push(matchedSku);
-                        // billFileNotes.push('Matched SKU: ' + matchedSku);
                     }
+                    
+                    // // try to autoselect item using fuse;
+                    // const options = {
+                    //     includeScore: true,
+                    //     threshold: 0.4,
+                    //     keys: ['text']
+                    // };
+
+                    // var fuse = new Fuse(availableSkus, options);
+
+                    // var fuseOutput = fuse.search(myArr[i].ordObj.lines[l].ITEMNO);
+
+                    // if (fuseOutput.length > 0) {
+                    //     var matchedSku = fuseOutput[0].item.value;
+
+                    //     myArr[i].ordObj.lines[l].NSITEM = matchedSku;
+                    //     arrMatchedSKU.push(matchedSku);
+                    //     // billFileNotes.push('Matched SKU: ' + matchedSku);
+                    // }
                 }
 
                 if (arrMatchedSKU.length) {
@@ -405,9 +418,10 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         dateVal: new Date(dateStr),
                         msg: arr.shift()
                     };
-                    note.msg = note.msg.replace(/\r\n/gm, '');
+                    if (note.msg) note.msg = note.msg.replace(/\r\n/gm, '');
                     arrNotes.push(note);
                 }
+                log.audit('noteHelper::splitByDate', '>> arrNotes: ' + JSON.stringify(arrNotes));
                 return arrNotes.sort(function (a, b) {
                     return b.dateVal - a.dateVal;
                 });

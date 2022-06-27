@@ -41,29 +41,29 @@ define([
 
         try {
             var orderStatusReq = VC2_Utils.sendRequest({
-            header: [LogTitle, 'Order Status'].join(':'),
-            method: 'post',
-            recordId: poId,
-            query: {
+                header: [LogTitle, 'Order Status'].join(':'),
+                method: 'post',
+                recordId: poId,
+                query: {
                     url: vendorConfig.endPoint,
-                headers: {
-                    'Content-Type': 'text/xml; charset=utf-8',
-                    'Content-Length': 'length'
-                },
-                body:
-                    '<?xml version="1.0" encoding="UTF-8" ?>' +
-                    '<SynnexB2B version="2.2">' +
-                    '<Credential>' +
+                    headers: {
+                        'Content-Type': 'text/xml; charset=utf-8',
+                        'Content-Length': 'length'
+                    },
+                    body:
+                        '<?xml version="1.0" encoding="UTF-8" ?>' +
+                        '<SynnexB2B version="2.2">' +
+                        '<Credential>' +
                         ('<UserID>' + vendorConfig.user + '</UserID>') +
                         ('<Password>' + vendorConfig.password + '</Password>') +
-                    '</Credential>' +
-                    '<OrderStatusRequest>' +
+                        '</Credential>' +
+                        '<OrderStatusRequest>' +
                         ('<CustomerNumber>' + vendorConfig.customerNo + '</CustomerNumber>') +
-                    ('<PONumber>' + poNum + '</PONumber>') +
-                    '</OrderStatusRequest>' +
-                    '</SynnexB2B>'
-            }
-        });
+                        ('<PONumber>' + poNum + '</PONumber>') +
+                        '</OrderStatusRequest>' +
+                        '</SynnexB2B>'
+                }
+            });
 
             if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
             if (!orderStatusReq.RESPONSE.body) throw 'Unable to fetch server response';
@@ -221,6 +221,7 @@ define([
             poId = option.poId,
             vendorConfig = option.vendorConfig,
             outputArray = null;
+
         var responseXML = processRequest({
             poNum: poNum,
             poId: poId,
