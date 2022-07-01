@@ -35,6 +35,8 @@ define([
     '../CTC_VC_Lib_LicenseValidator',
     '../CTC_Util.js'
 ], function (task, ui, runtime, record, constants, libMainConfig, libLicenseValidator, Util) {
+    var LogTitle = 'UE_SerialManip';
+
     function _validateLicense(options) {
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
@@ -73,6 +75,15 @@ define([
      * @Since 2015.2
      */
     function beforeLoad(scriptContext) {
+        var logTitle = [LogTitle, 'beforeLoad'].join('::');
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: runtime.executionContext
+            })
+        );
+
         if (scriptContext.type !== scriptContext.UserEventType.DELETE) {
             var mainConfig = _loadMainConfig();
 
@@ -112,6 +123,15 @@ define([
      * @Since 2015.2
      */
     function afterSubmit(scriptContext) {
+        var logTitle = [LogTitle, 'afterSubmit'].join('::');
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: runtime.executionContext
+            })
+        );
+
         if (
             scriptContext.type !== scriptContext.UserEventType.DELETE &&
             runtime.executionContext != runtime.ContextType.MAP_REDUCE

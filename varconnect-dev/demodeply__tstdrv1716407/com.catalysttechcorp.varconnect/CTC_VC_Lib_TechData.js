@@ -133,7 +133,7 @@ define([
                 vendorSKU: 'NA',
                 carrier: 'NA',
                 serial_num: 'NA',
-                status: 'NA'
+                order_status: 'NA'
             };
 
             var orderInfoNode = itemInfoNodes[j].parentNode.parentNode;
@@ -147,6 +147,16 @@ define([
             //var orderNum = VC2_Utils.getNodeTextContent(xml.XPath.select({node:orderInfoNode, xpath:'OrderNbr'})[0]);
             if (orderNum != null && orderNum.length > 0) {
                 xml_items.order_num = orderNum;
+            }
+
+            var orderStatus = VC2_Utils.getNodeTextContent(
+                ns_xml.XPath.select({
+                    node: orderInfoNode,
+                    xpath: 'OrderStatus'
+                })[0]
+            );
+            if (orderStatus != null && orderStatus.length > 0) {
+                xml_items.order_status = orderStatus;
             }
 
             var orderDate = VC2_Utils.getNodeTextContent(
@@ -336,7 +346,10 @@ define([
         VC2_Utils.vcLog({
             recordId: option.poId,
             title: [LogTitle, 'Line Items'].join('::'),
-            message: JSON.stringify(outputArray)
+            message:
+                outputArray && outputArray.length
+                    ? JSON.stringify(outputArray)
+                    : '-no lines to process-'
         });
         /// log it //////////
 
@@ -410,6 +423,18 @@ define([
             if (lineInfoNodes == null) throw 'Empty LineInfo Nodes...';
             for (var j = 0; j < lineInfoNodes.length; j++) {
                 var xmlLineInfo = {
+                    order_status: VC2_Utils.getNodeTextContent(
+                        ns_xml.XPath.select({
+                            node: lineInfoNodes[j].parentNode,
+                            xpath: 'OrderStatus'
+                        })[0]
+                    ),
+                    line_status: VC2_Utils.getNodeTextContent(
+                        ns_xml.XPath.select({
+                            node: lineInfoNodes[j],
+                            xpath: 'LineStatus'
+                        })[0]
+                    ),
                     item_num: VC2_Utils.getNodeTextContent(
                         ns_xml.XPath.select({
                             node: lineInfoNodes[j],
@@ -457,6 +482,8 @@ define([
                 });
 
                 var xml_items = {
+                    order_status: 'NA',
+                    line_status: 'NA',
                     line_num: 'NA',
                     item_num: 'NA',
                     order_num: 'NA',
@@ -469,6 +496,10 @@ define([
                     carrier: 'NA',
                     serial_num: 'NA'
                 };
+
+                if (VC2_Utils.inArray(xmlLineInfo.line_status, ['SHIPPED'])) {
+                    xml_items.is_shipped = true;
+                }
 
                 for (var fld in xml_items) {
                     if (!xmlLineInfo.hasOwnProperty(fld) || xmlLineInfo[fld] == null) continue;

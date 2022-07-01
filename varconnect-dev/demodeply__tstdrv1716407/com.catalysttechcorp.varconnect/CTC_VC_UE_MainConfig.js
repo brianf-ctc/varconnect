@@ -21,15 +21,20 @@
  *
  */
 
-define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
-    serverWidget,
-    constants,
-    libLicenseValidator
-) {
+define([
+    'N/runtime',
+    'N/ui/serverWidget',
+    './CTC_VC_Constants.js',
+    './CTC_VC_Lib_LicenseValidator'
+], function (ns_runtime, serverWidget, constants, libLicenseValidator) {
+    var LogTitle = 'MainCFG';
     //Disables and clears the fields
     function _disableAndClearFields(options) {
+        var logTitle = [LogTitle, 'disableAndClearFields'].join('::');
+
         var form = options.form,
             fields = options.fields;
+        log.debug(logTitle, '>> fields: ' + JSON.stringify(fields));
 
         for (var field in fields) {
             var formField = form.getField({ id: fields[field] });
@@ -40,6 +45,8 @@ define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValid
 
     //Validates license and displays the corresponding status
     function _validateLicense(options) {
+        var logTitle = [LogTitle, 'validateLicense'].join('::');
+
         var newRecord = options.newRecord,
             license = newRecord.getValue({ fieldId: constants.Fields.MainConfig.LICENSE }),
             response = libLicenseValidator.callValidationSuitelet({
@@ -48,7 +55,7 @@ define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValid
             }),
             licenseText;
 
-        log.debug('response', response);
+        log.debug(logTitle, '>> response: ' + JSON.stringify(response));
 
         if (response == 'valid') {
             licenseText =
@@ -74,7 +81,16 @@ define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValid
      * @Since 2015.2
      */
     function beforeLoad(scriptContext) {
-        log.debug(scriptContext.type);
+        var logTitle = [LogTitle, 'beforeLoad'].join('::');
+
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: ns_runtime.executionContext
+            })
+        );
+
         if (
             scriptContext.type === scriptContext.UserEventType.CREATE ||
             scriptContext.type === scriptContext.UserEventType.EDIT ||
@@ -87,6 +103,12 @@ define(['N/ui/serverWidget', './CTC_VC_Constants.js', './CTC_VC_Lib_LicenseValid
                 isProcessSpecialOrder = newRecord.getValue({
                     fieldId: constants.Fields.MainConfig.PROCESS_SPECIAL_ORDERS
                 });
+
+            log.debug(logTitle, '>> isProcessDropship: ' + JSON.stringify(isProcessDropship));
+            log.debug(
+                logTitle,
+                '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder)
+            );
 
             if (!isProcessDropship)
                 _disableAndClearFields({

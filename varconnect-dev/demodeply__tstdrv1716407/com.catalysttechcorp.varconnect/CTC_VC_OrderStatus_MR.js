@@ -56,6 +56,7 @@ define([
 
             var logOption = {
                 transaction: option.tranId || option.transactionId,
+                transactionLineKey: option.transactionLineKey,
                 header: [LogTitle, option.title ? '::' + option.title : null].join(''),
                 body:
                     option.message ||
@@ -402,18 +403,35 @@ define([
             log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
 
             // if there are no lines.. just exit the script
-            if (vc2Utils.isEmpty(outputObj.itemArray)) {
+            if (
+                !outputObj.itemArray ||
+                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
+            ) {
                 log.debug(logTitle, LogPrefix + '>> no line items to process... exiting script: ');
                 return true;
             }
 
-            so_ID = vcRecord.updatepo({
+            var updateStatus = vcRecord.updatepo({
                 po_record: po_record,
                 poNum: docid,
                 lineData: outputObj.itemArray,
                 mainConfig: mainConfig,
                 vendorConfig: vendorConfig
             });
+
+            so_ID = null;
+            if (updateStatus) {
+                so_ID = updateStatus.id;
+                if (updateStatus.error && updateStatus.lineuniquekey) {
+                    vcLog.recordLog({
+                        header: 'PO Update | Error',
+                        body: vc2Utils.extractError(updateStatus.error),
+                        transaction: docid,
+                        transactionLineKey: updateStatus.lineuniquekey,
+                        status: constants.Lists.VC_LOG_STATUS.ERROR
+                    });
+                }
+            }
 
             log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(so_ID));
 

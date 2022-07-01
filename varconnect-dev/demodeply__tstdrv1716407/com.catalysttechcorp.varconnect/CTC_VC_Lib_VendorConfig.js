@@ -253,6 +253,13 @@ define([
                 })
         );
 
+        vendorConfigFields.push(
+            search.createColumn({
+                name: 'country',
+                join: 'custrecord_ctc_vc_vendor_subsidiary'
+            })
+        );
+
         var vendorSearch = search.create({
             type: constants.Records.VENDOR_CONFIG,
             filters: filter,

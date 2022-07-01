@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
@@ -299,7 +298,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
                     var matchedSku;
                     availableSkus.forEach(function (sku) {
-                        if (myArr[i].ordObj.lines[l].ITEMNO == sku.text ) {
+                        if (myArr[i].ordObj.lines[l].ITEMNO == sku.text) {
                             matchedSku = sku.value;
                         }
                         return true;
@@ -309,7 +308,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                         myArr[i].ordObj.lines[l].NSITEM = matchedSku;
                         arrMatchedSKU.push(matchedSku);
                     }
-                    
+
                     // // try to autoselect item using fuse;
                     // const options = {
                     //     includeScore: true,
