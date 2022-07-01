@@ -100,6 +100,12 @@ define([
 
             var itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
             var orderDateTime = xmlDoc.getElementsByTagName({ tagName: 'PODatetime' });
+            var orderCodes = xmlDoc.getElementsByTagName({ tagName: 'Code' });
+            if (orderCodes && orderCodes.length) {
+                itemArray.header_info = {
+                    order_status: orderCodes[0].textContent
+                };
+            }
 
             for (var i = 0; i < itemNodesArray.length; i++) {
                 var itemRow = {
@@ -113,7 +119,8 @@ define([
                     tracking_num: 'NA',
                     vendorSKU: 'NA',
                     carrier: 'NA',
-                    serial_num: 'NA'
+                    serial_num: 'NA',
+                    order_status: 'NA'
                 };
                 var itemCode = '';
 
@@ -136,7 +143,7 @@ define([
                     switch (itemChildNodes[j].nodeName) {
                         case 'Code':
                             itemCode = itemChildNodes[j].textContent;
-                            itemRow.statusCode = itemCode;
+                            itemRow.order_status = itemCode;
                             break;
                         case 'OrderNumber':
                             itemRow.order_num = itemChildNodes[j].textContent;
