@@ -13,23 +13,24 @@
  */
 
 define([
-    'N/log',
+    'N/runtime',
+    'N/search',
     'N/https',
     '../Libraries/moment',
-    '../Libraries/lodash',
-    'N/search',
-    'N/runtime'
-], function (log, https, moment, lodash, search, runtime) {
+    '../Libraries/lodash'
+], function (ns_runtime, ns_search, ns_https, moment, lodash) {
     'use strict';
+    var LogTitle = 'WS:IngramV1';
 
     function processXml(input, config) {
-        //var config = JSON.parse(configStr)
+        var logTitle = [LogTitle, 'processXml'].join('::');
 
+        //var config = JSON.parse(configStr)
         var tranNsid = input;
         log.debug('im: input', tranNsid);
 
-        var findDocumentNumber = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
+        var findDocumentNumber = ns_search.lookupFields({
+            type: ns_search.Type.PURCHASE_ORDER,
             id: tranNsid,
             columns: ['tranid']
         });
@@ -58,7 +59,7 @@ define([
 
         var lastCall = new Date().getTime();
 
-        var authResponse = https.post({
+        var authResponse = ns_https.post({
             url: baseUrl + authUrl,
             headers: headers,
             body: convertToXWWW(authBody)
@@ -75,7 +76,12 @@ define([
 
         log.debug(
             '>> country',
-            JSON.stringify([runtime.country, config.country, countryCode, runtime.country == 'CA'])
+            JSON.stringify([
+                ns_runtime.country,
+                config.country,
+                countryCode,
+                ns_runtime.country == 'CA'
+            ])
         );
 
         headers['Content-Type'] = 'application/json';
@@ -110,7 +116,7 @@ define([
             sleep(lastCall, 1050);
             lastCall = new Date().getTime();
 
-            var searchResponse = https.get({
+            var searchResponse = ns_https.get({
                 url: baseUrl + searchUrl,
                 headers: headers
             });
@@ -187,7 +193,7 @@ define([
                     })
                 );
 
-                var invoiceResponse = https.get({
+                var invoiceResponse = ns_https.get({
                     url: baseUrl + invoiceUrl,
                     headers: headers
                 });
@@ -298,7 +304,7 @@ define([
         try {
             var orderStatusUrl = config.url + '/resellers/v6/orders/' + imOrderNum;
 
-            var orderStatusResp = https.get({
+            var orderStatusResp = ns_https.get({
                 url: orderStatusUrl,
                 headers: {
                     'Content-Type': 'application/json',
@@ -361,7 +367,7 @@ define([
         // add delay between API calls so that we
         // don't get hit by ingrams 60 calls per minute governance.
 
-        https.get({
+        ns_https.get({
             url:
                 'https://us-east4-rapid-booking-320617.cloudfunctions.net/netsuite-sleep-function?delay=' +
                 milliseconds

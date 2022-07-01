@@ -23,9 +23,13 @@ define([
     './Libraries/CTC_VC_Lib_Vendor_Map'
 ], function (ns_search, ns_runtime, ns_error, moment, VC2_Utils, VCLib_BillFile, VCLib_VendorMap) {
     var LogTitle = 'MR_BillFiles-API';
+    var LogPrefix = '';
 
-    function getInputData() {
+    var MAP_REDUCE = {};
+
+    MAP_REDUCE.getInputData = function () {
         var logTitle = [LogTitle, 'getInputData'].join(':');
+        LogPrefix = '[getInputData] ';
 
         var CONNECT_TYPE = {
                 API: 1,
@@ -48,7 +52,7 @@ define([
             return true;
         });
 
-        log.debug(logTitle, '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
+        log.debug(logTitle, LogPrefix + '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
 
         var searchOption = {
             type: 'purchaseorder',
@@ -67,7 +71,7 @@ define([
                 ],
                 'AND',
                 ['mainline', 'is', 'T']
-                // ,'AND',['internalid', 'anyof', 6235]
+                // ,'AND',['internalid', 'anyof', 478344]
             ],
             columns: [
                 'internalid',
@@ -91,19 +95,34 @@ define([
                 })
             );
         }
-        log.debug(logTitle, '>> searchOption : ' + JSON.stringify(searchOption));
+        log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption));
 
         return ns_search.create(searchOption);
-    }
+    };
 
-    function reduce(context) {
-        var logTitle = [LogTitle, 'reduce'].join(':');
+    // MAP_REDUCE.map = function(context) {
+    //     var logTitle = [LogTitle, 'map'].join(':');
+    //     //var scriptObj = ns_runtime.getCurrentScript();
+    //     log.audit(logTitle, '>> context: ' + JSON.stringify(context));
+    //     var searchResult = VC2_Utils.safeParse(context.value);
+    //     context.write(context.key, searchResult);
+
+    //     return;
+    // }
+
+    MAP_REDUCE.reduce = function (context) {
+        var logTitle = [LogTitle, 'reduce', context.key].join(':');
         //var scriptObj = ns_runtime.getCurrentScript();
+        var searchValues = VC2_Utils.safeParse(context.values.shift());
 
-        var searchValues = JSON.parse(context.values);
-
+        log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
+        log.audit(
+            logTitle,
+            LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length)
+        );
+        LogPrefix = ['[', searchValues.recordType, searchValues.id, '] '].join('');
         //var record_id = searchValues.id;
-        log.audit(logTitle, '>> searchValues: ' + JSON.stringify(searchValues));
+        log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));
 
         var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
@@ -143,7 +162,7 @@ define([
             configObj.country = ns_runtime.country;
         }
 
-        log.audit(logTitle, '>> ## configObj: ' + JSON.stringify(configObj));
+        log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
         try {
             var entryFunction = configObj.entry_function;
 
@@ -163,18 +182,18 @@ define([
 
             //log.debug(context.key, myArr);
 
-            log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr));
+            log.audit(logTitle, LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr));
 
             VCLib_BillFile.process(configObj, myArr, moment().unix());
         } catch (e) {
-            log.error(context.key + ': ' + 'Error encountered in reduce', e);
+            log.error(logTitle, LogPrefix + '## Error  ## ' + JSON.stringify(e));
         }
-    }
+    };
 
-    function summarize(summary) {
+    MAP_REDUCE.summarize = function (summary) {
         handleErrorIfAny(summary);
         createSummaryRecord(summary);
-    }
+    };
 
     function handleErrorIfAny(summary) {
         var inputSummary = summary.inputSummary;
@@ -213,9 +232,5 @@ define([
         }
     }
 
-    return {
-        getInputData: getInputData,
-        reduce: reduce,
-        summarize: summarize
-    };
+    return MAP_REDUCE;
 });

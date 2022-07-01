@@ -94,7 +94,6 @@ define([
             return returnValue;
         },
 
-
         processRequest: function (option) {
             var logTitle = [LogTitle, 'processRequest'].join('::'),
                 returnValue;
@@ -111,7 +110,6 @@ define([
                     recordId: option.poId
                 });
                 if (!tokenId) throw 'Missing token for authentication';
-                
 
                 var orderStatusReq = vc2Utils.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' '),
@@ -137,13 +135,12 @@ define([
 
                 if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
 
-                var orderStatusResp = vc2Utils.safeParse( orderStatusReq.RESPONSE);
+                var orderStatusResp = vc2Utils.safeParse(orderStatusReq.RESPONSE);
                 if (!orderStatusResp) throw 'Unable to fetch Order Status';
 
                 option.responseBody = orderStatusResp;
                 returnValue = orderStatusResp;
             } catch (error) {
-                
                 var errorMsg = vc2Utils.extractError(error);
                 vcLog.recordLog({
                     header: [LogTitle + ': Error', errorMsg].join(' - '),

@@ -261,11 +261,10 @@ require([
             log.debug(logTitle, LogPrefix + 'Validating remaining items to bill...');
 
             VC2_Lib.vcLog({
-                title: LOG_APP, 
-                recordId: CURRENT_PO, 
-                body:'*** VENDOR BILL CREATION START *****: ' + JSON.stringify(currentData), 
+                title: LOG_APP,
+                recordId: CURRENT_PO,
+                body: '*** VENDOR BILL CREATION START *****: ' + JSON.stringify(currentData)
             });
-
 
             /// FIND EXISTING BILLS ////////////////////////////
             log.debug(logTitle, LogPrefix + 'Checking for existing bills...');
@@ -314,11 +313,10 @@ require([
             log.debug(logTitle, LogPrefix + 'PO Status: ' + JSON.stringify(poStatus));
 
             VC2_Lib.vcLog({
-                title: LOG_APP, 
-                recordId: CURRENT_PO, 
-                body:'PO Status: ' + JSON.stringify(poStatus), 
+                title: LOG_APP,
+                recordId: CURRENT_PO,
+                body: 'PO Status: ' + JSON.stringify(poStatus)
             });
-
 
             if (
                 poStatus.statusRef == 'pendingBilling' ||
@@ -372,14 +370,13 @@ require([
                     JSON.stringify(transformOption)
             );
 
-            
             ////////////////////////////////
             var recBill;
             try {
                 recBill = ns_record.transform(transformOption);
             } catch (transform_error) {
                 var transform_error_msg = VC2_Lib.extractError(transform_error);
-                returnObj.details = 'Error: ' + transform_error_msg; 
+                returnObj.details = 'Error: ' + transform_error_msg;
                 throw BILL_CREATOR.Code.BILL_NOT_CREATED;
             }
             ////////////////////////////////
@@ -416,7 +413,6 @@ require([
                     value: postingPeriod
                 });
             }
-
 
             /// TRANSACTION NAME  ///////////////////
             log.debug(logTitle, LogPrefix + '.. set invoice name: ' + billPayload.invoice);
@@ -1029,17 +1025,16 @@ require([
 
             log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
-
             VC2_Lib.vcLog({
-                title: LOG_APP, 
-                recordId: CURRENT_PO, 
-                body:[
+                title: LOG_APP,
+                recordId: CURRENT_PO,
+                body: [
                     returnObj.msg,
                     returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' '), 
+                ].join(' '),
                 status: returnObj.isError
-                ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
-                : VC_Constants.LIST.VC_LOG_STATUS.INFO, 
+                    ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
+                    : VC_Constants.LIST.VC_LOG_STATUS.INFO,
                 doLog: true
             });
 

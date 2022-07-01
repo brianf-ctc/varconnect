@@ -34,7 +34,10 @@ define([
     '../CTC_VC_Constants.js',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (record, search, runtime, constants, libMainConfig, libLicenseValidator) {
+], function (ns_record, ns_search, ns_runtime, constants, libMainConfig, libLicenseValidator) {
+    var LogTitle = 'MR_LinkSerials',
+        PARAM = {};
+
     function _validateLicense(options) {
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
@@ -64,16 +67,15 @@ define([
     }
 
     function _updateTransaction() {
-        var recType = runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
-            recId = runtime.getCurrentScript().getParameter('custscript_vc_all_id');
-
-        if (recType == record.Type.INVOICE) {
-            var rec = record.load({
-                type: recType,
-                id: recId
-            });
-            rec.save();
-        }
+        // var recType = ns_runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
+        //     recId = ns_runtime.getCurrentScript().getParameter('custscript_vc_all_id');
+        // if (PARAM.recordType == ns_record.Type.INVOICE) {
+        //     var rec = ns_record.load({
+        //         type: PARAM.recordType,
+        //         id: PARAM.recordId
+        //     });
+        //     rec.save();
+        // }
     }
 
     /**
@@ -87,106 +89,129 @@ define([
      * @since 2015.1
      */
     function getInputData() {
-        log.debug('getInputData');
-        var recType = runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
-            recId = runtime.getCurrentScript().getParameter('custscript_vc_all_id'),
-            mainConfig = _loadMainConfig();
+        var logTitle = [LogTitle, 'getInputData'].join('::');
 
-        _validateLicense({ mainConfig: mainConfig });
+        try {
+            PARAM = {
+                recordType: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
+                recordId: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_id')
+            };
+            log.debug(logTitle, '>> PARAMS: ' + JSON.stringify(PARAM));
 
-        if (!mainConfig || !mainConfig.copySerialsInv) {
-            //Terminate if Copy Serials functionality is not set
-            log.audit('Copy Serials functionality is not set');
-            return;
-        }
+            if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
-        var rec = record.load({
-            type: recType,
-            id: recId
-        });
+            var mainConfig = _loadMainConfig();
+            log.debug(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+            _validateLicense({ mainConfig: mainConfig });
 
-        if (!rec) log.error('Invalid record', 'Type: + ' + recType + ' | Id: ' + recId);
+            if (!mainConfig || !mainConfig.copySerialsInv) {
+                //Terminate if Copy Serials functionality is not set
+                log.audit(logTitle, 'Copy Serials functionality is not set');
+                return;
+            }
 
-        var itemLen = rec.getLineCount({ sublistId: 'item' }),
-            createdFrom = rec.getValue({ fieldId: 'createdfrom' }),
-            recordType = rec.type,
-            itemList = [],
-            soId = '',
-            ifId = '',
-            returnObj = [];
+            var record = ns_record.load({ type: PARAM.recordType, id: PARAM.recordId });
+            if (!record) throw 'Invalid record/record type';
 
-        for (var itemCounter = 0; itemCounter < itemLen; itemCounter++) {
-            var itemNum = rec.getSublistValue({
-                sublistId: 'item',
-                fieldId: 'item',
-                line: itemCounter
-            });
-            var updateSerialString = rec.getSublistValue({
-                sublistId: 'item',
-                fieldId: constants.Columns.SERIAL_NUMBER_UPDATE,
-                line: itemCounter
-            });
-
-            if (!updateSerialString || updateSerialString.trim().length < 1) itemList.push(itemNum);
-        }
-
-        if (recordType == 'itemfulfillment') {
-            ifId = recId;
-            var useSO = true;
-            var lookup = search.lookupFields({
-                type: search.Type.TRANSACTION,
-                id: createdFrom,
-                columns: ['type']
-            });
-
-            if (lookup) {
-                if (lookup.type && lookup.type.length > 0 && lookup.type[0].value == 'VendAuth') {
-                    vendorAuthId = createdFrom;
-                    useSO = false;
+            // update the sync
+            ns_record.submitFields({
+                type: PARAM.recordType,
+                id: PARAM.recordId,
+                values: {
+                    custbody_ctc_vc_serialsync_done: false
                 }
+            });
+
+            var lineCount = record.getLineCount({ sublistId: 'item' }),
+                createdFrom = record.getValue({ fieldId: 'createdfrom' }),
+                recordType = record.type,
+                itemList = [],
+                soId = '',
+                ifId = '',
+                returnObj = [];
+
+            for (var line = 0; line < lineCount; line++) {
+                var itemNum = record.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'item',
+                    line: line
+                });
+                var updateSerialString = record.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: constants.Columns.SERIAL_NUMBER_UPDATE,
+                    line: line
+                });
+
+                if (!updateSerialString || updateSerialString.trim().length < 1)
+                    itemList.push(itemNum);
+            }
+            log.debug(logTitle, '>> itemList: ' + JSON.stringify(itemList));
+
+            if (recordType == 'itemfulfillment') {
+                ifId = PARAM.recordId;
+                var useSO = true;
+                var lookup = ns_search.lookupFields({
+                    type: ns_search.Type.TRANSACTION,
+                    id: createdFrom,
+                    columns: ['type']
+                });
+
+                if (lookup) {
+                    if (
+                        lookup.type &&
+                        lookup.type.length > 0 &&
+                        lookup.type[0].value == 'VendAuth'
+                    ) {
+                        vendorAuthId = createdFrom;
+                        useSO = false;
+                    }
+                }
+
+                if (useSO) soId = createdFrom;
+            } else if (recordType == 'invoice') {
+                soId = createdFrom;
             }
 
-            if (useSO) soId = createdFrom;
-        } else if (recordType == 'invoice') {
-            soId = createdFrom;
-        }
+            if (!soId) {
+                log.error('No source Sales Order');
+                return false;
+                // throw new Error('No source Sales Order');
+            }
 
-        if (!soId) {
-            log.error('No source Sales Order');
+            var filters = [
+                {
+                    name: 'custrecordserialsales',
+                    operator: 'anyof',
+                    values: soId
+                },
+                {
+                    name: 'custrecordserialitem',
+                    operator: 'anyof',
+                    values: itemList
+                }
+            ];
+
+            if (PARAM.recordType == ns_record.Type.ITEM_FULFILLMENT) {
+                filters.push({
+                    name: 'custrecorditemfulfillment',
+                    operator: 'isempty'
+                });
+            } else if (PARAM.recordType == ns_record.Type.INVOICE) {
+                filters.push({
+                    name: 'custrecordserialinvoice',
+                    operator: 'isempty'
+                });
+            }
+
+            return ns_search.create({
+                type: 'customrecordserialnum',
+                filters: filters,
+                columns: ['internalid']
+            });
+        } catch (error) {
+            log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
             return false;
-            // throw new Error('No source Sales Order');
         }
-
-        var filters = [
-            {
-                name: 'custrecordserialsales',
-                operator: 'anyof',
-                values: soId
-            },
-            {
-                name: 'custrecordserialitem',
-                operator: 'anyof',
-                values: itemList
-            }
-        ];
-
-        if (recType == record.Type.ITEM_FULFILLMENT) {
-            filters.push({
-                name: 'custrecorditemfulfillment',
-                operator: 'isempty'
-            });
-        } else if (recType == record.Type.INVOICE) {
-            filters.push({
-                name: 'custrecordserialinvoice',
-                operator: 'isempty'
-            });
-        }
-
-        return search.create({
-            type: 'customrecordserialnum',
-            filters: filters,
-            columns: ['internalid']
-        });
     }
 
     /**
@@ -196,29 +221,34 @@ define([
      * @since 2015.1
      */
     function reduce(context) {
+        var logTitle = [LogTitle, 'reduce'].join('::');
+
         var sc;
         try {
-            log.debug('reduce');
+            PARAM = {
+                recordType: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
+                recordId: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_id')
+            };
+            log.debug(logTitle, '>> PARAMS: ' + JSON.stringify(PARAM));
 
             var data = JSON.parse(context.values[0]);
+            log.debug(logTitle, '>> data: ' + JSON.stringify(data));
 
             if (data) {
                 var serialId = data.id,
-                    recType = runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
-                    recId = runtime.getCurrentScript().getParameter('custscript_vc_all_id'),
                     val = {},
                     field;
 
-                if (recType == record.Type.ITEM_FULFILLMENT) {
+                if (PARAM.recordType == ns_record.Type.ITEM_FULFILLMENT) {
                     field = 'custrecorditemfulfillment';
-                    val[field] = recId;
-                } else if (recType == record.Type.INVOICE) {
+                    val[field] = PARAM.recordId;
+                } else if (PARAM.recordType == ns_record.Type.INVOICE) {
                     field = 'custrecordserialinvoice';
-                    val[field] = recId;
+                    val[field] = PARAM.recordId;
                 }
 
                 if (field)
-                    sc = record.submitFields({
+                    sc = ns_record.submitFields({
                         type: 'customrecordserialnum',
                         id: serialId,
                         values: val
@@ -238,9 +268,16 @@ define([
      * @since 2015.1
      */
     function summarize(summary) {
+        var logTitle = [LogTitle, 'summarize'].join('::');
+
+        PARAM = {
+            recordType: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
+            recordId: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_id')
+        };
+
         //any errors that happen in the above methods are thrown here so they should be handled
         //log stuff that we care about, like number of serial numbers
-        log.audit('summarize');
+        // log.audit('summarize');
         summary.reduceSummary.errors.iterator().each(function (key, error) {
             log.error('Reduce Error for key: ' + key, error);
             return true;
@@ -251,7 +288,16 @@ define([
             return true;
         });
         if (reduceKeys && reduceKeys.length > 0) _updateTransaction();
-        log.audit('REDUCE keys processed', reduceKeys);
+        log.audit(logTitle, 'REDUCE keys processed' + JSON.stringify(reduceKeys));
+
+        // update the sync
+        ns_record.submitFields({
+            type: PARAM.recordType,
+            id: PARAM.recordId,
+            values: {
+                custbody_ctc_vc_serialsync_done: true
+            }
+        });
     }
 
     return {
