@@ -27,6 +27,7 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
         var header = options.header,
             body = options.body,
             transaction = options.transaction,
+            transactionLineKey = options.transactionLineKey,
             status = options.status,
             logFields = constants.Fields.VarConnectLog;
 
@@ -50,6 +51,11 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             recLog.setValue({
                 fieldId: logFields.TRANSACTION,
                 value: transaction
+            });
+        if (transactionLineKey)
+            recLog.setValue({
+                fieldId: logFields.TRANSACTION_LINEKEY,
+                value: transactionLineKey
             });
         recLog.setValue({
             fieldId: logFields.STATUS,
