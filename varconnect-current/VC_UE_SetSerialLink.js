@@ -36,6 +36,68 @@ define([
     './CTC_VC_Constants.js'
 ], function (record, runtime, error, config, search, url, vcGlobals, util, constants) {
     //        vcGlobals.SN_LINE_FIELD_LINK_ID
+    var LogTitle = 'SetSerialLink';
+
+    function beforeLoad(context) {
+        var logTitle = 'beforeLoad';
+        var form = context.form;
+
+        try {
+            if (context.type != context.UserEventType.VIEW) return false;
+            if (context.newRecord.type != record.Type.ITEM_FULFILLMENT) return false;
+
+            var lineCount = context.newRecord.getLineCount({ sublistId: 'item' });
+            log.debug(logTitle, '>> Total lines: ' + lineCount);
+
+            var sublistItem = context.form.getSublist({ id: 'item' });
+            log.debug(logTitle, sublistItem);
+
+            sublistItem.addField({
+                id: 'custpage_custom_serial_link',
+                label: 'Serial Link',
+                type: 'text'
+            });
+            for (var line = 0; line < lineCount; line++) {
+                var serialLink = context.newRecord.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'custcol_ctc_xml_serial_num_link',
+                    line: line
+                });
+
+                log.debug(logTitle, JSON.stringify({ line: line, serialLink: serialLink }));
+
+                if (!serialLink) continue;
+                // context.newRecord.setSublistValue({
+                //     sublistId: 'item',
+                //     fieldId: 'custcol_ctc_xml_serial_num_link',
+                //     line: line,
+                //     value: '<a href="' + serialLink + '" target="_blank">Serial Link</a>'
+                // });
+
+                sublistItem.setSublistValue({
+                    id: 'custpage_custom_serial_link',
+                    line: line,
+                    value:
+                        '<span class="uir-field"><a class="dottedlink" href="' +
+                        serialLink +
+                        '" target="_blank">Serial Number Link</a></span>'
+                });
+
+                // context.form.addSub
+            }
+
+            var fldLink = sublistItem.getField({
+                id: 'custcol_ctc_xml_serial_num_link'
+            });
+            fldLink.updateDisplayType({
+                displayType: 'HIDDEN'
+            });
+        } catch (error) {
+            log.audit(logTitle, error);
+        }
+
+        return true;
+    }
 
     function beforeSubmit(context) {
         if (context.type == context.UserEventType.EDIT) {
@@ -194,6 +256,7 @@ define([
     }
 
     return {
+        beforeLoad: beforeLoad,
         beforeSubmit: beforeSubmit,
         afterSubmit: afterSubmit
     };
