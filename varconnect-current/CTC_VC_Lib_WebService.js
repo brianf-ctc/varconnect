@@ -74,8 +74,10 @@ define([
         log.audit(logTitle, '>> params: ' + JSON.stringify(options));
 
         var poNum = options.poNum,
+            poId = options.poId,
             vendorConfig = options.vendorConfig,
             country = options.country,
+            countryCode = options.countryCode,
             responseXML;
 
         if (vendorConfig) {
@@ -91,8 +93,9 @@ define([
                 });
                 responseXML = libVendor.processRequest({
                     poNum: poNum,
+                    poId: poId,
                     vendorConfig: vendorConfig,
-                    country: country,
+                    countryCode: countryCode,
                     fromDebug: true,
                     country: country
                 });

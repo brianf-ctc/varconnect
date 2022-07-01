@@ -72,6 +72,7 @@ define([
         purchaseorderSearchObj.run().each(function (result) {
             if (vcGlobals.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
             poObj['vendor'] = result.getValue('entity');
+            poObj['id'] = result.id;
             // ?
             //            if (vcGlobals.ENABLE_SUBSIDIARIES)
             //            	poObj['subsidiary'] = result.getValue('subsidiary');
@@ -115,6 +116,7 @@ define([
         var xmlVendor = thisRecord.getValue({ fieldId: 'vendors' });
 
         var ponum = thisRecord.getValue({ fieldId: 'ponum' });
+        var objPO = _getPODetails(ponum);
         var outputObj = '';
 
         var country = thisRecord.getValue({ fieldId: 'country' });
@@ -129,7 +131,9 @@ define([
                     outputObj = libWebService.handleRequest({
                         vendorConfig: vendorConfig,
                         poNum: ponum,
-                        country: country
+                        poId: objPO.id,
+                        country: country,
+                        countryCode: vendorConfig.country
                     });
                 } catch (processErr) {
                     outputObj =
@@ -219,8 +223,12 @@ define([
                     xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
                     xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
                 }
-                xmlViewerDocument.getElementById([elementIdToShow, '_content'].join('')).innerHTML =
-                    xmlContent;
+                xmlViewerDocument.getElementById(
+                    elementIdToShow || 'custpage_xml__viewer'
+                ).style.display = '';
+                xmlViewerDocument.getElementById(
+                    [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
+                ).innerHTML = xmlContent;
             } else {
                 alert('Please Select a valid PO with vendor properly configured');
             }

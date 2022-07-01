@@ -25,6 +25,9 @@
  * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
  *                                                      Updating fields overwrite value if append failed
  * 4.03		May 10,2022		christian@nscatalyst.com	Carrier info should not append to itself
+ * 4.04		Jun 14,2022		christian@nscatalyst.com	Return errors and line key for updatePOItemData
+ * 4.05		Jun 28,2022		christian@nscatalyst.com	Update po header and line order status
+ *
  */
 
 define([
@@ -66,7 +69,10 @@ define([
             lineData = options.lineData,
             mainConfig = options.mainConfig,
             vendorConfig = options.vendorConfig,
-            po_record = options.po_record;
+            po_record = options.po_record,
+            returnValue = {
+                id: null
+            };
 
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
 
@@ -77,11 +83,12 @@ define([
             var bypassVAR = po_record.getValue({
                 fieldId: 'custbody_ctc_bypass_vc'
             });
-            if (bypassVAR) return null;
+            if (bypassVAR) return returnValue;
 
             var createdFromID = po_record.getValue({
                 fieldId: 'createdfrom'
             });
+            returnValue.id = createdFromID;
             var specialOrder = false;
             var isDropPO = po_record.getValue({
                 fieldId: 'custbody_isdropshippo'
@@ -128,6 +135,31 @@ define([
                     log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
                 }
 
+                if (lineData.header_info) {
+                    for (var headerField in lineData.header_info) {
+                        var fieldValue = lineData.header_info[headerField];
+                        var fieldID = null;
+                        if (fieldValue) {
+                            switch (headerField) {
+                                case 'order_status':
+                                    fieldID = 'custbody_ctc_vc_order_status';
+                                    break;
+                                default:
+                                    fieldID = null;
+                                    break;
+                            }
+                            if (fieldID) {
+                                po_record.setValue({
+                                    fieldId: fieldID,
+                                    value: fieldValue
+                                });
+                                po_updated = true;
+                            }
+                        }
+                    }
+                }
+
+                var mapLineOrderStatus = {};
                 for (var i = 0; i < lineData.length; i++) {
                     // Find the line on the PO that matches the line data from the XML file
                     var line_num = validateLineNumber({
@@ -159,6 +191,10 @@ define([
                         sublistId: 'item',
                         line: line_num
                     });
+                    returnValue.lineuniquekey = po_record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'lineuniquekey'
+                    });
 
                     updateField(po_record, 'custcol_ctc_xml_dist_order_num', lineData[i].order_num);
                     updateField(
@@ -182,7 +218,24 @@ define([
                         //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
                     }
 
+                    if (
+                        lineData[i].order_status &&
+                        lineData[i].line_status &&
+                        lineData[i].line_status != 'NA'
+                    ) {
+                        lineData[i].order_status =
+                            'Order: ' +
+                            lineData[i].order_status +
+                            '\nItem: ' +
+                            lineData[i].line_status;
+                        mapLineOrderStatus[lineNum + ''] = lineData[i].order_status;
+                    }
                     updateField(po_record, 'custcol_ctc_xml_carrier', lineData[i].carrier);
+                    updateField(
+                        po_record,
+                        'custcol_ctc_vc_order_status',
+                        mapLineOrderStatus[lineNum + ''] || lineData[i].order_status
+                    );
 
                     updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
 
@@ -210,20 +263,24 @@ define([
                         enableSourcing: false,
                         ignoreMandatoryFields: true
                     });
+                    returnValue.lineuniquekey = null;
                 }
-                return createdFromID;
+                return returnValue;
             } catch (err) {
                 log.error(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
                 // log.error({
                 //     title: 'Update PO line data ERROR',
                 //     details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
                 // });
-                return null;
+                returnValue.id = null;
+                returnValue.error = err;
+                return returnValue;
             }
         } else {
             log.error(logTitle, LogPrefix + '!! ERROR !! Could not update PO ');
 
-            return null;
+            returnValue.id = null;
+            return returnValue;
         }
     }
 
@@ -344,14 +401,16 @@ define([
             currentFieldValue != 'NA'
         ) {
             if (
-                ['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0 ||
+                ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0 ||
                 (currentFieldValue.indexOf(xmlVal) < 0 &&
                     currentFieldValue.length < maxFieldLength &&
                     xmlVal != 'NA')
             ) {
                 var newFieldValue = null;
                 // some fields should just be overwritten
-                if (['custcol_ctc_xml_carrier'].indexOf(fieldID) >= 0) {
+                if (
+                    ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0
+                ) {
                     newFieldValue = xmlVal;
                 } else {
                     newFieldValue = currentFieldValue + '\n' + xmlVal;
