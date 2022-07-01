@@ -20,7 +20,9 @@
  * 1.00		Sep 12, 2019	paolodl		Sets the is dropship flag depending
  */
 
-define(['N/record', 'N/search'], function (record, search) {
+define(['N/runtime', 'N/record', 'N/search'], function (ns_runtime, record, search) {
+    var LogTitle = 'SetDropShip';
+
     /**
      * Function definition to be triggered before record is loaded.
      *
@@ -31,6 +33,16 @@ define(['N/record', 'N/search'], function (record, search) {
      * @Since 2015.2
      */
     function beforeLoad(scriptContext) {
+        var logTitle = [LogTitle, 'beforeLoad'].join('::');
+
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: ns_runtime.executionContext
+            })
+        );
+
         var newRecord = scriptContext.newRecord,
             createdFrom = newRecord.getValue({ fieldId: 'createdfrom' }),
             dropShipSO = newRecord.getValue({ fieldId: 'dropshipso' });
@@ -47,6 +59,16 @@ define(['N/record', 'N/search'], function (record, search) {
         }
     }
     function beforeSubmit(scriptContext) {
+        var logTitle = [LogTitle, 'beforeSubmit'].join('::');
+
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: ns_runtime.executionContext
+            })
+        );
+
         if (
             scriptContext.type === scriptContext.UserEventType.CREATE ||
             scriptContext.type === scriptContext.UserEventType.DROPSHIP
@@ -68,6 +90,16 @@ define(['N/record', 'N/search'], function (record, search) {
         }
     }
     function afterSubmit(scriptContext) {
+        var logTitle = [LogTitle, 'beforeSubmit'].join('::');
+
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: scriptContext.type,
+                contextType: ns_runtime.executionContext
+            })
+        );
+
         if (
             scriptContext.type === scriptContext.UserEventType.CREATE ||
             scriptContext.type === scriptContext.UserEventType.DROPSHIP

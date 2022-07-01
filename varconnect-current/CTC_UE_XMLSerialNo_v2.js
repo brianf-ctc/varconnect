@@ -35,7 +35,7 @@ define([
     'N/config',
     'N/format',
     './VC_Globals.js'
-], function (record, runtime, error, search, config, format, vcGlobals) {
+], function (record, ns_runtime, error, search, config, format, vcGlobals) {
     var LogTitle = 'UE_SerialUpdate',
         LogPrefix = '';
 
@@ -79,6 +79,15 @@ define([
     var SEARCH_INVOICE_TO_SO = 'customsearch_ctc_invoice_line_ids';
 
     function afterSubmit(context) {
+        var logTitle = [LogTitle, 'afterSubmit'].join('::');
+        log.debug(
+            logTitle,
+            JSON.stringify({
+                eventType: context.type,
+                contextType: ns_runtime.executionContext
+            })
+        );
+
         if (
             context.type == context.UserEventType.CREATE ||
             context.type == context.UserEventType.EDIT
