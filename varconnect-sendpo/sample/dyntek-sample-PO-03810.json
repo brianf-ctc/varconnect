@@ -1,0 +1,425 @@
+{
+    "poNumber": "PO-03810",
+    "profileId": "DYNTEK_API",
+    "isTestPayload": true,
+    "shippingContact": {
+        "company": "",
+        "contactName": "",
+        "email": null,
+        "telephone": "",
+        "address": {
+            "address1": "",
+            "address2": "",
+            "city": ""
+        }
+    },
+    "billingContact": {
+        "company": "DynTek, Inc",
+        "contactName": "",
+        "email": "",
+        "telephone": "",
+        "address": {
+            "address1": "5241 California Avenue",
+            "address2": "#150",
+            "city": "Irvine",
+            "stateOrProvince": "California",
+            "postalCode": "92617",
+            "country": "United States"
+        }
+    },
+    "payment": {
+        "paymentTerm": "Net 45"
+    },
+    "orderDetails": [
+        {
+            "lineItemNum": 1,
+            "supplierPartId": "817-BBBN",
+            "supplierPartIdExt": "817-BBBN",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 2,
+            "supplierPartId": "210-AYVH",
+            "supplierPartIdExt": "210-AYVH",
+            "quantity": 1,
+            "unitPrice": 837.64,
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 3,
+            "supplierPartId": "338-BVDG",
+            "supplierPartIdExt": "338-BVDG",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 4,
+            "supplierPartId": "619-AQMP",
+            "supplierPartIdExt": "619-AQMP",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 5,
+            "supplierPartId": "658-BCSB",
+            "supplierPartIdExt": "658-BCSB",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 6,
+            "supplierPartId": "370-AFWE",
+            "supplierPartIdExt": "370-AFWE",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 7,
+            "supplierPartId": "400-BEUW",
+            "supplierPartIdExt": "400-BEUW",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 8,
+            "supplierPartId": "412-AALV",
+            "supplierPartIdExt": "412-AALV",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 9,
+            "supplierPartId": "773-BBBC",
+            "supplierPartIdExt": "773-BBBC",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 10,
+            "supplierPartId": "401-AANH",
+            "supplierPartIdExt": "401-AANH",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 11,
+            "supplierPartId": "490-BBFG",
+            "supplierPartIdExt": "490-BBFG",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 12,
+            "supplierPartId": "329-BFGY",
+            "supplierPartIdExt": "329-BFGY",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 13,
+            "supplierPartId": "450-AHYZ",
+            "supplierPartIdExt": "450-AHYZ",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 14,
+            "supplierPartId": "450-AAZN",
+            "supplierPartIdExt": "450-AAZN",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 15,
+            "supplierPartId": "555-BFPV",
+            "supplierPartIdExt": "555-BFPV",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 16,
+            "supplierPartId": "555-BGNB",
+            "supplierPartIdExt": "555-BGNB",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 17,
+            "supplierPartId": "379-BBCY",
+            "supplierPartIdExt": "379-BBCY",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 18,
+            "supplierPartId": "492-BBFF",
+            "supplierPartIdExt": "492-BBFF",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 19,
+            "supplierPartId": "580-ADJC",
+            "supplierPartIdExt": "580-ADJC",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 20,
+            "supplierPartId": "570-ABIE",
+            "supplierPartIdExt": "570-ABIE",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 21,
+            "supplierPartId": "325-BCZQ",
+            "supplierPartIdExt": "325-BCZQ",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 22,
+            "supplierPartId": "525-BBCL",
+            "supplierPartIdExt": "525-BBCL",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 23,
+            "supplierPartId": "640-BBLW",
+            "supplierPartIdExt": "640-BBLW",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 24,
+            "supplierPartId": "658-BBMR",
+            "supplierPartIdExt": "658-BBMR",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 25,
+            "supplierPartId": "658-BBRB",
+            "supplierPartIdExt": "658-BBRB",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 26,
+            "supplierPartId": "658-BEOK",
+            "supplierPartIdExt": "658-BEOK",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 27,
+            "supplierPartId": "658-BEQP",
+            "supplierPartIdExt": "658-BEQP",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 28,
+            "supplierPartId": "658-BFDQ",
+            "supplierPartIdExt": "658-BFDQ",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 29,
+            "supplierPartId": "387-BBLW",
+            "supplierPartIdExt": "387-BBLW",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 30,
+            "supplierPartId": "379-BEKK",
+            "supplierPartIdExt": "379-BEKK",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 31,
+            "supplierPartId": "340-CVQR",
+            "supplierPartIdExt": "340-CVQR",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 32,
+            "supplierPartId": "329-BBJL",
+            "supplierPartIdExt": "329-BBJL",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 33,
+            "supplierPartId": "340-CQYN",
+            "supplierPartIdExt": "340-CQYN",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 34,
+            "supplierPartId": "389-BBUU",
+            "supplierPartIdExt": "389-BBUU",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 35,
+            "supplierPartId": "389-DZEW",
+            "supplierPartIdExt": "389-DZEW",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 36,
+            "supplierPartId": "800-BBIO",
+            "supplierPartIdExt": "800-BBIO",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 37,
+            "supplierPartId": "817-BBBB",
+            "supplierPartIdExt": "817-BBBB",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 38,
+            "supplierPartId": "340-ACQQ",
+            "supplierPartIdExt": "340-ACQQ",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 39,
+            "supplierPartId": "379-BDZB",
+            "supplierPartIdExt": "379-BDZB",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 40,
+            "supplierPartId": "520-AARC",
+            "supplierPartIdExt": "520-AARC",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 41,
+            "supplierPartId": "631-ACXI",
+            "supplierPartIdExt": "631-ACXI",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 42,
+            "supplierPartId": "709-BCGL",
+            "supplierPartIdExt": "709-BCGL",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 43,
+            "supplierPartId": "883-BBBG",
+            "supplierPartIdExt": "883-BBBG",
+            "quantity": 1,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 44,
+            "supplierPartId": "210-AQCI",
+            "supplierPartIdExt": "210-AQCI",
+            "quantity": 2,
+            "unitPrice": 203.75,
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 45,
+            "supplierPartId": "814-9381",
+            "supplierPartIdExt": "814-9381",
+            "quantity": 2,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        },
+        {
+            "lineItemNum": 46,
+            "supplierPartId": "814-9382",
+            "supplierPartIdExt": "814-9382",
+            "quantity": 2,
+            "unitPrice": "0.00",
+            "currency": "USA"
+        }
+    ],
+    "customFields": [
+        {
+            "name": "EU_PO_NUMBER",
+            "type": "string",
+            "value": ""
+        },
+        {
+            "name": "SHIPPING_CODE",
+            "type": "string",
+            "value": "LC"
+        },
+        {
+            "name": "SHIPPING_CARRIER_NAME",
+            "type": "string",
+            "value": ""
+        },
+        {
+            "name": "SHIPPING_CARRIER_ACCT_NU",
+            "type": "string",
+            "value": ""
+        }
+    ]
+}

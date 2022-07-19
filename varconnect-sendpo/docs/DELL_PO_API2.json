@@ -1,0 +1,2508 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Purchase Order Submission API V2",
+        "version": "2.0",
+        "description": "The Purchase Order API provides the ability to submit a purchase order to Dell. Customers can submit their purchase order in XML or JSON format and will receive response regarding the processing of successful or failed PO. In case of failure, response will provide appropriate message for rectifying the error.\n\nVersions Available\n\nTo use the latest version of the API, a version number can be provided in the request header (Accepts-version). It is mandatory to provide API version in request header\n\nA new version will be created each time a significant update is made to the schema.\n\n| Version | Description                                         | Date Available    |\n| ------- |:---------------------------------------------------:| -----------------:|\n|   1.0   | Initial and first version of the Purchase Order API | 2nd Feb 2020      |\n|   2.0   | Second Version of PO API with Enhancements\t        | \t\t    |\n\n\n### Request URL\n\n| Version | Input Request format | URL\t                                                                    |\n| ------- |:--------------------:| ------------------------------------------------------------------------:|\n|   2.0   | Json\t         | https://apigtwb2c.us.dell.com/PROD/procurement/purchase-order            |\n|   2.0   | Xml\t                 | https://apigtwb2c.us.dell.com/PROD/procurement/xml-purchase-order        |\n\nWithin this URL PROD refers to the environment, however after your GIA has enabled your integration for live orders, the IsTestPayload flag in the payload must be set to FALSE for purchase orders to be submitted for fulfillment\n \n \n### API Authentication\nYou will need to retrieve an authorization token to be able to send requests to the API endpoints.\nThe response to each request will be sent in JSON format.\n\nPOST https://apigtwb2c.us.dell.com/auth/oauth/v2/token\n\n\n### Request Body\n\n| Field           | Description                                                            | Datatype            |\n| --------------- |:----------------------------------------------------------------------:| -------------------:|\n|  grant_type     |  client_credentials                                                    |  string             |\n|  client_id      |  The application id assigned to your app.               \t           |  string             |\n|  client_secret  |  The application secret created for your app under Keys. The client_secret should be URL-encoded before being sent.              |  string             |\n\n\nExample Request\n```\nPOST /auth/oauth/v2/token HTTP/1.1\nHost: apigtwb2c.us.dell.com\nContent-Type: application/x-www-form-urlencoded\nUser-Agent: PostmanRuntime/7.15.0\nAccept: */*\nCache-Control: no-cache\naccept-encoding: gzip, deflate\nConnection: keep-alive\n\ngrant_type=client_credentials\n&client_id=testClientId\n&client_secret=testClientSecret\n```\n\nExample Response\n```\n    {\n        \"access_token\": \"abcdef-4c9c-42dc-a756-68a8c4uvwxyz\",\n        \"token_type\": \"Bearer\",\n        \"expires_in\": 3600,\n        \"scope\": \"oob\"\n    }\n```\n\nOnce the token is retrieved from the response above, it is valid for next 60 minutes. The token can be used in subsequent requests to retrieve data from the API described below.\n\nToken is populated in header as follows: \n\n```\n'Authorization: Bearer 0d41a083-8d55-4cec-a4a7-22e3dc370d80' \n```\n\nExample curl request to illustrate usage: \n\n```\ncurl --location --request POST 'https://apigtwb2c.us.dell.com/PROD/procurement/purchase-order' \n\\ --header 'Authorization: Bearer 0d41a083-8d55-4cec-a4a7-22e3dc370d80' \\ --header 'Accepts-version: 2.0' \\ --header 'Content-Type: application/json'\n``` \n",
+        "summary": "Purchase Order API"
+    },
+    "paths": {
+        "/procurement/purchase-order": {
+            "parameters": [],
+            "post": {
+                "summary": "Submit Purchase Order",
+                "operationId": "post-v2-PurchaseOrder-SubmitPurchaseOrder",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": {
+                                            "CorrelationId": "2a68f8b0-9f93-4379-b134-e45f2364cb5b",
+                                            "ThreadId": "",
+                                            "PoNumber": "TestDoNotBook_Demo",
+                                            "PoDate": null,
+                                            "StatusCode": 200,
+                                            "StatusMessage": ["PO has been successfully submitted"]
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "headers": {}
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": {
+                                            "CorrelationId": "226e12e9-5abd-4624-8583-1bac88960995",
+                                            "ThreadId": "",
+                                            "PoNumber": "TestDoNotBook_Demo",
+                                            "PoDate": null,
+                                            "StatusCode": 202,
+                                            "StatusMessage": [
+                                                "We received your Purchase Order, and it is being processed. You will be contacted if there is any issue processing the PO"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "Errors": {
+                                            "type": "object",
+                                            "properties": {
+                                                "PoNumber": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "Type": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "Title": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "Status": {
+                                            "type": "number"
+                                        },
+                                        "TraceId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": {
+                                            "Errors": {
+                                                "PoNumber": ["The PoNumber field is required."]
+                                            },
+                                            "Type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                                            "Title": "One or more validation errors occurred.",
+                                            "Status": 400,
+                                            "TraceId": "|d00cf0e9-40816ff06012219a."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": {
+                                            "CorrelationId": "e43d014d-14b0-4dda-b87f-10c55a662e8a",
+                                            "ThreadId": "",
+                                            "PoNumber": "TestDoNotBook_Demo",
+                                            "PoDate": null,
+                                            "StatusCode": 401,
+                                            "StatusMessage": ["unable to authenticate"]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": {
+                                            "CorrelationId": "3f0aeb43-6d5a-4901-9886-27c2621c3be2",
+                                            "ThreadId": "",
+                                            "PoNumber": "TestDoNotBook_Demo",
+                                            "PoDate": null,
+                                            "StatusCode": 500,
+                                            "StatusMessage": ["Invalid item list in PO request."]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "",
+                                "type": "object",
+                                "properties": {
+                                    "IsTestPayload": {
+                                        "type": "boolean"
+                                    },
+                                    "CorrelationId": {
+                                        "type": "string"
+                                    },
+                                    "PoNumber": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "EndCustomerPONumber": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "ProfileId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "ProfilePwd": {
+                                        "type": "string"
+                                    },
+                                    "RequestedDeliveryDate": {
+                                        "type": "string"
+                                    },
+                                    "OrderContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "ShippingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "BillingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "InstallAtContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "ResellerContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "DeliveryToContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "MailingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "EndUserContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "Payment": {
+                                        "type": "object",
+                                        "properties": {
+                                            "CardInfo": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "CardNumber": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "CardAuthCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "IncludeSensitiveInfo": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "CardRefNumber": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardExpirationDate": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardType": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "CardTypeOther": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardHolderName": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "PaymentMean": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "PaymentMeanOther": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "PaymentTerm": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        }
+                                    },
+                                    "OrderDetails": {
+                                        "type": "array",
+                                        "uniqueItems": true,
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "LineItemNum": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "LineItemDescription": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "SupplierPartId": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "SupplierPartIdExt": {
+                                                    "type": "string"
+                                                },
+                                                "Quantity": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "UnitPrice": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Currency": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "finalRecipient": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "Company": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "ContactName": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Email": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Telephone": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Address": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "Address1": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address2": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address3": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address4": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "City": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "StateOrProvince": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "PostalCode": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Country": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "LineItemNum",
+                                                "SupplierPartId",
+                                                "SupplierPartIdExt",
+                                                "Quantity",
+                                                "UnitPrice",
+                                                "Currency"
+                                            ]
+                                        }
+                                    },
+                                    "ShippingMethod": {
+                                        "type": "object",
+                                        "properties": {
+                                            "ShippingMethod": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Carrier": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Mean": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "CustShippingContractNum": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        }
+                                    },
+                                    "CustomFields": {
+                                        "type": "array",
+                                        "uniqueItems": true,
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "Name": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Type": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Value": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "ThreadId": {
+                                        "type": "string"
+                                    },
+                                    "MonitoringCorrelationId": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": ["IsTestPayload", "PoNumber", "ProfileId"]
+                            },
+                            "examples": {
+                                "Sample": {
+                                    "value": {
+                                        "IsTestPayload": true,
+                                        "CorrelationId": "",
+                                        "PoNumber": "TestDoNotBook_Demo",
+                                        "EndCustomerPONumber": "TestEndCustomerPONumber",
+                                        "ProfileId": "POAPI_Test",
+                                        "ProfilePwd": "",
+                                        "RequestedDeliveryDate": "",
+                                        "OrderContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test OC Address1",
+                                                "Address2": "Test OC Address2",
+                                                "Address3": "Test OC Address3",
+                                                "Address4": "Test OC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "ShippingContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test SC Address1",
+                                                "Address2": "Test SC Address2",
+                                                "Address3": "Test SC Address3",
+                                                "Address4": "Test SC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "BillingContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test BC Address1",
+                                                "Address2": "Test BC Address2",
+                                                "Address3": "Test BC Address3",
+                                                "Address4": "Test BC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "InstallAtContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test IC Address1",
+                                                "Address2": "Test IC Address2",
+                                                "Address3": "Test IC Address3",
+                                                "Address4": "Test IC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "ResellerContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test RC Address1",
+                                                "Address2": "Test RC Address2",
+                                                "Address3": "Test RC Address3",
+                                                "Address4": "Test RC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "DeliveryToContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test DC Address1",
+                                                "Address2": "Test DC Address2",
+                                                "Address3": "Test DC Address3",
+                                                "Address4": "Test DC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "MailingContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test MC Address1",
+                                                "Address2": "Test MC Address2",
+                                                "Address3": "Test MC Address3",
+                                                "Address4": "Test MC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "EndUserContact": {
+                                            "Company": "Test Company Name",
+                                            "ContactName": "Test Contact Name",
+                                            "Email": "test@dell.com",
+                                            "Telephone": "(512) 231-2344",
+                                            "Address": {
+                                                "Address1": "Test EC Address1",
+                                                "Address2": "Test EC Address2",
+                                                "Address3": "Test EC Address3",
+                                                "Address4": "Test EC Address4",
+                                                "City": "Austin",
+                                                "StateOrProvince": "Texas",
+                                                "PostalCode": "78753",
+                                                "Country": "US"
+                                            }
+                                        },
+                                        "Payment": {
+                                            "CardInfo": {
+                                                "CardNumber": "1234567812344567",
+                                                "CardAuthCode": "123",
+                                                "IncludeSensitiveInfo": true,
+                                                "CardRefNumber": "",
+                                                "CardExpirationDate": "",
+                                                "CardType": "CC",
+                                                "CardTypeOther": "",
+                                                "CardHolderName": "Test Card"
+                                            },
+                                            "PaymentMean": "Instant",
+                                            "PaymentMeanOther": "PO",
+                                            "PaymentTerm": "Annual"
+                                        },
+                                        "OrderDetails": [
+                                            {
+                                                "LineItemNum": "1",
+                                                "LineItemDescription": "Item Description",
+                                                "SupplierPartId": "3000109849164.1",
+                                                "SupplierPartIdExt": "",
+                                                "Quantity": "1",
+                                                "UnitPrice": "10031.85",
+                                                "Currency": "USD",
+                                                "finalRecipient": {
+                                                    "Company": "Test Company Name",
+                                                    "ContactName": "Test Contact Name",
+                                                    "Email": "test@dell.com",
+                                                    "Telephone": "(512) 231-2344",
+                                                    "Address": {
+                                                        "Address1": "Test FR Address1",
+                                                        "Address2": "Test FR Address2",
+                                                        "Address3": "Test FR Address3",
+                                                        "Address4": "Test FR Address4",
+                                                        "City": "Austin",
+                                                        "StateOrProvince": "Texas",
+                                                        "PostalCode": "78753",
+                                                        "Country": "US"
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        "ShippingMethod": {
+                                            "ShippingMethod": "DC",
+                                            "Carrier": "FedEx",
+                                            "Mean": "Any Mean",
+                                            "CustShippingContractNum": "12345"
+                                        },
+                                        "CustomFields": [
+                                            {
+                                                "Name": "Custom Field",
+                                                "Type": "Shipping Instructions",
+                                                "Value": "Custom Field"
+                                            }
+                                        ],
+                                        "ThreadId": "",
+                                        "MonitoringCorrelationId": ""
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Purchase Order API Version 2",
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "example": "2.0"
+                        },
+                        "in": "header",
+                        "name": "Accepts-version",
+                        "description": "2.0",
+                        "required": true
+                    },
+                    {
+                        "schema": {
+                            "type": "string",
+                            "example": "application/json"
+                        },
+                        "in": "header",
+                        "name": "Content-Type",
+                        "description": "application/json",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        "/procurement/xml-purchase-order": {
+            "post": {
+                "summary": "Submit Xml Purchase Order",
+                "operationId": "post-xml-PurchaseOrder-SubmitPurchaseOrder",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": "<PurchaseOrderResponseV2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n    <CorrelationId>2e76ffcd-b147-46de-9c3f-6e7fb8def39e</CorrelationId>\n    <ThreadId />\n    <PoNumber>TestDoNotBook_Demo</PoNumber>\n    <PoDate />\n    <StatusCode>200</StatusCode>\n    <StatusMessage>\n        <string>PO has been successfully submitted</string>\n    </StatusMessage>\n</PurchaseOrderResponseV2>"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": "<PurchaseOrderResponseV2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n    <CorrelationId>c2b708a8-8543-45ac-8fcb-d240b2d206c1</CorrelationId>\n    <ThreadId />\n    <PoNumber>TestDoNotBook_Demo</PoNumber>\n    <PoDate />\n    <StatusCode>202</StatusCode>\n    <StatusMessage>\n        <string>We received your Purchase Order, and it is being processed. You will be contacted if there is any issue processing the PO</string>\n    </StatusMessage>\n</PurchaseOrderResponseV2>"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "Errors": {
+                                            "type": "object",
+                                            "properties": {
+                                                "PoNumber": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "Type": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "Title": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "Status": {
+                                            "type": "number"
+                                        },
+                                        "TraceId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": "<problem xmlns=\"urn:ietf:rfc:7807\">\n    <status>400</status>\n    <title>One or more validation errors occurred.</title>\n    <type>https://tools.ietf.org/html/rfc7231#section-6.5.1</type>\n    <traceId>|d00cfc4e-40816ff06012219a.</traceId>\n    <MVC-Errors>\n        <OrderDetails_x005B_0_x005D_.Quantity>Quantity must be greater than zero Enter numeric value for Quantity</OrderDetails_x005B_0_x005D_.Quantity>\n    </MVC-Errors>\n</problem>"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": "<PurchaseOrderResponseV2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n    <CorrelationId>4c5daf62-289b-44a0-82fc-6d2f8799e299</CorrelationId>\n    <ThreadId />\n    <PoNumber>TestDoNotBook_Demo</PoNumber>\n    <PoDate />\n    <StatusCode>401</StatusCode>\n    <StatusMessage>\n        <string>unable to authenticate</string>\n    </StatusMessage>\n</PurchaseOrderResponseV2>"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "description": "",
+                                    "type": "object",
+                                    "properties": {
+                                        "CorrelationId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "ThreadId": {
+                                            "type": "string"
+                                        },
+                                        "PoNumber": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "PoDate": {},
+                                        "StatusCode": {
+                                            "type": "number"
+                                        },
+                                        "StatusMessage": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "Sample": {
+                                        "value": "<PurchaseOrderResponseV2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n    <CorrelationId>5bb5aada-9971-48ad-aff7-1201f80e37fb</CorrelationId>\n    <ThreadId />\n    <PoNumber>TestDoNotBook_Demo</PoNumber>\n    <PoDate />\n    <StatusCode>500</StatusCode>\n    <StatusMessage>\n        <string>Invalid item list in PO request.</string>\n    </StatusMessage>\n</PurchaseOrderResponseV2>"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Purchase Order API XML",
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "example": "application/xml"
+                        },
+                        "in": "header",
+                        "name": "Content-Type",
+                        "description": "application/xml",
+                        "required": true
+                    },
+                    {
+                        "schema": {
+                            "type": "string",
+                            "example": "2.0"
+                        },
+                        "in": "header",
+                        "name": "Accepts-version",
+                        "description": "2.0",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "description": "",
+                                "type": "object",
+                                "properties": {
+                                    "IsTestPayload": {
+                                        "type": "boolean"
+                                    },
+                                    "CorrelationId": {
+                                        "type": "string"
+                                    },
+                                    "PoNumber": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "EndCustomerPONumber": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "ProfileId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "ProfilePwd": {
+                                        "type": "string"
+                                    },
+                                    "RequestedDeliveryDate": {
+                                        "type": "string"
+                                    },
+                                    "OrderContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "ShippingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "BillingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "InstallAtContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "Address1",
+                                                    "Address2",
+                                                    "Address3",
+                                                    "Address4",
+                                                    "City",
+                                                    "StateOrProvince",
+                                                    "PostalCode",
+                                                    "Country"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "ResellerContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "DeliveryToContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "MailingContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "EndUserContact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Company": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "ContactName": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Email": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Telephone": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Address": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Address1": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address2": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address3": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Address4": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "City": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "StateOrProvince": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "PostalCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "Country": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "Payment": {
+                                        "type": "object",
+                                        "properties": {
+                                            "CardInfo": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "CardNumber": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "CardAuthCode": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "IncludeSensitiveInfo": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "CardRefNumber": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardExpirationDate": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardType": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "CardTypeOther": {
+                                                        "type": "string"
+                                                    },
+                                                    "CardHolderName": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "PaymentMean": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "PaymentMeanOther": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "PaymentTerm": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        }
+                                    },
+                                    "OrderDetails": {
+                                        "type": "array",
+                                        "uniqueItems": true,
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "LineItemNum": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "LineItemDescription": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "SupplierPartId": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "SupplierPartIdExt": {
+                                                    "type": "string"
+                                                },
+                                                "Quantity": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "UnitPrice": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Currency": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "finalRecipient": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "Company": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "ContactName": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Email": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Telephone": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "Address": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "Address1": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address2": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address3": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Address4": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "City": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "StateOrProvince": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "PostalCode": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                },
+                                                                "Country": {
+                                                                    "type": "string",
+                                                                    "minLength": 1
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "LineItemNum",
+                                                "SupplierPartId",
+                                                "SupplierPartIdExt",
+                                                "Quantity",
+                                                "UnitPrice",
+                                                "Currency"
+                                            ]
+                                        }
+                                    },
+                                    "ShippingMethod": {
+                                        "type": "object",
+                                        "properties": {
+                                            "ShippingMethod": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Carrier": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "Mean": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "CustShippingContractNum": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        }
+                                    },
+                                    "CustomFields": {
+                                        "type": "array",
+                                        "uniqueItems": true,
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "Name": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Type": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                "Value": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "ThreadId": {
+                                        "type": "string"
+                                    },
+                                    "MonitoringCorrelationId": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": ["IsTestPayload", "PoNumber", "ProfileId"]
+                            },
+                            "examples": {
+                                "Sample": {
+                                    "value": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<PurchaseOrder xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <BillingContact>\n        <Address>\n            <Address1>One Zafer Way line 1</Address1>\n            <Address2>One Zafer Way line 2</Address2>\n            <Address3>One Zafer Way line 3</Address3>\n            <Address4>One Zafer Way line 4</Address4>\n            <City>OTTAWA</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n        <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>0206294027</Telephone>\n    </BillingContact>\n    <CorrelationId></CorrelationId>\n    <CustomFields>\n        <CustomFields>\n            <Name>Test1</Name>\n            <Type>Shipping Instructions</Type>\n            <Value>Test1</Value>\n        </CustomFields>\n    </CustomFields>\n    <DeliverToContact i:nil=\"true\" />\n    <EndUserContact>\n          <Address>\n            <Address1>One Zafer Way line 1</Address1>\n            <Address2>One Zafer Way line 2</Address2>\n            <Address3>One Zafer Way line 3</Address3>\n            <Address4>One Zafer Way line 4</Address4>\n            <City>OTTAWA</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n        <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>0206294027</Telephone>\n    </EndUserContact>\n    <InstallAtContact>\n          <Address>\n            <Address1>One Zafer Way line 1</Address1>\n            <Address2>One Zafer Way line 2</Address2>\n            <Address3>One Zafer Way line 3</Address3>\n            <Address4>One Zafer Way line 4</Address4>\n            <City>OTTAWA</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n        <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>0206294027</Telephone>\n    </InstallAtContact>\n    <MailingContact>\n         <Address>\n            <Address1>One Zafer Way line 1</Address1>\n            <Address2>One Zafer Way line 2</Address2>\n            <Address3>One Zafer Way line 3</Address3>\n            <Address4>One Zafer Way line 4</Address4>\n            <City>OTTAWA</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n        <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>0206294027</Telephone>\n    </MailingContact>\n    <MonitoringCorrelationId i:nil=\"true\" />\n    <OrderContact>\n        <Address>\n            <Address1>Grondzeilerweg 29</Address1>\n            <Address2 i:nil=\"true\" />\n            <Address3 i:nil=\"true\" />\n            <Address4 i:nil=\"true\" />\n            <City>Culemborg</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n       <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>+31 6 123 81 454</Telephone>\n    </OrderContact>\n    <OrderDetails>\n        <OrderDetails>\n            <Currency>USD</Currency>\n            <FinalRecipient>\n                <Address>\n                    <Address1>Grondzeilerweg 29</Address1>\n                    <Address2 i:nil=\"true\" />\n                    <Address3 i:nil=\"true\" />\n                    <Address4 i:nil=\"true\" />\n                    <City>Culemborg</City>\n                    <Country>US</Country>\n                    <PostalCode>75001</PostalCode>\n                    <StateOrProvince>UT</StateOrProvince>\n                </Address>\n                <Company>ABNAMRO</Company>\n                <ContactName>Bas van Gils</ContactName>\n                <Email>Test@dell.com</Email>\n                <Telephone>+31 6 123 81 454</Telephone>\n            </FinalRecipient>\n            <LineItemDescription i:nil=\"true\" />\n            <LineItemNum>1</LineItemNum>\n            <Quantity>1</Quantity>\n            <SupplierPartId>3000000000004.1</SupplierPartId>\n            <SupplierPartIdExt></SupplierPartIdExt>\n            <UnitPrice>100.85</UnitPrice>\n        </OrderDetails>\n    </OrderDetails>\n    <Payment>\n        <CardInfo>\n            <CardAuthCode></CardAuthCode>\n            <CardExpirationDate></CardExpirationDate>\n            <CardHolderName></CardHolderName>\n            <CardNumber></CardNumber>\n            <CardRefNumber></CardRefNumber>\n            <CardType></CardType>\n            <CardTypeOther></CardTypeOther>\n            <IncludeSensitiveInfo>true</IncludeSensitiveInfo>\n        </CardInfo>\n        <PaymentMean>Instant</PaymentMean>\n        <PaymentMeanOther>PO</PaymentMeanOther>\n        <PaymentTerm>Annual</PaymentTerm>\n    </Payment>\n    <PoNumber>TestDoNotBook_Demo</PoNumber>\n    <ProfileId>POAPI_Test</ProfileId>\n    <ProfilePwd i:nil=\"true\" />\n    <RequestedDeliveryDate i:nil=\"true\" />\n    <ResellerContact>\n        <Address>\n            <Address1></Address1>\n            <Address2></Address2>\n            <Address3 i:nil=\"true\" />\n            <Address4 i:nil=\"true\" />\n            <City></City>\n            <Country></Country>\n            <PostalCode></PostalCode>\n            <StateOrProvince></StateOrProvince>\n        </Address>\n        <Company></Company>\n        <ContactName></ContactName>\n        <Email></Email>\n        <Telephone></Telephone>\n    </ResellerContact>\n    <ShippingContact>\n        <Address>\n            <Address1>One Zafer Way</Address1>\n            <Address2 i:nil=\"true\" />\n            <Address3 i:nil=\"true\" />\n            <Address4 i:nil=\"true\" />\n            <City>OTTAWA</City>\n            <Country>US</Country>\n            <PostalCode>75001</PostalCode>\n            <StateOrProvince>UT</StateOrProvince>\n        </Address>\n        <Company>Test Company Name</Company>\n        <ContactName>Test Contact Name</ContactName>\n        <Email>Test@dell.com</Email>\n        <Telephone>+31 6 123 81 454</Telephone>\n    </ShippingContact>\n    <ShippingMethod>\n        <carrier></carrier>\n        <custShippingContractNum></custShippingContractNum>\n        <mean></mean>\n        <shippingMethod></shippingMethod>\n    </ShippingMethod>\n    <ThreadId i:nil=\"true\" />\n    <isTestPayload>true</isTestPayload>\n</PurchaseOrder>"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": []
+        }
+    },
+    "components": {
+        "schemas": {
+            "PurchaseOrderResponse": {
+                "description": "",
+                "type": "object",
+                "properties": {
+                    "correlationId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "threadId": {
+                        "type": "string"
+                    },
+                    "poNumber": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "poDate": {},
+                    "statusCode": {
+                        "type": "number"
+                    },
+                    "statusMessage": {
+                        "type": "array",
+                        "items": {
+                            "required": [],
+                            "properties": {}
+                        }
+                    }
+                },
+                "required": ["correlationId", "threadId", "poNumber", "statusCode", "statusMessage"]
+            },
+            "BadRequest": {
+                "description": "",
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "status": {
+                        "type": "number"
+                    },
+                    "traceId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "errors": {
+                        "type": "object",
+                        "properties": {
+                            "OrderDetails[0].SupplierPartId": {
+                                "type": "array",
+                                "items": {
+                                    "required": [],
+                                    "properties": {}
+                                }
+                            }
+                        },
+                        "required": ["OrderDetails[0].SupplierPartId"]
+                    }
+                },
+                "required": ["type", "title", "status", "traceId", "errors"],
+                "x-examples": {},
+                "title": ""
+            },
+            "UnauthorizedException": {
+                "description": "",
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "status": {
+                        "type": "number"
+                    },
+                    "traceId": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": ["type", "title", "status", "traceId"],
+                "x-examples": {}
+            },
+            "InternalServerError": {
+                "description": "",
+                "type": "object",
+                "properties": {
+                    "correlationId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "threadId": {
+                        "type": "string"
+                    },
+                    "poNumber": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "poDate": {},
+                    "statusCode": {
+                        "type": "number"
+                    },
+                    "statusMessage": {
+                        "type": "array",
+                        "items": {
+                            "required": [],
+                            "properties": {}
+                        }
+                    }
+                },
+                "required": ["correlationId", "threadId", "poNumber", "statusCode", "statusMessage"]
+            }
+        },
+        "responses": {
+            "500-InternalServerError": {
+                "description": "Example response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "description": "",
+                            "type": "object",
+                            "properties": {
+                                "CorrelationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "ThreadId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoNumber": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoDate": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "StatusCode": {
+                                    "type": "number"
+                                },
+                                "StatusMessage": {
+                                    "type": "array",
+                                    "uniqueItems": true,
+                                    "minItems": 1,
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        },
+                        "examples": {
+                            "Sample": {
+                                "value": {
+                                    "CorrelationId": "string",
+                                    "ThreadId": "string",
+                                    "PoNumber": "string",
+                                    "PoDate": "string",
+                                    "StatusCode": 0,
+                                    "StatusMessage": [{}]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "200-PurchaseOrderResponse": {
+                "description": "Example response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "description": "",
+                            "type": "object",
+                            "properties": {
+                                "CorrelationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "ThreadId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoNumber": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoDate": {},
+                                "StatusCode": {
+                                    "type": "number"
+                                },
+                                "StatusMessage": {
+                                    "type": "array",
+                                    "uniqueItems": true,
+                                    "minItems": 1,
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        },
+                        "examples": {
+                            "Sample": {
+                                "value": {
+                                    "CorrelationId": "string",
+                                    "ThreadId": "string",
+                                    "PoNumber": "string",
+                                    "PoDate": null,
+                                    "StatusCode": 0,
+                                    "StatusMessage": [{}]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "400-BadRequest": {
+                "description": "Example response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "description": "",
+                            "type": "object",
+                            "properties": {
+                                "Type": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "Title": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "Status": {
+                                    "type": "number"
+                                },
+                                "TraceId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "Errors": {
+                                    "type": "object",
+                                    "properties": {
+                                        "OrderDetails[0].SupplierPartId": {
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "minItems": 1,
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "examples": {
+                            "Sample": {
+                                "value": {
+                                    "Type": "string",
+                                    "Title": "string",
+                                    "Status": 0,
+                                    "TraceId": "string",
+                                    "Errors": {
+                                        "OrderDetails[0].SupplierPartId": [{}]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "401-Unauthorized": {
+                "description": "Example response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "description": "",
+                            "type": "object",
+                            "properties": {
+                                "Type": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "Title": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "Status": {
+                                    "type": "number"
+                                },
+                                "TraceId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            }
+                        },
+                        "examples": {
+                            "Sample": {
+                                "value": {
+                                    "type": "string",
+                                    "title": "string",
+                                    "status": 0,
+                                    "traceId": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "202-Accepted": {
+                "description": "Example response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "description": "",
+                            "type": "object",
+                            "properties": {
+                                "CorrelationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "ThreadId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoNumber": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "PoDate": {},
+                                "StatusCode": {
+                                    "type": "number"
+                                },
+                                "StatusMessage": {
+                                    "type": "array",
+                                    "uniqueItems": true,
+                                    "minItems": 1,
+                                    "items": {
+                                        "required": [],
+                                        "properties": {}
+                                    }
+                                }
+                            },
+                            "required": [
+                                "CorrelationId",
+                                "ThreadId",
+                                "PoNumber",
+                                "StatusCode",
+                                "StatusMessage"
+                            ]
+                        },
+                        "examples": {
+                            "Sample": {
+                                "value": {
+                                    "CorrelationId": "string",
+                                    "ThreadId": "string",
+                                    "PoNumber": "string",
+                                    "PoDate": null,
+                                    "StatusCode": 0,
+                                    "StatusMessage": [{}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "servers": []
+}
