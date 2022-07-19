@@ -12,13 +12,14 @@
  * @NModuleScope Public
  */
 
-define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js'], function (
-    NS_Runtime,
-    NS_Format,
-    NS_Record,
-    NS_Search,
-    VC2_Global
-) {
+define(function (require) {
+    // load modules https://requirejs.org/docs/api.html#modulenotes
+    var NS_Runtime = require('N/runtime'),
+        NS_Format = require('N/format'),
+        NS_Record = require('N/record'),
+        NS_Search = require('N/search'),
+        VC2_Global = require('./CTC_VC2_Constants.js');
+
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
@@ -386,11 +387,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
             return qry.join('&');
         },
         loadModule: function (mod) {
-            var returnValue;
-            require([mod], function (modObj) {
-                returnValue = modObj;
-                return true;
-            });
+            var returnValue = require(mod);
             return returnValue;
         },
 
@@ -421,7 +418,6 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
         //     return requestObj;
         // },
-
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
@@ -433,7 +429,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 maxRetries: 3,
                 maxWaitMs: 3000
             };
-            var ns_https = VC2_Util.loadModule('N/https');
+            var NS_Https = require('N/https');
 
             var queryOption = option.query || option.queryOption;
             if (!queryOption || VC2_Util.isEmpty(queryOption)) throw 'Missing query option';
@@ -478,7 +474,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 returnValue.REQUEST = queryOption;
 
                 //// SEND THE REQUEST //////
-                response = ns_https[param.method](queryOption);
+                response = NS_Https[param.method](queryOption);
                 returnValue.RESPONSE = response;
 
                 parsedResponse = VC2_Util.safeParse(response);
@@ -486,11 +482,11 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
                 responseBody = response.body;
 
-                if (!response.code || response.code != 200) {
-                    throw 'Received invalid response code - ' + response.code;
-                }
                 if (!response || !response.body) {
                     throw 'Empty or Missing Response !';
+                }
+                if (!response.code || response.code != 200) {
+                    throw 'Received invalid response code - ' + response.code;
                 }
 
                 ////////////////////////////
@@ -499,6 +495,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
+                returnValue.details = parsedResponse || response;
 
                 VC2_Util.vcLog({
                     title:
@@ -506,7 +503,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
                         (param.doRetry
                             ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
                             : ''),
-                    content: error,
+                    content: { error: errorMsg, details: returnValue.details },
                     transaction: param.logTranId,
                     isError: true
                 });
@@ -541,6 +538,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VC2_Constants.js
 
             return returnValue;
         },
+
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;

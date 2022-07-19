@@ -1405,7 +1405,6 @@ define([
                     continue;
                 }
 
-                
                 Helper.logMsg({
                     status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
                     title: 'Fulfillment Lines',

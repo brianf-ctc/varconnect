@@ -121,12 +121,21 @@ define([
 
         var country = thisRecord.getValue({ fieldId: 'country' });
 
-        if (ponum != null && ponum.length > 0) {
+        if (!ponum || !ponum.length) {
+            alert('Please Select a vendor and enter a PO number');
+        } else {
             var xmlContent = 'Your PO = ' + ponum;
             var vendorConfig = _loadDebugVendorConfig({ xmlVendor: xmlVendor });
             var elementIdToShow, elementIdToHide;
-            if (vendorConfig) {
+            if (!vendorConfig) {
+                alert('Please Select a valid PO with vendor properly configured');
+            } else {
+                jQuery('#custpage_xml__loader').show();
+                setTimeout(function () {
+                    try {
                 console.log('debug lib: Calling library webservice');
+                        var promiseResponse = new Promise(function (resolve) {
+                            var outputObj;
                 try {
                     outputObj = libWebService.handleRequest({
                         vendorConfig: vendorConfig,
@@ -151,9 +160,17 @@ define([
                             processErr.stack
                     );
                 }
-                console.log('debug lib: webservice return ' + JSON.stringify(outputObj));
+                            resolve(outputObj);
+                        });
+                        promiseResponse.then(function (outputObj) {
+                            console.log(
+                                'debug lib: webservice return ' + JSON.stringify(outputObj)
+                            );
                 if (outputObj) {
-                    if (vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO) {
+                                if (
+                                    vendorConfig.xmlVendor ==
+                                    constants.Lists.XML_VENDOR.INGRAM_MICRO
+                                ) {
                         xmlContent =
                             '<!--Retrieved XML-->\n' +
                             outputObj.detailxml +
@@ -161,32 +178,43 @@ define([
                             outputObj.trackxml;
                         try {
                             xmlContent = vkbeautify.xml(xmlContent, 4);
-                            xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'xml'
+                                        }).value;
                             elementIdToShow = 'custpage_xml__viewer';
                             elementIdToHide = 'custpage_json__viewer';
                         } catch (parseErr) {
                             xmlContent = JSON.stringify(outputObj);
                             xmlContent = vkbeautify.json(xmlContent, 4);
-                            xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'JSON'
+                                        }).value;
                             elementIdToShow = 'custpage_json__viewer';
                             elementIdToHide = 'custpage_xml__viewer';
                         }
                     } else if (
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
                         vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
-                        vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.SYNNEX_API ||
-                        vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
-                        vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
+                                    vendorConfig.xmlVendor ==
+                                        constants.Lists.XML_VENDOR.SYNNEX_API ||
+                                    vendorConfig.xmlVendor ==
+                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
+                                    vendorConfig.xmlVendor ==
+                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
                     ) {
                         xmlContent = JSON.stringify(outputObj);
                         try {
                             xmlContent = vkbeautify.json(xmlContent, 4);
-                            xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'JSON'
+                                        }).value;
                             elementIdToShow = 'custpage_json__viewer';
                             elementIdToHide = 'custpage_xml__viewer';
                         } catch (parseErr) {
                             xmlContent = vkbeautify.xml(xmlContent, 4);
-                            xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'xml'
+                                        }).value;
                             elementIdToShow = 'custpage_xml__viewer';
                             elementIdToHide = 'custpage_json__viewer';
                         }
@@ -195,13 +223,17 @@ define([
                         if (typeof xmlContent == 'string') {
                             try {
                                 xmlContent = vkbeautify.xml(xmlContent, 4);
-                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                 elementIdToShow = 'custpage_xml__viewer';
                                 elementIdToHide = 'custpage_json__viewer';
                             } catch (parseErr) {
                                 xmlContent = JSON.stringify(outputObj);
                                 xmlContent = vkbeautify.json(xmlContent, 4);
-                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                 elementIdToShow = 'custpage_json__viewer';
                                 elementIdToHide = 'custpage_xml__viewer';
                             }
@@ -209,19 +241,25 @@ define([
                             xmlContent = JSON.stringify(outputObj);
                             try {
                                 xmlContent = vkbeautify.json(xmlContent, 4);
-                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                 elementIdToShow = 'custpage_json__viewer';
                                 elementIdToHide = 'custpage_xml__viewer';
                             } catch (parseErr) {
                                 xmlContent = vkbeautify.xml(xmlContent, 4);
-                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                 elementIdToShow = 'custpage_xml__viewer';
                                 elementIdToHide = 'custpage_json__viewer';
                             }
                         }
                     }
-                    xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
-                    xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
+                                xmlViewerDocument.getElementById(elementIdToShow).style.display =
+                                    '';
+                                xmlViewerDocument.getElementById(elementIdToHide).style.display =
+                                    'none';
                 }
                 xmlViewerDocument.getElementById(
                     elementIdToShow || 'custpage_xml__viewer'
@@ -229,10 +267,13 @@ define([
                 xmlViewerDocument.getElementById(
                     [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
                 ).innerHTML = xmlContent;
-            } else {
-                alert('Please Select a valid PO with vendor properly configured');
+                        });
+                    } finally {
+                        jQuery('#custpage_xml__loader').hide();
+                    }
+                }, 500);
             }
-        } else alert('Please Select a vendor and enter a PO number');
+            }
     }
 
     (function () {

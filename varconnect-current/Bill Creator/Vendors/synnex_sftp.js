@@ -54,7 +54,7 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                                     X.removeWhite(xml);
                                     for (var n = xml.firstChild; n; n = n.nextSibling) {
                                         if (n.nodeType == NodeType.TEXT)
-                                            // text node
+                                             // text node
                                             o['#text'] = X.escape(n.nodeValue);
                                         else if (n.nodeType == NodeType.CDATA)
                                             // cdata node

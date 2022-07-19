@@ -27,14 +27,14 @@ define([
 ], function (
     VC_Constants,
     CTC_Util,
-    serverWidget,
-    message,
-    record,
-    redirect,
-    search,
-    url,
-    runtime,
-    task
+    ns_ui,
+    ns_msg,
+    ns_record,
+    ns_redirect,
+    ns_search,
+    ns_url,
+    ns_runtime,
+    ns_task
 ) {
     var LOG_TITLE = 'FlexScreen',
         BILL_CREATOR = VC_Constants.Bill_Creator;
@@ -52,15 +52,15 @@ define([
                 return errorMessage;
             },
             processBill: function () {
-                var mrTask = task.create({
-                    taskType: task.TaskType.MAP_REDUCE,
+                var mrTask = ns_task.create({
+                    taskType: ns_task.TaskType.MAP_REDUCE,
                     scriptId: 'customscript_ctc_vc_process_bills',
                     params: {
                         custscript_ctc_vc_bc_bill_fileid: Param.RecordId
                     }
                 });
                 mrTask.submit();
-                redirect.redirect({
+                ns_redirect.redirect({
                     url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&scripttype=&primarykey=&sortcol=dateCreated&sortdir=DESC'
                 });
                 return false;
@@ -116,10 +116,10 @@ define([
                         'closed'
                     ])
                 ) {
-                    // Current.WarnMessage.push(
+                    // Current.Warnns_msg.push(
                     //     'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
                     // );
-                    Current.WarnMessage.push(
+                    Current.Warnns_msg.push(
                         'Purchase Order is not ready for billing: ' + Current.PO_DATA.statusText
                     );
                     returnValue = false;
@@ -128,7 +128,7 @@ define([
                 if (returnValue) {
                     if (Current.PO_REC && !Current.BILLFILE_DATA.billLink) {
                         try {
-                            Current.BILL_REC = record.transform({
+                            Current.BILL_REC = ns_record.transform({
                                 fromType: 'purchaseorder',
                                 fromId: Current.PO_ID,
                                 toType: 'vendorbill',
@@ -229,7 +229,7 @@ define([
                     var arrFields = [
                         {
                             id: 'custpage_action',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             label: 'Action',
                             container: 'fg_action',
                             selectOptions: [
@@ -242,47 +242,47 @@ define([
                         },
                         {
                             id: 'custpage_hold',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             source: 'customlist_ctc_vc_bill_hold_rsns',
                             container: 'fg_action',
                             label: 'Hold Reason',
                             defaultValue: values.custpage_hold,
                             displayType: !Current.IS_ACTIVE_EDIT
-                                ? serverWidget.FieldDisplayType.INLINE
+                                ? ns_ui.FieldDisplayType.INLINE
                                 : false
                         },
                         {
                             id: 'custpage_processing_notes',
-                            type: serverWidget.FieldType.TEXTAREA,
+                            type: ns_ui.FieldType.TEXTAREA,
                             container: 'fg_action',
                             label: 'Notes',
                             defaultValue: values.custpage_processing_notes ///Current.BILLFILE_DATA.notes
                         },
                         {
                             id: 'custpage_integration',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             source: 'customrecord_vc_bill_vendor_config',
                             container: 'fg_action',
                             label: 'Integration',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
-                            breakType: serverWidget.FieldBreakType.STARTCOL,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
+                            breakType: ns_ui.FieldBreakType.STARTCOL,
                             defaultValue: values.custpage_integration //Current.BILLFILE_DATA.integration
                         },
                         {
                             id: 'custpage_status',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             source: 'customlist_ctc_vc_bill_statuses',
                             container: 'fg_action',
                             label: 'Status',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_status //Current.BILLFILE_DATA.status
                         },
                         {
                             id: 'custpage_bill_file',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_action',
                             label: 'Bill File',
-                            displayType: serverWidget.FieldDisplayType.HIDDEN,
+                            displayType: ns_ui.FieldDisplayType.HIDDEN,
                             defaultValue: values.custpage_bill_file //Current.RecordUrl
                             // '<a href="' +
                             // Current.RecordUrl +
@@ -292,19 +292,19 @@ define([
                         },
                         {
                             id: 'custpage_suitelet_url',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_action',
                             label: 'Process Bill',
-                            displayType: serverWidget.FieldDisplayType.HIDDEN,
+                            displayType: ns_ui.FieldDisplayType.HIDDEN,
                             defaultValue: values.custpage_suitelet_url //Current.SuiteletUrl + '&taskact=processbill'
                         },
                         {
                             id: 'custpage_processing_logs',
-                            type: serverWidget.FieldType.LONGTEXT,
+                            type: ns_ui.FieldType.LONGTEXT,
                             container: 'fg_action',
                             label: 'Processing Logs',
-                            // breakType: serverWidget.FieldBreakType.STARTCOL,
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            // breakType: ns_ui.FieldBreakType.STARTCOL,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_processing_logs //Current.BILLFILE_DATA.processLog
                         }
                     ];
@@ -379,70 +379,70 @@ define([
                     var arrFields = [
                         {
                             id: 'custpage_ponum',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_po',
                             label: 'PO #',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_ponum
                         },
                         {
                             id: 'record_id',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Record ID',
                             container: 'fg_po',
-                            displayType: serverWidget.FieldDisplayType.HIDDEN,
+                            displayType: ns_ui.FieldDisplayType.HIDDEN,
                             defaultValue: values.record_id
                         },
                         {
                             id: 'custpage_polink',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             label: 'PO Link',
                             source: 'transaction',
                             container: 'fg_po',
                             displayType: Current.BILLFILE_DATA.linkedPO
-                                ? serverWidget.FieldDisplayType.INLINE
+                                ? ns_ui.FieldDisplayType.INLINE
                                 : false,
                             defaultValue: values.custpage_polink
                         },
                         {
                             id: 'custpage_vendor',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             source: 'vendor',
                             container: 'fg_po',
                             label: 'Vendor',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_vendor
                         },
                         {
                             id: 'custpage_polocation',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_po',
                             label: 'Location',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_polocation
                         },
                         {
                             id: 'custpage_postatus',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_po',
                             label: 'Status',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_postatus
                         },
                         {
                             id: 'custpage_pototal',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_po',
                             label: 'Total',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_pototal
                         }
                         // {
                         //     id: 'custpage_potaxtotal',
-                        //     type: serverWidget.FieldType.CURRENCY,
+                        //     type: ns_ui.FieldType.CURRENCY,
                         //     container: 'fg_po',
                         //     label: 'Tax Total (PO)',
-                        //     displayType: serverWidget.FieldDisplayType.INLINE,
+                        //     displayType: ns_ui.FieldDisplayType.INLINE,
                         //     defaultValue: values.custpage_potaxtotal
                         // },
                     ];
@@ -455,36 +455,36 @@ define([
                     var arrFields = [
                         {
                             id: 'custpage_calctotal',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_calc',
                             label: 'Total Bill Amount',
-                            breakType: serverWidget.FieldBreakType.STARTCOL,
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            breakType: ns_ui.FieldBreakType.STARTCOL,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_calctotal
                         },
                         {
                             id: 'custpage_linetotal',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_calc',
                             label: 'Total Amount (Lines)',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_poshiptotal
                         },
                         {
                             id: 'custpage_polinetaxtotal',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_calc',
                             label: 'Total Tax (Lines)',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_polinetaxtotal
                         },
 
                         {
                             id: 'custpage_poshiptotal',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_calc',
                             label: 'Shipping Total',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_poshiptotal
                         }
                     ];
@@ -498,19 +498,19 @@ define([
                     var arrFields = [
                         {
                             id: 'custpage_inv',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             container: 'fg_bill',
                             label: 'Invoice #',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_inv
                         },
                         {
                             id: 'custpage_bill_link',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             source: 'transaction',
                             container: 'fg_bill',
                             label: 'Bill Link',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_bill_link
                             // //Current.BILLFILE_REC.getValue(
                             //     'custrecord_ctc_vc_bill_linked_bill'
@@ -518,10 +518,10 @@ define([
                         },
                         {
                             id: 'custpage_date',
-                            type: serverWidget.FieldType.DATE,
+                            type: ns_ui.FieldType.DATE,
                             container: 'fg_bill',
                             label: 'Invoice Date',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_date
                             // Current.BILLFILE_REC.getValue(
                             //     'custrecord_ctc_vc_bill_date'
@@ -529,10 +529,10 @@ define([
                         },
                         {
                             id: 'custpage_duedate',
-                            type: serverWidget.FieldType.DATE,
+                            type: ns_ui.FieldType.DATE,
                             container: 'fg_bill',
                             label: 'Due Date',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_duedate
                             // Current.BILLFILE_REC.getValue(
                             //     'custrecord_ctc_vc_bill_due_date'
@@ -540,10 +540,10 @@ define([
                         },
                         {
                             id: 'custpage_duefromfile',
-                            type: serverWidget.FieldType.CHECKBOX,
+                            type: ns_ui.FieldType.CHECKBOX,
                             container: 'fg_bill',
                             label: 'Due Date from File',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_duefromfile
 
                             // BOOLMAP[
@@ -554,35 +554,35 @@ define([
                         },
                         {
                             id: 'custpage_total',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_bill',
                             label: 'Invoice Total',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
-                            breakType: serverWidget.FieldBreakType.STARTCOL,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
+                            breakType: ns_ui.FieldBreakType.STARTCOL,
                             defaultValue: values.custpage_total //Current.BILL_DATA.total
                         },
                         {
                             id: 'custpage_tax',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_bill',
                             label: 'Tax Total',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_tax //Current.BILL_DATA.charges.tax
                         },
                         {
                             id: 'custpage_shipping',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_bill',
                             label: 'Shipping',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_shipping //Current.BILL_DATA.charges.shipping
                         },
                         {
                             id: 'custpage_other',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             container: 'fg_bill',
                             label: 'Other Charges',
-                            displayType: serverWidget.FieldDisplayType.INLINE,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             defaultValue: values.custpage_other //Current.BILL_DATA.charges.other
                         }
                     ];
@@ -595,7 +595,7 @@ define([
             },
             getLineItems: function (record, filter) {
                 if (!record) return false;
-                var lineCount = record.getLineCount('item');
+                var lineCount = ns_record.getLineCount('item');
 
                 var objLineItems = {},
                     lineFields = {
@@ -620,7 +620,7 @@ define([
                         if (field == 'line') {
                             lineData[field] = line;
                         } else {
-                            lineData[field] = record.getSublistValue({
+                            lineData[field] = ns_record.getSublistValue({
                                 sublistId: 'item',
                                 fieldId: field,
                                 line: line
@@ -628,7 +628,7 @@ define([
                         }
 
                         if (lineFields[field] == 'list') {
-                            lineData[field + '_text'] = record.getSublistText({
+                            lineData[field + '_text'] = ns_record.getSublistText({
                                 sublistId: 'item',
                                 fieldId: field,
                                 line: line
@@ -717,31 +717,31 @@ define([
             addLineItem: function (record, lineData) {
                 log.audit('addLineItem', '>> lineData: ' + JSON.stringify(lineData));
                 if (!lineData.item) return false;
-                record.selectNewLine({
+                ns_record.selectNewLine({
                     sublistId: 'item'
                 });
-                record.setCurrentSublistValue({
+                ns_record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'item',
                     value: lineData.item
                 });
-                record.setCurrentSublistValue({
+                ns_record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'quantity',
                     value: lineData.quantity || 1
                 });
-                record.setCurrentSublistValue({
+                ns_record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'rate',
                     value: Math.abs(lineData.rate || 0.0)
                 });
-                record.setCurrentSublistValue({
+                ns_record.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: 'amount',
                     value: Math.abs((lineData.quantity || 1) * (lineData.rate || 0.0))
                 });
-                record.commitLine({ sublistId: 'item' });
-                var lineCount = record.getLineCount('item');
+                ns_record.commitLine({ sublistId: 'item' });
+                var lineCount = ns_record.getLineCount('item');
                 var lineDataNew = Helper.getLineItems(record, {
                     line: lineCount - 1
                 });
@@ -771,79 +771,79 @@ define([
                     return [
                         {
                             id: 'fitem',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Item'
                         },
                         {
                             id: 'nsitem',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             label: 'NS Item',
                             displayType: Current.IS_ACTIVE_EDIT
-                                ? serverWidget.FieldDisplayType.ENTRY
-                                : serverWidget.FieldDisplayType.INLINE,
+                                ? ns_ui.FieldDisplayType.ENTRY
+                                : ns_ui.FieldDisplayType.INLINE,
                             selectOptions: arrItemOptions
                         },
                         {
                             id: 'fqty',
                             label: 'Bill Quantity',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             displayType:
                                 Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
-                                    ? serverWidget.FieldDisplayType.ENTRY
-                                    : serverWidget.FieldDisplayType.INLINE
+                                    ? ns_ui.FieldDisplayType.ENTRY
+                                    : ns_ui.FieldDisplayType.INLINE
                         },
                         {
                             id: 'nsqty',
                             label: 'NS QUANTITY',
-                            type: serverWidget.FieldType.CURRENCY
+                            type: ns_ui.FieldType.CURRENCY
                         },
                         {
                             id: 'nsrcvd',
                             label: 'NS RECEIVED',
-                            type: serverWidget.FieldType.CURRENCY
+                            type: ns_ui.FieldType.CURRENCY
                         },
                         {
                             id: 'nsbilled',
                             label: 'NS BILLED',
-                            type: serverWidget.FieldType.CURRENCY
+                            type: ns_ui.FieldType.CURRENCY
                         },
                         {
                             id: 'frate',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Bill Rate',
                             displayType:
                                 Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
-                                    ? serverWidget.FieldDisplayType.ENTRY
-                                    : serverWidget.FieldDisplayType.INLINE
+                                    ? ns_ui.FieldDisplayType.ENTRY
+                                    : ns_ui.FieldDisplayType.INLINE
                         },
                         {
                             id: 'billrate',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Bill Rate',
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
+                            displayType: ns_ui.FieldDisplayType.HIDDEN
                         },
 
                         {
                             id: 'nsrate',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'NS Rate'
                         },
                         {
                             id: 'famt',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Bill Amount',
                             totallingField: true
                         },
                         {
                             id: 'nstaxamt',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Calc. Tax'
                         },
                         {
                             id: 'fdesc',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Description'
                         }
                     ];
@@ -874,74 +874,74 @@ define([
                     return [
                         {
                             id: 'applied',
-                            type: serverWidget.FieldType.CHECKBOX,
+                            type: ns_ui.FieldType.CHECKBOX,
                             displayType:
                                 Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
-                                    ? serverWidget.FieldDisplayType.ENTRY
-                                    : serverWidget.FieldDisplayType.INLINE,
+                                    ? ns_ui.FieldDisplayType.ENTRY
+                                    : ns_ui.FieldDisplayType.INLINE,
                             label: 'Apply'
                         },
                         {
                             id: 'type',
-                            type: serverWidget.FieldType.TEXT,
-                            displayType: serverWidget.FieldDisplayType.HIDDEN,
+                            type: ns_ui.FieldType.TEXT,
+                            displayType: ns_ui.FieldDisplayType.HIDDEN,
                             label: 'Variance Type'
                         },
                         {
                             id: 'varname',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Type'
                         },
                         {
                             id: 'itemname',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Item'
                         },
                         {
                             id: 'description',
-                            type: serverWidget.FieldType.TEXT,
+                            type: ns_ui.FieldType.TEXT,
                             label: 'Description'
                         },
                         {
                             id: 'nsitem',
-                            type: serverWidget.FieldType.SELECT,
+                            type: ns_ui.FieldType.SELECT,
                             label: 'PO Item',
                             displayType:
                                 Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
-                                    ? serverWidget.FieldDisplayType.ENTRY
-                                    : serverWidget.FieldDisplayType.INLINE,
+                                    ? ns_ui.FieldDisplayType.ENTRY
+                                    : ns_ui.FieldDisplayType.INLINE,
                             selectOptions: arrItemOptions
                         },
                         {
                             id: 'itemid',
-                            type: serverWidget.FieldType.TEXT,
-                            displayType: serverWidget.FieldDisplayType.HIDDEN,
+                            type: ns_ui.FieldType.TEXT,
+                            displayType: ns_ui.FieldDisplayType.HIDDEN,
                             label: 'Item'
                         },
                         {
                             id: 'amount',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Amount',
                             totallingField: true,
                             displayType:
                                 Current.IS_ACTIVE_EDIT &&
                                 Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
-                                    ? serverWidget.FieldDisplayType.ENTRY
-                                    : serverWidget.FieldDisplayType.INLINE
+                                    ? ns_ui.FieldDisplayType.ENTRY
+                                    : ns_ui.FieldDisplayType.INLINE
                         },
                         {
                             id: 'amounttax',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Applied Tax',
-                            displayType: serverWidget.FieldDisplayType.INLINE
+                            displayType: ns_ui.FieldDisplayType.INLINE
                         },
                         {
                             id: 'amountfixed',
-                            type: serverWidget.FieldType.CURRENCY,
+                            type: ns_ui.FieldType.CURRENCY,
                             label: 'Amount (fixed)',
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
+                            displayType: ns_ui.FieldDisplayType.HIDDEN
                         }
                     ];
                 };
@@ -1272,7 +1272,7 @@ define([
         Current.Method = context.request.method.toUpperCase();
 
         var logTitle = [LOG_TITLE, Current.Method, Param.RecordId].join('::');
-        Current.Script = runtime.getCurrentScript();
+        Current.Script = ns_runtime.getCurrentScript();
 
         log.debug(
             logTitle,
@@ -1290,19 +1290,19 @@ define([
         };
         log.debug(logTitle, '>> Variance.Config : ' + JSON.stringify(Variance.Config));
 
-        Current.BILLFILE_REC = record.load({
+        Current.BILLFILE_REC = ns_record.load({
             type: 'customrecord_ctc_vc_bills',
             id: Param.RecordId,
             isDynamic: false
         });
 
-        Current.RecordUrl = url.resolveRecord({
+        Current.RecordUrl = ns_url.resolveRecord({
             recordType: 'customrecord_ctc_vc_bills',
             recordId: Current.BILLFILE_REC.id
         });
-        Current.SuiteletUrl = url.resolveScript({
-            scriptId: runtime.getCurrentScript().id,
-            deploymentId: runtime.getCurrentScript().deploymentId,
+        Current.SuiteletUrl = ns_url.resolveScript({
+            scriptId: ns_runtime.getCurrentScript().id,
+            deploymentId: ns_runtime.getCurrentScript().deploymentId,
             params: {
                 record_id: Param.RecordId
             }
@@ -1312,7 +1312,7 @@ define([
         Current.PO_DATA = {};
 
         if (Current.PO_ID) {
-            Current.PO_REC = record.load({
+            Current.PO_REC = ns_record.load({
                 type: 'purchaseorder',
                 id: Current.PO_ID,
                 isDynamic: false
@@ -1365,7 +1365,7 @@ define([
         /////////////////////////////////////////////////////////
         if (Current.Method === 'GET') {
             // CREATE FORM
-            Current.Form = serverWidget.createForm({ title: 'Flex Screen' });
+            Current.Form = ns_ui.createForm({ title: 'Flex Screen' });
             Current.Form.clientScriptModulePath = './Libraries/CTC_VC_Lib_Suitelet_Client_Script';
 
             /// BUTTONS //////////////////////
@@ -1488,7 +1488,7 @@ define([
             var sublistItem = Current.Form.addSublist({
                 id: 'item',
                 label: 'Invoice Lines',
-                type: serverWidget.SublistType.LIST
+                type: ns_ui.SublistType.LIST
             });
 
             Current.listTaxItems = {};
@@ -1669,7 +1669,7 @@ define([
             var sublistVar = Current.Form.addSublist({
                 id: 'variance',
                 label: 'Variance Lines',
-                type: serverWidget.SublistType.LIST
+                type: ns_ui.SublistType.LIST
             });
 
             Helper.getSublistFields('Variance').forEach(function (colField) {
@@ -1706,7 +1706,7 @@ define([
                 Current.Form.addPageInitMessage({
                     title: 'Error',
                     message: Current.ErrorMessage,
-                    type: message.Type.WARNING
+                    type: ns_msg.Type.WARNING
                 });
             }
 
@@ -1726,7 +1726,7 @@ define([
                 Current.Form.addPageInitMessage({
                     title: 'Warning',
                     message: Current.WarnMessage,
-                    type: message.Type.WARNING
+                    type: ns_msg.Type.WARNING
                 });
             }
 
@@ -1912,20 +1912,20 @@ define([
                 output: JSON.stringify(updateValues)
             });
 
-            record.submitFields({
+            ns_record.submitFields({
                 type: 'customrecord_ctc_vc_bills',
                 id: Param.RecordId,
                 values: updateValues
             });
 
             if (redirectToPO) {
-                redirect.toRecordTransform({
+                ns_redirect.toRecordTransform({
                     fromId: Current.PO_ID,
-                    fromType: record.Type.PURCHASE_ORDER,
-                    toType: record.Type.VENDOR_BILL
+                    fromType: ns_record.Type.PURCHASE_ORDER,
+                    toType: ns_record.Type.VENDOR_BILL
                 });
             } else {
-                redirect.toSuitelet({
+                ns_redirect.toSuitelet({
                     scriptId: 'customscript_ctc_vc_bill_flex_screen',
                     deploymentId: '1',
                     parameters: {

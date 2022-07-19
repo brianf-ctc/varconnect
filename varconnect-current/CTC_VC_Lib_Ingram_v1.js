@@ -134,8 +134,9 @@ define([
                 transaction: option.poId,
                 status: VC_Global.Lists.VC_LOG_STATUS.ERROR
             });
+            if (!returnVaue) returnVaue = errorMsg;
         }
-        return orderDetails;
+        return returnVaue;
     }
 
     function _getOrderDetail(option) {
