@@ -12,75 +12,83 @@
  * @NModuleScope Public
  */
 define([
-    'N/https',
     'N/encode',
     'N/search',
     '../Library/CTC_VCSP_Constants.js',
     '../Library/CTC_VCSP_Lib_Log.js',
-    '../VO/CTC_VCSP_Response.js'
-], function (https, encode, search, constants, vcLog, response) {
-    function authenticate(options) {
-        var key = options.key,
-            secret = options.secret,
-            url = options.url,
-            grantType = options.grantType;
+    '../Library/CTC_Lib_Utils'
+], function (ns_encode, ns_search, constants, vcLog, ctc_util) {
+    var LogTitle = 'WS:Dell';
 
-        //		var token = btoa(key+':'+secret);
-        var token = encode.convert({
-            string: key + ':' + secret,
-            inputEncoding: encode.Encoding.UTF_8,
-            outputEncoding: encode.Encoding.BASE_64_URL_SAFE
+    function generateToken(option) {
+        var logTitle = [LogTitle, 'generateToken'].join('::');
+
+        var authkey = ns_encode.convert({
+            string: option.key + ':' + option.secret,
+            inputEncoding: ns_encode.Encoding.UTF_8,
+            outputEncoding: ns_encode.Encoding.BASE_64_URL_SAFE
+        });
+        log.audit(logTitle, '>> auth-key: ' + JSON.stringify(authkey));
+
+        var tokenReq = ctc_util.sendRequest({
+            header: [LogTitle, 'GenerateToken'].join(' : '),
+            method: 'post',
+            recordId: option.poId,
+            query: {
+                url: option.url,
+                headers: {
+                    authorization: 'Basic ' + authkey,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: {
+                    grant_type: 'client_credentials'
+                }
+            }
         });
 
-        var headers = {
-                authorization: 'Basic ' + token,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body = {
-                grant_type: 'client_credentials'
-            };
+        if (tokenReq.isError) throw ['Generate Token Error - ', tokenReq.errorMsg].join('');
 
-        log.debug('auth headers', headers);
-        log.debug('auth body', body);
+        var tokenResp = ctc_util.safeParse(tokenReq.RESPONSE);
+        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
-        var responseObj = https.post({
-            url: url,
-            headers: headers,
-            body: body
-        });
+        log.audit(logTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
 
-        return JSON.parse(responseObj.body);
+        return tokenResp;
     }
 
-    function _getRequestedDeliveryDate(options) {
-        var recPO = options.recPO,
-            itemCount = recPO.items.length,
-            deliveryDate = undefined;
+    function _getRequestedDeliveryDate(option) {
+        var logTitle = [LogTitle, 'getRequestedDeliveryDate'].join('::');
+
+        var record = option.record,
+            itemCount = record.items.length,
+            deliveryDate;
 
         for (var i = 0; i < itemCount; i++) {
-            var expectedReceiptDate = recPO.items[i].expectedReceiptDate;
+            var expectedReceiptDate = record.items[i].expectedReceiptDate;
             if (!deliveryDate && expectedReceiptDate) deliveryDate = expectedReceiptDate;
         }
 
         return deliveryDate;
     }
 
-    function _buildOrderDetails(options) {
-        var recPO = options.recPO,
-            itemCount = recPO.items.length,
+    function _buildOrderDetails(option) {
+        var logTitle = [LogTitle, 'buildOrderDetails'].join('::');
+
+        var record = option.record,
+            itemCount = record.items.length,
             itemNum = '',
             orderDetails = [];
 
         for (var i = 0; i < itemCount; i++) {
-            if (itemNum != recPO.items[i].item || itemNum == '') {
+            if (itemNum != record.items[i].item || itemNum == '') {
                 var orderDetail = {
                     lineItemNum: i + 1,
-                    lineItemDescription: recPO.items[i].description,
-                    supplierPartId: recPO.items[i].item,
-                    supplierPartIdExt: recPO.items[i].item,
-                    quantity: recPO.items[i].quantity,
-                    unitPrice: recPO.items[i].rate,
-                    currency: recPO.currency
+                    lineItemDescription: record.items[i].description,
+                    supplierPartId: record.items[i].item,
+                    supplierPartIdExt: record.items[i].item,
+                    quantity: record.items[i].quantity,
+                    unitPrice: record.items[i].rate,
+                    currency: record.currency
                     //TODO: Need to populate from SO?
                     //				endUser: {
                     //					 company: '',
@@ -98,12 +106,12 @@ define([
                     //				}
                 };
 
-                if (recPO.items[i].quotenumber)
-                    orderDetail.supplierPartId = recPO.items[i].quotenumber;
+                if (record.items[i].quotenumber)
+                    orderDetail.supplierPartId = record.items[i].quotenumber;
 
                 orderDetails.push(orderDetail);
 
-                itemNum = recPO.items[i].item;
+                itemNum = record.items[i].item;
             } else {
                 orderDetails[orderDetails.length - 1].quantity = 1;
                 break;
@@ -113,12 +121,12 @@ define([
         return orderDetails;
     }
 
-    function _buildCustomFields(options) {
-        var recPO = options.recPO;
+    function _buildCustomFields(option) {
+        var record = option.record;
         var arr = [];
 
         var shipCode = undefined,
-            dellShipCode = recPO.dellShippingCode;
+            dellShipCode = record.dellShippingCode;
         if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.TWO_DAY) {
             shipCode = '2D';
         } else if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.NEXT_DAY) {
@@ -126,7 +134,7 @@ define([
         } else {
             shipCode = 'LC';
         }
-        var createdfrom = recPO.createdFrom;
+        var createdfrom = record.createdFrom;
 
         arr.push({
             name: 'EU_PO_NUMBER',
@@ -154,13 +162,14 @@ define([
         return arr;
     }
 
-    function _getEndUserPO(options) {
-        var createdfrom = options.createdfrom,
+    function _getEndUserPO(option) {
+
+        var createdfrom = option.createdfrom,
             endUserPO = '';
 
         if (createdfrom) {
-            var lkup = search.lookupFields({
-                type: search.Type.TRANSACTION,
+            var lkup = ns_search.lookupFields({
+                type: ns_search.Type.TRANSACTION,
                 id: createdfrom,
                 columns: ['recordtype', 'otherrefnum']
             });
@@ -173,61 +182,62 @@ define([
         return endUserPO;
     }
 
-    function _generateBody(options) {
-        var recPO = options.recPO,
-            customerNo = options.customerNo,
-            testRequest = options.testRequest;
-        log.debug('recPO', recPO);
+    function _generateBody(option) {
+        var logTitle = [LogTitle, 'generateBody'].join('::');
+
+        var record = option.record,
+            customerNo = option.customerNo,
+            testRequest = option.testRequest;
+        log.debug('record', record);
         var body = {
-            poNumber: recPO.tranId,
-            profileId: customerNo,
-            isTestPayload: testRequest,
-            requestedDeliveryDate: _getRequestedDeliveryDate({ recPO: recPO }),
-            //TODO: Who to put here
-            //				 orderContact: {
-            //					 company: '',
-            //					 contactName: '',
-            //					 email: '',
-            //					 telephone: '',
-            //					 address: {
-            //						 address1: '',
-            //						 address2: '',
-            //						 city: '',
-            //						 stateOrProvince: '',
-            //						 postalCode: '',
-            //						 country: ''
-            //					 }
-            //				 },
-            shippingContact: {
-                //					 company: recPO.shipAttention,
-                //					 contactName: recPO.shipAddressee,
-                company: recPO.shipAddressee,
-                contactName: recPO.shipAttention,
-                email: recPO.shipEmail,
-                telephone: recPO.shipPhone,
+            PoNumber: record.tranId,
+            ProfileId: customerNo,
+            isTestPayload: (testRequest ? true : false).toString(),
+            requestedDeliveryDate: _getRequestedDeliveryDate({ record: record }),
+            OrderContact: {
+                Company: '',
+                contactName: '',
+                email: '',
+                telephone: '',
                 address: {
-                    address1: recPO.shipAddr1,
-                    address2: recPO.shipAddr2,
-                    city: recPO.shipCity,
-                    stateOrProvince: recPO.shipState,
-                    postalCode: recPO.shipZip,
-                    country: recPO.shipCountry
+                    address1: '',
+                    address2: '',
+                    city: '',
+                    stateOrProvince: '',
+                    postalCode: '',
+                    country: ''
+                }
+            },
+            ShippingContact: {
+                //					 company: record.shipAttention,
+                //					 contactName: record.shipAddressee,
+                company: record.shipAddressee,
+                contactName: record.shipAttention,
+                email: record.shipEmail,
+                telephone: record.shipPhone,
+                address: {
+                    address1: record.shipAddr1,
+                    address2: record.shipAddr2,
+                    city: record.shipCity,
+                    stateOrProvince: record.shipState,
+                    postalCode: record.shipZip,
+                    country: record.shipCountry
                 }
             },
             billingContact: {
-                //					 company: recPO.billAttention,
-                //					 contactName: recPO.billAddressee,
-                company: recPO.billAddressee,
-                contactName: recPO.billAttention,
-                email: recPO.billEmail,
-                telephone: recPO.billPhone,
+                //					 company: record.billAttention,
+                //					 contactName: record.billAddressee,
+                company: record.billAddressee,
+                contactName: record.billAttention,
+                email: record.billEmail,
+                telephone: record.billPhone,
                 address: {
-                    address1: recPO.billAddr1,
-                    address2: recPO.billAddr2,
-                    city: recPO.billCity,
-                    stateOrProvince: recPO.billState,
-                    postalCode: recPO.billZip,
-                    country: recPO.billCountry
+                    address1: record.billAddr1,
+                    address2: record.billAddr2,
+                    city: record.billCity,
+                    stateOrProvince: record.billState,
+                    postalCode: record.billZip,
+                    country: record.billCountry
                 }
             },
             //TODO What to put here
@@ -243,10 +253,10 @@ define([
                 //					 },
                 //					 paymentMean: '',
                 //					 paymentMeanOther: '',
-                paymentTerm: recPO.terms
+                paymentTerm: record.terms
             },
-            orderDetails: _buildOrderDetails({ recPO: recPO }),
-            customFields: _buildCustomFields({ recPO: recPO })
+            orderDetails: _buildOrderDetails({ record: record }),
+            customFields: _buildCustomFields({ record: record })
         };
 
         log.debug('body', JSON.stringify(body));
@@ -254,101 +264,287 @@ define([
         return body;
     }
 
-    function send(options) {
-        var auth = options.auth,
-            recPO = options.recPO,
-            url = options.url,
-            customerNo = options.customerNo,
-            testRequest = options.testRequest,
-            tokenType = auth.token_type,
-            accessToken = auth.access_token,
-            body = _generateBody({
-                recPO: recPO,
-                customerNo: customerNo,
-                testRequest: testRequest
-            });
+    function generateBody(option) {
+        var logTitle = [LogTitle, 'generateBody'].join('::'),
+            returnValue = '';
 
-        vcLog.recordLog({
-            header: 'Request',
-            body: JSON.stringify(body),
-            transaction: recPO.id
-        });
-        var responseObj = https.post({
-            url: url,
-            headers: {
-                Authorization: tokenType + ' ' + accessToken,
-                'Content-Type': 'application/json'
+        var record = option.record,
+            customerNo = option.customerNo,
+            itemLength = record.items.length,
+            testRequest = option.testRequest;
+
+        var bodyContentJSON = {
+            PoNumber: record.tranId,
+            ProfileId: customerNo,
+            isTestPayload: testRequest.toString(),
+            RequestedDeliveryDate: (function () {
+                var deliveryDate = null;
+                for (var i = 0; i < itemLength; i++) {
+                    if (deliveryDate) break;
+                    var expectedReceiptDate = record.items[i].expectedReceiptDate;
+                    if (expectedReceiptDate) deliveryDate = expectedReceiptDate;
+                }
+
+                return deliveryDate;
+            })(),
+            OrderContact: (function () {
+                // get the contact info
+                var contactAddrFields = [
+                    'entityid',
+                    'address',
+                    'address1',
+                    'address2',
+                    'address3',
+                    'addressphone',
+                    'attention',
+                    'city',
+                    'company',
+                    'country',
+                    'countrycode',
+                    'email',
+                    'phone',
+                    'state',
+                    'zipcode'
+                ];
+
+                var searchOption = {
+                    type: 'transaction',
+                    filters: [['internalid', 'anyof', record.id], 'AND', ['mainline', 'is', 'T']],
+                    columns: []
+                };
+
+                contactAddrFields.forEach(function (fld) {
+                    searchOption.columns.push(
+                        ns_search.createColumn({ name: fld, join: 'contactPrimary' })
+                    );
+                    return true;
+                });
+
+                var contactAddrSearch = ns_search.create(searchOption),
+                    contactAddrObj = {};
+
+                contactAddrSearch.run().each(function (searchRow) {
+                    contactAddrFields.forEach(function (fld) {
+                        contactAddrObj[fld] = searchRow.getValue({
+                            name: fld,
+                            join: 'contactPrimary'
+                        });
+                        return true;
+                    });
+                    return true;
+                });
+
+                log.audit(logTitle, '>> contact Info: ' + JSON.stringify(contactAddrObj));
+
+                return {
+                    Company: contactAddrObj.company,
+                    ContactName: contactAddrObj.entityid,
+                    Email: contactAddrObj.email,
+                    Telephone: contactAddrObj.phone,
+                    Address: {
+                        Address1: contactAddrObj.address1,
+                        Address2: contactAddrObj.address2,
+                        City: contactAddrObj.city,
+                        StateOrProvince: contactAddrObj.state,
+                        PostalCode: contactAddrObj.zipcode,
+                        Country: contactAddrObj.countrycode
+                    }
+                };
+            })(),
+            ShippingContact: {
+                Company: record.shipAddressee,
+                ContactName: record.shipAttention,
+                Cmail: record.shipEmail,
+                Telephone: record.shipPhone,
+                Address: {
+                    Address1: record.shipAddr1,
+                    Address2: record.shipAddr2,
+                    City: record.shipCity,
+                    StateOrProvince: record.shipState,
+                    PostalCode: record.shipZip,
+                    Country: record.shipCountry
+                }
             },
-            body: JSON.stringify(body)
-        });
+            BillingContact: {
+                Company: record.billAddressee,
+                ContactName: record.billAttention,
+                Email: record.billEmail,
+                Telephone: record.billPhone,
+                Address: {
+                    Address1: record.billAddr1,
+                    Address2: record.billAddr2,
+                    City: record.billCity,
+                    StateOrProvince: record.billState,
+                    PostalCode: record.billZip,
+                    Country: record.billCountry
+                }
+            },
+            Payment: {
+                // PaymentMean: 'Other',
+                // PaymentMeanOther: 'FP',
+                PaymentTerm: record.terms
+            },
+            OrderDetails: (function () {
+                var arrItemList = [];
 
-        return responseObj;
+                for (var i = 0, j = itemLength; i < j; i++) {
+                    var itemData = record.items[i];
+
+                    var itemDetails = {
+                        LineItemNum: i + 1,
+                        SupplierPartId: itemData.item,
+                        SupplierPartIdExt: itemData.item,
+                        Quantity: itemData.quantity,
+                        UnitPrice: itemData.rate,
+                        Currency: record.currency
+                        // EndUser: {
+                        //     Company: 'ABC Company',
+                        //     ContactName: 'John Doe',
+                        //     Email: 'john.doe@email.com',
+                        //     Telephone: '1234567890',
+                        //     Address: {
+                        //         Address1: 'Test Address Line 1',
+                        //         Address2: 'Address Line 2',
+                        //         City: 'San Diego',
+                        //         StateOrProvince: 'CA',
+                        //         PostalCode: '85214',
+                        //         Country: 'US'
+                        //     }
+                        // }
+                    };
+
+                    arrItemList.push(itemDetails);
+                }
+
+                return arrItemList;
+            })(),
+            CustomFields: (function () {
+                var arr = [],
+                    shipCode,
+                    dellShipCode = record.dellShippingCode;
+
+                if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.TWO_DAY) {
+                    shipCode = '2D';
+                } else if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.NEXT_DAY) {
+                    shipCode = 'ND';
+                } else {
+                    shipCode = 'LC';
+                }
+                var createdfrom = record.createdFrom;
+
+                arr.push({
+                    name: 'EU_PO_NUMBER',
+                    type: 'string',
+                    value: _getEndUserPO({ createdfrom: createdfrom })
+                });
+                arr.push({
+                    name: 'SHIPPING_CODE',
+                    type: 'string',
+                    value: shipCode
+                });
+                //only for shippingCode = DC, i.e., FEDEX, UPS
+                arr.push({
+                    name: 'SHIPPING_CARRIER_NAME',
+                    type: 'string',
+                    value: ''
+                });
+                //only for shippingCode = dc, carrier acct no
+                arr.push({
+                    name: 'SHIPPING_CARRIER_ACCT_NU',
+                    type: 'string',
+                    value: ''
+                });
+
+                return arr;
+            })()
+        };
+
+        returnValue = bodyContentJSON; //JSON.stringify(bodyContentJSON);
+        return returnValue;
     }
 
-    function process(options) {
-        var recVendorConfig = options.recVendorConfig,
+    function process(option) {
+        var logTitle = [LogTitle, 'process'].join('::');
+
+        var recVendorConfig = option.recVendorConfig,
             key = recVendorConfig.apiKey,
             secret = recVendorConfig.apiSecret,
             url = recVendorConfig.endPoint,
             accessUrl = recVendorConfig.accessEndPoint,
-            grantType = recVendorConfig.grantType,
             testRequest = recVendorConfig.testRequest,
             customerNo = recVendorConfig.customerNo,
-            recPO = options.recPO;
-        responseObj;
+            record = option.record || option.recPO;
 
-        var auth = authenticate({
-            key: key,
-            secret: secret,
-            url: accessUrl,
-            grabtType: grantType
-        });
-        log.debug('auth', auth);
+        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+
+        var returnResponse = {
+            transactionNum: record.tranId,
+            transactionId: record.id
+        };
+
         try {
-            var responseObj = send({
-                auth: auth,
-                recPO: recPO,
-                url: url,
+            var token = generateToken({
+                key: key,
+                secret: secret,
+                url: accessUrl,
+                poId: record.id
+            });
+            if (!token) throw 'Missing token for authentication.';
+
+            // build the request body
+            var sendPOBody = generateBody({
+                record: record,
                 customerNo: customerNo,
                 testRequest: testRequest
             });
+            log.audit(logTitle, sendPOBody);
 
-            vcLog.recordLog({
-                header: 'Response',
-                body: JSON.stringify(responseObj),
-                transaction: recPO.id,
-                status: constants.Lists.VC_LOG_STATUS.SUCCESS
+            ctc_util.vcLog({
+                title: [LogTitle, 'PO Details'].join(' - '),
+                content: sendPOBody,
+                transaction: record.id
             });
-        } catch (err) {
-            log.error({
-                title: 'Send PO to Dell',
-                details: 'Could not send PO ' + recPO.tranId + ' error = ' + err.message
+
+            if (!sendPOBody) throw 'Unable to generate PO Body Request';
+
+            var sendPOReq = ctc_util.sendRequest({
+                header: [LogTitle, 'Send PO'].join(' : '),
+                method: 'post',
+                recordId: record.id,
+                query: {
+                    url: url,
+                    headers: {
+                        Authorization: token.token_type + ' ' + token.access_token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sendPOBody)
+                }
             });
-            vcLog.recordLog({
-                header: 'Error when sending to Dell',
-                body: 'Could not send PO ' + recPO.tranId + ' error = ' + err.message,
-                transaction: recPO.id
-            });
-            responseObj = {
-                code: 400,
-                body: 'Could not send PO ' + recPO.tranId + ' error = ' + err.message
-            };
+
+            returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
+            returnResponse.responseCode = sendPOReq.RESPONSE.code;
+
+            var sendPoResp = sendPOReq.PARSED_RESPONSE;
+            if (sendPOReq.isError || !sendPoResp) {
+                throw 'Send PO Error - ' + sendPOReq.errorMsg;
+            } else {
+                returnResponse.message = 'Success';
+            }
+        } catch (error) {
+            var errorMsg = ctc_util.extractError(error);
+
+            returnResponse.isError = true;
+            returnResponse.message = errorMsg;
+        } finally {
+            log.audit(logTitle, '>> sendPoResp: ' + JSON.stringify(returnResponse));
         }
-        var resp = new response({
-            code: responseObj.code,
-            message: responseObj.body
-        });
 
-        if (resp.code == 200) resp.message = null;
-
-        log.debug('resp', JSON.stringify(resp));
-
-        return resp;
+        return returnResponse;
     }
 
     return {
-        authenticate: authenticate,
-        send: send,
+        // authenticate: generateToken,
+        // send: send,
         process: process
     };
 });

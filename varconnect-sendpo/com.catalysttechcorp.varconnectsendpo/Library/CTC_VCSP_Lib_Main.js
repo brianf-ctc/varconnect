@@ -47,7 +47,8 @@ define([
             response;
         var rec = record.load({
             type: record.Type.PURCHASE_ORDER,
-            id: recId
+            id: recId, 
+            isDynamic: true
         });
 
         if (rec) {

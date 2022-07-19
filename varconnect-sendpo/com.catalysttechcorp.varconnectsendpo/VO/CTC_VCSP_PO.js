@@ -90,10 +90,36 @@ define(['N/search'], function (search) {
 
         this.entity = recPO.getValue({ fieldId: 'entity' });
         this.subsidiary = recPO.getValue({ fieldId: 'subsidiary' });
-        this.currency = recPO.getValue({ fieldId: 'currencyname' });
+        this.currency = recPO.getValue({ fieldId: 'currencysymbol' });
         this.total = recPO.getValue({ fieldId: 'total' });
         this.memo = recPO.getValue({ fieldId: 'memo' });
         this.trandate = recPO.getText({ fieldId: 'trandate' });
+
+        var subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
+        var addressFields = [
+            'attention',
+            'addressee',
+            'addrphone',
+            'addr1',
+            'addr2',
+            'city',
+            'state',
+            'zip',
+            'country',
+            'countrycode'
+        ];
+
+        log.emergency('Sub Rec', subRecShipping);
+        log.emergency('Sub Rec', addressFields);
+
+        if (subRecShipping) {
+            var shipAddr = {};
+            addressFields.forEach(function (field) {
+                shipAddr[field] = subRecShipping.getValue({ fieldId: field });
+                return true;
+            });
+            log.emergency('Sub Rec', shipAddr);
+        }
 
         this.shipAttention = _getSubrecordValue({
             recPO: recPO,
@@ -172,6 +198,8 @@ define(['N/search'], function (search) {
             recPO: recPO,
             field: 'custbody_ctc_vcsp_dell_ship_code'
         });
+
+        this.paymentTerms = _getFieldValue({ recPO: recPO, field: 'terms' });
 
         this.items = [];
 

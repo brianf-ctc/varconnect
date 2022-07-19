@@ -1,0 +1,84 @@
+{
+    "PoNumber": "${record.tranid}",
+    "ProfileId": "${config.customerNo}",
+    "isTestPayload": "${config.testRequest}",
+    "RequestedDeliveryDate": "11/24/2019",
+    "OrderContact": {
+        "Company": "${contact.company}",
+        "ContactName": "${contact.entityid}",
+        "Email": "${contact.email}",
+        "Telephone": "${contact.officephone}",
+        "Address": {
+            "Address1": "Test Address Line 1",
+            "Address2": "Address Line 2",
+            "City": "San Diego",
+            "StateOrProvince": "CA",
+            "PostalCode": "85214",
+            "Country": "US"
+        }
+    },
+    "ShippingContact": {
+        "Company": "ABC Company",
+        "ContactName": "John Doe",
+        "Cmail": "john.doe@email.com",
+        "Telephone": "1234567890",
+        "Address": {
+            "Address1": "Test Address Line 1",
+            "Address2": "Address Line 2",
+            "City": "San Diego",
+            "StateOrProvince": "CA",
+            "PostalCode": "85214",
+            "Country": "US"
+        }
+    },
+    "BillingContact": {
+        "Company": "ABC Company",
+        "ContactName": "John Doe",
+        "Email": "john.doe@email.com",
+        "Telephone": "1234567890",
+        "Address": {
+            "Address1": "Test Address Line 1",
+            "Address2": "Address Line 2",
+            "City": "San Diego",
+            "StateOrProvince": "CA",
+            "PostalCode": "85214",
+            "Country": "US"
+        }
+    },
+    "Payment": {
+        "PaymentMean": "Other",
+        "PaymentMeanOther": "FP",
+        "PaymentTerm": "Instant"
+    },
+    "OrderDetails": [
+        {
+            "LineItemNum": "1",
+            "SupplierPartId": "123213213-xx",
+            "SupplierPartIdExt": "XXX:123123213213",
+            "Quantity": "1",
+            "UnitPrice": "299.99",
+            "Currency": "USD",
+            "EndUser": {
+                "Company": "ABC Company",
+                "ContactName": "John Doe",
+                "Email": "john.doe@email.com",
+                "Telephone": "1234567890",
+                "Address": {
+                    "Address1": "Test Address Line 1",
+                    "Address2": "Address Line 2",
+                    "City": "San Diego",
+                    "StateOrProvince": "CA",
+                    "PostalCode": "85214",
+                    "Country": "US"
+                }
+            }
+        }
+    ],
+    "CustomFields": [
+        {
+            "Name": "Corp ID",
+            "Type": "string",
+            "Value": "123213"
+        }
+    ]
+}

@@ -60,7 +60,7 @@ define([], function () {
                 HEADER: 'custrecord_ctc_vcsp_log_header',
                 BODY: 'custrecord_ctc_vcsp_log_body',
                 TRANSACTION: 'custrecord_ctc_vcsp_log_transaction',
-                STATUS: 'custrecord_ctc_vcsp_status'
+                STATUS: 'custrecord_ctc_vcsp_log_status'
             }
         },
         Lists: {

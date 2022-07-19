@@ -12,6 +12,7 @@
  * @NModuleScope Public
  */
 define([
+    './CTC_Lib_Utils.js',
     './CTC_VCSP_Constants.js',
     './CTC_VCSP_Lib_VendorConfig.js',
     '../Vendor Scripts/CTC_VCSP_Lib_Dell.js',
@@ -19,37 +20,38 @@ define([
     '../Vendor Scripts/CTC_VCSP_Lib_Synnex.js',
     '../VO/CTC_VCSP_Response.js',
     '../VO/CTC_VCSP_PO.js'
-], function (constants, libVendorConfig, libDell, libArrow, libSynnex, response, PO) {
+], function (ctc_util, constants, libVendorConfig, libDell, libArrow, libSynnex, response, PO) {
+    var LogTitle = 'LibWS';
+
     function _validateVendorConfig(options) {
+        var logTitle = [LogTitle, 'validateVendorConfig'].join('::');
+
         var recVendorConfig = options.recVendorConfig,
             endpoint = recVendorConfig.endPoint,
             apiKey = recVendorConfig.apiKey,
-            apiSecret = recVendorConfig.apiSecret,
-            customerNo = recVendorConfig.customerNo;
+            apiSecret = recVendorConfig.apiSecret;
 
-        log.debug({
-            title: 'Lib_WS: vendor config ',
-            details:
-                'endpoint: ' +
-                endpoint +
-                ' | ' +
-                'apiKey: ' +
-                !!apiKey +
-                ' | ' +
-                'apiSecret: ' +
-                !!apiSecret
-        });
+        log.debug(
+            logTitle,
+            ['endpoint:' + endpoint, 'apiKey:' + apiKey, 'apiSecret:' + apiSecret].join('|')
+        );
+
         if (!endpoint || !apiKey || !apiSecret)
-            throw Error('Incomplete webservice information for ' + recVendorConfig.vendor);
+            throw 'Incomplete webservice information for ' + recVendorConfig.vendor;
+
+        return;
     }
 
     function _getVendorLibrary(options) {
+        var logTitle = [LogTitle, 'getVendorLibrary'].join('::');
+
         var recVendorConfig = options.recVendorConfig,
             apiVendor = recVendorConfig.apiVendor,
             vendorList = constants.Lists.API_VENDOR,
             libVendor;
 
-        log.debug('Lib_WS: apiVendor', apiVendor);
+        log.debug(logTitle, '>> API Vendor: ' + apiVendor);
+
         switch (apiVendor) {
             case vendorList.DELL:
                 libVendor = libDell;
@@ -65,7 +67,7 @@ define([
                 break;
         }
 
-        log.debug('Lib_WS: get lib libVendor', JSON.stringify(libVendor));
+        log.debug(logTitle, JSON.stringify(libVendor));
 
         return libVendor;
     }
@@ -103,22 +105,22 @@ define([
                     recVendorConfig: recVendorConfig
                 });
 
-                if (libVendor) {
-                    _validateVendorConfig({
-                        recVendorConfig: recVendorConfig
-                    });
+                if (!libVendor) throw 'Missing or invalid vendor configuration';
 
-                    resp = libVendor.process({
-                        recVendorConfig: recVendorConfig,
-                        recPO: recPO
-                    });
-                }
+                _validateVendorConfig({
+                    recVendorConfig: recVendorConfig
+                });
+
+                resp = libVendor.process({
+                    recVendorConfig: recVendorConfig,
+                    recPO: recPO
+                });
             }
         } catch (e) {
-            resp = new response({
-                code: 'Err',
-                message: e.message
-            });
+            resp = {
+                code: 'error',
+                message: ctc_util.extractError(e)
+            };
         }
 
         return resp;
