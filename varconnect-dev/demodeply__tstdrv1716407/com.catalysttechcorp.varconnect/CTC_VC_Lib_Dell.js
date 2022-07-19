@@ -148,6 +148,7 @@ define([
                     transaction: option.poId,
                     status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
                 });
+                if (!returnValue) returnValue = errorMsg;
             } finally {
             }
 

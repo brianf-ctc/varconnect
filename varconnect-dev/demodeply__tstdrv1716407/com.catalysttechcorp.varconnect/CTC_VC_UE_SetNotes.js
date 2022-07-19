@@ -120,6 +120,7 @@ define([
                     if (logPage.data.length < 1000) break;
                 }
                 // hand pick latest values
+                arrLogResults = arrLogResults.reverse();
                 var mapLogStatusMessage = {};
                 for (var x = 0, y = arrLogResults.length; x < y; x++) {
                     var logResult = arrLogResults[x];
@@ -137,7 +138,8 @@ define([
                     FORM.addField({
                         id: 'custpage_ctc_vc_log_message',
                         label: 'VC Notes',
-                        type: serverWidget.FieldType.LONGTEXT
+                        type: serverWidget.FieldType.LONGTEXT, 
+                        container: 'custom186' // var connect tab
                     });
                     var itemSublist = FORM.getSublist({
                         id: 'item'

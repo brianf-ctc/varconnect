@@ -53,7 +53,7 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
     ];
 
     function _generateVendorConfig(result) {
-        log.debug('vendor config', JSON.stringify(result));
+        // log.debug('vendor config', JSON.stringify(result));
         return {
             id: result.getValue({ name: vendorConfigFields[0] }),
             subsidiary: result.getValue({ name: vendorConfigFields[1] }),
@@ -132,7 +132,7 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
             config = _generateVendorConfig(result[0]);
         }
 
-        log.debug('vendor config', config);
+        // log.debug('vendor config', config);
 
         return config;
     }

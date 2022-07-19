@@ -82,6 +82,7 @@ define([
                 transaction: option.poId,
                 status: VC_Global.Lists.VC_LOG_STATUS.ERROR
             });
+            if (!returnValue) returnValue = errorMsg;
         }
 
         return returnValue;
@@ -472,9 +473,6 @@ define([
                     xmlLineInfo.order_eta = xmlLineInfo.order_eta_parent;
                 }
 
-                // check if backordered
-                if (!xmlLineInfo.bo_qty) continue;
-
                 VC2_Utils.vcLog({
                     recordId: option.poId,
                     title: [LogTitle, 'OrderStatus::Line'].join('::'),
@@ -496,6 +494,11 @@ define([
                     carrier: 'NA',
                     serial_num: 'NA'
                 };
+
+                // check if backordered
+                if (!xmlLineInfo.bo_qty)
+                    // continue;
+                    xml_items.is_shipped = false;
 
                 if (VC2_Utils.inArray(xmlLineInfo.line_status, ['SHIPPED'])) {
                     xml_items.is_shipped = true;

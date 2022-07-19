@@ -37,12 +37,16 @@ define([
             },
             validVendorCfg = [];
 
+        var paramConfigID = ns_runtime.getCurrentScript().getParameter({
+            name: 'custscript_ctc_vc_bc_vendor_api'
+        });
+
         var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
             filters: [
                 ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API],
                 'AND',
-                ['isinactive', 'is', 'F']
+                paramConfigID ? ['internalid', 'anyof', paramConfigID] : ['isinactive', 'is', 'F']
             ],
             columns: ['internalid']
         });

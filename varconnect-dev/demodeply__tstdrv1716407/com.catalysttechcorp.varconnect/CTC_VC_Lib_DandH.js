@@ -101,7 +101,7 @@ define([
                 status: constants.Lists.VC_LOG_STATUS.ERROR
             });
 
-            responseXML = null;
+            if (!responseXML) responseXML = err.message;
         }
 
         return responseXML;

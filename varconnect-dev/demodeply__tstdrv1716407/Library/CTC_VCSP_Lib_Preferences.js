@@ -14,12 +14,14 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		Jan 9, 2020		paolodl		Library for Account Preferences
- *
- */ /**
+ * 
+ *//**
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  */
-define(['N/runtime'], function (runtime) {
+define(['N/runtime'],
+
+function(runtime) {
     return {
         ENABLE_SUBSIDIARIES: runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
         PICK_PACK_SHIP: runtime.isFeatureInEffect({ feature: 'pickpackship' })

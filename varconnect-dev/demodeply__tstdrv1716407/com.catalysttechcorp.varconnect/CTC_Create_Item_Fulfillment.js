@@ -802,7 +802,6 @@ define([
                 }
 
                 var recItemFF;
-
                 log.audit(logTitle, LogPrefix + '****  Transform to Fulfillment ****');
                 try {
                     // create item fulfillment from sales order
@@ -1406,14 +1405,13 @@ define([
                     continue;
                 }
 
-                
-                    Helper.logMsg({
+                Helper.logMsg({
                     status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
-                        title: 'Fulfillment Lines',
-                        message: Helper.printerFriendlyLines({
-                            recordLines: recordLines
-                        })
-                    });
+                    title: 'Fulfillment Lines',
+                    message: Helper.printerFriendlyLines({
+                        recordLines: recordLines
+                    })
+                });
 
                 // var lineItemCountX = recItemFF.getLineCount({
                 //     sublistId: 'item'

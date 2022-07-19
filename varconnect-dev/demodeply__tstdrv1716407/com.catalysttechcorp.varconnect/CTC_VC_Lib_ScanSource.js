@@ -165,6 +165,7 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
                 title: 'Error Getting Transaction List for PO ' + obj.poNum,
                 details: listResponse
             });
+            returnArray = listResponse;
         }
 
         return returnArray;

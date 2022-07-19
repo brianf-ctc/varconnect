@@ -221,8 +221,10 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 billFileNotes.push('PO Link is not found : [' + myArr[i].ordObj.po + ']');
             }
 
-            log.audit(logTitle, '>> due date: ' + JSON.stringify([dueDate, typeof dueDate]));
-
+            log.audit(
+                logTitle,
+                '>> due date: ' + JSON.stringify([dueDate, dueDate !== null, dueDate === null])
+            );
             if (dueDate !== null) {
                 objRecord.setValue({
                     fieldId: 'custrecord_ctc_vc_bill_due_date',
@@ -241,11 +243,16 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 fieldId: 'custrecord_ctc_vc_bill_number',
                 value: myArr[i].ordObj.invoice
             });
+            log.audit(logTitle, '>> set invoice: ' + JSON.stringify(myArr[i].ordObj.invoice));
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_date',
                 value: moment(myArr[i].ordObj.date).toDate()
             });
+            log.audit(
+                logTitle,
+                '>> set bill date: ' + JSON.stringify(moment(myArr[i].ordObj.date).toDate())
+            );
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_proc_status',
@@ -343,22 +350,25 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 fieldId: 'custrecord_ctc_vc_bill_json',
                 value: JSON.stringify(myArr[i].ordObj)
             });
+            log.audit(logTitle, '>> set json: ' + JSON.stringify(myArr[i].ordObj));
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_src',
                 value: myArr[i].xmlStr
             });
+            log.audit(logTitle, '>> set xml: ' + JSON.stringify(myArr[i].xmlStr));
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_integration',
                 value: configObj.id
             });
+            log.audit(logTitle, '>> set integration id: ' + JSON.stringify(configObj.id));
 
             objRecord.setValue({
                 fieldId: 'custrecord_ctc_vc_bill_log',
                 value: addNote({ note: billFileNotes.join(' | ') })
             });
-
+            log.audit(logTitle, '>> saving record...');
             var record_id = objRecord.save();
 
             log.audit(logTitle, '>> Bill File created: ' + record_id);
@@ -371,6 +381,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
     function addNote(option) {
         var logTitle = [LogTitle, 'addNote'].join('::');
+
+        log.audit(logTitle, option);
 
         var billFileId = option.billFileId || option.billId || option.id,
             notes = option.note || option.notes || option.content,
@@ -385,8 +397,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
                 type: config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
         }
+            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
 
         // get the current notes
         if (billFileId) {
@@ -465,12 +477,20 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
         // lets simplify ///
         // first, split up the notes by date, and make each an object
+        var newNoteStr = allNotes;
+        try {
         var arrNotes = noteHelper.splitByDate(allNotes);
+            log.audit(logTitle, '>> arrNotes [splitByDate]: ' + JSON.stringify(arrNotes));
         arrNotes = noteHelper.removeDuplicates(arrNotes);
+            log.audit(logTitle, '>> arrNotes [removeDuplicates]: ' + JSON.stringify(arrNotes));
         arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
+            log.audit(logTitle, '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes));
         arrNotes = noteHelper.flatten(arrNotes);
+            log.audit(logTitle, '>> arrNotes [flatten]: ' + JSON.stringify(arrNotes));
 
-        var newNoteStr = arrNotes.join('\r\n\r\n');
+            newNoteStr = arrNotes.join('\r\n\r\n');
+        } catch (e) {}
+        log.audit(logTitle, '>> newNoteStr: ' + JSON.stringify(newNoteStr));
 
         if (billFileId) {
             // update
