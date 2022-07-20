@@ -418,7 +418,6 @@ define(function (require) {
 
         //     return requestObj;
         // },
-
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
@@ -496,6 +495,7 @@ define(function (require) {
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
+                returnValue.details = parsedResponse || response;
 
                 VC2_Util.vcLog({
                     title:
@@ -503,7 +503,7 @@ define(function (require) {
                         (param.doRetry
                             ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
                             : ''),
-                    content: error,
+                    content: { error: errorMsg, details: returnValue.details },
                     transaction: param.logTranId,
                     isError: true
                 });
@@ -538,6 +538,7 @@ define(function (require) {
 
             return returnValue;
         },
+
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;

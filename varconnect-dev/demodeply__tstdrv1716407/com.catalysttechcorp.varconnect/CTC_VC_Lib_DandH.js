@@ -72,7 +72,8 @@ define([
                 BODY: xmlorderStatus
             }),
             transaction: options.poId,
-            status: constants.Lists.VC_LOG_STATUS.INFO
+            status: constants.Lists.VC_LOG_STATUS.INFO,
+            isDebugMode: options.fromDebug
         });
 
         var responseXML;
@@ -90,7 +91,8 @@ define([
                 header: 'D&H OrderStatus Response',
                 body: responseXML,
                 transaction: options.poId,
-                status: constants.Lists.VC_LOG_STATUS.SUCCESS
+                status: constants.Lists.VC_LOG_STATUS.SUCCESS,
+                isDebugMode: options.fromDebug
             });
         } catch (err) {
             log.audit(logTitle, err);
@@ -98,7 +100,8 @@ define([
                 header: 'D&H OrderStatus Response Error',
                 body: err.message,
                 transaction: options.poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR
+                status: constants.Lists.VC_LOG_STATUS.ERROR,
+                isDebugMode: options.fromDebug
             });
 
             if (!responseXML) responseXML = err.message;

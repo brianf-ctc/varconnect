@@ -19,8 +19,9 @@ define([
     'N/runtime',
     './Libraries/moment',
     './../CTC_VC_Constants',
-    './../CTC_VC_Lib_Log'
-], function (record, search, format, runtime, moment, VC_Constants, VC_Log) {
+    './../CTC_VC_Lib_Log',
+    './../CTC_VC_Lib_MainConfiguration'
+], function (record, search, format, runtime, moment, VC_Constants, VC_Log, VC_MainCfg) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
@@ -189,6 +190,25 @@ define([
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
+        },
+        getBillingConfig: function () {
+            var mainConfig = VC_MainCfg.getMainConfiguration();
+            if (!mainConfig) {
+                log.error('No Configuration available');
+                throw new Error('No Configuration available');
+            }
+            return {
+                defaultBillForm: mainConfig.defaultBillForm,
+                billDefaultStatus: mainConfig.defaultVendorBillStatus,
+                allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
+                hasTaxVariance: mainConfig.isVarianceOnTax,
+                taxItem: mainConfig.defaultTaxItem,
+                hasShippingVariance: mainConfig.isVarianceOnShipping,
+                shipItem: mainConfig.defaultShipItem,
+                hasOtherVariance: mainConfig.isVarianceOnOther,
+                otherItem: mainConfig.defaultOtherItem,
+                dontSaveBill: mainConfig.isBillCreationDisabled
+            };
         }
     };
 
@@ -198,38 +218,7 @@ define([
             currentData = {},
             currScript = runtime.getCurrentScript();
 
-        var param = {
-            shipItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_ship_item'
-            }),
-            taxItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_tax_item'
-            }),
-            otherItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_other_item'
-            }),
-            hasShippingVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_ship_var'
-            }),
-            hasTaxVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_tax_var'
-            }),
-            hasOtherVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_other_var'
-            }),
-            billDefaultStatus: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_status'
-            }),
-            dontSaveBill: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_dontcreate'
-            }),
-            allowedThreshold: currScript.getParameter({
-                name: 'custscript_ctc_bc_variance_threshold'
-            }),
-            defaultBillForm: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_form'
-            })
-        };
+        var param = Helper.getBillingConfig();
 
         try {
             log.audit(logTitle, 'Params: ' + JSON.stringify(param));

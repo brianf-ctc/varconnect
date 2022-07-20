@@ -16,6 +16,7 @@
 define([
     './../CTC_VC_Constants',
     './../CTC_Util',
+    './../CTC_VC_Lib_MainConfiguration',
     'N/ui/serverWidget',
     'N/ui/message',
     'N/record',
@@ -27,6 +28,7 @@ define([
 ], function (
     VC_Constants,
     CTC_Util,
+    VC_MainCfg,
     serverWidget,
     message,
     record,
@@ -1229,6 +1231,22 @@ define([
                     },
                     addVarianceLine: function (lineData, index) {}
                 };
+            },
+            getBillingConfig: function () {
+                var mainConfig = VC_MainCfg.getMainConfiguration();
+                if (!mainConfig) {
+                    log.error('No Configuration available');
+                    throw new Error('No Configuration available');
+                }
+                return {
+                    applyTax: mainConfig.isVarianceOnTax,
+                    taxItem: mainConfig.defaultTaxItem,
+                    taxItem2: mainConfig.defaultTaxItem2,
+                    applyShip: mainConfig.isVarianceOnShipping,
+                    shipItem: mainConfig.defaultShipItem,
+                    applyOther: mainConfig.isVarianceOnOther,
+                    otherItem: mainConfig.defaultOtherItem
+                };
             }
         },
         Param = {
@@ -1279,15 +1297,8 @@ define([
             '****** START ****** :  ' + JSON.stringify({ method: Current.Method, param: Param })
         );
 
-        Variance.Config = {
-            applyTax: Current.Script.getParameter({ name: 'custscript_ctc_bc_tax_var' }),
-            applyShip: Current.Script.getParameter({ name: 'custscript_ctc_bc_ship_var' }),
-            applyOther: Current.Script.getParameter({ name: 'custscript_ctc_bc_other_var' }),
-            taxItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_tax_item' }),
-            taxItem2: Current.Script.getParameter({ name: 'custscript_ctc_bc_tax_item2' }),
-            shipItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_ship_item' }),
-            otherItem: Current.Script.getParameter({ name: 'custscript_ctc_bc_other_item' })
-        };
+        Variance.Config = Helper.getBillingConfig();
+
         log.debug(logTitle, '>> Variance.Config : ' + JSON.stringify(Variance.Config));
 
         Current.BILLFILE_REC = record.load({

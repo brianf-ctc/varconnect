@@ -118,7 +118,8 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
         vcLog.recordLog({
             header: 'ScanSource Get PO Response',
             body: JSON.stringify(listResponse),
-            transaction: obj.poId
+            transaction: obj.poId,
+            isDebugMode: obj.fromDebug
         });
 
         var returnArray = [];

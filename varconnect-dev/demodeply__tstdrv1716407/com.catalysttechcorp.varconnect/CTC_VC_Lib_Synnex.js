@@ -75,7 +75,8 @@ define([
                 header: [LogTitle + ': Error', errorMsg].join(' - '),
                 body: JSON.stringify(error),
                 transaction: option.poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
+                isDebugMode: option.fromDebug
             });
         }
 
@@ -251,7 +252,8 @@ define([
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
             transaction: poId,
-            status: VC_Global.Lists.VC_LOG_STATUS.INFO
+            status: vcGlobal.Lists.VC_LOG_STATUS.INFO,
+            isDebugMode: option.fromDebug
         });
 
         return outputArray;

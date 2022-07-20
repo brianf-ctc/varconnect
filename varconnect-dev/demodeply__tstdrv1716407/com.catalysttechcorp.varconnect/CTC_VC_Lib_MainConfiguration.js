@@ -45,7 +45,18 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js'], function (
         constants.Fields.MainConfig.PRINT_SERIALS_TEMPLATE, //17
         constants.Fields.MainConfig.MULTIPLE_INGRAM, //18
         constants.Fields.MainConfig.INGRAM_HASH_TO_SPACE, //19
-        constants.Fields.MainConfig.FULFILMENT_SEARCH //20
+        constants.Fields.MainConfig.FULFILMENT_SEARCH, //20,
+        constants.Fields.MainConfig.DEFAULT_BILL_FORM, //21
+        constants.Fields.MainConfig.DEFAULT_VENDOR_BILL_STATUS, //22
+        constants.Fields.MainConfig.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
+        constants.Fields.MainConfig.VARIANCE_ON_TAX, //24
+        constants.Fields.MainConfig.DEFAULT_TAX_ITEM, //25
+        constants.Fields.MainConfig.DEFAULT_TAX_ITEM2, //25
+        constants.Fields.MainConfig.VARIANCE_ON_SHIPPING, //26
+        constants.Fields.MainConfig.DEFAULT_SHIPPING_ITEM, //27
+        constants.Fields.MainConfig.VARIANCE_ON_OTHER, //29
+        constants.Fields.MainConfig.DEFAULT_OTHER_ITEM, //30
+        constants.Fields.MainConfig.DISABLE_VENDOR_BILL_CREATION //31
     ];
 
     function _generateMainConfig(recLookup) {
@@ -70,7 +81,18 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js'], function (
             printSerialsTemplate: recLookup[mainConfigFields[17]],
             multipleIngram: recLookup[mainConfigFields[18]],
             ingramHashSpace: recLookup[mainConfigFields[19]],
-            fulfillmentSearch: recLookup[mainConfigFields[20]]
+            fulfillmentSearch: recLookup[mainConfigFields[20]],
+            defaultBillForm: recLookup[mainConfigFields[21]],
+            defaultVendorBillStatus: recLookup[mainConfigFields[22]],
+            allowedVarianceAmountThreshold: recLookup[mainConfigFields[23]],
+            isVarianceOnTax: recLookup[mainConfigFields[24]],
+            defaultTaxItem: recLookup[mainConfigFields[25]],
+            defaultTaxItem2: recLookup[mainConfigFields[26]],
+            isVarianceOnShipping: recLookup[mainConfigFields[27]],
+            defaultShipItem: recLookup[mainConfigFields[28]],
+            isVarianceOnOther: recLookup[mainConfigFields[29]],
+            defaultOtherItem: recLookup[mainConfigFields[30]],
+            isBillCreationDisabled: recLookup[mainConfigFields[31]]
         };
     }
 

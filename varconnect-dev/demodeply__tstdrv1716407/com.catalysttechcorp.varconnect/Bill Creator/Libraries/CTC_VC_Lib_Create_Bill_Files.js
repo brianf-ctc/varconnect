@@ -398,7 +398,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
         }
-            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+
+        log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
 
         // get the current notes
         if (billFileId) {
@@ -479,13 +480,16 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
         // first, split up the notes by date, and make each an object
         var newNoteStr = allNotes;
         try {
-        var arrNotes = noteHelper.splitByDate(allNotes);
+            var arrNotes = noteHelper.splitByDate(allNotes);
             log.audit(logTitle, '>> arrNotes [splitByDate]: ' + JSON.stringify(arrNotes));
-        arrNotes = noteHelper.removeDuplicates(arrNotes);
+            arrNotes = noteHelper.removeDuplicates(arrNotes);
             log.audit(logTitle, '>> arrNotes [removeDuplicates]: ' + JSON.stringify(arrNotes));
-        arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
-            log.audit(logTitle, '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes));
-        arrNotes = noteHelper.flatten(arrNotes);
+            arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
+            log.audit(
+                logTitle,
+                '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes)
+            );
+            arrNotes = noteHelper.flatten(arrNotes);
             log.audit(logTitle, '>> arrNotes [flatten]: ' + JSON.stringify(arrNotes));
 
             newNoteStr = arrNotes.join('\r\n\r\n');

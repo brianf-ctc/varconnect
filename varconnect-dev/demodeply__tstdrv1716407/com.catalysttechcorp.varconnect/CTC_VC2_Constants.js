@@ -43,7 +43,18 @@ define([], function () {
                 INV_PRINT_SERIALS: 'custrecord_ctc_vc_print_serials',
                 MULTIPLE_INGRAM: 'custrecord_ctc_vc_multiple_ingram',
                 INGRAM_HASH_TO_SPACE: 'custrecord_ctc_vc_ingram_hash_to_space',
-                FULFILMENT_SEARCH: 'custrecord_ctc_vc_sch_if_search'
+                FULFILMENT_SEARCH: 'custrecord_ctc_vc_sch_if_search',
+                DEFAULT_BILL_FORM: 'custrecord_ctc_vc_bill_form',
+                DEFAULT_VENDOR_BILL_STATUS: 'custrecord_ctc_vc_bill_status',
+                ALLOWED_VARIANCE_AMOUNT_THRESHOLD: 'custrecord_ctc_vc_bill_var_threshold',
+                VARIANCE_ON_TAX: 'custrecord_ctc_vc_bill_tax_var',
+                DEFAULT_TAX_ITEM: 'custrecord_ctc_vc_bill_tax_item',
+                DEFAULT_TAX_ITEM2: 'custrecord_ctc_vc_bill_tax_item2',
+                VARIANCE_ON_SHIPPING: 'custrecord_ctc_vc_bill_ship_var',
+                DEFAULT_SHIPPING_ITEM: 'custrecord_ctc_vc_bill_ship_item',
+                VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
+                DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
+                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled'
             }
         },
         VENDOR_CONFIG: {
