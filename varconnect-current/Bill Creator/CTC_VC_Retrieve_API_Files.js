@@ -96,7 +96,6 @@ define([
                 ],
                 'AND',
                 ['mainline', 'is', 'T']
-                // ,'AND',['internalid', 'anyof', 478344]
             ],
             columns: [
                 'internalid',

@@ -19,8 +19,9 @@ define([
     'N/runtime',
     './Libraries/moment',
     './../CTC_VC_Constants',
-    './../CTC_VC_Lib_Log'
-], function (record, search, format, runtime, moment, VC_Constants, VC_Log) {
+    './../CTC_VC_Lib_Log',
+    './../CTC_VC_Lib_MainConfiguration'
+], function (record, search, format, runtime, moment, VC_Constants, VC_Log, VC_MainCfg) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
@@ -189,6 +190,25 @@ define([
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
+        },
+        getBillingConfig: function () {
+            var mainConfig = VC_MainCfg.getMainConfiguration();
+            if (!mainConfig) {
+                log.error('No Configuration available');
+                throw new Error('No Configuration available');
+            }
+            return {
+                defaultBillForm: mainConfig.defaultBillForm,
+                billDefaultStatus: mainConfig.defaultVendorBillStatus,
+                allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
+                hasTaxVariance: mainConfig.isVarianceOnTax,
+                taxItem: mainConfig.defaultTaxItem,
+                hasShippingVariance: mainConfig.isVarianceOnShipping,
+                shipItem: mainConfig.defaultShipItem,
+                hasOtherVariance: mainConfig.isVarianceOnOther,
+                otherItem: mainConfig.defaultOtherItem,
+                dontSaveBill: mainConfig.isBillCreationDisabled
+            };
         }
     };
 
@@ -198,38 +218,7 @@ define([
             currentData = {},
             currScript = runtime.getCurrentScript();
 
-        var param = {
-            shipItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_ship_item'
-            }),
-            taxItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_tax_item'
-            }),
-            otherItem: currScript.getParameter({
-                name: 'custscript_ctc_bc_other_item'
-            }),
-            hasShippingVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_ship_var'
-            }),
-            hasTaxVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_tax_var'
-            }),
-            hasOtherVariance: currScript.getParameter({
-                name: 'custscript_ctc_bc_other_var'
-            }),
-            billDefaultStatus: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_status'
-            }),
-            dontSaveBill: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_dontcreate'
-            }),
-            allowedThreshold: currScript.getParameter({
-                name: 'custscript_ctc_bc_variance_threshold'
-            }),
-            defaultBillForm: currScript.getParameter({
-                name: 'custscript_ctc_bc_bill_form'
-            })
-        };
+        var param = Helper.getBillingConfig();
 
         try {
             log.audit(logTitle, 'Params: ' + JSON.stringify(param));
@@ -688,6 +677,9 @@ define([
             log.audit(logTitle, '>> variance lines: ' + JSON.stringify(billPayload.varianceLines));
             log.audit(logTitle, '>> variance: ' + JSON.stringify(billPayload.variance));
 
+            var varianceLines = [];
+
+
             if (billPayload.varianceLines && billPayload.varianceLines.length) {
                 hasVariance = true;
 
@@ -716,6 +708,7 @@ define([
                 var shipVariance = { apply: false, amount: 0 };
                 var otherVariance = { apply: false, amount: 0 };
                 var adjustmentVariance = { apply: false, amount: 0 };
+
 
                 taxVariance.apply = param.hasTaxVariance;
                 taxVariance.amount = deltaCharges.tax;
@@ -764,6 +757,13 @@ define([
                             item: param.taxItem,
                             rate: taxVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'tax',
+                            item: param.taxItem,
+                            rate: taxVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add tax variance line';
@@ -786,6 +786,13 @@ define([
                             description: 'VC: Ship Variance',
                             item: param.shipItem,
                             rate: shipVariance.amount
+                        });
+
+                        varianceLines.push({
+                            type: 'shipping',
+                            item: param.shipItem,
+                            rate: shipVariance.amount,
+                            quantity: 1
                         });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
@@ -810,6 +817,13 @@ define([
                             description: 'VC: Other Charges',
                             rate: otherVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'other',
+                            item: param.otherItem,
+                            rate: otherVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add other charges line';
@@ -833,6 +847,14 @@ define([
                             description: 'VC: Adjustments',
                             rate: adjustmentVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'adjustment',
+                            item: param.otherItem,
+                            description: 'VC: Adjustments',
+                            rate: adjustmentVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add adjustments line';
@@ -842,8 +864,8 @@ define([
 
             /////////////////////////////////
             var allowBillVariance = false,
-                allowableVarianceThreshold = param.allowedThreshold,
-                totalVarianceAmount = 0;
+                allowableVarianceThreshold = param.allowedThreshold;
+            totalVarianceAmount = 0;
 
             // param.allowedThreshold;
 
@@ -931,6 +953,10 @@ define([
                         }) +
                         '\n\t\t' +
                         returnObj.msg;
+                }
+
+                if (varianceLines && varianceLines.length) {
+                    returnObj.varianceLines = varianceLines; 
                 }
 
                 returnObj.details =

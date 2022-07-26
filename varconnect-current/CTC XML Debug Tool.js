@@ -76,7 +76,9 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 type: serverWidget.FieldType.SELECT,
                 label: 'Select a Vendor'
             });
-
+            vendors.updateBreakType({
+                breakType: serverWidget.FieldBreakType.STARTCOL
+            });
             vendors.isMandatory = true;
             var activeVendors = searchUtil.getAllResults(
                 search.create({
@@ -109,18 +111,10 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 type: serverWidget.FieldType.TEXT,
                 label: 'Enter PO Number'
             });
-            subject.layoutType = serverWidget.FieldLayoutType.NORMAL;
-            subject.breakType = serverWidget.FieldBreakType.STARTCOL;
-            subject.isMandatory = true;
-
-            var country = form.addField({
-                id: 'country',
-                type: serverWidget.FieldType.SELECT,
-                source: 'customlist_ctc_vc_debug_country',
-                label: 'Select Country'
+            subject.updateBreakType({
+                breakType: serverWidget.FieldBreakType.STARTROW
             });
-            subject.layoutType = serverWidget.FieldLayoutType.NORMAL;
-            subject.breakType = serverWidget.FieldBreakType.STARTCOL;
+            subject.isMandatory = true;
             form.addTab({
                 id: 'custpage_xml_tab',
                 label: 'XML Viewer'

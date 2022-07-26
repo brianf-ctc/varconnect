@@ -107,7 +107,7 @@ define([
                 itemName: itemName
             });
 
-            if (itemNumbers) {
+            if (itemNumbers && (itemNumbers.itemNum || itemNumbers.partNum)) {
                 log.debug('itemname / itemNumbers', JSON.stringify([itemNumbers, itemName]));
                 var valToSave;
 

@@ -361,8 +361,6 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime'], function (record, search,
             srch = search.load({ id: srchId });
         } else throw new Error('No search provided');
         log.debug('search count', srch.runPaged().count);
-        // CTC VC Native Serial Search
-
 
         return srch;
     }

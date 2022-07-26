@@ -29,7 +29,11 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             transaction = options.transaction,
             transactionLineKey = options.transactionLineKey,
             status = options.status,
-            logFields = constants.Fields.VarConnectLog;
+            logFields = constants.Fields.VarConnectLog,
+            isDebugMode = options.isDebugMode;
+
+
+        if (isDebugMode) return;
 
         var recLog = record.create({
             type: constants.Records.VC_LOG
@@ -65,17 +69,6 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             fieldId: logFields.DATE,
             value: _getCurrentTime()
         });
-
-        log.audit(
-            'VCLOG:recordLog',
-            JSON.stringify({
-                APP: options.logApp || constants.LOG_APPLICATION,
-                HEADER: header || '',
-                BODY: body || '',
-                TXN: transaction || '',
-                STATUS: status || constants.Lists.VC_LOG_STATUS.INFO
-            })
-        );
 
         recLog.save();
     }

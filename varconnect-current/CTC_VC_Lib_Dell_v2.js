@@ -150,7 +150,8 @@ define([
                     header: LogTitle + ' Error | ' + errorMsg,
                     body: JSON.stringify(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    isDebugMode: option.fromDebug
                 });
                 returnValue = null;
             } finally {

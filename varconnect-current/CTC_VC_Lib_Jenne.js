@@ -69,7 +69,8 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js', 'N/xml', 'N/email'], function
         vcLog.recordLog({
             header: 'Jenne Get PO Request',
             body: JSON.stringify(body),
-            transaction: obj.poId
+            transaction: obj.poId,
+            isDebugMode: obj.fromDebug
         });
 
         var response = https.post({
@@ -81,7 +82,8 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js', 'N/xml', 'N/email'], function
         vcLog.recordLog({
             header: 'Jenne Get PO Response',
             body: JSON.stringify(response),
-            transaction: obj.poId
+            transaction: obj.poId,
+            isDebugMode: obj.fromDebug
         });
 
         if (response) {

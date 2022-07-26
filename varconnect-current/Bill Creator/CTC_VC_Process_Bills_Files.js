@@ -218,6 +218,12 @@ define([
                     updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
                 }
 
+                if (r.varianceLines) {
+                    var jsonData = JSON.parse(rec.custrecord_ctc_vc_bill_json);
+                    jsonData.varianceLines = r.varianceLines;
+                    updateValues.custrecord_ctc_vc_bill_json = JSON.stringify(jsonData);
+                }
+
                 log.debug(logTitle, '>> update fields: ' + JSON.stringify(updateValues));
 
                 //if the updateValues object isn't empty update the record

@@ -146,7 +146,8 @@ define([
                     header: [LogTitle + ': Error', errorMsg].join(' - '),
                     body: JSON.stringify(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    isDebugMode: option.fromDebug
                 });
                 if (!returnValue) returnValue = errorMsg;
             } finally {
@@ -226,7 +227,8 @@ define([
                     header: [LogTitle, 'Processing'].join(' | ') + ' - ERROR',
                     body: vc2Utils.extractError(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR
+                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    isDebugMode: option.fromDebug
                 });
             } finally {
             }

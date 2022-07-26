@@ -132,7 +132,8 @@ define([
                 header: [LogTitle + ': Error', errorMsg].join(' - '),
                 body: JSON.stringify(error),
                 transaction: option.poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
+                isDebugMode: option.fromDebug
             });
             if (!returnVaue) returnVaue = errorMsg;
         }
@@ -272,7 +273,10 @@ define([
             doRetry: false,
             query: {
                 url:
-                    vendorConfig.endPoint.replace(/orders\/$/gi, 'catalog/priceandavailability?') +
+                    vendorConfig.endPoint.replace(
+                        /orders[\/]*$/gi,
+                        'catalog/priceandavailability?'
+                    ) +
                     'includeAvailability=true&includePricing=true&includeProductAttributes=true',
                 headers: {
                     Authorization: 'Bearer ' + token,
@@ -442,13 +446,13 @@ define([
                                     serialLine++
                                 ) {
                                     var serial = tracking.SerialNumbers[serialLine];
-
                                     if (serial.serialNumber) serials.push(serial.serialNumber);
                                 }
                         }
                     }
                     //		            	  }
                 }
+                serials = VC2_Utils.uniqueArray(serials);
                 outputObj.tracking_num = trackingNum.join(',');
                 outputObj.serial_num = serials.join(',');
                 log.audit(logTitle, '>> adding: ' + JSON.stringify(outputObj));
@@ -461,7 +465,8 @@ define([
                 header: 'Ingram Response Processing | ERROR',
                 body: VC2_Utils.extractError(error),
                 transaction: poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
+                isDebugMode: option.fromDebug
             });
         }
 
@@ -501,7 +506,8 @@ define([
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
             transaction: option.poId,
-            status: VC_Global.Lists.VC_LOG_STATUS.INFO
+            status: VC_Global.Lists.VC_LOG_STATUS.INFO,
+            isDebugMode: option.fromDebug
         });
 
         return outputArray;

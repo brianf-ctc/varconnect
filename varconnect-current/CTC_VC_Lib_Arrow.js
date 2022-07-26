@@ -145,7 +145,8 @@ define(['N/search', 'N/record', 'N/runtime', 'N/log', 'N/https', './CTC_VC_Lib_L
             vcLog.recordLog({
                 header: 'Arrow Get PO Request',
                 body: JSON.stringify(body),
-                transaction: obj.poId
+                transaction: obj.poId,
+                isDebugMode: obj.fromDebug
             });
 
         var response = https.post({
@@ -158,7 +159,8 @@ define(['N/search', 'N/record', 'N/runtime', 'N/log', 'N/https', './CTC_VC_Lib_L
             vcLog.recordLog({
                 header: 'Arrow Get PO Response',
                 body: JSON.stringify(response),
-                transaction: obj.poId
+                transaction: obj.poId,
+                isDebugMode: obj.fromDebug
             });
 
         if (response) {

@@ -17,6 +17,7 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
+ * 1.01       July 20, 2022 christian     Create line VC Logs as sublist lines
  *
  */
 
@@ -350,7 +351,8 @@ define([
             message:
                 outputArray && outputArray.length
                     ? JSON.stringify(outputArray)
-                    : '-no lines to process-'
+                    : '-no lines to process-',
+            isDebugMode: option.fromDebug
         });
         /// log it //////////
 
@@ -477,7 +479,9 @@ define([
                 VC2_Utils.vcLog({
                     recordId: option.poId,
                     title: [LogTitle, 'OrderStatus::Line'].join('::'),
-                    message: JSON.stringify(xmlLineInfo)
+                    message: JSON.stringify(xmlLineInfo),
+                    batch: option.poId,
+                    isDebugMode: option.fromDebug
                 });
 
                 var xml_items = {
@@ -495,11 +499,9 @@ define([
                     carrier: 'NA',
                     serial_num: 'NA'
                 };
-                // check if backordered
-                if (!xmlLineInfo.bo_qty)
-                    // continue;
+                if (!xmlLineInfo.bo_qty) {
                     xml_items.is_shipped = false;
-
+                }
                 if (VC2_Utils.inArray(xmlLineInfo.line_status, ['SHIPPED'])) {
                     xml_items.is_shipped = true;
                 }
@@ -512,6 +514,7 @@ define([
                 log.audit(logTitle, '>> xml_items: ' + JSON.stringify(xml_items));
                 outputArray.push(xml_items);
             }
+            VC2_Utils.submitVCLogBatch(option.poId);
 
             returnValue = outputArray;
         } catch (error) {

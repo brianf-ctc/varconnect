@@ -15,6 +15,7 @@
 define([
     'N/search',
     'N/currentRecord',
+    'N/https',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
@@ -25,6 +26,7 @@ define([
 ], function (
     nsSearch,
     currentRecord,
+    https,
     constants,
     libVendorConfig,
     libWebService,
@@ -85,8 +87,10 @@ define([
 
     function _loadDebugVendorConfig(options) {
         var xmlVendor = options.xmlVendor,
+            xmlSubsidiary = options.xmlSubsidiary,
             vendorConfig = libVendorConfig.getDebugVendorConfiguration({
-                xmlVendor: xmlVendor
+                xmlVendor: xmlVendor,
+                subsidiary: xmlSubsidiary
             });
 
         if (!vendorConfig) {
@@ -117,15 +121,15 @@ define([
 
         var ponum = thisRecord.getValue({ fieldId: 'ponum' });
         var objPO = _getPODetails(ponum);
-        var outputObj = '';
-
-        var country = thisRecord.getValue({ fieldId: 'country' });
 
         if (!ponum || !ponum.length) {
             alert('Please Select a vendor and enter a PO number');
         } else {
             var xmlContent = 'Your PO = ' + ponum;
-            var vendorConfig = _loadDebugVendorConfig({ xmlVendor: xmlVendor });
+            var vendorConfig = _loadDebugVendorConfig({
+                xmlVendor: xmlVendor,
+                xmlSubsidiary: objPO.subsidiary
+            });
             var elementIdToShow, elementIdToHide;
             if (!vendorConfig) {
                 alert('Please Select a valid PO with vendor properly configured');
@@ -141,7 +145,10 @@ define([
                         vendorConfig: vendorConfig,
                         poNum: ponum,
                         poId: objPO.id,
-                        country: country,
+                                    country:
+                                        vendorConfig.country == 'CA'
+                                            ? constants.Lists.COUNTRY.CA
+                                            : constants.Lists.COUNTRY.US,
                         countryCode: vendorConfig.country
                     });
                 } catch (processErr) {
