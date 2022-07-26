@@ -12,12 +12,11 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './fuse'], function (
+define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], function (
     ns_search,
     ns_record,
-    log,
-    format,
-    config,
+    ns_format,
+    ns_config,
     moment,
     Fuse
 ) {
@@ -48,9 +47,9 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
         // return date;
         //Convert to string
         if (dateValue) {
-            dateValue = format.format({
+            dateValue = ns_format.format({
                 value: dateValue,
-                type: format.Type.DATE
+                type: ns_format.Type.DATE
             });
         }
 
@@ -69,8 +68,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
         // //4.01
         if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
+            var generalPref = ns_config.load({
+                type: ns_config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
             log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
@@ -393,8 +392,8 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
 
         // //4.01
         if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
+            var generalPref = ns_config.load({
+                type: ns_config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
         }
@@ -485,10 +484,7 @@ define(['N/search', 'N/record', 'N/log', 'N/format', 'N/config', './moment', './
             arrNotes = noteHelper.removeDuplicates(arrNotes);
             log.audit(logTitle, '>> arrNotes [removeDuplicates]: ' + JSON.stringify(arrNotes));
             arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
-            log.audit(
-                logTitle,
-                '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes)
-            );
+            log.audit(logTitle, '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes));
             arrNotes = noteHelper.flatten(arrNotes);
             log.audit(logTitle, '>> arrNotes [flatten]: ' + JSON.stringify(arrNotes));
 

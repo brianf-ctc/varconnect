@@ -299,6 +299,27 @@ define(function (require) {
 
             return Math.round(flValue * 100) / 100;
         },
+        _batchedVCLogs: {},
+        submitVCLogBatch: function (batchTransaction) {
+            var logTitle = [LogTitle, 'submitVCLogBatch'].join('::');
+            var recBatch = this._batchedVCLogs[batchTransaction];
+            if (recBatch) {
+                var VC_LOG = VC2_Global.RECORD.VC_LOG,
+                    sublistId = ['recmach', VC_LOG.FIELD.BATCH].join('');
+                var lineCount = recBatch.getLineCount({
+                    sublistId: sublistId
+                });
+                if (lineCount > 0) {
+                    recBatch.save();
+                    log.audit(logTitle, 'VC Logs submitted for batch ' + batchTransaction);
+                } else {
+                    recBatch = null;
+                }
+            }
+            if (!recBatch) {
+                log.debug(logTitle, 'No VC Logs to submit for batch ' + batchTransaction);
+            }
+        },
         vcLog: function (option) {
             var logTitle = [LogTitle, 'vcLog'].join('::');
             log.audit(logTitle, option);
@@ -307,7 +328,9 @@ define(function (require) {
                 LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
 
             try {
-                var logOption = {};
+                var logOption = {},
+                    batchTransaction = option.batch,
+                    isBatched = batchTransaction != null;
                 logOption.APPLICATION = option.appName || VC2_Global.LOG_APPLICATION;
                 logOption.HEADER = option.title || logOption.APPLICATION;
                 logOption.BODY =
@@ -342,23 +365,56 @@ define(function (require) {
                 logOption.DATE = new Date();
                 // log.audit(logTitle, logOption);
 
-                // create the log
-                var recLog = NS_Record.create({ type: VC_LOG.ID });
-                for (var field in VC_LOG.FIELD) {
-                    var fieldName = VC_LOG.FIELD[field];
-                    // log.audit(
-                    //     logTitle,
-                    //     '>> set log field: ' +
-                    //         JSON.stringify([field, fieldName, logOption[field] || ''])
-                    // );
+                if (isBatched) {
+                    var VC_LOG_BATCH = VC2_Global.RECORD.VC_LOG_BATCH;
+                    var batchOption = {
+                        TRANSACTION: batchTransaction
+                    };
+                    // create the log as an inline item
+                    var recBatch =
+                        this._batchedVCLogs[batchTransaction] ||
+                        NS_Record.create({ type: VC_LOG_BATCH.ID });
+                    for (var field in VC_LOG_BATCH.FIELD) {
+                        var fieldName = VC_LOG_BATCH.FIELD[field];
+                        recBatch.setValue({
+                            fieldId: fieldName,
+                            value: batchOption[field] || ''
+                        });
+                    }
+                    var sublistId = ['recmach', VC_LOG.FIELD.BATCH].join(''),
+                        line = recBatch.getLineCount({
+                            sublistId: sublistId
+                        });
+                    for (var column in VC_LOG.FIELD) {
+                        var columnName = VC_LOG.FIELD[column];
+                        recBatch.setSublistValue({
+                            sublistId: sublistId,
+                            fieldId: columnName,
+                            line: line,
+                            value: logOption[column] || ''
+                        });
+                    }
+                    this._batchedVCLogs[batchTransaction] = recBatch;
+                    log.audit(logOption.HEADER, logOption.BODY);
+                } else {
+                    // create the log
+                    var recLog = NS_Record.create({ type: VC_LOG.ID });
+                    for (var field in VC_LOG.FIELD) {
+                        var fieldName = VC_LOG.FIELD[field];
+                        // log.audit(
+                        //     logTitle,
+                        //     '>> set log field: ' +
+                        //         JSON.stringify([field, fieldName, logOption[field] || ''])
+                        // );
 
-                    recLog.setValue({
-                        fieldId: fieldName,
-                        value: logOption[field] || ''
-                    });
+                        recLog.setValue({
+                            fieldId: fieldName,
+                            value: logOption[field] || ''
+                        });
+                    }
+                    recLog.save();
+                    log.audit(logOption.HEADER, logOption.BODY);
                 }
-                recLog.save();
-                log.audit(logOption.HEADER, logOption.BODY);
             } catch (error) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + VC2_Util.extractError(error));
             }
@@ -418,6 +474,7 @@ define(function (require) {
 
         //     return requestObj;
         // },
+
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
@@ -538,7 +595,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;

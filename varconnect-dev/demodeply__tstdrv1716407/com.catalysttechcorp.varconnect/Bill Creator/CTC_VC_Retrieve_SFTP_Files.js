@@ -35,7 +35,8 @@ define([
                 API: 1,
                 SFTP: 2
             },
-            validVendorCfg = [];
+            validVendorCfg = [],
+            validVendorCfgName = [];
 
         var paramConfigID = runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_vendor_sftp'
@@ -49,15 +50,24 @@ define([
                 paramConfigID ? ['internalid', 'anyof', paramConfigID] : ['isinactive', 'is', 'F']
                 // ['isinactive', 'is', 'F']
             ],
-            columns: ['internalid']
+            columns: ['internalid', 'name', 'custrecord_vc_bc_connect_type']
         });
 
         vendorConfigSearch.run().each(function (result) {
             validVendorCfg.push(result.id);
+            validVendorCfgName.push({
+                name: result.getValue({ name: 'name' }),
+                type: result.getText({ name: 'custrecord_vc_bc_connect_type' }),
+                id: result.id
+            });
+
             return true;
         });
 
-        log.debug(logTitle, '>> Valid SFTP Configs : ' + JSON.stringify(validVendorCfg));
+        log.debug(
+            logTitle,
+            '>> Valid SFTP Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
+        );
 
         return validVendorCfg;
     }
@@ -128,11 +138,7 @@ define([
             type: 'customrecord_ctc_vc_bills',
             filters: [['created', 'onorafter', 'daysago90']],
             columns: [
-                search.createColumn({
-                    name: 'name',
-                    summary: 'GROUP',
-                    sort: search.Sort.ASC
-                })
+                search.createColumn({ name: 'name', summary: 'GROUP', sort: search.Sort.ASC })
             ]
         });
 
@@ -144,12 +150,7 @@ define([
             var currentPage = pagedData.fetch(i);
 
             currentPage.data.forEach(function (result) {
-                existingFiles.push(
-                    result.getValue({
-                        name: 'name',
-                        summary: 'GROUP'
-                    })
-                );
+                existingFiles.push(result.getValue({ name: 'name', summary: 'GROUP' }));
             });
         }
         log.audit(logTitle, '>> ..existing Files: ' + JSON.stringify(existingFiles.length));
@@ -162,7 +163,7 @@ define([
             if (!list[i]) break;
             currentFile = { data: list[i] };
             if (list[i].directory) {
-                log.audit(logTitle, '>>> ...skipping directories - ' + list[i].name);
+                // log.audit(logTitle, '>>> ...skipping directories - ' + list[i].name);
                 continue;
             }
 
@@ -214,7 +215,7 @@ define([
                 continue;
             }
 
-            log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));
+            // log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));
 
             addedFiles.push(list[i].name);
             context.write({

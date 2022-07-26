@@ -18,6 +18,7 @@ define([], function () {
             MAIN_CONFIG: 'customrecord_ctc_vc_main_config',
             VENDOR_CONFIG: 'customrecord_ctc_vc_vendor_config',
             VC_LOG: 'customrecord_ctc_vcsp_log',
+            VC_LOG_BATCH: 'customrecord_ctc_vcsp_log_batch',
             SERIALS: 'customrecordserialnum'
         },
         Fields: {
@@ -84,7 +85,11 @@ define([], function () {
                 TRANSACTION: 'custrecord_ctc_vcsp_log_transaction',
                 TRANSACTION_LINEKEY: 'custrecord_ctc_vcsp_log_linekey',
                 STATUS: 'custrecord_ctc_vcsp_log_status',
-                DATE: 'custrecord_ctc_vcsp_log_date'
+                DATE: 'custrecord_ctc_vcsp_log_date',
+                BATCH: 'custrecord_ctc_vcsp_log_batch'
+            },
+            VarConnectLogBatch: {
+                TRANSACTION: 'custrecord_ctc_vcsp_log_batch_txn'
             },
             Transaction: {
                 SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info'

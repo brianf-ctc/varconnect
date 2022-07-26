@@ -97,11 +97,10 @@ define([
 
                 // add button to the flex screen
                 scriptContext.form.addButton({
-                    id: 'custpage_flexscreen', 
-                    label: 'Open Flex Screen', 
+                    id: 'custpage_flexscreen',
+                    label: 'Open Flex Screen',
                     functionName: '(function(url){return window.open(url, "_blank");})("'+flexScreenUrl+'")'
                 });
-
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

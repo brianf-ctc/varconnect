@@ -163,7 +163,6 @@ define([
     }
 
     function _getEndUserPO(option) {
-
         var createdfrom = option.createdfrom,
             endUserPO = '';
 
@@ -182,94 +181,13 @@ define([
         return endUserPO;
     }
 
-    function _generateBody(option) {
-        var logTitle = [LogTitle, 'generateBody'].join('::');
-
-        var record = option.record,
-            customerNo = option.customerNo,
-            testRequest = option.testRequest;
-        log.debug('record', record);
-        var body = {
-            PoNumber: record.tranId,
-            ProfileId: customerNo,
-            isTestPayload: (testRequest ? true : false).toString(),
-            requestedDeliveryDate: _getRequestedDeliveryDate({ record: record }),
-            OrderContact: {
-                Company: '',
-                contactName: '',
-                email: '',
-                telephone: '',
-                address: {
-                    address1: '',
-                    address2: '',
-                    city: '',
-                    stateOrProvince: '',
-                    postalCode: '',
-                    country: ''
-                }
-            },
-            ShippingContact: {
-                //					 company: record.shipAttention,
-                //					 contactName: record.shipAddressee,
-                company: record.shipAddressee,
-                contactName: record.shipAttention,
-                email: record.shipEmail,
-                telephone: record.shipPhone,
-                address: {
-                    address1: record.shipAddr1,
-                    address2: record.shipAddr2,
-                    city: record.shipCity,
-                    stateOrProvince: record.shipState,
-                    postalCode: record.shipZip,
-                    country: record.shipCountry
-                }
-            },
-            billingContact: {
-                //					 company: record.billAttention,
-                //					 contactName: record.billAddressee,
-                company: record.billAddressee,
-                contactName: record.billAttention,
-                email: record.billEmail,
-                telephone: record.billPhone,
-                address: {
-                    address1: record.billAddr1,
-                    address2: record.billAddr2,
-                    city: record.billCity,
-                    stateOrProvince: record.billState,
-                    postalCode: record.billZip,
-                    country: record.billCountry
-                }
-            },
-            //TODO What to put here
-            payment: {
-                //					 cardInfo: {
-                //						 cardNumber: '',
-                //						 cardAuthCode: '',
-                //						 cardRefNumber: '',
-                //						 cardExpirationDate: '',
-                //						 cardType: '',
-                //						 cardTypeOther: '',
-                //						 cardHolderName: ''
-                //					 },
-                //					 paymentMean: '',
-                //					 paymentMeanOther: '',
-                paymentTerm: record.terms
-            },
-            orderDetails: _buildOrderDetails({ record: record }),
-            customFields: _buildCustomFields({ record: record })
-        };
-
-        log.debug('body', JSON.stringify(body));
-
-        return body;
-    }
-
     function generateBody(option) {
         var logTitle = [LogTitle, 'generateBody'].join('::'),
             returnValue = '';
 
         var record = option.record,
             customerNo = option.customerNo,
+            config = option.config,
             itemLength = record.items.length,
             testRequest = option.testRequest;
 
@@ -284,106 +202,55 @@ define([
                     var expectedReceiptDate = record.items[i].expectedReceiptDate;
                     if (expectedReceiptDate) deliveryDate = expectedReceiptDate;
                 }
-
-                return deliveryDate;
+                return deliveryDate || "null";
             })(),
-            OrderContact: (function () {
-                // get the contact info
-                var contactAddrFields = [
-                    'entityid',
-                    'address',
-                    'address1',
-                    'address2',
-                    'address3',
-                    'addressphone',
-                    'attention',
-                    'city',
-                    'company',
-                    'country',
-                    'countrycode',
-                    'email',
-                    'phone',
-                    'state',
-                    'zipcode'
-                ];
-
-                var searchOption = {
-                    type: 'transaction',
-                    filters: [['internalid', 'anyof', record.id], 'AND', ['mainline', 'is', 'T']],
-                    columns: []
-                };
-
-                contactAddrFields.forEach(function (fld) {
-                    searchOption.columns.push(
-                        ns_search.createColumn({ name: fld, join: 'contactPrimary' })
-                    );
-                    return true;
-                });
-
-                var contactAddrSearch = ns_search.create(searchOption),
-                    contactAddrObj = {};
-
-                contactAddrSearch.run().each(function (searchRow) {
-                    contactAddrFields.forEach(function (fld) {
-                        contactAddrObj[fld] = searchRow.getValue({
-                            name: fld,
-                            join: 'contactPrimary'
-                        });
-                        return true;
-                    });
-                    return true;
-                });
-
-                log.audit(logTitle, '>> contact Info: ' + JSON.stringify(contactAddrObj));
-
-                return {
-                    Company: contactAddrObj.company,
-                    ContactName: contactAddrObj.entityid,
-                    Email: contactAddrObj.email,
-                    Telephone: contactAddrObj.phone,
-                    Address: {
-                        Address1: contactAddrObj.address1,
-                        Address2: contactAddrObj.address2,
-                        City: contactAddrObj.city,
-                        StateOrProvince: contactAddrObj.state,
-                        PostalCode: contactAddrObj.zipcode,
-                        Country: contactAddrObj.countrycode
-                    }
-                };
-            })(),
-            ShippingContact: {
-                Company: record.shipAddressee,
-                ContactName: record.shipAttention,
-                Cmail: record.shipEmail,
-                Telephone: record.shipPhone,
+            OrderContact: {
+                Company: config.Bill.addressee,
+                ContactName: config.Bill.attention,
+                Email: config.Bill.email,
+                Telephone: '',
                 Address: {
-                    Address1: record.shipAddr1,
-                    Address2: record.shipAddr2,
-                    City: record.shipCity,
-                    StateOrProvince: record.shipState,
-                    PostalCode: record.shipZip,
-                    Country: record.shipCountry
+                    Address1: config.Bill.address1,
+                    Address2: config.Bill.address2,
+                    City: config.Bill.city,
+                    StateOrProvince: config.Bill.state,
+                    PostalCode: config.Bill.zip,
+                    Country: config.Bill.country
+                }
+            },
+            ShippingContact: {
+                Company: config.Bill.addressee,
+                ContactName: config.Bill.attention,
+                Email: config.Bill.email,
+                Telephone: '',
+                Address: {
+                    Address1: config.Bill.address1,
+                    Address2: config.Bill.address2,
+                    City: config.Bill.city,
+                    StateOrProvince: config.Bill.state,
+                    PostalCode: config.Bill.zip,
+                    Country: config.Bill.country
                 }
             },
             BillingContact: {
-                Company: record.billAddressee,
-                ContactName: record.billAttention,
-                Email: record.billEmail,
-                Telephone: record.billPhone,
+                Company: config.Bill.addressee,
+                ContactName: config.Bill.attention,
+                Email: config.Bill.email,
+                Telephone: '',
                 Address: {
-                    Address1: record.billAddr1,
-                    Address2: record.billAddr2,
-                    City: record.billCity,
-                    StateOrProvince: record.billState,
-                    PostalCode: record.billZip,
-                    Country: record.billCountry
+                    Address1: config.Bill.address1,
+                    Address2: config.Bill.address2,
+                    City: config.Bill.city,
+                    StateOrProvince: config.Bill.state,
+                    PostalCode: config.Bill.zip,
+                    Country: config.Bill.country
                 }
             },
-            Payment: {
-                // PaymentMean: 'Other',
-                // PaymentMeanOther: 'FP',
-                PaymentTerm: record.terms
-            },
+            // Payment: {
+            //     // PaymentMean: 'Other',
+            //     // PaymentMeanOther: 'FP',
+            //     PaymentTerm: record.terms
+            // },
             OrderDetails: (function () {
                 var arrItemList = [];
 
@@ -391,72 +258,91 @@ define([
                     var itemData = record.items[i];
 
                     var itemDetails = {
-                        LineItemNum: i + 1,
-                        SupplierPartId: itemData.item,
-                        SupplierPartIdExt: itemData.item,
-                        Quantity: itemData.quantity,
-                        UnitPrice: itemData.rate,
-                        Currency: record.currency
-                        // EndUser: {
-                        //     Company: 'ABC Company',
-                        //     ContactName: 'John Doe',
-                        //     Email: 'john.doe@email.com',
-                        //     Telephone: '1234567890',
-                        //     Address: {
-                        //         Address1: 'Test Address Line 1',
-                        //         Address2: 'Address Line 2',
-                        //         City: 'San Diego',
-                        //         StateOrProvince: 'CA',
-                        //         PostalCode: '85214',
-                        //         Country: 'US'
-                        //     }
-                        // }
+                        LineItemNum: (i + 1).toString(),
+                        SupplierPartId: itemData.quotenumber,
+                        SupplierPartIdExt: itemData.quotenumber,
+                        lineItemDescription: 'null',
+                        Quantity: (itemData.quantity).toString(),
+                        UnitPrice: (itemData.rate).toString(),
+                        Currency: record.currency,
+                        FinalRecipient: {
+                            Company: config.Bill.addressee,
+                            ContactName: config.Bill.attention,
+                            Email: config.Bill.email,
+                            Telephone: '',
+                            Address: {
+                                Address1: config.Bill.address1,
+                                Address2: config.Bill.address2,
+                                City: config.Bill.city,
+                                StateOrProvince: config.Bill.state,
+                                PostalCode: config.Bill.zip,
+                                Country: config.Bill.country
+                            }
+                        }
                     };
+                    // skip the item if no quote number
+                    if (!itemDetails.SupplierPartId) continue; 
+                    log.audit(logTitle, '>> item Data: ' + JSON.stringify(itemData));
+                    log.audit(logTitle, '>> item Details: ' + JSON.stringify(itemDetails));
 
-                    arrItemList.push(itemDetails);
+                    var itemDataIdx=-1;
+                    for (var ii=0, jj=arrItemList.length; ii <jj; ii++) {
+                        if (itemDetails.SupplierPartId ==arrItemList[ii].SupplierPartId ) {
+                            itemDataIdx = ii;
+                            break;
+                        }
+                    }
+
+                    log.audit(logTitle, '>> itemDataIdx: ' + itemDataIdx);
+
+                    // if( itemDataIdx >= 0 ) {
+                    //     arrItemList[ii].Quantity+=itemDetails.Quantity;
+                    // } else {
+                        arrItemList.push(itemDetails);
+                    // }
                 }
 
                 return arrItemList;
             })(),
-            CustomFields: (function () {
-                var arr = [],
-                    shipCode,
-                    dellShipCode = record.dellShippingCode;
+            // CustomFields: (function () {
+            //     var arr = [],
+            //         shipCode,
+            //         dellShipCode = record.dellShippingCode;
 
-                if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.TWO_DAY) {
-                    shipCode = '2D';
-                } else if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.NEXT_DAY) {
-                    shipCode = 'ND';
-                } else {
-                    shipCode = 'LC';
-                }
-                var createdfrom = record.createdFrom;
+            //     if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.TWO_DAY) {
+            //         shipCode = '2D';
+            //     } else if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.NEXT_DAY) {
+            //         shipCode = 'ND';
+            //     } else {
+            //         shipCode = 'LC';
+            //     }
+            //     var createdfrom = record.createdFrom;
 
-                arr.push({
-                    name: 'EU_PO_NUMBER',
-                    type: 'string',
-                    value: _getEndUserPO({ createdfrom: createdfrom })
-                });
-                arr.push({
-                    name: 'SHIPPING_CODE',
-                    type: 'string',
-                    value: shipCode
-                });
-                //only for shippingCode = DC, i.e., FEDEX, UPS
-                arr.push({
-                    name: 'SHIPPING_CARRIER_NAME',
-                    type: 'string',
-                    value: ''
-                });
-                //only for shippingCode = dc, carrier acct no
-                arr.push({
-                    name: 'SHIPPING_CARRIER_ACCT_NU',
-                    type: 'string',
-                    value: ''
-                });
+            //     arr.push({
+            //         name: 'EU_PO_NUMBER',
+            //         type: 'string',
+            //         value: _getEndUserPO({ createdfrom: createdfrom })
+            //     });
+            //     arr.push({
+            //         name: 'SHIPPING_CODE',
+            //         type: 'string',
+            //         value: shipCode
+            //     });
+            //     //only for shippingCode = DC, i.e., FEDEX, UPS
+            //     arr.push({
+            //         name: 'SHIPPING_CARRIER_NAME',
+            //         type: 'string',
+            //         value: ''
+            //     });
+            //     //only for shippingCode = dc, carrier acct no
+            //     arr.push({
+            //         name: 'SHIPPING_CARRIER_ACCT_NU',
+            //         type: 'string',
+            //         value: ''
+            //     });
 
-                return arr;
-            })()
+            //     return arr;
+            // })()
         };
 
         returnValue = bodyContentJSON; //JSON.stringify(bodyContentJSON);
@@ -495,6 +381,7 @@ define([
             var sendPOBody = generateBody({
                 record: record,
                 customerNo: customerNo,
+                config: recVendorConfig,
                 testRequest: testRequest
             });
             log.audit(logTitle, sendPOBody);

@@ -677,6 +677,9 @@ define([
             log.audit(logTitle, '>> variance lines: ' + JSON.stringify(billPayload.varianceLines));
             log.audit(logTitle, '>> variance: ' + JSON.stringify(billPayload.variance));
 
+            var varianceLines = [];
+
+
             if (billPayload.varianceLines && billPayload.varianceLines.length) {
                 hasVariance = true;
 
@@ -753,6 +756,13 @@ define([
                             item: param.taxItem,
                             rate: taxVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'tax',
+                            item: param.taxItem,
+                            rate: taxVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add tax variance line';
@@ -775,6 +785,13 @@ define([
                             description: 'VC: Ship Variance',
                             item: param.shipItem,
                             rate: shipVariance.amount
+                        });
+
+                        varianceLines.push({
+                            type: 'shipping',
+                            item: param.shipItem,
+                            rate: shipVariance.amount,
+                            quantity: 1
                         });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
@@ -799,6 +816,13 @@ define([
                             description: 'VC: Other Charges',
                             rate: otherVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'other',
+                            item: param.otherItem,
+                            rate: otherVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add other charges line';
@@ -822,6 +846,14 @@ define([
                             description: 'VC: Adjustments',
                             rate: adjustmentVariance.amount
                         });
+
+                        varianceLines.push({
+                            type: 'adjustment',
+                            item: param.otherItem,
+                            description: 'VC: Adjustments',
+                            rate: adjustmentVariance.amount,
+                            quantity: 1
+                        });
                     } catch (line_err) {
                         returnObj.details = Helper.extractError(line_err);
                         throw 'Unable to add adjustments line';
@@ -831,7 +863,7 @@ define([
 
             /////////////////////////////////
             var allowBillVariance = false,
-                allowableVarianceThreshold = param.allowedThreshold,
+                allowableVarianceThreshold = param.allowedThreshold;
                 totalVarianceAmount = 0;
 
             // param.allowedThreshold;
@@ -920,6 +952,10 @@ define([
                         }) +
                         '\n\t\t' +
                         returnObj.msg;
+                }
+
+                if (varianceLines && varianceLines.length) {
+                    returnObj.varianceLines = varianceLines; 
                 }
 
                 returnObj.details =

@@ -13,368 +13,517 @@
  */
 
 define([
-    'N/log',
     'N/https',
-    '../Libraries/moment',
-    '../Libraries/lodash',
     'N/search',
-    'N/runtime'
-], function (log, https, moment, lodash, search, runtime) {
+    'N/runtime',
+    '../../CTC_VC2_Lib_Utils',
+    '../Libraries/moment',
+    '../Libraries/lodash'
+], function (ns_https, ns_search, ns_runtime, vc2_utils, moment, lodash) {
     'use strict';
+    var LogTitle = 'WS:IngramAPI',
+        LogPrefix;
 
-    function processXml(input, config) {
-        //var config = JSON.parse(configStr)
+    function processXml(recordId, config) {
+        var logTitle = [LogTitle, 'processXml'].join('::'),
+            returnValue;
+        log.audit(logTitle, [recordId, config]);
+        LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
 
-        var tranNsid = input;
-
-        log.debug('im: input', tranNsid);
-
-        var findDocumentNumber = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
-            id: tranNsid,
+        var recordData = vc2_utils.flatLookup({
+            type: ns_search.Type.PURCHASE_ORDER,
+            id: recordId,
             columns: ['tranid']
         });
 
-        var docNum = findDocumentNumber.tranid;
-
-        var headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
-
-        var baseUrl = config.url;
-
-        var authUrl = '/oauth/oauth20/token';
-
-        //var url = 'https://api.ingrammicro.com:443/oauth/oauth20/token';
-
-        log.debug('im: headers', input + ': ' + JSON.stringify(headers));
-
-        var authBody = {
-            grant_type: 'client_credentials',
-            client_id: config.user_id,
-            client_secret: config.user_pass
-        };
-
-        log.debug('im: authBody', input + ': ' + JSON.stringify(authBody));
-
-        var lastCall = new Date().getTime();
-
-        var authResponse = https.post({
-            url: baseUrl + authUrl,
-            headers: headers,
-            body: convertToXWWW(authBody)
+        var token = generateToken({
+            recordId: recordId,
+            config: config,
+            tranId: recordData.tranid
         });
+        log.audit(logTitle, LogPrefix + '>> access token: ' + JSON.stringify(token));
 
-        log.debug('im: authResponse', input + ': ' + JSON.stringify(authResponse));
+        var orderDetails = getOrderDetails({
+            config: config,
+            recordId: recordId,
+            token: token,
+            recordData: recordData
+        });
+        log.audit(logTitle, LogPrefix + '>> orderDetails: ' + JSON.stringify(orderDetails));
 
-        var authJson = JSON.parse(authResponse.body);
+        var invoiceDetails = getInvoiceDetails({
+            config: config,
+            recordId: recordId,
+            token: token,
+            recordData: recordData,
+            invoiceLinks: orderDetails.invoiceLinks,
+            orderNumbers: orderDetails.orderNumbers
+        });
+        // log.audit(logTitle, LogPrefix + '>> invoiceDetails: ' + JSON.stringify(invoiceDetails));
 
-        log.debug('im: token', input + ': ' + authJson.access_token);
+        // for (orderId in orderDetails) {
+        //     log.audit(logTitle, LogPrefix + '>> orderId: ' + orderId);
+        //     log.audit(logTitle, LogPrefix + '>> order details: ' + JSON.stringify(orderDetails[orderId]));
+        // }
 
-        var countryCode = config.country;
-        // if (runtime.country == 'CA') countryCode = 'CA';
+        var arrInvoices = [];
 
-        log.debug(
-            '>> country',
-            JSON.stringify([runtime.country, config.country, countryCode, runtime.country == 'CA'])
-        );
+        for (var orderKey in invoiceDetails) {
+            log.audit(logTitle, LogPrefix + '>> invoice Id: ' + orderKey);
 
-        headers['Content-Type'] = 'application/json';
-        headers['Accept'] = 'application/json';
-        headers['Authorization'] = 'Bearer ' + authJson.access_token;
-        headers['IM-CustomerNumber'] = config.partner_id;
-        headers['customerNumber'] = config.partner_id;
-        headers['IM-CountryCode'] = countryCode;
-        headers['IM-CorrelationID'] = tranNsid;
+            var invoiceData = invoiceDetails[orderKey];
 
-        //docNum = '81936560.0';
+            // check for misc charges
+            if (orderDetails.miscCharges && orderDetails.miscCharges[orderKey]) {
+                log.audit(
+                    logTitle,
+                    LogPrefix +
+                        '>> misc charge: ' +
+                        JSON.stringify(orderDetails.miscCharges[orderKey])
+                );
 
-        var pageNum = 1,
-            pageSize = 10,
-            totalRecords = 0,
-            pageComplete = false;
-        var myArr = [];
-        var imOrders = [],
-            imOrderNums = [];
+                invoiceData.xmlStr = JSON.stringify({
+                    invoiceDetails: JSON.parse(invoiceData.xmlStr),
+                    miscCharges: orderDetails.miscCharges[orderKey]
+                });
 
-        while (!pageComplete) {
-            var searchUrl =
-                '/resellers/v6/orders/search?' +
-                ['&customerNumber', config.partner_id].join('=') +
-                ['&isoCountryCode', countryCode].join('=') +
-                ['&customerOrderNumber', docNum].join('=') +
-                ['&pageNumber', pageNum].join('=') +
-                ['&pageSize', pageSize].join('=');
+                // add the misc charges ///
+                for (var ii = 0, jj = orderDetails.miscCharges[orderKey].length; ii < jj; ii++) {
+                    var chargeInfo = orderDetails.miscCharges[orderKey][ii];
 
-            log.debug('im: searchRequest url', baseUrl + searchUrl);
-
-            sleep(lastCall, 1050);
-            lastCall = new Date().getTime();
-
-            var searchResponse = https.get({
-                url: baseUrl + searchUrl,
-                headers: headers
-            });
-
-            log.debug('im: searchResponse', input + ': ' + JSON.stringify(searchResponse.body));
-
-            var searchBody = JSON.parse(searchResponse.body);
-
-            if (searchResponse.code !== 200) {
-                log.debug('im: ' + searchResponse.code, input + ': ' + 'No Records Returned');
-                return myArr;
+                    if (chargeInfo.description) {
+                        if (chargeInfo.description.match(/freight/gi)) {
+                            // add it to as shipping charge
+                            invoiceData.ordObj.charges.shipping += vc2_utils.parseFloat(
+                                chargeInfo.amount
+                            );
+                        } else {
+                            invoiceData.ordObj.charges.other += vc2_utils.parseFloat(
+                                chargeInfo.amount
+                            );
+                        }
+                    } else {
+                        invoiceData.ordObj.charges.other += vc2_utils.parseFloat(chargeInfo.amount);
+                    }
+                }
             }
 
-            //      var searchOrders = searchBody.serviceresponse.ordesearchresponse.orders;
-            var searchOrders = searchBody.orders;
-            totalRecords = totalRecords + searchBody.pageSize;
+            log.audit(logTitle, LogPrefix + '>> invoiceData: ' + JSON.stringify(invoiceData));
 
-            for (var i = 0; i < searchOrders.length; i++) {
-                for (var s = 0; s < searchOrders[i].subOrders.length; s++) {
-                    for (var l = 0; l < searchOrders[i].subOrders[s].links.length; l++) {
-                        if (searchOrders[i].subOrders[s].links[l].topic == 'invoices') {
-                            imOrders.push(searchOrders[i].subOrders[s].links[l].href);
+            arrInvoices.push(invoiceData);
+        }
 
-                            imOrderNums.push(searchOrders[i].ingramOrderNumber);
+        return arrInvoices;
+    }
+
+    function getOrderDetails(option) {
+        var logTitle = [LogTitle, 'getOrderDetails'].join('::'),
+            returnValue = {};
+
+        // log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+
+        var config = option.config,
+            recordData = option.recordData,
+            token = option.token,
+            recordId = option.recordId;
+
+        var arrInvoiceLinks = [],
+            arrOrderNums = [],
+            orderMiscCharges;
+
+        try {
+            var pageNum = 1,
+                pageSize = 10,
+                recordsCount = 0,
+                pageComplete = false;
+
+            while (!pageComplete) {
+                var searchUrl =
+                    '/resellers/v6/orders/search?' +
+                    vc2_utils.convertToQuery({
+                        customerNumber: config.partner_id,
+                        isoCountryCode: config.country,
+                        customerOrderNumber: recordData.tranid,
+                        pageNumber: pageNum,
+                        pageSize: pageSize
+                    });
+                searchUrl = config.url + searchUrl;
+                log.audit(logTitle, LogPrefix + '>> searchUrl: ' + searchUrl);
+
+                // send the request
+                var searchOrderReq = vc2_utils.sendRequest({
+                    header: [LogTitle, 'OrderSearch'].join(' '),
+                    method: 'get',
+                    recordId: recordId,
+                    query: {
+                        url: searchUrl,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            Authorization: 'Bearer ' + token,
+                            'IM-CustomerNumber': config.partner_id,
+                            customerNumber: config.partner_id,
+                            'IM-CountryCode': config.country,
+                            'IM-CorrelationID': recordData.tranid
+                        }
+                    }
+                });
+
+                var searchOrderResp =
+                    searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
+
+                if (searchOrderReq.isError || vc2_utils.isEmpty(searchOrderResp)) {
+                    throw (
+                        searchOrderReq.errorMsg +
+                        (searchOrderReq.details
+                            ? '\n' + JSON.stringify(searchOrderReq.details)
+                            : '')
+                    );
+                }
+
+                if (!searchOrderResp.recordsFound) {
+                    log.audit(logTitle, LogPrefix + '!! No records found !!');
+                    break;
+                }
+
+                var ordersResults = searchOrderResp.orders;
+                recordsCount = recordsCount + (searchOrderResp.pageSize || 0);
+
+                log.audit(
+                    logTitle,
+                    LogPrefix +
+                        '>> ' +
+                        JSON.stringify({
+                            recordsCount: recordsCount,
+                            recordsFound: searchOrderResp.recordsFound,
+                            totalOrders: ordersResults.length,
+                            currentPage: pageNum
+                        })
+                );
+
+                if (vc2_utils.isEmpty(ordersResults)) break;
+
+                for (var i = 0, j = ordersResults.length; i < j; i++) {
+                    var orderInfo = ordersResults[i];
+
+                    for (var ii = 0, jj = orderInfo.subOrders.length; ii < jj; ii++) {
+                        var subOrderInfo = orderInfo.subOrders[ii];
+
+                        for (var iii = 0, jjj = subOrderInfo.links.length; iii < jjj; iii++) {
+                            var subOrderLink = subOrderInfo.links[iii];
+
+                            if (!subOrderLink.topic || subOrderLink.topic != 'invoices') continue;
+
+                            arrInvoiceLinks.push(subOrderLink.href);
+                            arrOrderNums.push(orderInfo.ingramOrderNumber);
                         }
                     }
                 }
+
+                // get the
+                if (recordsCount >= searchOrderResp.recordsFound) {
+                    pageComplete = true;
+                    break;
+                } else {
+                    pageNum++;
+                    vc2_utils.waitMs(1000);
+                }
             }
 
-            log.audit(
-                'total records >>',
-                JSON.stringify({
-                    totalRecords: totalRecords,
-                    pageSize: pageSize,
-                    pageNum: pageNum,
-                    recordsFound: searchBody.recordsFound,
-                    imOrders: imOrders,
-                    imOrderNums: imOrderNums
+            log.audit(logTitle, LogPrefix + '>> Invoice Links: ' + JSON.stringify(arrInvoiceLinks));
+            log.audit(logTitle, LogPrefix + '>> Order Numbers: ' + JSON.stringify(arrOrderNums));
+            arrInvoiceLinks = vc2_utils.uniqueArray(arrInvoiceLinks);
+            arrOrderNums = vc2_utils.uniqueArray(arrOrderNums);
+
+            log.audit(logTitle, LogPrefix + '>> Prep to fetch miscellaneous charges.... ');
+            orderMiscCharges = getMiscCharges(
+                util.extend(option, {
+                    invoiceLinks: arrInvoiceLinks,
+                    orderNums: arrOrderNums
                 })
             );
-
-            if (totalRecords >= searchBody.recordsFound) {
-                pageComplete = true;
-                break;
-            } else {
-                pageNum++;
-            }
-        }
-
-        log.debug('im: Orders', input + ': ' + JSON.stringify(imOrders));
-
-        var orderMiscCharges = {};
-        for (var ii = 0; ii < imOrderNums.length; ii++) {
-            util.extend(
-                orderMiscCharges,
-                _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNums[ii])
-            );
-        }
-
-        log.debug('im: orderMiscCharges', JSON.stringify(orderMiscCharges));
-
-        for (var o = 0; o < imOrders.length; o++) {
-            try {
-                var invoiceUrl =
-                    imOrders[o] +
-                    ('?customerNumber=' + config.partner_id) +
-                    ('&isoCountryCode=' + countryCode);
-
-                log.debug(
-                    'im: invoice request',
-                    JSON.stringify({
-                        url: baseUrl + invoiceUrl,
-                        headers: headers
-                    })
-                );
-
-                var invoiceResponse = https.get({
-                    url: baseUrl + invoiceUrl,
-                    headers: headers
-                });
-
-                var xmlObj = JSON.parse(invoiceResponse.body);
-                log.debug('im: invoice response', input + ': ' + JSON.stringify(xmlObj));
-
-                var myObj = {};
-                myObj.po = docNum;
-
-                var invDetail = xmlObj.serviceresponse.invoicedetailresponse;
-
-                //			myObj.date = moment(invDetail.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY');
-                //ingram always provides an orderdate value but doesn't alway provide an invoicedate key:value
-                //using changed mapping to use orderdate instead.
-                if (invDetail.hasOwnProperty('invoicedate')) {
-                    myObj.date = moment(invDetail.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY');
-                } else {
-                    // use the current date
-                    myObj.date = moment().format('MM/DD/YYYY');
-                }
-
-                // myObj.invoice = invDetail.invoicenumber;
-                // changed invoice mapping per request on 12/9/20
-                //			myObj.invoice = invDetail.globalorderid;
-                // changed back to globalorderid @bfeliciano 23Sept2021
-                myObj.invoice = invDetail.globalorderid;
-                myObj.total = invDetail.totalamount * 1;
-
-                myObj.charges = {};
-
-                myObj.charges.tax = invDetail.totaltaxamount * 1;
-                myObj.charges.shipping =
-                    invDetail.customerfreightamount * 1 + invDetail.customerforeignfrightamt * 1;
-
-                myObj.charges.other = invDetail.discountamount * 1;
-
-                // calculate the misc charges
-                if (orderMiscCharges.hasOwnProperty(invDetail.globalorderid)) {
-                    var miscCharge = orderMiscCharges[invDetail.globalorderid];
-
-                    if (!myObj.charges.miscCharges) myObj.charges.miscCharges = [];
-                    // if (!myObj.charges.hasOwnProperty('other')) {
-                    //     myObj.charges.other = 0;
-                    // }
-
-                    for (ii = 0; ii < miscCharge.length; ii++) {
-                        myObj.charges.miscCharges.push(miscCharge[ii]);
-                        // myObj.charges.other += parseFloat(miscCharge[ii].amount);
-                    }
-                }
-
-                // // applies only for: Aqueduct
-                // if (invDetail.hasOwnProperty('weight')) {
-                //     myObj.weight = invDetail.weight;
-                //     if (parseFloat(myObj.weight) > 150) {
-                //         myObj.charges.shipping = parseFloat(myObj.charges.shipping) + 2;
-                //     }
-                // }
-
-                myObj.lines = [];
-
-                for (var i = 0; i < invDetail.lines.length; i++) {
-                    var item = invDetail.lines[i].vendorpartnumber;
-
-                    if (!item || item == '' || item == null) {
-                        continue;
-                    }
-
-                    var itemIdx = lodash.findIndex(myObj.lines, {
-                        ITEMNO: item
-                    });
-
-                    if (itemIdx !== -1) {
-                        myObj.lines[itemIdx].QUANTITY += invDetail.lines[i].shippedquantity * 1;
-                    } else {
-                        var lineObj = {};
-
-                        lineObj.processed = false;
-                        lineObj.ITEMNO = item;
-                        lineObj.PRICE = invDetail.lines[i].unitprice * 1;
-                        lineObj.QUANTITY = invDetail.lines[i].shippedquantity * 1;
-                        lineObj.DESCRIPTION = invDetail.lines[i].partdescription;
-
-                        myObj.lines.push(lineObj);
-                    }
-                }
-
-                //return myObj;
-
-                var returnObj = {};
-                returnObj.ordObj = myObj;
-                returnObj.xmlStr = xmlObj;
-                myArr.push(returnObj);
-            } catch (e) {
-                log.error('Error parsing invoice', e);
-            }
-        }
-
-        return myArr;
-    }
-
-    function _getMiscCharges(config, authJson, countryCode, tranNsid, imOrderNum) {
-        var logTitle = 'getMiscCharges',
-            returnValue = false,
-            miscCharges;
-
-        try {
-            var orderStatusUrl = config.url + '/resellers/v6/orders/' + imOrderNum;
-
-            var orderStatusResp = https.get({
-                url: orderStatusUrl,
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    Authorization: 'Bearer ' + authJson.access_token,
-                    'IM-CustomerNumber': config.partner_id,
-                    customerNumber: config.partner_id,
-                    'IM-CountryCode': countryCode,
-                    'IM-CorrelationID': tranNsid
-                }
-            });
-
-            // log.debug('im: miscCharges', '>> orderStatusResp: ' + JSON.stringify(orderStatusResp));
-            var orderStatus = JSON.parse(orderStatusResp.body);
-
-            // log.debug('im: miscCharges', '>> orderStatus: ' + JSON.stringify(orderStatus));
-            if (orderStatus.hasOwnProperty('miscellaneousCharges')) {
-                returnValue = {};
-
-                for (var i = 0, j = orderStatus.miscellaneousCharges.length; i < j; i++) {
-                    miscCharges = orderStatus.miscellaneousCharges[i];
-
-                    log.debug('im: miscCharges', '>> miscCharges: ' + JSON.stringify(miscCharges));
-
-                    if (!returnValue.hasOwnProperty(miscCharges.subOrderNumber)) {
-                        returnValue[miscCharges.subOrderNumber] = [];
-                    }
-
-                    returnValue[miscCharges.subOrderNumber].push({
-                        description: miscCharges.chargeDescription,
-                        amount: miscCharges.chargeAmount
-                    });
-                }
-            }
-
-            log.debug('im: miscCharges', JSON.stringify(returnValue));
+            log.audit(logTitle, LogPrefix + '>> misc charges: ' + JSON.stringify(orderMiscCharges));
         } catch (error) {
-            log.error('Error parsing order', JSON.stringify(error));
+            var errorMsg = vc2_utils.extractError(error);
+            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+        } finally {
+            returnValue = {
+                invoiceLinks: arrInvoiceLinks || [],
+                orderNumbers: arrOrderNums || [],
+                miscCharges: orderMiscCharges
+            };
         }
 
         return returnValue;
     }
 
-    function convertToXWWW(json) {
-        //log.debug('convertToXWWW', JSON.stringify(json));
-        if (typeof json !== 'object') {
-            return null;
+    function getMiscCharges(option) {
+        var logTitle = [LogTitle, 'getMiscCharges'].join('::'),
+            returnValue = {};
+
+        log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+
+        var config = option.config,
+            recordData = option.recordData,
+            token = option.token,
+            recordId = option.recordId;
+
+        var objMischCharges = {};
+
+        try {
+            if (vc2_utils.isEmpty(option.orderNums)) throw 'Missing purchase order numbers';
+            for (var i = 0, j = option.orderNums.length; i < j; i++) {
+                var orderNum = option.orderNums[i];
+
+                var orderDetailsReq = vc2_utils.sendRequest({
+                    header: [LogTitle, 'Misc Charge'].join(' '),
+                    method: 'get',
+                    recordId: recordId,
+                    query: {
+                        url: config.url + '/resellers/v6/orders/' + orderNum,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            Authorization: 'Bearer ' + token,
+                            'IM-CustomerNumber': config.partner_id,
+                            customerNumber: config.partner_id,
+                            'IM-CountryCode': config.country,
+                            'IM-CorrelationID': recordData.tranid
+                        }
+                    }
+                });
+
+                var orderDetailsResp =
+                    orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
+
+                if (orderDetailsReq.isError || vc2_utils.isEmpty(orderDetailsReq)) {
+                    throw (
+                        orderDetailsReq.errorMsg +
+                        (orderDetailsReq.details
+                            ? '\n' + JSON.stringify(orderDetailsReq.details)
+                            : '')
+                    );
+                }
+
+                if (!orderDetailsResp.hasOwnProperty('miscellaneousCharges')) continue;
+
+                for (var ii = 0, jj = orderDetailsResp.miscellaneousCharges.length; ii < jj; ii++) {
+                    var chargeInfo = orderDetailsResp.miscellaneousCharges[ii];
+                    log.audit(logTitle, LogPrefix + '>> chargeInfo: ' + JSON.stringify(chargeInfo));
+
+                    if (!chargeInfo.subOrderNumber) continue;
+                    if (!objMischCharges[chargeInfo.subOrderNumber])
+                        objMischCharges[chargeInfo.subOrderNumber] = [];
+
+                    objMischCharges[chargeInfo.subOrderNumber].push({
+                        description: chargeInfo.chargeDescription,
+                        amount: vc2_utils.forceFloat(chargeInfo.chargeAmount)
+                    });
+                }
+
+                vc2_utils.waitMs(1200);
+            }
+        } catch (error) {
+            var errorMsg = vc2_utils.extractError(error);
+            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+        } finally {
+            returnValue = objMischCharges;
         }
-        var u = encodeURIComponent;
-        var urljson = '';
-        var keys = Object.keys(json);
-        for (var i = 0; i < keys.length; i++) {
-            urljson += u(keys[i]) + '=' + u(json[keys[i]]);
-            if (i < keys.length - 1) urljson += '&';
-        }
-        return urljson;
+
+        return returnValue;
     }
 
-    function sleep(startTime, milliseconds) {
-        // add delay between API calls so that we
-        // don't get hit by ingrams 60 calls per minute governance.
+    function getInvoiceDetails(option) {
+        var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
+            returnValue = {};
 
-        https.get({
-            url:
-                'https://us-east4-rapid-booking-320617.cloudfunctions.net/netsuite-sleep-function?delay=' +
-                milliseconds
+        log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+
+        var config = option.config,
+            recordData = option.recordData,
+            token = option.token,
+            recordId = option.recordId;
+
+        var objInvoiceDetails = {};
+
+        try {
+            if (vc2_utils.isEmpty(option.invoiceLinks)) throw 'Missing invoice links';
+
+            for (var i = 0, j = option.invoiceLinks.length; i < j; i++) {
+                var invoiceLink = option.invoiceLinks[i];
+
+                var invoiceDetailsReq = vc2_utils.sendRequest({
+                    header: [LogTitle, 'Invoice Details'].join(' '),
+                    recordId: recordId,
+                    query: {
+                        url:
+                            config.url +
+                            invoiceLink +
+                            ('?customerNumber=' + config.partner_id) +
+                            ('&isoCountryCode=' + config.country),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            Authorization: 'Bearer ' + token,
+                            'IM-CustomerNumber': config.partner_id,
+                            customerNumber: config.partner_id,
+                            'IM-CountryCode': config.country,
+                            'IM-CorrelationID': recordData.tranid
+                        }
+                    }
+                });
+
+                var invoiceDetailsResp =
+                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+
+                if (invoiceDetailsReq.isError || vc2_utils.isEmpty(invoiceDetailsResp)) {
+                    throw (
+                        invoiceDetailsReq.errorMsg +
+                        (invoiceDetailsReq.details
+                            ? '\n' + JSON.stringify(invoiceDetailsReq.details)
+                            : '')
+                    );
+                }
+
+                if (
+                    !invoiceDetailsResp.serviceresponse ||
+                    !invoiceDetailsResp.serviceresponse.invoicedetailresponse
+                )
+                    continue;
+
+                var invoiceInfo = invoiceDetailsResp.serviceresponse.invoicedetailresponse,
+                    invoiceData = {
+                        po: recordData.tranid,
+                        date: invoiceInfo.hasOwnProperty('invoicedate')
+                            ? moment(invoiceInfo.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY')
+                            : moment().format('MM/DD/YYYY'),
+                        invoice: invoiceInfo.globalorderid,
+                        total: vc2_utils.parseFloat(invoiceInfo.totalamount),
+                        charges: {
+                            tax: vc2_utils.parseFloat(invoiceInfo.totaltaxamount),
+                            shipping:
+                                vc2_utils.parseFloat(invoiceInfo.customerfreightamount) +
+                                vc2_utils.parseFloat(invoiceInfo.customerforeignfrightamt),
+                            other: vc2_utils.parseFloat(invoiceInfo.discountamount)
+                        },
+                        lines: []
+                    };
+
+                for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
+                    var lineInfo = invoiceInfo.lines[ii];
+                    if (vc2_utils.isEmpty(lineInfo.vendorpartnumber)) continue;
+
+                    var lineData = {
+                        ITEMNO: lineInfo.vendorpartnumber,
+                        PRICE: vc2_utils.parseFloat(lineInfo.unitprice),
+                        QUANTITY: vc2_utils.forceInt(lineInfo.shippedquantity),
+                        DESCRIPTION: lineInfo.partdescription
+                    };
+
+                    var lineSerials = [];
+                    // get the serial numbers
+                    if (lineInfo.hasOwnProperty('serialnumberdetails')) {
+                        lineInfo.serialnumberdetails.forEach(function (serial) {
+                            if (serial.serialnumber) lineSerials.push(serial.serialnumber);
+                            return true;
+                        });
+                        lineData.SERIAL = lineSerials;
+                    }
+
+                    var listTracking = [];
+                    if (lineInfo.hasOwnProperty('trackingnumberdetails')) {
+                        lineInfo.trackingnumberdetails.forEach(function (tracking) {
+                            if (tracking.trackingnumber) listTracking.push(tracking.trackingnumber);
+                            return true;
+                        });
+                        lineData.TRACKING = listTracking;
+                    }
+
+                    // look for the item
+                    var lineIdx = lodash.findIndex(invoiceData.lines, {
+                        ITEMNO: lineData.ITEMNO
+                    });
+
+                    if (lineIdx >= 0) {
+                        // increment the quantity
+                        invoiceData.lines[lineIdx].QUANTITY += lineData.QUANTITY;
+
+                        if (!vc2_utils.isEmpty(lineData.SERIAL)) {
+                            if (!invoiceData.lines[lineIdx].SERIAL)
+                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
+                            else
+                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL.concat(
+                                    invoiceData.lines[lineIdx].SERIAL
+                                );
+                            // trim unique serials
+                            invoiceData.lines[lineIdx].SERIAL = vc2_utils.uniqueArray(
+                                invoiceData.lines[lineIdx].SERIAL
+                            );
+                        }
+
+                        if (!vc2_utils.isEmpty(lineData.TRACKING)) {
+                            if (!invoiceData.lines[lineIdx].TRACKING)
+                                invoiceData.lines[lineIdx].TRACKING = lineData.TRACKING;
+                            else
+                                invoiceData.lines[lineIdx].TRACKING = lineData.TRACKING.concat(
+                                    invoiceData.lines[lineIdx].TRACKING
+                                );
+                            // trim unique tracking
+                            invoiceData.lines[lineIdx].TRACKING = vc2_utils.uniqueArray(
+                                invoiceData.lines[lineIdx].TRACKING
+                            );
+                        }
+                    } else {
+                        invoiceData.lines.push(lineData);
+                    }
+                }
+                log.audit(logTitle, LogPrefix + '>> Invoice Data: ' + JSON.stringify(invoiceData));
+
+                objInvoiceDetails[invoiceData.invoice] = {
+                    ordObj: invoiceData,
+                    xmlStr: JSON.stringify(invoiceDetailsResp)
+                };
+
+                // vc2_utils.waitMs(500);
+            }
+        } catch (error) {
+            var errorMsg = vc2_utils.extractError(error);
+            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+        } finally {
+            returnValue = objInvoiceDetails;
+        }
+
+        return returnValue;
+    }
+
+    function generateToken(option) {
+        var logTitle = [LogTitle, 'generateToken'].join('::');
+        // log.audit(logTitle, option);
+
+        var tokenReq = vc2_utils.sendRequest({
+            header: [LogTitle, 'GenerateToken'].join(' '),
+            method: 'post',
+            recordId: option.recordId,
+            doRetry: true,
+            maxRetry: 3,
+            query: {
+                url: option.config.url + '/oauth/oauth20/token',
+                body: vc2_utils.convertToQuery({
+                    grant_type: 'client_credentials',
+                    client_id: option.config.user_id,
+                    client_secret: option.config.user_pass
+                }),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
         });
 
-        // for (var i = 0; i < 1e7; i++) {
-        //   if ((new Date().getTime() - startTime) > milliseconds){
-        //     log.debug('slept for', (new Date().getTime() - startTime) + ' ms');
-        //     log.debug('required', i + ' iterations');
-        //     break;
-        //   }
-        // }
+        if (tokenReq.isError) throw tokenReq.errorMsg;
+        var tokenResp = vc2_utils.safeParse(tokenReq.RESPONSE);
+        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+
+        return tokenResp.access_token;
     }
 
     // Add the return statement that identifies the entry point function.

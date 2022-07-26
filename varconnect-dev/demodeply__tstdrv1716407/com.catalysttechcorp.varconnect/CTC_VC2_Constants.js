@@ -89,7 +89,15 @@ define([], function () {
                 TRANSACTION: 'custrecord_ctc_vcsp_log_transaction',
                 TRANSACTION_LINEKEY: 'custrecord_ctc_vcsp_log_linekey',
                 STATUS: 'custrecord_ctc_vcsp_log_status',
-                DATE: 'custrecord_ctc_vcsp_log_date'
+                DATE: 'custrecord_ctc_vcsp_log_date',
+                BATCH: 'custrecord_ctc_vcsp_log_batch'
+            }
+        },
+        VC_LOG_BATCH: {
+            ID: 'customrecord_ctc_vcsp_log_batch',
+            FIELD: {
+                ID: 'internalid',
+                TRANSACTION: 'custrecord_ctc_vcsp_log_batch_txn'
             }
         },
         SERIALS: {

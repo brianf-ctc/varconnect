@@ -453,6 +453,7 @@ define([
                     }
                     //		            	  }
                 }
+                serials = VC2_Utils.uniqueArray(serials);
                 outputObj.tracking_num = trackingNum.join(',');
                 outputObj.serial_num = serials.join(',');
                 log.audit(logTitle, '>> adding: ' + JSON.stringify(outputObj));

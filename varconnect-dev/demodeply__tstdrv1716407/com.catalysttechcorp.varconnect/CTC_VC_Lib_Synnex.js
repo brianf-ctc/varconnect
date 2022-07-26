@@ -252,7 +252,7 @@ define([
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
             transaction: poId,
-            status: vcGlobal.Lists.VC_LOG_STATUS.INFO,
+            status: VC_Global.Lists.VC_LOG_STATUS.INFO,
             isDebugMode: option.fromDebug
         });
 

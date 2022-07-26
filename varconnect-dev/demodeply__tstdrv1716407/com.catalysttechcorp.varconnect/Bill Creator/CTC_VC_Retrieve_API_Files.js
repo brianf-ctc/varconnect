@@ -22,8 +22,8 @@ define([
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map'
 ], function (ns_search, ns_runtime, ns_error, moment, VC2_Utils, VCLib_BillFile, VCLib_VendorMap) {
-    var LogTitle = 'MR_BillFiles-API';
-    var LogPrefix = '';
+    var LogTitle = 'MR_BillFiles-API',
+        LogPrefix = '';
 
     var MAP_REDUCE = {};
 
@@ -35,11 +35,20 @@ define([
                 API: 1,
                 SFTP: 2
             },
-            validVendorCfg = [];
+            validVendorCfg = [],
+            validVendorCfgName = [];
 
         var paramConfigID = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_vendor_api'
         });
+        var paramOrderId = ns_runtime.getCurrentScript().getParameter({
+            name: 'custscript_ctc_vc_bc_po_id'
+        });
+
+        if (paramOrderId) paramConfigID = null; // if purchase is specified, include all configurations
+
+        if (paramConfigID) LogPrefix += '[ConfigID:' + paramConfigID + '] ';
+        if (paramOrderId) LogPrefix += '[PO ID:' + paramOrderId + '] ';
 
         var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
@@ -48,15 +57,27 @@ define([
                 'AND',
                 paramConfigID ? ['internalid', 'anyof', paramConfigID] : ['isinactive', 'is', 'F']
             ],
-            columns: ['internalid']
+            columns: ['internalid', 'name', 'custrecord_vc_bc_connect_type']
         });
 
         vendorConfigSearch.run().each(function (result) {
             validVendorCfg.push(result.id);
+            validVendorCfgName.push({
+                name: result.getValue({ name: 'name' }),
+                type: result.getText({ name: 'custrecord_vc_bc_connect_type' }),
+                id: result.id
+            });
             return true;
         });
 
-        log.debug(logTitle, LogPrefix + '>> Valid API Configs : ' + JSON.stringify(validVendorCfg));
+        log.debug(
+            logTitle,
+            LogPrefix +
+                '>> Valid API Configs : ' +
+                JSON.stringify([validVendorCfgName, validVendorCfg])
+        );
+
+        // G = Fully Billed
 
         var searchOption = {
             type: 'purchaseorder',
@@ -75,7 +96,6 @@ define([
                 ],
                 'AND',
                 ['mainline', 'is', 'T']
-                // ,'AND',['internalid', 'anyof', 478344]
             ],
             columns: [
                 'internalid',
@@ -90,6 +110,10 @@ define([
                 })
             ]
         };
+        if (paramOrderId) {
+            searchOption.filters.push('AND');
+            searchOption.filters.push(['internalid', 'anyof', paramOrderId]);
+        }
 
         if (VC2_Utils.isOneWorld()) {
             searchOption.columns.push(
@@ -101,22 +125,16 @@ define([
         }
         log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption));
 
-        return ns_search.create(searchOption);
+        var searchObj = ns_search.create(searchOption);
+        var totalPending = searchObj.runPaged().count;
+        log.audit(logTitle, LogPrefix + '>> Orders To Process: ' + totalPending);
+
+        return searchObj;
     };
-
-    // MAP_REDUCE.map = function(context) {
-    //     var logTitle = [LogTitle, 'map'].join(':');
-    //     //var scriptObj = ns_runtime.getCurrentScript();
-    //     log.audit(logTitle, '>> context: ' + JSON.stringify(context));
-    //     var searchResult = VC2_Utils.safeParse(context.value);
-    //     context.write(context.key, searchResult);
-
-    //     return;
-    // }
 
     MAP_REDUCE.reduce = function (context) {
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
-        //var scriptObj = ns_runtime.getCurrentScript();
+
         var searchValues = VC2_Utils.safeParse(context.values.shift());
 
         log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
@@ -124,7 +142,7 @@ define([
             logTitle,
             LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length)
         );
-        LogPrefix = ['[', searchValues.recordType, searchValues.id, '] '].join('');
+        LogPrefix = ['[', searchValues.recordType, ':', searchValues.id, '] '].join('');
         //var record_id = searchValues.id;
         log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));
 

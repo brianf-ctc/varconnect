@@ -145,7 +145,10 @@ define([
                                     vendorConfig: vendorConfig,
                                     poNum: ponum,
                                     poId: objPO.id,
-                                    country: vendorConfig.country == 'CA' ? '2' : '1',
+                                    country:
+                                        vendorConfig.country == 'CA'
+                                            ? constants.Lists.COUNTRY.CA
+                                            : constants.Lists.COUNTRY.US,
                                     countryCode: vendorConfig.country
                                 });
                             } catch (processErr) {
