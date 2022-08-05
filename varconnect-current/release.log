@@ -1,3 +1,25 @@
+08-03
+ * added targeted Bill File download thru SFTP
+ * only process Bill Files that is not inactive
+ * move setting locations if serialized item
+ * formatted views for json content
+   - bill file record
+   - vendor bill config
+   - vc logs
+ * added valid orders loop 
+
+07-27
+Order Status
+ * add invalid Ingram Status Closed 
+Log Viewer
+ * formatted JSON
+
 07-26-2022 
- * modified flex screen: 
- - 
+ * Bill Creator
+   - flex screen link to bill file
+   - bill file link to flex screen
+   - updated bill file record form 
+* updated XML Debug
+   - remove country     
+
+

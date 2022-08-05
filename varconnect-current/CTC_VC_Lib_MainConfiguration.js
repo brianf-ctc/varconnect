@@ -161,8 +161,7 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js', './CTC_VC2_Lib_Util
             result = _generateMainConfig(recLookup);
         }
 
-        log.audit('getMainConfiguration', result);
-
+        // log.audit('getMainConfiguration', result);
         return result;
     }
 

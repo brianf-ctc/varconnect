@@ -262,7 +262,7 @@ define([
             }
         }
 
-        // log.audit(logTitle, '>> Order Lines: ' + JSON.stringify(outputArray));
+        log.audit(logTitle, '>> Order Lines (1): ' + JSON.stringify(outputArray));
 
         return outputArray;
     }

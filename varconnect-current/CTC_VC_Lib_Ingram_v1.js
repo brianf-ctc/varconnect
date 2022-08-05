@@ -19,502 +19,629 @@
  * Author: shawn.blackburn
  */
 define([
+    'N/search',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (vcLog, VC_Global, VC2_Utils, moment) {
+], function (NS_Search, VC_Log, VC_Global, VC2_Utils, moment) {
     'use strict';
-    var LogTitle = 'WS:IngramV1';
+    var LogTitle = 'WS:IngramAPI',
+        LogPrefix;
 
-    /**
-     * @memberOf CTC_VC_Lib_Ingram_v1
-     * @param {object} option
-     * @returns string
-     **/
-    function generateToken(option) {
-        var logTitle = [LogTitle, 'generateToken'].join('::');
-        log.audit(logTitle, option);
+    var CURRENT = {};
+    var LibIngramAPI = {
+        ValidOrderStatus: ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'],
+        ValidLineStatus: ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'],
+        ValidShippedStatus: ['SHIPPED'],
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
+            option = option || {};
 
-        var tokenReq = VC2_Utils.sendRequest({
-            header: [LogTitle, 'GenerateToken'].join(' '),
-            method: 'post',
-            recordId: option.recordId,
-            doRetry: true,
-            maxRetry: 3,
-            query: {
-                url: option.vendorConfig.accessEndPoint,
-                body: VC2_Utils.convertToQuery({
-                    client_id: option.vendorConfig.apiKey,
-                    client_secret: option.vendorConfig.apiSecret,
-                    grant_type: 'client_credentials'
-                }),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
-        });
-
-        if (tokenReq.isError) throw tokenReq.errorMsg;
-        var tokenResp = VC2_Utils.safeParse(tokenReq.RESPONSE);
-        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
-
-        return tokenResp.access_token;
-    }
-
-    /**
-     * @memberOf CTC_VC_Lib_Ingram_v1
-     * @param {object} option
-     * @returns object
-     **/
-    function processRequest(option) {
-        var logTitle = [LogTitle, 'processRequest'].join('::');
-        log.audit(logTitle, option);
-
-        var returnVaue;
-
-        try {
-            var token = generateToken({
-                vendorConfig: option.vendorConfig,
-                recordId: option.poId
-            });
-            if (!token) throw 'Missing token for authentication.';
-
-            var orderStatusReq = VC2_Utils.sendRequest({
-                header: [LogTitle, 'Order Status'].join(' : '),
-                method: 'get',
-                query: {
-                    url:
-                        option.vendorConfig.endPoint +
-                        '/search?customerOrderNumber=' +
-                        option.poNum,
-                    headers: {
-                        Authorization: 'Bearer ' + token,
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json',
-                        'IM-CustomerNumber': option.vendorConfig.customerNo,
-                        'IM-CountryCode': option.vendorConfig.country,
-                        'IM-CustomerOrderNumber': option.poNum,
-                        'IM-CorrelationID': [option.poNum, option.poId].join('-')
+            try {
+                var tokenReq = VC2_Utils.sendRequest({
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'post',
+                    recordId: CURRENT.recordId,
+                    doRetry: true,
+                    maxRetry: 3,
+                    query: {
+                        url: CURRENT.vendorConfig.accessEndPoint,
+                        body: VC2_Utils.convertToQuery({
+                            client_id: CURRENT.vendorConfig.apiKey,
+                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            grant_type: 'client_credentials'
+                        }),
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
                     }
-                },
-                recordId: option.poId
-            });
+                });
 
-            if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
-            var orderStatusResp = VC2_Utils.safeParse(orderStatusReq.RESPONSE);
+                if (tokenReq.isError) throw tokenReq.errorMsg;
+                var tokenResp = VC2_Utils.safeParse(tokenReq.RESPONSE);
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
-            if (!orderStatusResp) throw 'Unable to fetch server response';
-
-            // get the Order Details
-            var orderDetails = _getOrderDetail({
-                responseBody: orderStatusResp,
-                token: token,
-                vendorConfig: option.vendorConfig,
-                poId: option.poId
-            });
-
-            if (!orderDetails) throw 'Unable to fetch order details';
-
-            returnVaue = orderDetails;
-
-            // get the itemavailability ///
-            _getItemAvailability({
-                responseBody: orderDetails,
-                token: token,
-                vendorConfig: option.vendorConfig,
-                poId: option.poId || option.poNum,
-                poNum: option.poNum
-            });
-        } catch (error) {
-            var errorMsg = VC2_Utils.extractError(error);
-            vcLog.recordLog({
-                header: [LogTitle + ': Error', errorMsg].join(' - '),
-                body: JSON.stringify(error),
-                transaction: option.poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
-                isDebugMode: option.fromDebug
-            });
-            if (!returnVaue) returnVaue = errorMsg;
-        }
-        return returnVaue;
-    }
-
-    function _getOrderDetail(option) {
-        var logTitle = [LogTitle, '_getOrderDetail'].join('::');
-        log.audit(logTitle, option);
-
-        var response = option.responseBody,
-            vendorConfig = option.vendorConfig,
-            token = option.token,
-            poId = option.poId,
-            returnValue;
-
-        var orders = response.orders;
-        log.audit(logTitle, '>> orders = ' + JSON.stringify(orders));
-
-        var validOrder;
-        if (orders && orders.length) {
-            if (orders.length == 1) validOrder = orders[0];
-            else {
-                for (var i = 0, j = orders.length; i < j; i++) {
-                    if (orders[i].orderStatus != 'CANCELLED') {
-                        validOrder = orders[i];
-                        break;
-                    }
-                }
-            }
-        }
-        log.audit(logTitle, '>> validOrder' + JSON.stringify(validOrder));
-        if (!validOrder) validOrder = orders[0];
-
-        if (validOrder || orders.length) {
-            var ingramOrderNumber = validOrder.ingramOrderNumber;
-            log.audit(logTitle, '>> ingramOrderNumber: ' + JSON.stringify(ingramOrderNumber));
-
-            var orderDetailReq = VC2_Utils.sendRequest({
-                header: [LogTitle, 'OrderDetails'].join(' '),
-                method: 'get',
-                doRetry: false,
-                recordId: poId,
-                query: {
-                    url: vendorConfig.endPoint + '/' + ingramOrderNumber,
-                    headers: {
-                        Authorization: 'Bearer ' + token,
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json',
-                        'IM-CustomerNumber': vendorConfig.customerNo,
-                        'IM-CountryCode': vendorConfig.country,
-                        'IM-CorrelationID': [option.poNum, option.poId].join('-')
-                    }
-                }
-            });
-
-            if (orderDetailReq.isError) throw orderDetailReq.errorMsg;
-            var orderDetailRespBody = VC2_Utils.safeParse(orderDetailReq.RESPONSE);
-            if (!orderDetailRespBody) throw 'Unable to fetch server response';
-
-            returnValue = orderDetailRespBody;
-        }
-
-        return returnValue;
-    }
-
-    function _getItemAvailability(option) {
-        var logTitle = [LogTitle, '_getItemAvailability'].join('::');
-        log.audit(logTitle, option);
-
-        var responseBody = option.responseBody,
-            vendorConfig = option.vendorConfig,
-            token = option.token,
-            poId = option.poId,
-            poNum = option.poNum;
-
-        var orderLines = responseBody.lines;
-        log.audit(logTitle, 'orderLines : ' + JSON.stringify(orderLines));
-
-        if (!orderLines || !orderLines.length) return;
-
-        /// update the default ETA ///
-        var ingramOrderDate = responseBody.ingramOrderDate;
-        var defaultETA = {
-            date: moment(ingramOrderDate).add(1, 'day').toDate(),
-            text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
-        };
-        log.audit(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
-
-        var arrItems = [],
-            shipLocation = {},
-            i,
-            ii,
-            j,
-            jj,
-            orderLine;
-
-        for (i = 0, j = orderLines.length; i < j; i++) {
-            orderLine = orderLines[i];
-            log.audit(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
-
-            var lineData = {
-                ingramPartNumber: orderLine.ingramPartNumber,
-                customerPartNumber: orderLine.ingramPartNumber,
-                vendorPartNumber: orderLine.vendorPartNumber,
-                upc: orderLine.upcCode,
-                quantityRequested: orderLine.quantityOrdered
-            };
-
-            if (orderLine.shipmentDetails) {
-                if (!shipLocation[lineData.ingramPartNumber]) {
-                    shipLocation[lineData.ingramPartNumber] = [];
-                }
-
-                for (ii = 0, jj = orderLine.shipmentDetails.length; ii < jj; ii++) {
-                    shipLocation[lineData.ingramPartNumber].push({
-                        warehouseId: orderLine.shipmentDetails[ii].shipFromWarehouseId,
-                        warehouseLocation: orderLine.shipmentDetails[ii].shipFromLocation
-                    });
-
-                    // set the default ETA
-                    orderLine.shipmentDetails[ii].estimatedDeliveryDate = defaultETA.text;
-                }
+                returnValue = tokenResp.access_token;
+                CURRENT.accessToken = tokenResp.access_token;
+            } catch (error) {
+                returnValue = false;
+                throw error;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Access Token: ' + JSON.stringify(returnValue));
             }
 
-            log.audit(logTitle, '>>>> lineData: ' + JSON.stringify(lineData));
-            arrItems.push(lineData);
-        }
+            return returnValue;
+        },
+        getValidOrders: function (option) {
+            var logTitle = [LogTitle, 'getValidOrders'].join('::'),
+                returnValue;
+            try {
+                var reqValidOrders = VC2_Utils.sendRequest({
+                    header: [LogTitle, 'Orders Search'].join(' : '),
+                    query: {
+                        url:
+                            CURRENT.vendorConfig.endPoint +
+                            '/search?customerOrderNumber=' +
+                            CURRENT.recordNum,
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
+                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerOrderNumber': CURRENT.recordNum,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        }
+                    },
+                    recordId: CURRENT.recordId
+                });
 
-        log.audit(logTitle, '>> arrItems: ' + JSON.stringify(arrItems));
-        log.audit(logTitle, '>> shipLocation: ' + JSON.stringify(shipLocation));
+                if (reqValidOrders.isError) throw reqValidOrders.errorMsg;
+                var respIngramOrders = VC2_Utils.safeParse(reqValidOrders.RESPONSE);
+                if (!respIngramOrders) throw 'Unable to fetch server response';
 
-        // send the call
-        var itemAvailReq = VC2_Utils.sendRequest({
-            header: [LogTitle, 'Item Availability'].join(' : '),
-            method: 'post',
-            doRetry: false,
-            query: {
-                url:
-                    vendorConfig.endPoint.replace(
-                        /orders[\/]*$/gi,
-                        'catalog/priceandavailability?'
-                    ) +
-                    'includeAvailability=true&includePricing=true&includeProductAttributes=true',
-                headers: {
-                    Authorization: 'Bearer ' + token,
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'IM-CustomerNumber': vendorConfig.customerNo,
-                    'IM-CountryCode': vendorConfig.country,
-                    'IM-CustomerOrderNumber': poNum,
-                    'IM-CorrelationID': [option.poNum, option.poId].join('-')
-                },
-                body: JSON.stringify({
-                    showAvailableDiscounts: true,
-                    showReserveInventoryDetails: true,
-                    specialBidNumber: '',
-                    products: arrItems
-                })
-            },
-            recordId: poId
-        });
-        if (itemAvailReq.isError) throw itemAvailReq.errorMsg;
-        var itemAvailRespBody = VC2_Utils.safeParse(itemAvailReq.RESPONSE);
-        if (!itemAvailRespBody) throw 'Unable to retrieve the item availability';
+                var arrOrderDetails = [];
+                if (!respIngramOrders.orders) throw 'Orders are not found';
 
-        for (i = 0, j = orderLines.length; i < j; i++) {
-            orderLine = orderLines[i];
+                for (var i = 0, j = respIngramOrders.orders.length; i < j; i++) {
+                    var ingramOrder = respIngramOrders.orders[i];
 
-            for (ii = 0, jj = itemAvailRespBody.length; ii < jj; ii++) {
-                var itemAvailLine = itemAvailRespBody[i];
-                log.audit(logTitle, '>> itemAvailLine: ' + JSON.stringify(itemAvailLine));
+                    if (!ingramOrder.orderStatus) continue;
+                    if (VC2_Utils.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
+
+                    arrOrderDetails.push(ingramOrder);
+                }
+
+                returnValue = arrOrderDetails;
+            } catch (error) {
+                var errorMsg = VC2_Utils.extractError(error);
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+
+                VC2_Utils.vcLog({
+                    title: [LogTitle + ' Orders Search : Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+                returnValue = false;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> valid orders: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+        getOrderDetails: function (option) {
+            var logTitle = [LogTitle, 'getOrderDetails'].join('::'),
+                returnValue;
+
+            try {
+                var ingramOrder = option.ingramOrder;
+                if (!ingramOrder) throw 'Ingram Order is required';
+
+                var reqOrderDetails = VC2_Utils.sendRequest({
+                    header: [LogTitle, 'Order Details'].join(' '),
+                    recordId: CURRENT.recordId,
+                    query: {
+                        url: CURRENT.vendorConfig.endPoint + '/' + ingramOrder.ingramOrderNumber,
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
+                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        }
+                    }
+                });
+
+                if (reqOrderDetails.isError) throw reqOrderDetails.errorMsg;
+                var respOrderDetail = VC2_Utils.safeParse(reqOrderDetails.RESPONSE);
+                if (!respOrderDetail) throw 'Unable to fetch server response';
+
+                returnValue = respOrderDetail;
+            } catch (error) {
+                var errorMsg = VC2_Utils.extractError(error);
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+                VC2_Utils.vcLog({
+                    title: [LogTitle + ' Order Details:  Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+                returnValue = false;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> order details: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+        getItemAvailability: function (option) {
+            var logTitle = [LogTitle, 'getItemAvailability'].join('::'),
+                returnValue;
+
+            try {
+                var respOrderDetail = option.orderDetails;
+                if (VC2_Utils.isEmpty(respOrderDetail)) throw 'Missing order details';
+
+                var arrLineItems = [];
+
+                for (var i = 0, j = respOrderDetail.lines.length; i < j; i++) {
+                    var orderLine = respOrderDetail.lines[i];
+
+                    var lineData = null;
+                    for (var ii = 0, jj = arrLineItems.length; ii < jj; ii++) {
+                        if (arrLineItems[ii].ingramPartNumber == orderLine.ingramPartNumber) {
+                            lineData = arrLineItems[ii];
+                            break;
+                        }
+                    }
+
+                    if (!lineData) {
+                        arrLineItems.push({
+                            ingramPartNumber: orderLine.ingramPartNumber,
+                            customerPartNumber: orderLine.ingramPartNumber,
+                            vendorPartNumber: orderLine.vendorPartNumber,
+                            upc: orderLine.upcCode,
+                            quantityRequested: orderLine.quantityOrdered
+                        });
+                    } else {
+                        lineData.quantityRequested += parseInt(orderLine.quantityOrdered);
+                    }
+                }
+
+                log.audit(logTitle, LogPrefix + '>> arrLineItems: ' + JSON.stringify(arrLineItems));
+
+                var reqItemAvail = VC2_Utils.sendRequest({
+                    header: [LogTitle, 'Item Availability'].join(' : '),
+                    method: 'post',
+                    query: {
+                        url:
+                            CURRENT.vendorConfig.endPoint.replace(
+                                /orders.*$/gi,
+                                'catalog/priceandavailability?'
+                            ) +
+                            'includeAvailability=true&includePricing=true&includeProductAttributes=true',
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
+                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerOrderNumber': CURRENT.recordNum,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        },
+                        body: JSON.stringify({
+                            showAvailableDiscounts: true,
+                            showReserveInventoryDetails: true,
+                            specialBidNumber: '',
+                            products: arrLineItems
+                        })
+                    },
+                    recordId: CURRENT.recordId
+                });
+                if (reqItemAvail.isError) throw reqItemAvail.errorMsg;
+                var respItemAvail = VC2_Utils.safeParse(reqItemAvail.RESPONSE);
+                if (!respItemAvail) throw 'Unable to retrieve the item availability';
+
+                returnValue = respItemAvail;
+            } catch (error) {
+                var errorMsg = VC2_Utils.extractError(error);
+                VC2_Utils.vcLog({
+                    title: [LogTitle + ' Item Availability:  Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+                returnValue = [];
+            } finally {
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> item availability: ' + JSON.stringify(returnValue)
+                );
+            }
+            return returnValue;
+        },
+        extractItemAvailability: function (option) {
+            var logTitle = [LogTitle, 'extractItemAvailability'].join('::');
+
+            var lineDetail = option.lineDetail,
+                respItemAvail = option.itemAvailability,
+                itemLocations = null;
+
+            // look for the item availability
+            for (var i = 0, j = respItemAvail.length; i < j; i++) {
+                var itemAvail = respItemAvail[i];
 
                 if (
-                    itemAvailLine.ingramPartNumber != orderLine.ingramPartNumber ||
-                    itemAvailLine.upc != orderLine.upcCode ||
-                    itemAvailLine.vendorPartNumber != orderLine.vendorPartNumber
+                    itemAvail.ingramPartNumber != lineDetail.ingramPartNumber ||
+                    itemAvail.upc != lineDetail.upcCode ||
+                    itemAvail.vendorPartNumber != lineDetail.vendorPartNumber
                 )
                     continue;
 
-                // search for location
-                if (!itemAvailLine.availability) continue;
-
-                var locationList = itemAvailLine.availability
-                    ? itemAvailLine.availability.availabilityByWarehouse || false
-                    : false;
-
-                log.audit(logTitle, '>> locationList: ' + JSON.stringify(locationList));
-
-                var arrDates = [];
-                for (var iii = 0, jjj = locationList.length; iii < jjj; iii++) {
-                    var dateStr = locationList[iii].quantityBackorderedEta;
-                    if (!dateStr) continue;
-                    // arrDates.push( new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$2/$3/$1")) );
-                    arrDates.push({
-                        dateStr: dateStr,
-                        dateObj: moment(dateStr).toDate() //new Date(dateStr.replace(/(\d{4}).(\d{2}).(\d{2})/gi, "$3/$2/$1"))
-                    });
-                }
-                log.audit(logTitle, '>> arrDates: ' + JSON.stringify(arrDates));
-                if (arrDates.length) {
-                    var nearestDate = arrDates.sort(function (a, b) {
-                        return a.dateObj - b.dateObj;
-                    })[0];
-                    for (
-                        var shipLine = 0;
-                        shipLine < responseBody.lines[i].shipmentDetails.length;
-                        shipLine++
-                    ) {
-                        responseBody.lines[i].shipmentDetails[shipLine].estimatedDeliveryDate =
-                            nearestDate.dateStr;
-                    }
+                if (itemAvail.availability && itemAvail.availability.availabilityByWarehouse) {
+                    itemLocations = itemAvail.availability.availabilityByWarehouse;
+                    break;
                 }
             }
-        }
+            if (!itemLocations) return;
 
-        return responseBody;
-    }
+            var arrDateBackOrderd = [];
+            for (var ii = 0, jj = itemLocations.length; ii < jj; ii++) {
+                var location = itemLocations[ii];
+                var dateBackOrderd = location.quantityBackorderedEta;
+                if (!dateBackOrderd) continue;
 
-    /**
-     * @memberOf CTC_VC_Lib_Ingram_v1
-     * @param {object} option
-     * @returns object
-     **/
-    function processResponse(option) {
-        var logTitle = [LogTitle, 'processResponse'].join('::');
-        log.audit(logTitle, option);
-
-        var outputArray = [],
-            poId = option.poId;
-
-        var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-        var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-        var validShippedStatus = ['SHIPPED'];
-
-        try {
-            if (option.responseBody === null || !option.responseBody) {
-                throw 'Missing or invalid responseBody';
-            }
-            var objBody = option.responseBody;
-
-            log.audit(logTitle, '>> objBody : ' + JSON.stringify(objBody));
-
-            var orderStatus = objBody.orderStatus;
-            if (orderStatus) orderStatus = orderStatus.toUpperCase();
-            log.audit(logTitle, '>> orderStatus : ' + JSON.stringify(orderStatus));
-
-            if (!VC2_Utils.inArray(orderStatus, validOrderStatus)) {
-                throw 'Skipping Order - ' + orderStatus;
+                arrDateBackOrderd.push({
+                    dateStr: dateBackOrderd,
+                    dateObj: moment(dateBackOrderd).toDate()
+                });
             }
 
-            for (var i = 0; i < objBody.lines.length; i++) {
-                var orderLine = objBody.lines[i];
-                var lineStatus = orderLine.lineStatus;
-                if (lineStatus) lineStatus = lineStatus.toUpperCase();
+            log.audit(
+                logTitle,
+                LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd)
+            );
 
-                log.audit(logTitle, '>> orderLine #' + i + ': ' + JSON.stringify(orderLine));
+            if (VC2_Utils.isEmpty(arrDateBackOrderd)) return;
 
-                if (!VC2_Utils.inArray(lineStatus, validLineStatus)) {
-                    log.audit(
-                        logTitle,
-                        '.... skipping line, invalid status :  [' + orderLine.lineStatus + ']'
-                    );
-                }
+            var nearestDate = arrDateBackOrderd.sort(function (a, b) {
+                return a.dateObj - b.dateObj;
+            });
+            log.audit(logTitle, LogPrefix + '>> nearestDate: ' + JSON.stringify(nearestDate));
 
-                var outputObj = {};
+            return nearestDate.shift();
+        },
+        extractOrderShipmentDetails: function (option) {
+            var logTitle = [LogTitle, 'extractOrderShipmentDetails'].join('::');
 
-                // get line details from order lines
-                outputObj.line_num = orderLine.customerLineNumber;
-                outputObj.item_num = orderLine.vendorPartNumber; ////orderLine.ingramPartNumber;//
-                outputObj.item_num_alt = orderLine.ingramPartNumber;
-                outputObj.is_shipped = VC2_Utils.inArray(lineStatus, validShippedStatus);
+            var shipmentDetails = option.shipmentDetails;
+            if (VC2_Utils.isEmpty(shipmentDetails)) return false;
 
-                //add shipment details
-                outputObj.ship_qty = 0;
-                var trackingNum = [];
-                var serials = [];
-                for (var shipLine = 0; shipLine < orderLine.shipmentDetails.length; shipLine++) {
-                    var shipment = orderLine.shipmentDetails[shipLine];
+            var shipData = {
+                quantity: 0,
+                serials: [],
+                trackingNumbers: []
+            };
 
-                    outputObj.ship_qty += parseInt(shipment.quantity);
-                    outputObj.order_num = orderLine.subOrderNumber; //shipment.invoiceNumber;
-                    outputObj.order_date = shipment.invoiceDate;
-                    outputObj.ship_date = shipment.shippedDate;
-                    outputObj.order_eta = shipment.estimatedDeliveryDate || '';
-                    outputObj.order_eta_ship = shipment.estimatedDeliveryDate;
+            for (var i = 0, j = shipmentDetails.length; i < j; i++) {
+                var shipment = shipmentDetails[i];
+                shipData.detail = shipment;
+                shipData.quantity += parseFloat(shipment.quantity);
+                shipData.order_date = shipment.invoiceDate;
+                shipData.ship_date = shipment.shippedDate;
+                shipData.order_eta = shipment.estimatedDeliveryDate || '';
+                shipData.order_eta_ship = shipment.estimatedDeliveryDate;
 
-                    //add carrier details
-                    //		            	  for (var carrierLine = 0; carrierLine < shipment.carrierDetails.length; carrierLine++) {
-                    var carrier = shipment.carrierDetails;
+                if (shipment.carrierDetails) {
+                    shipData.carrier = shipment.carrierDetails.carrierName;
 
-                    if (!outputObj.carrier) outputObj.carrier = carrier.carrierName;
+                    if (shipment.carrierDetails.trackingDetails) {
+                        var trackingDetails = shipment.carrierDetails.trackingDetails;
+                        for (var ii = 0, jj = trackingDetails.length; ii < jj; ii++) {
+                            if (trackingDetails[ii].trackingNumber) {
+                                // var trackingNumber = trackingDetails[ii].trackingNumber.split(/\s/gi);
 
-                    //add tracking details
-                    if (carrier.trackingDetails) {
-                        for (
-                            var trackingLine = 0;
-                            trackingLine < carrier.trackingDetails.length;
-                            trackingLine++
-                        ) {
-                            var tracking = carrier.trackingDetails[trackingLine];
+                                shipData.trackingNumbers = shipData.trackingNumbers.concat(
+                                    trackingDetails[ii].trackingNumber.split(/[\W\D]+/g)
+                                );
 
-                            if (tracking.trackingNumber) trackingNum.push(tracking.trackingNumber);
+                                // shipData.trackingNumbers.push(trackingDetails[ii].trackingNumber);
+                            }
 
-                            //add serials
-                            if (tracking.SerialNumbers)
-                                for (
-                                    var serialLine = 0;
-                                    serialLine < tracking.SerialNumbers.length;
-                                    serialLine++
-                                ) {
-                                    var serial = tracking.SerialNumbers[serialLine];
-                                    if (serial.serialNumber) serials.push(serial.serialNumber);
+                            if (trackingDetails[ii].SerialNumbers) {
+                                var serialNumbers = trackingDetails[ii].SerialNumbers;
+
+                                for (var iii = 0, jjj = serialNumbers.length; iii < jjj; iii++) {
+                                    if (serialNumbers[iii].serialNumber)
+                                        shipData.serials.push(serialNumbers[iii].serialNumber);
                                 }
+                            }
                         }
                     }
-                    //		            	  }
                 }
-                serials = VC2_Utils.uniqueArray(serials);
-                outputObj.tracking_num = trackingNum.join(',');
-                outputObj.serial_num = serials.join(',');
-                log.audit(logTitle, '>> adding: ' + JSON.stringify(outputObj));
-                outputArray.push(outputObj);
             }
-        } catch (error) {
-            log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
 
-            vcLog.recordLog({
-                header: 'Ingram Response Processing | ERROR',
-                body: VC2_Utils.extractError(error),
-                transaction: poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
-                isDebugMode: option.fromDebug
-            });
+            shipData.serials = VC2_Utils.uniqueArray(shipData.serials);
+            shipData.trackingNumbers = VC2_Utils.uniqueArray(shipData.trackingNumbers);
+
+            log.audit(logTitle, LogPrefix + '>> Ship Data: ' + JSON.stringify(shipData));
+            return shipData;
+        },
+        buildOutputArray: function (option) {
+            var logTitle = [LogTitle, 'buildOutputArray'].join('::'),
+                returnValue;
+            try {
+                var respOrderDetails = option.orderDetails,
+                    respItemAvail = option.itemAvailability;
+
+                var arrLineData = [];
+
+                for (var i = 0, j = respOrderDetails.lines.length; i < j; i++) {
+                    var lineDetail = respOrderDetails.lines[i];
+
+                    var lineData = {
+                        detail: lineDetail,
+                        availabilityDate: LibIngramAPI.extractItemAvailability({
+                            lineDetail: lineDetail,
+                            itemAvailability: respItemAvail
+                        }),
+                        status: (lineDetail.lineStatus || '').toUpperCase()
+                    };
+
+                    if (!VC2_Utils.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
+                        log.audit(
+                            logTitle,
+                            '.... skipping line, invalid status :  [' + lineData.status + ']'
+                        );
+                        continue;
+                    }
+
+                    if (lineDetail.shipmentDetails) {
+                        lineData.shipmentDetails = LibIngramAPI.extractOrderShipmentDetails({
+                            shipmentDetails: lineDetail.shipmentDetails
+                        });
+                    }
+
+                    arrLineData.push(lineData);
+                }
+
+                returnValue = arrLineData;
+            } catch (error) {
+                log.audit(
+                    logTitle,
+                    LogPrefix +
+                        ('## ERROR ## ' + VC2_Utils.extractError(error)) +
+                        ('\n' + JSON.stringify(error))
+                );
+                returnValue = false;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> output array: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+        getNSRecord: function (option) {
+            var logTitle = [LogTitle, 'getNSRecord'].join('::'),
+                returnValue;
+
+            var orderNumber = option.ingramOrderNumber;
+            orderNumber = orderNumber.replace(/[^a-z0-9]/gi, '');
+            orderNumber = [CURRENT.vendorConfig.fulfillmentPrefix, orderNumber].join('');
+
+            var searchOption = {
+                type: 'itemfulfillment',
+                filters: [
+                    ['type', 'anyof', 'ItemShip'],
+                    'AND',
+                    ['mainline', 'is', 'T'],
+                    'AND',
+                    [
+                        "formulatext: REGEXP_REPLACE({custbody_ctc_if_vendor_order_match}, '[^a-zA-Z0-9]', '')",
+                        'is',
+                        orderNumber
+                    ]
+                ],
+                columns: ['internalid', 'transactionnumber', 'custbody_ctc_if_vendor_order_match']
+            };
+            // log.audit(logTitle, LogPrefix + '>> searchOPtion: ' + JSON.stringify(searchOption));
+
+            var nsItemFF;
+            NS_Search.create(searchOption)
+                .run()
+                .each(function (row) {
+                    nsItemFF = row.id;
+                    return true;
+                });
+
+            returnValue = nsItemFF;
+            log.audit(logTitle, LogPrefix + '>> nsItemFF: ' + JSON.stringify(nsItemFF));
+
+            return returnValue;
         }
-
-        log.audit(logTitle, '>> output array: ' + JSON.stringify(outputArray));
-        return outputArray;
-    }
-
-    function process(option) {
-        var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, option);
-
-        var outputArray = null;
-
-        // outputArray = JSON.parse(
-        //     '[{"line_num":"001","item_num":"DELL-WD19TBS","item_num_alt":"8VQ071","is_shipped":true,"ship_qty":9,"order_num":"40-09550-11","order_date":"2022-04-10","ship_date":"2022-04-10","order_eta":"2022-04-09","order_eta_ship":"2022-04-09","carrier":"FEDEX GROUND","tracking_num":"571966430395,571966430400","serial_num":"3PTRVK3,3THFVK3,68NRVK3,7RTRVK3,7WKQVK3,CMTRVK3,DFCSVK3,FQMRVK3,H60SVK3,3PTRVK3,3THFVK3,68NRVK3,7RTRVK3,7WKQVK3,CMTRVK3,DFCSVK3,FQMRVK3,H60SVK3"},{"line_num":"002","item_num":"DELL-WD19TBS","item_num_alt":"8VQ071","is_shipped":true,"ship_qty":1,"order_num":"40-09550-21","order_date":"2022-04-08","ship_date":"2022-04-08","order_eta":"2022-04-09","order_eta_ship":"2022-04-09","carrier":"FEDEX GROUND","tracking_num":"563221536625","serial_num":"J4NMVK3"}]'
-        // );
-
-        var responseBody = processRequest({
-            poNum: option.poNum,
-            vendorConfig: option.vendorConfig,
-            poId: option.poId
-        });
-
-        if (responseBody) {
-            outputArray = processResponse({
-                poNum: option.poNum,
-                poId: option.poId,
-                vendorConfig: option.vendorConfig,
-                responseBody: responseBody
-            });
-        }
-        log.audit(logTitle, '>> outputArray: ' + JSON.stringify(outputArray));
-
-        vcLog.recordLog({
-            header: [LogTitle, 'Lines'].join(' - '),
-            body: !VC2_Utils.isEmpty(outputArray)
-                ? JSON.stringify(outputArray)
-                : '-no lines to process-',
-            transaction: option.poId,
-            status: VC_Global.Lists.VC_LOG_STATUS.INFO,
-            isDebugMode: option.fromDebug
-        });
-
-        return outputArray;
-    }
+    };
 
     return {
-        process: process,
-        processRequest: processRequest
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            CURRENT.recordId = option.poId || option.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum;
+            CURRENT.vendorConfig = option.vendorConfig;
+            LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+            if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+            if (!CURRENT.recordId) throw 'Missing record Id!';
+
+
+            // generate the
+            LibIngramAPI.generateToken();
+            if (!CURRENT.accessToken) throw 'Unable to generate access token';
+
+            // get all the valid orders
+            var arrValidOrders = LibIngramAPI.getValidOrders();
+
+            var arrResponse = [];
+
+            for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                var validOrder = arrValidOrders[i];
+                LogPrefix =
+                    '' +
+                    ('[purchaseorder:' + CURRENT.recordId + '][') +
+                    (validOrder.ingramOrderNumber + '] ');
+
+                log.audit(logTitle, LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder));
+
+                var respOrderDetails = LibIngramAPI.getOrderDetails({
+                    ingramOrder: validOrder
+                });
+
+                var respItemAvail = LibIngramAPI.getItemAvailability({
+                    orderDetails: respOrderDetails
+                });
+
+                arrResponse.push({
+                    orderInfo: validOrder,
+                    orderDetails: respOrderDetails,
+                    itemAvailability: respItemAvail
+                });
+            }
+            returnValue = arrResponse;
+
+            return returnValue;
+        },
+
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum;
+                CURRENT.vendorConfig = option.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.recordId) throw 'Missing record Id!';
+
+                log.audit(logTitle, LogPrefix + '>> CURRENT: ' + JSON.stringify(CURRENT));
+
+                var arrOrderResponse = this.processRequest(option),
+                    arrLineOutput = [],
+                    allSerials = {};
+
+                for (var i = 0, j = arrOrderResponse.length; i < j; i++) {
+                    var orderResponse = arrOrderResponse[i];
+
+                    var validOrder = orderResponse.orderInfo;
+                    LogPrefix =
+                        '' +
+                        ('[purchaseorder:' + CURRENT.recordId + '][') +
+                        (validOrder.ingramOrderNumber + '] ');
+
+                    var ingramOrderDate = validOrder.ingramOrderDate;
+                    var defaultETA = {
+                        date: moment(ingramOrderDate).add(1, 'day').toDate(),
+                        text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
+                    };
+                    log.audit(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
+
+                    var arrLines = LibIngramAPI.buildOutputArray(orderResponse);
+
+                    for (var ii = 0, jj = arrLines.length; ii < jj; ii++) {
+                        var itemDetail = arrLines[ii].detail,
+                            shipment = arrLines[ii].shipmentDetails,
+                            lineStatus = arrLines[ii].status;
+
+                        var outputLineData = {
+                            line_num: itemDetail.customerLineNumber,
+                            item_num: itemDetail.vendorPartNumber,
+                            item_num_alt: itemDetail.ingramPartNumber,
+                            is_shipped: VC2_Utils.inArray(
+                                lineStatus,
+                                LibIngramAPI.ValidShippedStatus
+                            ),
+                            line_status: lineStatus,
+                            ship_qty: shipment.quantity,
+                            order_num: itemDetail.subOrderNumber,
+                            order_date: shipment.detail.invoiceDate,
+                            ship_date: shipment.detail.shippedDate,
+                            order_eta: shipment.detail.estimatedDeliveryDate || defaultETA.text,
+                            order_eta_ship: shipment.detail.estimatedDeliveryDate,
+                            carrier: shipment.carrier
+                            // tracking_num: shipment.trackingNumbers.length
+                            //     ? shipment.trackingNumbers.join(',')
+                            //     : 'NA',
+                            // serial_num: shipment.serials.length ? shipment.serials.join(',') : 'NA'
+                        };
+
+                        //// SERIALS / TRACKING //////////////////////
+                        if (!allSerials[outputLineData.item_num])
+                            allSerials[outputLineData.item_num] = [];
+
+                        if (!VC2_Utils.isEmpty(shipment.serials)) {
+                            // add the shipment serials
+                            allSerials[outputLineData.item_num] = VC2_Utils.uniqueArray(
+                                allSerials[outputLineData.item_num].concat(shipment.serials)
+                            );
+
+                            outputLineData.serial_num = allSerials[outputLineData.item_num]
+                                .splice(0, outputLineData.ship_qty)
+                                .join(',');
+                        } else {
+                            outputLineData.serial_num = 'NA';
+                        }
+
+                        if (!VC2_Utils.isEmpty(shipment.trackingNumbers)) {
+                            outputLineData.tracking_num = shipment.trackingNumbers.join(',');
+                        } else {
+                            outputLineData.tracking_num = 'NA';
+                        }
+                        /////////////////////////////////////////////
+
+                        // check if fulfillment is
+                        var nsItemFF = LibIngramAPI.getNSRecord({
+                            ingramOrderNumber: outputLineData.order_num
+                        });
+
+                        if (nsItemFF) {
+                            outputLineData.ns_record = nsItemFF;
+                        }
+
+                        log.audit(
+                            logTitle,
+                            LogPrefix + '>> Line Data: ' + JSON.stringify(outputLineData)
+                        );
+
+                        arrLineOutput.push(outputLineData);
+                    }
+                }
+
+                returnValue = arrLineOutput;
+            } catch (error) {
+                var errorMsg = VC2_Utils.extractError(error);
+                VC2_Utils.vcLog({
+                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
+
+                VC2_Utils.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !VC2_Utils.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                });
+            }
+
+            return returnValue;
+        }
     };
 });

@@ -54,84 +54,30 @@ define([
 
         log.debug(logTitle, '*** START SCRIPT ***');
 
-        var billInAdvance = ns_runtime.getCurrentScript().getParameter({
+        var paramBillInAdv = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_in_adv'
         });
-
-        var filters = [
-            ['custrecord_ctc_vc_bill_linked_bill', 'anyof', '@NONE@'],
-            'AND',
-            [
-                'custrecord_ctc_vc_bill_proc_status',
-                'anyof',
-                BILL_CREATOR.Status.PENDING,
-                BILL_CREATOR.Status.REPROCESS,
-                BILL_CREATOR.Status.ERROR
-            ],
-            'AND',
-            ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
-        ];
-
-        // added isolate bill file id //
-        // @bfeliciano
-        var billFileId = ns_runtime.getCurrentScript().getParameter({
+        var paramBillFileId = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_fileid'
         });
 
-        if (billFileId) {
-            var updateValues = {
-                custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
-            };
-
-            // log.debug(logTitle, '>> updateValues: ' + JSON.stringify(updateValues));
-
-            ns_record.submitFields({
-                type: 'customrecord_ctc_vc_bills',
-                id: billFileId,
-                values: updateValues,
-                options: {
-                    enablesourcing: true,
-                    ignoreMandatoryFields: true
-                }
-            });
-
-            log.debug(logTitle, '>> billFileId: ' + JSON.stringify(billFileId));
-            filters.push('AND');
-            filters.push(['internalid', 'anyof', billFileId]);
-            // } else {
-            // if (billInAdvance == true) {
-            //     // include all applicable statuses
-            //     filters.push('AND');
-            //     filters.push([
-            //         'custrecord_ctc_vc_bill_linked_po.status',
-            //         'anyof',
-            //         'PurchOrd:B', // PendingReceipt
-            //         'PurchOrd:D', // PartiallyReceived
-            //         'PurchOrd:E', // PendingBilling_PartiallyReceived
-            //         'PurchOrd:F', // PendingBill
-            //         'PurchOrd:G' // FullyBilled
-            //     ]);
-            // } else {
-            //     // only include statuses that have been received and are ready to be billed
-            //     filters.push('AND');
-            //     filters.push([
-            //         'custrecord_ctc_vc_bill_linked_po.status',
-            //         'anyof',
-            //         'PurchOrd:E', // PendingBilling_PartiallyReceived
-            //         'PurchOrd:F', // PendingBill
-            //         'PurchOrd:G' // FullyBilled
-            //     ]);
-            // }
-        }
-
-        // end
-        // filters.push('OR');
-        // filters.push(['custrecord_ctc_vc_bill_linked_po','anyof','@NONE@']);
-        log.debug(logTitle, '>> filters: ' + JSON.stringify({ filters: filters }));
-
-        return ns_search.create({
+        var searchOption = {
             type: 'customrecord_ctc_vc_bills',
-            filters: filters,
+            filters: [
+                ['isinactive', 'is', 'F'],
+                'AND',
+                ['custrecord_ctc_vc_bill_linked_bill', 'anyof', '@NONE@'],
+                'AND',
+                [
+                    'custrecord_ctc_vc_bill_proc_status',
+                    'anyof',
+                    BILL_CREATOR.Status.PENDING,
+                    BILL_CREATOR.Status.REPROCESS,
+                    BILL_CREATOR.Status.ERROR
+                ],
+                'AND',
+                ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
+            ],
             columns: [
                 'internalid',
                 'custrecord_ctc_vc_bill_po',
@@ -139,13 +85,39 @@ define([
                 'custrecord_ctc_vc_bill_proc_status',
                 'custrecord_ctc_vc_bill_log'
             ]
-        });
+        };
+
+        if (paramBillFileId) {
+            var updateValues = {
+                custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
+            };
+
+            ns_record.submitFields({
+                type: 'customrecord_ctc_vc_bills',
+                id: paramBillFileId,
+                values: updateValues,
+                options: {
+                    enablesourcing: true,
+                    ignoreMandatoryFields: true
+                }
+            });
+
+            searchOption.filters.push('AND');
+            searchOption.filters.push(['internalid', 'anyof', paramBillFileId]);
+        }
+        log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
+
+        var searchObj = ns_search.create(searchOption);
+        var totalPending = searchObj.runPaged().count;
+        log.audit(logTitle, '>> Bills To Process: ' + totalPending);
+
+        return searchObj;
     }
 
     function reduce(context) {
         var logTitle = [LOG_TITLE, 'reduce'].join(':');
 
-        var billInAdvance = ns_runtime.getCurrentScript().getParameter({
+        var paramBillInAdv = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_bill_in_adv'
         });
 
@@ -187,7 +159,7 @@ define([
                 var requestObj = JSON.parse(JSON.stringify(rec));
                 log.debug(logTitle, '>> requestObj: ' + JSON.stringify(requestObj));
 
-                requestObj.billInAdvance = billInAdvance;
+                requestObj.paramBillInAdv = paramBillInAdv;
 
                 var createBillResponse = ns_https.requestRestlet({
                     headers: restletHeaders,

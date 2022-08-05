@@ -188,7 +188,10 @@ define([
                             (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
                                 xmlVendor == vendorList.INGRAM_MICRO)
                         ) {
-                            if (fulfillLineData.vendorSKU.replace('#', ' ') == lineData.skuName) {
+                            if (
+                                fulfillLineData.vendorSKU &&
+                                fulfillLineData.vendorSKU.replace('#', ' ') == lineData.skuName
+                            ) {
                                 log.debug(
                                     logTitle,
                                     LogPrefix + '.......matched for Ingram Hash SKU '
@@ -765,8 +768,13 @@ define([
                     vendorOrderNum = numPrefix + fulfillOrderNum;
 
                 // skip any existing orders
-                if (fulfillOrderNum !== 'NA' && Helper.orderExists(vendorOrderNum)) {
+                if (fulfillOrderNum == 'NA') {
                     log.audit(logTitle, LogPrefix + '...skipping ' + fulfillOrderNum);
+                    continue;
+                }
+
+                if (Helper.orderExists(vendorOrderNum)) {
+                    log.audit(logTitle, LogPrefix + '...skipping: Fulfillment already exists ');
                     continue;
                 }
 
@@ -785,6 +793,11 @@ define([
                         continue;
                     }
 
+                    if (arrLineData[ii].hasOwnProperty('ns_record') && arrLineData[ii].ns_record) {
+                        log.debug(logTitle, '......skipping line: Fulfillment already exists.');
+                        continue;
+                    }
+
                     log.audit(
                         logTitle,
                         '... adding to fulfillment lines - ' + JSON.stringify(arrLineData[ii])
@@ -797,7 +810,7 @@ define([
                     LogPrefix + '>> arrLinesToFulfill = ' + JSON.stringify(arrLinesToFulfill)
                 );
                 if (!arrLinesToFulfill.length) {
-                    log.audit(logTitle, LogPrefix + '** No items to fulfill ** ');
+                    log.audit(logTitle, LogPrefix + '** No items to fulfill **');
                     continue;
                 }
 
@@ -1093,14 +1106,6 @@ define([
                                         JSON.stringify(uniqueItems[tmp2])
                                 );
 
-                                // /////////////////////////////////
-                                // // set the location here
-                                Helper.setLineLocation({
-                                    record: recItemFF,
-                                    orderId: so_ID
-                                });
-                                // ////////////////////////////////
-
                                 if (
                                     lineFFData.quantity < parseInt(uniqueItems[tmp2].totalShipped)
                                 ) {
@@ -1229,6 +1234,14 @@ define([
                                         // log.audit(logTitle, '>> is serialized1: ' + isSerialized);
 
                                         if (isSerialized && isSerialized === 'T') {
+                                            // /////////////////////////////////
+                                            // // set the location here
+                                            Helper.setLineLocation({
+                                                record: recItemFF,
+                                                orderId: so_ID
+                                            });
+                                            // ////////////////////////////////
+
                                             var resultSerials = Helper.addNativeSerials({
                                                 record: recItemFF,
                                                 serials: item.all_serial_nums
@@ -1366,6 +1379,14 @@ define([
                                     );
 
                                     if (isSerialized && isSerialized === 'T') {
+                                        // /////////////////////////////////
+                                        // // set the location here
+                                        Helper.setLineLocation({
+                                            record: recItemFF,
+                                            orderId: so_ID
+                                        });
+                                        // ////////////////////////////////
+
                                         resultSerials = Helper.addNativeSerials({
                                             record: recItemFF,
                                             serials: item.all_serial_nums.split('\n')

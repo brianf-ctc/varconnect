@@ -327,7 +327,7 @@ define([
                     'PO #' + currentData.poNum,
                     ' - current status: ' + poStatus.status
                 ].join('');
-                throw BILL_CREATOR.Code.NOT_BILLABLE;
+                // throw BILL_CREATOR.Code.NOT_BILLABLE;
             }
             ///////////////////////////////////
 
@@ -984,17 +984,17 @@ define([
 
             log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
-            VC_Log.add({
-                header: LOG_APP,
-                transaction: CURRENT_PO,
-                body: [
-                    returnObj.msg,
-                    returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' '),
-                status: returnObj.isError
-                    ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
-                    : VC_Constants.Lists.VC_LOG_STATUS.INFO
-            });
+            // VC_Log.add({
+            //     header: LOG_APP,
+            //     transaction: CURRENT_PO,
+            //     body: [
+            //         returnObj.msg,
+            //         returnObj.details != returnObj.msg ? returnObj.details : ''
+            //     ].join(' '),
+            //     status: returnObj.isError
+            //         ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
+            //         : VC_Constants.Lists.VC_LOG_STATUS.INFO
+            // });
 
             log.debug(logTitle, '## EXIT SCRIPT ## ' + JSON.stringify(returnObj));
         }
