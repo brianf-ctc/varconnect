@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  * @NScriptType MapReduceScript
  */
@@ -75,6 +75,10 @@ define([
     function map(context) {
         var logTitle = [LogTitle, 'map'].join(':');
 
+        var paramBillFileName = runtime.getCurrentScript().getParameter({
+            name: 'custscript_ctc_vc_bc_vendor_filename'
+        });
+
         //get the vendor config details
         log.audit(logTitle, '>> context.value: ' + JSON.stringify(context.value));
 
@@ -136,7 +140,13 @@ define([
 
         var s = search.create({
             type: 'customrecord_ctc_vc_bills',
-            filters: [['created', 'onorafter', 'daysago90']],
+            filters: [
+                ['custrecord_ctc_vc_bill_integration', 'anyof', context.value],
+                'AND',
+                ['isinactive', 'is', 'F'],
+                'AND',
+                ['formulanumeric: FLOOR({now}-{created})', 'lessthanorequalto', '90']
+            ],
             columns: [
                 search.createColumn({ name: 'name', summary: 'GROUP', sort: search.Sort.ASC })
             ]
@@ -163,7 +173,6 @@ define([
             if (!list[i]) break;
             currentFile = { data: list[i] };
             if (list[i].directory) {
-                // log.audit(logTitle, '>>> ...skipping directories - ' + list[i].name);
                 continue;
             }
 
@@ -203,16 +212,25 @@ define([
                 }
             }
 
-            var isAlreadyProcessed = false;
-            for (var e = 0; e < existingFiles.length; e++) {
-                if (list[i].name == existingFiles[e]) {
-                    isAlreadyProcessed = true;
-                    break;
+            if (paramBillFileName) {
+                var matchStr = new RegExp(paramBillFileName, 'ig');
+
+                if (!currentFile.data.name.match(matchStr)) {
+                    currentFile.skippedReason = 'Not matching the bill file';
+                    continue;
                 }
-            }
-            if (isAlreadyProcessed) {
-                currentFile.skippedReason = 'already processed';
-                continue;
+            } else {
+                var isAlreadyProcessed = false;
+                for (var e = 0; e < existingFiles.length; e++) {
+                    if (list[i].name == existingFiles[e]) {
+                        isAlreadyProcessed = true;
+                        break;
+                    }
+                }
+                if (isAlreadyProcessed) {
+                    currentFile.skippedReason = 'already processed';
+                    continue;
+                }
             }
 
             // log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));

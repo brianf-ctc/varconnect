@@ -158,7 +158,7 @@ define([
             if (orders.length == 1) validOrder = orders[0];
             else {
                 for (var i = 0, j = orders.length; i < j; i++) {
-                    if (orders[i].orderStatus != 'CANCELLED') {
+                    if (!VC2_Utils.inArray(orders[i].orderStatus, ['CANCELLED', 'CLOSED'])) {
                         validOrder = orders[i];
                         break;
                     }
@@ -446,7 +446,6 @@ define([
                                     serialLine++
                                 ) {
                                     var serial = tracking.SerialNumbers[serialLine];
-
                                     if (serial.serialNumber) serials.push(serial.serialNumber);
                                 }
                         }

@@ -137,150 +137,150 @@ define([
                 jQuery('#custpage_xml__loader').show();
                 setTimeout(function () {
                     try {
-                        console.log('debug lib: Calling library webservice');
+                console.log('debug lib: Calling library webservice');
                         var promiseResponse = new Promise(function (resolve) {
                             var outputObj;
-                            try {
-                                outputObj = libWebService.handleRequest({
-                                    vendorConfig: vendorConfig,
-                                    poNum: ponum,
-                                    poId: objPO.id,
+                try {
+                    outputObj = libWebService.handleRequest({
+                        vendorConfig: vendorConfig,
+                        poNum: ponum,
+                        poId: objPO.id,
                                     country:
                                         vendorConfig.country == 'CA'
                                             ? constants.Lists.COUNTRY.CA
                                             : constants.Lists.COUNTRY.US,
-                                    countryCode: vendorConfig.country
-                                });
-                            } catch (processErr) {
-                                outputObj =
-                                    'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
-                                    processErr.name +
-                                    ': ' +
-                                    processErr.message +
-                                    ']';
-                                console.log(
-                                    'debug lib: ' +
-                                        processErr.name +
-                                        '- ' +
-                                        processErr.message +
-                                        '==\n' +
-                                        processErr.stack
-                                );
-                            }
+                        countryCode: vendorConfig.country
+                    });
+                } catch (processErr) {
+                    outputObj =
+                        'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
+                        processErr.name +
+                        ': ' +
+                        processErr.message +
+                        ']';
+                    console.log(
+                        'debug lib: ' +
+                            processErr.name +
+                            '- ' +
+                            processErr.message +
+                            '==\n' +
+                            processErr.stack
+                    );
+                }
                             resolve(outputObj);
                         });
                         promiseResponse.then(function (outputObj) {
                             console.log(
                                 'debug lib: webservice return ' + JSON.stringify(outputObj)
                             );
-                            if (outputObj) {
+                if (outputObj) {
                                 if (
                                     vendorConfig.xmlVendor ==
                                     constants.Lists.XML_VENDOR.INGRAM_MICRO
                                 ) {
-                                    xmlContent =
-                                        '<!--Retrieved XML-->\n' +
-                                        outputObj.detailxml +
-                                        '\n<!--Tracking XML-->\n' +
-                                        outputObj.trackxml;
-                                    try {
-                                        xmlContent = vkbeautify.xml(xmlContent, 4);
+                        xmlContent =
+                            '<!--Retrieved XML-->\n' +
+                            outputObj.detailxml +
+                            '\n<!--Tracking XML-->\n' +
+                            outputObj.trackxml;
+                        try {
+                            xmlContent = vkbeautify.xml(xmlContent, 4);
                                         xmlContent = hljs.highlight(xmlContent, {
                                             language: 'xml'
                                         }).value;
-                                        elementIdToShow = 'custpage_xml__viewer';
-                                        elementIdToHide = 'custpage_json__viewer';
-                                    } catch (parseErr) {
-                                        xmlContent = JSON.stringify(outputObj);
-                                        xmlContent = vkbeautify.json(xmlContent, 4);
+                            elementIdToShow = 'custpage_xml__viewer';
+                            elementIdToHide = 'custpage_json__viewer';
+                        } catch (parseErr) {
+                            xmlContent = JSON.stringify(outputObj);
+                            xmlContent = vkbeautify.json(xmlContent, 4);
                                         xmlContent = hljs.highlight(xmlContent, {
                                             language: 'JSON'
                                         }).value;
-                                        elementIdToShow = 'custpage_json__viewer';
-                                        elementIdToHide = 'custpage_xml__viewer';
-                                    }
-                                } else if (
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
+                            elementIdToShow = 'custpage_json__viewer';
+                            elementIdToHide = 'custpage_xml__viewer';
+                        }
+                    } else if (
+                        vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
+                        vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
                                     vendorConfig.xmlVendor ==
                                         constants.Lists.XML_VENDOR.SYNNEX_API ||
                                     vendorConfig.xmlVendor ==
                                         constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
                                     vendorConfig.xmlVendor ==
                                         constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
-                                ) {
-                                    xmlContent = JSON.stringify(outputObj);
-                                    try {
-                                        xmlContent = vkbeautify.json(xmlContent, 4);
+                    ) {
+                        xmlContent = JSON.stringify(outputObj);
+                        try {
+                            xmlContent = vkbeautify.json(xmlContent, 4);
                                         xmlContent = hljs.highlight(xmlContent, {
                                             language: 'JSON'
                                         }).value;
-                                        elementIdToShow = 'custpage_json__viewer';
-                                        elementIdToHide = 'custpage_xml__viewer';
-                                    } catch (parseErr) {
-                                        xmlContent = vkbeautify.xml(xmlContent, 4);
+                            elementIdToShow = 'custpage_json__viewer';
+                            elementIdToHide = 'custpage_xml__viewer';
+                        } catch (parseErr) {
+                            xmlContent = vkbeautify.xml(xmlContent, 4);
                                         xmlContent = hljs.highlight(xmlContent, {
                                             language: 'xml'
                                         }).value;
-                                        elementIdToShow = 'custpage_xml__viewer';
-                                        elementIdToHide = 'custpage_json__viewer';
-                                    }
-                                } else {
-                                    xmlContent = outputObj;
-                                    if (typeof xmlContent == 'string') {
-                                        try {
-                                            xmlContent = vkbeautify.xml(xmlContent, 4);
+                            elementIdToShow = 'custpage_xml__viewer';
+                            elementIdToHide = 'custpage_json__viewer';
+                        }
+                    } else {
+                        xmlContent = outputObj;
+                        if (typeof xmlContent == 'string') {
+                            try {
+                                xmlContent = vkbeautify.xml(xmlContent, 4);
                                             xmlContent = hljs.highlight(xmlContent, {
                                                 language: 'xml'
                                             }).value;
-                                            elementIdToShow = 'custpage_xml__viewer';
-                                            elementIdToHide = 'custpage_json__viewer';
-                                        } catch (parseErr) {
-                                            xmlContent = JSON.stringify(outputObj);
-                                            xmlContent = vkbeautify.json(xmlContent, 4);
+                                elementIdToShow = 'custpage_xml__viewer';
+                                elementIdToHide = 'custpage_json__viewer';
+                            } catch (parseErr) {
+                                xmlContent = JSON.stringify(outputObj);
+                                xmlContent = vkbeautify.json(xmlContent, 4);
                                             xmlContent = hljs.highlight(xmlContent, {
                                                 language: 'JSON'
                                             }).value;
-                                            elementIdToShow = 'custpage_json__viewer';
-                                            elementIdToHide = 'custpage_xml__viewer';
-                                        }
-                                    } else {
-                                        xmlContent = JSON.stringify(outputObj);
-                                        try {
-                                            xmlContent = vkbeautify.json(xmlContent, 4);
+                                elementIdToShow = 'custpage_json__viewer';
+                                elementIdToHide = 'custpage_xml__viewer';
+                            }
+                        } else {
+                            xmlContent = JSON.stringify(outputObj);
+                            try {
+                                xmlContent = vkbeautify.json(xmlContent, 4);
                                             xmlContent = hljs.highlight(xmlContent, {
                                                 language: 'JSON'
                                             }).value;
-                                            elementIdToShow = 'custpage_json__viewer';
-                                            elementIdToHide = 'custpage_xml__viewer';
-                                        } catch (parseErr) {
-                                            xmlContent = vkbeautify.xml(xmlContent, 4);
+                                elementIdToShow = 'custpage_json__viewer';
+                                elementIdToHide = 'custpage_xml__viewer';
+                            } catch (parseErr) {
+                                xmlContent = vkbeautify.xml(xmlContent, 4);
                                             xmlContent = hljs.highlight(xmlContent, {
                                                 language: 'xml'
                                             }).value;
-                                            elementIdToShow = 'custpage_xml__viewer';
-                                            elementIdToHide = 'custpage_json__viewer';
-                                        }
-                                    }
-                                }
+                                elementIdToShow = 'custpage_xml__viewer';
+                                elementIdToHide = 'custpage_json__viewer';
+                            }
+                        }
+                    }
                                 xmlViewerDocument.getElementById(elementIdToShow).style.display =
                                     '';
                                 xmlViewerDocument.getElementById(elementIdToHide).style.display =
                                     'none';
-                            }
-                            xmlViewerDocument.getElementById(
-                                elementIdToShow || 'custpage_xml__viewer'
-                            ).style.display = '';
-                            xmlViewerDocument.getElementById(
-                                [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
-                            ).innerHTML = xmlContent;
+                }
+                xmlViewerDocument.getElementById(
+                    elementIdToShow || 'custpage_xml__viewer'
+                ).style.display = '';
+                xmlViewerDocument.getElementById(
+                    [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
+                ).innerHTML = xmlContent;
                         });
                     } finally {
                         jQuery('#custpage_xml__loader').hide();
                     }
                 }, 500);
             }
-        }
+            }
     }
 
     (function () {

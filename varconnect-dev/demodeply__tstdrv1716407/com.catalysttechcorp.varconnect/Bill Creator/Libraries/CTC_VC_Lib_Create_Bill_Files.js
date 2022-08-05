@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
@@ -85,25 +85,16 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             var billFileSearchObj = ns_search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
-                    // ["custrecord_ctc_vc_bill_po", "is", myArr[i].ordObj.po],
-                    // "AND", ["custrecord_ctc_vc_bill_file_position", "is", i]
-                    //["custrecord_ctc_vc_bill_json", "startswith", myArr[i].ordObj.invoice]
-                    //myArr[i].ordObj.date
                     ['custrecord_ctc_vc_bill_number', 'is', myArr[i].ordObj.invoice],
                     'AND',
-                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate]
+                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
+                    'AND',
+                    ['isinactive', 'is', 'F']
                 ],
-                columns: [
-                    ns_search.createColumn({
-                        name: 'id'
-                    })
-                ]
+                columns: ['id']
             });
 
-            var billFileSearch = billFileSearchObj.run().getRange({
-                start: 0,
-                end: 1
-            });
+            var billFileSearch = billFileSearchObj.run().getRange({ start: 0, end: 1 });
 
             if (billFileSearch.length > 0) {
                 // this bill already exists so skip it
@@ -484,7 +475,10 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             arrNotes = noteHelper.removeDuplicates(arrNotes);
             log.audit(logTitle, '>> arrNotes [removeDuplicates]: ' + JSON.stringify(arrNotes));
             arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
-            log.audit(logTitle, '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes));
+            log.audit(
+                logTitle,
+                '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes)
+            );
             arrNotes = noteHelper.flatten(arrNotes);
             log.audit(logTitle, '>> arrNotes [flatten]: ' + JSON.stringify(arrNotes));
 

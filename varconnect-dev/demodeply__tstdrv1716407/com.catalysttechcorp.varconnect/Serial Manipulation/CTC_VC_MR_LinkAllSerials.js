@@ -92,7 +92,7 @@ define([
         var logTitle = [LogTitle, 'getInputData'].join('::');
 
         try {
-            PARAM = {
+             PARAM = {
                 recordType: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_type'),
                 recordId: ns_runtime.getCurrentScript().getParameter('custscript_vc_all_id')
             };

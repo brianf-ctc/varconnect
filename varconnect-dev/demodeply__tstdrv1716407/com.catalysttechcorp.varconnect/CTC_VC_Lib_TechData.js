@@ -21,7 +21,7 @@
  *
  */
 
-define([
+ define([
     'N/xml',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',

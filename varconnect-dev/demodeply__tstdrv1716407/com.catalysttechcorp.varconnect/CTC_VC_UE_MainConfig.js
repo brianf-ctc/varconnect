@@ -56,7 +56,7 @@ define([
             licenseText;
 
         log.debug(logTitle, '>> response: ' + JSON.stringify(response));
-
+        
         if (response == 'valid') {
             licenseText =
                 "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>";

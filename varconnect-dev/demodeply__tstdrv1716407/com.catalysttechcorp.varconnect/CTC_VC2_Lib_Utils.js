@@ -45,6 +45,12 @@ define(function (require) {
             for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
+        getCache: function (cacheKey) {
+            return VC2_Util.CACHE.hasOwnProperty(cacheKey) ? VC2_Util.CACHE[cacheKey] : null;
+        },
+        setCache: function (cacheKey, objVar) {
+            VC2_Util.CACHE[cacheKey] = objVar;
+        },
         uniqueArray: function (arrVar) {
             var arrNew = [];
             for (var i = 0, j = arrVar.length; i < j; i++) {
@@ -413,7 +419,7 @@ define(function (require) {
                         });
                     }
                     recLog.save();
-                    log.audit(logOption.HEADER, logOption.BODY);
+                    // log.audit(logOption.HEADER, logOption.BODY);
                 }
             } catch (error) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + VC2_Util.extractError(error));
@@ -474,7 +480,6 @@ define(function (require) {
 
         //     return requestObj;
         // },
-
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
@@ -484,7 +489,7 @@ define(function (require) {
             var _DEFAULT = {
                 validMethods: ['post', 'get'],
                 maxRetries: 3,
-                maxWaitMs: 3000
+                maxWaitMs: 1500
             };
             var NS_Https = require('N/https');
 
@@ -515,7 +520,7 @@ define(function (require) {
                         : 'get'
                 };
 
-            log.audit(logTitle, '>> param: ' + JSON.stringify(param));
+            // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
             var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
             try {
                 if (!param.noLogs) {
@@ -595,6 +600,7 @@ define(function (require) {
 
             return returnValue;
         },
+
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;

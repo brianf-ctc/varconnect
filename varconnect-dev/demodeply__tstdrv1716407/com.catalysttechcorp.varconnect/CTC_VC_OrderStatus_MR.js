@@ -93,9 +93,11 @@ define([
                 );
         },
         loadMainConfig: function () {
+            var logTitle = [LogTitle, 'loadMainConfig'].join('::');
+
             var mainConfig = vcMainCfg.getMainConfiguration();
             if (!mainConfig) {
-                log.error('No Configuration available');
+                log.error(logTitle, 'No Configuration available');
                 throw new Error('No Configuration available');
             } else return mainConfig;
         },
@@ -104,6 +106,7 @@ define([
             // log.debug(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
 
             var vendor = option.vendor,
+                vendorName = option.vendorName,
                 subsidiary = option.subsidiary,
                 vendorConfig = vcVendorCfg.getVendorConfiguration({
                     vendor: vendor,
@@ -111,12 +114,10 @@ define([
                 });
 
             if (!vendorConfig) {
-                log.error(
-                    'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
+                log.audit(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
                 );
-                // log.error(
-                //     'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
-                // );
             }
 
             log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
@@ -355,14 +356,15 @@ define([
 
             var vendorConfig = Helper.loadVendorConfig({
                 vendor: vendor,
+                vendorName: searchResult.values.entity.text,
                 subsidiary: subsidiary
             });
-            if (!vendorConfig) throw 'Vendor Config not found';
+            if (!vendorConfig) return;
+            // throw 'Vendor Config not found';
             // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
             // looup the country
             var countryCode = vendorConfig.countryCode;
-
             var po_record = ns_record.load({
                 type: 'purchaseorder',
                 id: docid,
@@ -602,7 +604,7 @@ define([
                 );
             }
         } catch (e) {
-            log.error('Error encountered in map', e);
+            log.error(logTitle, LogPrefix + ' - Error encountered in map' + JSON.stringify(e));
         }
     };
 
@@ -639,6 +641,7 @@ define([
             var subsidiary = Helper.getSubsidiary(poId);
             var vendorConfig = Helper.loadVendorConfig({
                 vendor: vendor,
+                vendorName: po_record.getText({ fieldId: 'entity' }),
                 subsidiary: subsidiary
             });
             if (!vendorConfig) throw 'Vendor Config not found';
@@ -751,7 +754,7 @@ define([
         log.debug(logTitle, '###### START: SUMMARY ###### ');
 
         summary.reduceSummary.errors.iterator().each(function (key, error) {
-            log.error('Reduce Error for key: ' + key, error);
+            log.error(logTitle, 'Reduce Error for key: ' + JSON.stringify([key, error]));
             return true;
         });
         var reduceKeys = [];

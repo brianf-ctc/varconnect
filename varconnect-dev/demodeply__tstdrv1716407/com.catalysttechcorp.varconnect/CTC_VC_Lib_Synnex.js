@@ -104,7 +104,7 @@ define([
             var orderCodes = xmlDoc.getElementsByTagName({ tagName: 'Code' });
             if (orderCodes && orderCodes.length) {
                 itemArray.header_info = {
-                    order_status: orderCodes[0].textContent
+                    order_status : orderCodes[0].textContent
                 };
             }
 

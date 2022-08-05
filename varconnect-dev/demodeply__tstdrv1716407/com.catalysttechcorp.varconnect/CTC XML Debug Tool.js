@@ -164,9 +164,9 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 '<iframe id="custpage_xml_viewer_frame" srcdoc="',
                 '<html>',
                 '<head>',
-                xmlViewerStylesheet.url
-                    ? "<link rel='stylesheet' href='" + xmlViewerStylesheet.url + "'>"
-                    : '',
+                    xmlViewerStylesheet.url
+                        ? "<link rel='stylesheet' href='" + xmlViewerStylesheet.url + "'>"
+                        : '',
                 '</head>',
                 '<body>',
                 "<pre id='custpage_xml__viewer' lang='xml'><code id='custpage_xml__viewer_content' class='language-xml' /></pre>",

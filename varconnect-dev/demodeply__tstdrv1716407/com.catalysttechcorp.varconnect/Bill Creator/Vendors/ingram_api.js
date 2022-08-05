@@ -85,7 +85,7 @@ define([
                 invoiceData.xmlStr = JSON.stringify({
                     invoiceDetails: JSON.parse(invoiceData.xmlStr),
                     miscCharges: orderDetails.miscCharges[orderKey]
-                });
+        });
 
                 // add the misc charges ///
                 for (var ii = 0, jj = orderDetails.miscCharges[orderKey].length; ii < jj; ii++) {
@@ -132,14 +132,14 @@ define([
             orderMiscCharges;
 
         try {
-            var pageNum = 1,
-                pageSize = 10,
+        var pageNum = 1,
+            pageSize = 10,
                 recordsCount = 0,
-                pageComplete = false;
+            pageComplete = false;
 
-            while (!pageComplete) {
-                var searchUrl =
-                    '/resellers/v6/orders/search?' +
+        while (!pageComplete) {
+            var searchUrl =
+                '/resellers/v6/orders/search?' +
                     vc2_utils.convertToQuery({
                         customerNumber: config.partner_id,
                         isoCountryCode: config.country,
@@ -216,19 +216,19 @@ define([
 
                             arrInvoiceLinks.push(subOrderLink.href);
                             arrOrderNums.push(orderInfo.ingramOrderNumber);
-                        }
                     }
                 }
+            }
 
                 // get the
                 if (recordsCount >= searchOrderResp.recordsFound) {
-                    pageComplete = true;
-                    break;
-                } else {
-                    pageNum++;
+                pageComplete = true;
+                break;
+            } else {
+                pageNum++;
                     vc2_utils.waitMs(1000);
-                }
             }
+        }
 
             log.audit(logTitle, LogPrefix + '>> Invoice Links: ' + JSON.stringify(arrInvoiceLinks));
             log.audit(logTitle, LogPrefix + '>> Order Numbers: ' + JSON.stringify(arrOrderNums));
@@ -255,7 +255,7 @@ define([
         }
 
         return returnValue;
-    }
+                }
 
     function getMiscCharges(option) {
         var logTitle = [LogTitle, 'getMiscCharges'].join('::'),
@@ -289,8 +289,8 @@ define([
                             customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
                             'IM-CorrelationID': recordData.tranid
-                        }
                     }
+                }
                 });
 
                 var orderDetailsResp =
@@ -319,7 +319,7 @@ define([
                         description: chargeInfo.chargeDescription,
                         amount: vc2_utils.forceFloat(chargeInfo.chargeAmount)
                     });
-                }
+                    }
 
                 vc2_utils.waitMs(1200);
             }
@@ -331,7 +331,7 @@ define([
         }
 
         return returnValue;
-    }
+                }
 
     function getInvoiceDetails(option) {
         var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
@@ -361,17 +361,17 @@ define([
                             invoiceLink +
                             ('?customerNumber=' + config.partner_id) +
                             ('&isoCountryCode=' + config.country),
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
                             Authorization: 'Bearer ' + token,
-                            'IM-CustomerNumber': config.partner_id,
-                            customerNumber: config.partner_id,
+                    'IM-CustomerNumber': config.partner_id,
+                    customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
                             'IM-CorrelationID': recordData.tranid
                         }
-                    }
-                });
+                }
+            });
 
                 var invoiceDetailsResp =
                     invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
@@ -435,9 +435,9 @@ define([
                         lineInfo.trackingnumberdetails.forEach(function (tracking) {
                             if (tracking.trackingnumber) listTracking.push(tracking.trackingnumber);
                             return true;
-                        });
+                    });
                         lineData.TRACKING = listTracking;
-                    }
+                }
 
                     // look for the item
                     var lineIdx = lodash.findIndex(invoiceData.lines, {
@@ -459,7 +459,7 @@ define([
                             invoiceData.lines[lineIdx].SERIAL = vc2_utils.uniqueArray(
                                 invoiceData.lines[lineIdx].SERIAL
                             );
-                        }
+            }
 
                         if (!vc2_utils.isEmpty(lineData.TRACKING)) {
                             if (!invoiceData.lines[lineIdx].TRACKING)
