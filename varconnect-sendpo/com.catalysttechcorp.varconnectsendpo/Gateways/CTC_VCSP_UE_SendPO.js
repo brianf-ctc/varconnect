@@ -22,7 +22,8 @@ define([
     '../Library/CTC_VCSP_Lib_MainConfiguration',
     '../Library/CTC_VCSP_Lib_LicenseValidator',
     '../Library/CTC_VCSP_Lib_VendorConfig',
-    '../Library/CTC_VCSP_Lib_Main.js'
+    '../Library/CTC_VCSP_Lib_Main.js',
+    '../Library/CTC_VCSP_Constants.js'
 ], function (
     NS_Runtime,
     NS_Search,
@@ -33,7 +34,8 @@ define([
     libMainConfig,
     libLicenseValidator,
     libVendorConfig,
-    libMain
+    libMain,
+    VCSP_Global
 ) {
     var LogTitle = 'VC:SENDPO';
 
@@ -91,7 +93,7 @@ define([
                         message:
                             '<br/>Error encountered:  ' +
                             sessionData.error +
-                            '<br/><br/> See the details at the bottom on the VAR Connect Tab&gt;VAR Connect Logs.',
+                            '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
                         title: 'Send PO Unsuccessful',
                         type: NS_Msg.Type.ERROR
                     };
@@ -100,6 +102,74 @@ define([
                     scriptContext.form.addPageInitMessage(msgOption);
                 }
                 /////////////////////////////////
+
+                var recordData = {};
+                if (scriptContext.newRecord) {
+                    recordData.type = scriptContext.newRecord.type;
+                    recordData.id = scriptContext.newRecord.id;
+                }
+                log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
+
+                var lookupData = CTC_Util.flatLookup({
+                    type: recordData.type,
+                    id: recordData.id,
+                    columns: [
+                        'subsidiary',
+                        'entity',
+                        'custbody_ctc_vcsp_is_po_sent',
+                        'custbody_ctc_vcsp_timestamp'
+                    ]
+                });
+                log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
+
+                // check for main config
+                var mainConfig = libMainConfig.getMainConfiguration();
+                log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+                if (!mainConfig) return;
+
+                // check for valid license
+                if (!_validateLicense({ mainConfig: mainConfig })) return;
+
+                var vendorCfg = libVendorConfig.getVendorConfiguration({
+                    vendor: lookupData.entity.value,
+                    subsidiary: lookupData.subsidiary.value
+                });
+                log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
+                if (!vendorCfg) return;
+
+                if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.MANUAL) {
+                    scriptContext.form.addButton({
+                        id: 'custpage_ctc_vcsp_sendpo',
+                        label: 'Send PO to Vendor',
+                        functionName:
+                            '(function(url){window.location.href=url;})("' +
+                            EventRouter.addActionURL('sendPO') +
+                            '")'
+                    }).isDisabled = !!lookupData.custbody_ctc_vcsp_is_po_sent;
+                } else {
+                    if (lookupData.custbody_ctc_vcsp_timestamp) {
+                        scriptContext.form.addButton({
+                            id: 'custpage_ctc_vcsp_sendpo',
+                            label: 'Manually Send PO to Vendor',
+                            functionName:
+                                '(function(url){window.location.href=url;})("' +
+                                EventRouter.addActionURL('sendPO') +
+                                '")'
+                        }).isDisabled = !!lookupData.custbody_ctc_vcsp_is_po_sent;
+                    }
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        },
+        onAfterSubmit: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+            try {
+                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                // if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                // if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
                 var recordData = {};
                 if (scriptContext.newRecord) {
@@ -129,15 +199,6 @@ define([
                 });
                 log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                 if (!vendorCfg) return;
-
-                scriptContext.form.addButton({
-                    id: 'custpage_ctc_vcsp_sendpo',
-                    label: 'Send PO to Vendor',
-                    functionName:
-                        '(function(url){window.location.href=url;})("' +
-                        EventRouter.addActionURL('sendPO') +
-                        '")'
-                });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

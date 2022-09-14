@@ -46,7 +46,14 @@ define([
             }
         });
 
-        if (tokenReq.isError) throw ['Generate Token Error - ', tokenReq.errorMsg].join('');
+        if (tokenReq.isError) {
+            // try to parse anything
+            var errorMessage = tokenReq.errorMsg;
+            if (tokenReq.PARSED_RESPONSE && tokenReq.PARSED_RESPONSE.error_description) {
+                errorMessage = tokenReq.PARSED_RESPONSE.error_description;
+            }
+            throw 'Generate Token Error - ' + errorMessage;
+        }
 
         var tokenResp = ctc_util.safeParse(tokenReq.RESPONSE);
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
@@ -54,131 +61,6 @@ define([
         log.audit(logTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
 
         return tokenResp;
-    }
-
-    function _getRequestedDeliveryDate(option) {
-        var logTitle = [LogTitle, 'getRequestedDeliveryDate'].join('::');
-
-        var record = option.record,
-            itemCount = record.items.length,
-            deliveryDate;
-
-        for (var i = 0; i < itemCount; i++) {
-            var expectedReceiptDate = record.items[i].expectedReceiptDate;
-            if (!deliveryDate && expectedReceiptDate) deliveryDate = expectedReceiptDate;
-        }
-
-        return deliveryDate;
-    }
-
-    function _buildOrderDetails(option) {
-        var logTitle = [LogTitle, 'buildOrderDetails'].join('::');
-
-        var record = option.record,
-            itemCount = record.items.length,
-            itemNum = '',
-            orderDetails = [];
-
-        for (var i = 0; i < itemCount; i++) {
-            if (itemNum != record.items[i].item || itemNum == '') {
-                var orderDetail = {
-                    lineItemNum: i + 1,
-                    lineItemDescription: record.items[i].description,
-                    supplierPartId: record.items[i].item,
-                    supplierPartIdExt: record.items[i].item,
-                    quantity: record.items[i].quantity,
-                    unitPrice: record.items[i].rate,
-                    currency: record.currency
-                    //TODO: Need to populate from SO?
-                    //				endUser: {
-                    //					 company: '',
-                    //					 contactName: '',
-                    //					 email: '',
-                    //					 telephone: '',
-                    //					 address: {
-                    //						 address1: '',
-                    //						 address2: '',
-                    //						 city: '',
-                    //						 stateOrProvince: '',
-                    //						 postalCode: '',
-                    //						 country: ''
-                    //					 }
-                    //				}
-                };
-
-                if (record.items[i].quotenumber)
-                    orderDetail.supplierPartId = record.items[i].quotenumber;
-
-                orderDetails.push(orderDetail);
-
-                itemNum = record.items[i].item;
-            } else {
-                orderDetails[orderDetails.length - 1].quantity = 1;
-                break;
-            }
-        }
-
-        return orderDetails;
-    }
-
-    function _buildCustomFields(option) {
-        var record = option.record;
-        var arr = [];
-
-        var shipCode = undefined,
-            dellShipCode = record.dellShippingCode;
-        if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.TWO_DAY) {
-            shipCode = '2D';
-        } else if (dellShipCode == constants.Lists.DELL_SHIPPING_CODE.NEXT_DAY) {
-            shipCode = 'ND';
-        } else {
-            shipCode = 'LC';
-        }
-        var createdfrom = record.createdFrom;
-
-        arr.push({
-            name: 'EU_PO_NUMBER',
-            type: 'string',
-            value: _getEndUserPO({ createdfrom: createdfrom })
-        });
-        arr.push({
-            name: 'SHIPPING_CODE',
-            type: 'string',
-            value: shipCode
-        });
-        //only for shippingCode = DC, i.e., FEDEX, UPS
-        arr.push({
-            name: 'SHIPPING_CARRIER_NAME',
-            type: 'string',
-            value: ''
-        });
-        //only for shippingCode = dc, carrier acct no
-        arr.push({
-            name: 'SHIPPING_CARRIER_ACCT_NU',
-            type: 'string',
-            value: ''
-        });
-
-        return arr;
-    }
-
-    function _getEndUserPO(option) {
-        var createdfrom = option.createdfrom,
-            endUserPO = '';
-
-        if (createdfrom) {
-            var lkup = ns_search.lookupFields({
-                type: ns_search.Type.TRANSACTION,
-                id: createdfrom,
-                columns: ['recordtype', 'otherrefnum']
-            });
-
-            if (lkup && lkup.recordtype === 'salesorder') {
-                endUserPO = lkup.otherrefnum;
-            }
-        }
-
-        return endUserPO;
     }
 
     function generateBody(option) {
@@ -192,9 +74,11 @@ define([
             testRequest = option.testRequest;
 
         var bodyContentJSON = {
+            isTestPayload: !!testRequest,
+            CorrelationId: '',
             PoNumber: record.tranId,
+            EndCustomerPONumber: record.custPO,
             ProfileId: customerNo,
-            isTestPayload: testRequest.toString(),
             RequestedDeliveryDate: (function () {
                 var deliveryDate = null;
                 for (var i = 0; i < itemLength; i++) {
@@ -202,16 +86,16 @@ define([
                     var expectedReceiptDate = record.items[i].expectedReceiptDate;
                     if (expectedReceiptDate) deliveryDate = expectedReceiptDate;
                 }
-                return deliveryDate || "null";
+                return deliveryDate || 'null';
             })(),
             OrderContact: {
                 Company: config.Bill.addressee,
                 ContactName: config.Bill.attention,
                 Email: config.Bill.email,
-                Telephone: '',
+                Telephone: config.Bill.phoneno,
                 Address: {
                     Address1: config.Bill.address1,
-                    Address2: config.Bill.address2,
+                    Address2: record.custPO, //config.Bill.address2,
                     City: config.Bill.city,
                     StateOrProvince: config.Bill.state,
                     PostalCode: config.Bill.zip,
@@ -222,10 +106,10 @@ define([
                 Company: config.Bill.addressee,
                 ContactName: config.Bill.attention,
                 Email: config.Bill.email,
-                Telephone: '',
+                Telephone: config.Bill.phoneno,
                 Address: {
                     Address1: config.Bill.address1,
-                    Address2: config.Bill.address2,
+                    Address2: record.custPO, //config.Bill.address2,
                     City: config.Bill.city,
                     StateOrProvince: config.Bill.state,
                     PostalCode: config.Bill.zip,
@@ -236,22 +120,22 @@ define([
                 Company: config.Bill.addressee,
                 ContactName: config.Bill.attention,
                 Email: config.Bill.email,
-                Telephone: '',
+                Telephone: config.Bill.phoneno,
                 Address: {
                     Address1: config.Bill.address1,
-                    Address2: config.Bill.address2,
+                    Address2: record.custPO, //config.Bill.address2,config.Bill.address2,
                     City: config.Bill.city,
                     StateOrProvince: config.Bill.state,
                     PostalCode: config.Bill.zip,
                     Country: config.Bill.country
                 }
             },
-            // Payment: {
-            //     // PaymentMean: 'Other',
-            //     // PaymentMeanOther: 'FP',
-            //     PaymentTerm: record.terms
-            // },
-            OrderDetails: (function () {
+            payment: {
+                PaymentMean: config.paymentMean,
+                PaymentMeanOther: config.paymentOther,
+                PaymentTerm: config.paymentTerm
+            },
+            orderDetails: (function () {
                 var arrItemList = [];
 
                 for (var i = 0, j = itemLength; i < j; i++) {
@@ -259,20 +143,20 @@ define([
 
                     var itemDetails = {
                         LineItemNum: (i + 1).toString(),
+                        lineItemDescription: 'null',
                         SupplierPartId: itemData.quotenumber,
                         SupplierPartIdExt: itemData.quotenumber,
-                        lineItemDescription: 'null',
-                        Quantity: (itemData.quantity).toString(),
-                        UnitPrice: (itemData.rate).toString(),
+                        Quantity: itemData.quantity.toString(),
+                        UnitPrice: itemData.rate.toString(),
                         Currency: record.currency,
                         FinalRecipient: {
                             Company: config.Bill.addressee,
                             ContactName: config.Bill.attention,
                             Email: config.Bill.email,
-                            Telephone: '',
+                            Telephone: config.Bill.phoneno,
                             Address: {
                                 Address1: config.Bill.address1,
-                                Address2: config.Bill.address2,
+                                Address2: record.custPO, //config.Bill.address2,config.Bill.address2,
                                 City: config.Bill.city,
                                 StateOrProvince: config.Bill.state,
                                 PostalCode: config.Bill.zip,
@@ -281,13 +165,13 @@ define([
                         }
                     };
                     // skip the item if no quote number
-                    if (!itemDetails.SupplierPartId) continue; 
+                    if (!itemDetails.SupplierPartId) continue;
                     log.audit(logTitle, '>> item Data: ' + JSON.stringify(itemData));
                     log.audit(logTitle, '>> item Details: ' + JSON.stringify(itemDetails));
 
-                    var itemDataIdx=-1;
-                    for (var ii=0, jj=arrItemList.length; ii <jj; ii++) {
-                        if (itemDetails.SupplierPartId ==arrItemList[ii].SupplierPartId ) {
+                    var itemDataIdx = -1;
+                    for (var ii = 0, jj = arrItemList.length; ii < jj; ii++) {
+                        if (itemDetails.SupplierPartId == arrItemList[ii].SupplierPartId) {
                             itemDataIdx = ii;
                             break;
                         }
@@ -298,12 +182,12 @@ define([
                     // if( itemDataIdx >= 0 ) {
                     //     arrItemList[ii].Quantity+=itemDetails.Quantity;
                     // } else {
-                        arrItemList.push(itemDetails);
+                    arrItemList.push(itemDetails);
                     // }
                 }
 
                 return arrItemList;
-            })(),
+            })()
             // CustomFields: (function () {
             //     var arr = [],
             //         shipCode,
@@ -387,7 +271,7 @@ define([
             log.audit(logTitle, sendPOBody);
 
             ctc_util.vcLog({
-                title: [LogTitle, 'PO Details'].join(' - '),
+                title: [LogTitle, 'PO Payload'].join(' - '),
                 content: sendPOBody,
                 transaction: record.id
             });
@@ -407,16 +291,25 @@ define([
                     body: JSON.stringify(sendPOBody)
                 }
             });
+            if (sendPOReq.isError) {
+                var errorMesg = sendPOReq.errorMsg;
+
+                if (sendPOReq.PARSED_RESPONSE) {
+                    if (
+                        sendPOReq.PARSED_RESPONSE.Fault &&
+                        sendPOReq.PARSED_RESPONSE.Fault.faultstring
+                    ) {
+                        errorMesg = sendPOReq.PARSED_RESPONSE.Fault.faultstring;
+                    }
+                }
+
+                throw 'Send PO Error - ' + errorMesg;
+            }
 
             returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
             returnResponse.responseCode = sendPOReq.RESPONSE.code;
+            returnResponse.message = 'Success';
 
-            var sendPoResp = sendPOReq.PARSED_RESPONSE;
-            if (sendPOReq.isError || !sendPoResp) {
-                throw 'Send PO Error - ' + sendPOReq.errorMsg;
-            } else {
-                returnResponse.message = 'Success';
-            }
         } catch (error) {
             var errorMsg = ctc_util.extractError(error);
 

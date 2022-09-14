@@ -33,6 +33,7 @@ define([], function () {
                 API_SECRET: 'custrecord_ctc_vcsp_api_secret',
                 SKU_COLUMN: 'custrecord_ctc_vcsp_ven_itemcol',
                 TEST_REQUEST: 'custrecord_ctc_vcsp_test',
+                EVENT_TYPE: 'custrecord_ctc_vcsp_event',
                 QA_WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint',
                 QA_ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint',
                 QA_API_KEY: 'custrecord_ctc_vcsp_api_key',
@@ -42,11 +43,17 @@ define([], function () {
                     ATTENTION: 'custrecord_ctc_vcsp_bill_attention',
                     ADDRESS_1: 'custrecord_ctc_vcsp_bill_addr1',
                     ADDRESS_2: 'custrecord_ctc_vcsp_bill_addr2',
+                    PHONENO: 'custrecord_ctc_vcsp_phoneno', 
                     CITY: 'custrecord_ctc_vcsp_bill_city',
                     STATE: 'custrecord_ctc_vcsp_bill_state',
                     ZIP: 'custrecord_ctc_vcsp_bill_zip',
                     COUNTRY: 'custrecord_ctc_vcsp_bill_country',
                     EMAIL: 'custrecord_ctc_vcsp_bill_email'
+                }, 
+                PAYMENT: {
+                    MEAN: 'custrecord_ctc_vcsp_payment_mean',
+                    OTHER: 'custrecord_ctc_vcsp_payment_mean_other', 
+                    TERM: 'custrecord_ctc_vcsp_payment_term'
                 }
             },
             MainConfig: {
@@ -64,6 +71,11 @@ define([], function () {
             }
         },
         Lists: {
+            PO_EVENT: {
+                ON_CREATE: 1, 
+                ON_APPROVE: 2, 
+                MANUAL: 3
+            }, 
             API_VENDOR: {
                 DELL: '1',
                 ARROW: '2',

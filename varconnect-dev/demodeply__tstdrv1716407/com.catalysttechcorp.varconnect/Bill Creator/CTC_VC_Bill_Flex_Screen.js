@@ -13,7 +13,7 @@
  * @NScriptType Suitelet
  */
 
- define([
+define([
     './../CTC_VC_Lib_MainConfiguration',
     './../CTC_VC_Constants',
     './../CTC_Util',
@@ -1727,7 +1727,6 @@
 
             Current.Form.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = Total.lineTax;
             Current.Form.getField({ id: 'custpage_poshiptotal' }).defaultValue = Total.lineShip;
-
 
             log.debug(logTitle, '## Totals : ' + JSON.stringify(Total));
             log.debug(logTitle, '## Charges : ' + JSON.stringify(Current.BILL_DATA.charges));

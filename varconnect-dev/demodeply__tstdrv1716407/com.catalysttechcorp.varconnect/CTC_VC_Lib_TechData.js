@@ -21,7 +21,7 @@
  *
  */
 
- define([
+define([
     'N/xml',
     './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
@@ -97,16 +97,24 @@
 
         // Create XML object from XML text returned from vendor, using Netsuite XML parser
         var itemArray = [];
-        var xmlDoc = ns_xml.Parser.fromString({
-            text: xmlString
-        });
+        var xmlDoc;
+        try {
+            xmlDoc = ns_xml.Parser.fromString({
+                text: xmlString
+            });
+        } catch (err) {
+            var errorMsg = VC2_Utils.extractError(err);
+            log.error(logTitle, errorMsg);
+            VC_Log.recordLog({
+                header: [LogTitle + ': Error', 'Invalid XML Document'].join(' - '),
+                body: 'Invalid XML Document',
+                transaction: option.poId,
+                status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+            });
+        }
 
         if (xmlDoc == null) {
-            VC2_Utils.vcLog({
-                recordId: option.poId,
-                title: [LogTitle, 'Request Error'].join('::'),
-                error: err
-            });
+            log.error(logTitle, '>> Empty Item Notes ...');
             return itemArray;
         }
 
@@ -412,9 +420,15 @@
             if (!orderStatusResp) throw 'Missing response content';
 
             ////////////////////////////
-            var xmlDoc = ns_xml.Parser.fromString({
-                text: orderStatusResp
-            });
+            var xmlDoc;
+            try {
+                xmlDoc = ns_xml.Parser.fromString({
+                    text: orderStatusResp
+                });
+            } catch (xmlParseErr) {
+                var parseErrorMsg = VC2_Utils.extractError(xmlParseErr);
+                log.error(logTitle, parseErrorMsg);
+            }
 
             if (!xmlDoc || xmlDoc == null) throw 'Invalid XML Document';
 

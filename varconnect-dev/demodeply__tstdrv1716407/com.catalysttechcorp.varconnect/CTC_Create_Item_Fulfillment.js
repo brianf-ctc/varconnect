@@ -188,7 +188,10 @@ define([
                             (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
                                 xmlVendor == vendorList.INGRAM_MICRO)
                         ) {
-                            if (fulfillLineData.vendorSKU.replace('#', ' ') == lineData.skuName) {
+                            if (
+                                fulfillLineData.vendorSKU &&
+                                fulfillLineData.vendorSKU.replace('#', ' ') == lineData.skuName
+                            ) {
                                 log.debug(
                                     logTitle,
                                     LogPrefix + '.......matched for Ingram Hash SKU '
@@ -728,7 +731,8 @@ define([
             }
 
             if (arrLineData == null || !arrLineData.length) {
-                throw 'Empty Line Data';
+                // throw 'Empty Line Data';
+                return false;
             }
 
             var numPrefix = vendorConfig.fulfillmentPrefix;
@@ -765,8 +769,13 @@ define([
                     vendorOrderNum = numPrefix + fulfillOrderNum;
 
                 // skip any existing orders
-                if (fulfillOrderNum !== 'NA' && Helper.orderExists(vendorOrderNum)) {
+                if (fulfillOrderNum == 'NA') {
                     log.audit(logTitle, LogPrefix + '...skipping ' + fulfillOrderNum);
+                    continue;
+                }
+
+                if (Helper.orderExists(vendorOrderNum)) {
+                    log.audit(logTitle, LogPrefix + '...skipping: Fulfillment already exists ');
                     continue;
                 }
 
@@ -785,6 +794,11 @@ define([
                         continue;
                     }
 
+                    if (arrLineData[ii].hasOwnProperty('ns_record') && arrLineData[ii].ns_record) {
+                        log.debug(logTitle, '......skipping line: Fulfillment already exists.');
+                        continue;
+                    }
+
                     log.audit(
                         logTitle,
                         '... adding to fulfillment lines - ' + JSON.stringify(arrLineData[ii])
@@ -797,7 +811,7 @@ define([
                     LogPrefix + '>> arrLinesToFulfill = ' + JSON.stringify(arrLinesToFulfill)
                 );
                 if (!arrLinesToFulfill.length) {
-                    log.audit(logTitle, LogPrefix + '** No items to fulfill ** ');
+                    log.audit(logTitle, LogPrefix + '** No items to fulfill **');
                     continue;
                 }
 
@@ -813,10 +827,19 @@ define([
                     });
                     log.audit(logTitle, LogPrefix + '...success');
                 } catch (err) {
-                    Helper.logMsg({
-                        title: 'Transform Error on SO: ' + so_ID,
-                        error: err
-                    });
+                    if (!responseData.length) {
+                        Helper.logMsg({
+                            title: 'Transform Error on SO (id: ' + so_ID + ')',
+                            error: err
+                        });
+                    } else {
+                        log.error(
+                            logTitle,
+                            'Transform Error on SO (id: ' +
+                                so_ID +
+                                ') when order already fulfilled during the process.'
+                        );
+                    }
                     continue;
                 }
 
@@ -1048,16 +1071,19 @@ define([
                                   fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL
                               })
                             : '',
-                        poLine: recItemFF.getSublistText({
+                        poLine: recItemFF.getCurrentSublistText({
                             sublistId: 'item',
-                            fieldId: 'poline',
-                            line: line
+                            fieldId: 'poline'
+                        }),
+                        dandh: recItemFF.getCurrentSublistText({
+                            sublistId: 'item',
+                            fieldId: VC_Constants.Columns.DH_MPN
                         })
                     };
 
                     log.audit(
                         logTitle,
-                        LogPrefix + ' current line : ' + JSON.stringify(lineFFData.isReceived)
+                        LogPrefix + ' current line : ' + JSON.stringify(lineFFData)
                     );
 
                     if (!lineFFData.isReceived) continue;
@@ -1084,7 +1110,10 @@ define([
                             if (
                                 lineFFData.item == uniqueItems[tmp2].item_num ||
                                 (lineFFData.vendorSKU != '' &&
-                                    lineFFData.vendorSKU == uniqueItems[tmp2].vendorSKU)
+                                    lineFFData.vendorSKU == uniqueItems[tmp2].vendorSKU) ||
+                                // D&H Item recognition
+                                (lineFFData.dandh == uniqueItems[tmp2].item_num &&
+                                    vendorConfig.xmlVendor == VC_Constants.Lists.XML_VENDOR.DandH)
                             ) {
                                 log.audit(
                                     logTitle,
@@ -1092,14 +1121,6 @@ define([
                                         '... unique item : ' +
                                         JSON.stringify(uniqueItems[tmp2])
                                 );
-
-                                // /////////////////////////////////
-                                // // set the location here
-                                Helper.setLineLocation({
-                                    record: recItemFF,
-                                    orderId: so_ID
-                                });
-                                // ////////////////////////////////
 
                                 if (
                                     lineFFData.quantity < parseInt(uniqueItems[tmp2].totalShipped)
@@ -1229,6 +1250,14 @@ define([
                                         // log.audit(logTitle, '>> is serialized1: ' + isSerialized);
 
                                         if (isSerialized && isSerialized === 'T') {
+                                            // /////////////////////////////////
+                                            // // set the location here
+                                            Helper.setLineLocation({
+                                                record: recItemFF,
+                                                orderId: so_ID
+                                            });
+                                            // ////////////////////////////////
+
                                             var resultSerials = Helper.addNativeSerials({
                                                 record: recItemFF,
                                                 serials: item.all_serial_nums
@@ -1366,6 +1395,14 @@ define([
                                     );
 
                                     if (isSerialized && isSerialized === 'T') {
+                                        // /////////////////////////////////
+                                        // // set the location here
+                                        Helper.setLineLocation({
+                                            record: recItemFF,
+                                            orderId: so_ID
+                                        });
+                                        // ////////////////////////////////
+
                                         resultSerials = Helper.addNativeSerials({
                                             record: recItemFF,
                                             serials: item.all_serial_nums.split('\n')
@@ -1563,13 +1600,13 @@ define([
 
                     log.audit(
                         logTitle,
-                        LogPrefix + '## Created Item Fulfillement: [itemfulfillment:' + objId + ']'
+                        LogPrefix + '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
                     );
 
                     Helper.logMsg({
                         title: 'Create Fulfillment',
                         isSucces: true,
-                        message: '## Created Item Fulfillement: [itemfulfillment:' + objId + ']'
+                        message: '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
                     });
                 } catch (err) {
                     var errMsg = Helper.extractError(err);

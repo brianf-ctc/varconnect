@@ -1,0 +1,5 @@
+ - Send PO - store last sent / disable when successfully sent
+ - configuration when to  send po (ie approved po - manual or auto)
+    - if PO is created from SO (auto)
+    - if PO is approved  (auto)
+    - if button is pressed (manual)

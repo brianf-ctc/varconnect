@@ -51,12 +51,12 @@ define([
 ) {
     var LogTitle = 'WebSvcLib';
 
-    function _validateVendorConfig(options) {
+    function _validateVendorConfig(option) {
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
-        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
-        var poNum = options.poNum,
-            vendorConfig = options.vendorConfig,
+        var poNum = option.poNum,
+            vendorConfig = option.vendorConfig,
             endpoint = vendorConfig.endPoint,
             user = vendorConfig.user,
             password = vendorConfig.password,
@@ -69,15 +69,15 @@ define([
     /**
      * Mainly for debug
      */
-    function handleRequest(options) {
+    function handleRequest(option) {
         var logTitle = [LogTitle, 'handleRequest'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
-        var poNum = options.poNum,
-            poId = options.poId,
-            vendorConfig = options.vendorConfig,
-            country = options.country,
-            countryCode = options.countryCode,
+        var poNum = option.poNum,
+            poId = option.poId,
+            vendorConfig = option.vendorConfig,
+            country = option.country,
+            countryCode = option.countryCode,
             responseXML;
 
         if (vendorConfig) {
@@ -107,15 +107,15 @@ define([
         return responseXML;
     }
 
-    function _handleResponse(options) {
+    function _handleResponse(option) {
         var logTitle = [LogTitle, '_handleResponse'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
         var outputArray = null,
-            responseXML = options.responseXML,
-            vendorConfig = options.vendorConfig,
+            responseXML = option.responseXML,
+            vendorConfig = option.vendorConfig,
             xmlVendor = vendorConfig.xmlVendor,
-            libVendor = options.libVendor;
+            libVendor = option.libVendor;
 
         outputArray = libVendor.processResponse({
             vendorConfig: vendorConfig,
@@ -125,11 +125,11 @@ define([
         return outputArray;
     }
 
-    function _getVendorLibrary(options) {
+    function _getVendorLibrary(option) {
         var logTitle = [LogTitle, '_getVendorLibrary'].join('::');
-        // log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        // log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
-        var vendorConfig = options.vendorConfig,
+        var vendorConfig = option.vendorConfig,
             xmlVendor = vendorConfig.xmlVendor,
             vendorList = constants.Lists.XML_VENDOR,
             xmlVendorText = vendorConfig.xmlVendorText,
@@ -175,14 +175,14 @@ define([
         return libVendor;
     }
 
-    function _checkDates(options) {
+    function _checkDates(option) {
         var logTitle = [LogTitle, '_checkDates'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
-        var poNum = options.poNum,
-            startDate = options.startDate,
-            tranDate = options.tranDate,
-            xmlVendorText = options.xmlVendorText;
+        var poNum = option.poNum,
+            startDate = option.startDate,
+            tranDate = option.tranDate,
+            xmlVendorText = option.xmlVendorText;
 
         var dtStartDate = vc2Utils.parseDate(startDate),
             dtTranDate = vc2Utils.parseDate(tranDate);
@@ -195,15 +195,15 @@ define([
         return dtStartDate <= dtTranDate;
     }
 
-    function _handleSingleVendor(options) {
+    function _handleSingleVendor(option) {
         var logTitle = [LogTitle, '_handleSingleVendor'].join('::');
 
-        log.audit(logTitle, options);
+        log.audit(logTitle, option);
 
-        var vendorConfig = options.vendorConfig,
-            poNum = options.poNum,
-            poId = options.poId,
-            tranDate = options.tranDate,
+        var vendorConfig = option.vendorConfig,
+            poNum = option.poNum,
+            poId = option.poId,
+            tranDate = option.tranDate,
             startDate = vendorConfig.startDate,
             xmlVendorText = vendorConfig.xmlVendorText,
             outputArray;
@@ -244,7 +244,7 @@ define([
                 outputArray = libVendor.process({
                     poNum: poNum,
                     poId: poId,
-                    countryCode: options.countryCode,
+                    countryCode: option.countryCode,
                     vendorConfig: vendorConfig
                 });
             } catch (e) {
@@ -267,15 +267,15 @@ define([
         return outputArray;
     }
 
-    function _handleMultipleVendor(options) {
+    function _handleMultipleVendor(option) {
         var logTitle = [LogTitle, '_handleMultipleVendor'].join('::');
-        log.audit(logTitle, '>> params: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> params: ' + JSON.stringify(option));
 
-        var vendor = options.vendor,
-            subsidiary = options.subsidiary,
-            poNum = options.poNum,
-            poId = options.poId,
-            tranDate = options.tranDate,
+        var vendor = option.vendor,
+            subsidiary = option.subsidiary,
+            poNum = option.poNum,
+            poId = option.poId,
+            tranDate = option.tranDate,
             configs = libVendorConfig.getMultipleConfigurations({
                 vendor: vendor,
                 subsidiary: subsidiary
@@ -336,20 +336,20 @@ define([
         return itemArray;
     }
 
-    function process(options) {
+    function process(option) {
         var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, options);
+        log.audit(logTitle, option);
 
-        var mainConfig = options.mainConfig,
-            vendorConfig = options.vendorConfig,
-            vendor = options.vendor,
-            poNum = options.poNum,
-            poId = options.poId,
-            tranDate = options.tranDate,
-            subsidiary = options.subsidiary,
+        var mainConfig = option.mainConfig,
+            vendorConfig = option.vendorConfig,
+            vendor = option.vendor,
+            poNum = option.poNum,
+            poId = option.poId,
+            tranDate = option.tranDate,
+            subsidiary = option.subsidiary,
             vendorList = constants.Lists.XML_VENDOR,
             xmlVendor = vendorConfig.xmlVendor,
-            countryCode = options.countryCode,
+            countryCode = option.countryCode,
             outputArray = null;
 
         try {

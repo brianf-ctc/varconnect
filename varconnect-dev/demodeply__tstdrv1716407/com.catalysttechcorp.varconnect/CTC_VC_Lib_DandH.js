@@ -21,112 +21,121 @@
  */
 define([
     'N/search',
-    'N/runtime',
-    'N/record',
     'N/xml',
-    'N/https',
-    './CTC_VC_Lib_Log.js',
-    './VC_Globals.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Utilities.js'
-], function (search, runtime, r, xml, https, vcLog, vcGlobals, constants, util) {
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_search, ns_xml, VC_Global, VC_Log, VC_Util, moment) {
+    // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
-    function processRequest(options) {
-        var logTitle = [LogTitle, 'processRequest'].join('::'),
-            returnValue;
-        log.audit(logTitle, options);
+    var CURRENT = {};
+    var LibDnH = {
+        getOrderStatus: function (option) {
+            var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
+                returnValue = [];
+            option = option || {};
 
-        var poNum = options.poNum,
-            vendorConfig = options.vendorConfig,
-            requestURL = vendorConfig.endPoint,
-            userName = vendorConfig.user,
-            password = vendorConfig.password;
+            try {
+                var reqOrderStatus = VC_Util.sendRequest({
+                    header: [LogTitle, 'Order Status'].join(' : '),
+                    recordId: CURRENT.recordId,
+                    method: 'post',
+                    isXML: true,
+                    query: {
+                        url: CURRENT.vendorConfig.endPoint,
 
-        var xmlorderStatus,
-            xmlInvoiceByPOStatus,
-            orderXMLLineData = [];
-
-        xmlorderStatus =
+                        headers: {
+                            'Content-Type': 'text/xml; charset=utf-8',
+                            'Content-Length': 'length'
+                        },
+                        body:
             '<XMLFORMPOST>' +
             '<REQUEST>orderStatus</REQUEST>' +
             '<LOGIN>' +
-            ('<USERID>' + userName + '</USERID>') +
-            ('<PASSWORD>' + password + '</PASSWORD>') +
+                            ('<USERID>' + CURRENT.vendorConfig.user + '</USERID>') +
+                            ('<PASSWORD>' + CURRENT.vendorConfig.password + '</PASSWORD>') +
             '</LOGIN>' +
             '<STATUSREQUEST>' +
-            ('<PONUM>' + poNum + '</PONUM>') +
+                            ('<PONUM>' + CURRENT.recordNum + '</PONUM>') +
             '</STATUSREQUEST>' +
-            '</XMLFORMPOST>';
-
-        var headers = {
-            'Content-Type': 'text/xml; charset=utf-8',
-            'Content-Length': 'length'
-        };
-
-        vcLog.recordLog({
-            header: 'D&H OrderStatus Request',
-            body: JSON.stringify({
-                URL: requestURL,
-                HEADERS: headers,
-                BODY: xmlorderStatus
-            }),
-            transaction: options.poId,
-            status: constants.Lists.VC_LOG_STATUS.INFO,
-            isDebugMode: options.fromDebug
+                            '</XMLFORMPOST>'
+                    }
         });
 
-        var responseXML;
-        try {
-            var response = https.post({
-                url: requestURL,
-                body: xmlorderStatus,
-                headers: headers
-            });
+                if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
+                var respOrderStatus = reqOrderStatus.RESPONSE.body;
+                if (!respOrderStatus) throw 'Unable to fetch server response';
 
-            responseXML = response.body;
-            log.audit(logTitle, '>>> response length: ' + responseXML.length);
+                returnValue = respOrderStatus;
+            } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
 
-            vcLog.recordLog({
-                header: 'D&H OrderStatus Response',
-                body: responseXML,
-                transaction: options.poId,
-                status: constants.Lists.VC_LOG_STATUS.SUCCESS,
-                isDebugMode: options.fromDebug
+                VC_Util.vcLog({
+                    title: [LogTitle + ' Orders Status : Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
             });
-        } catch (err) {
-            log.audit(logTitle, err);
-            vcLog.recordLog({
-                header: 'D&H OrderStatus Response Error',
-                body: err.message,
-                transaction: options.poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR,
-                isDebugMode: options.fromDebug
-            });
+                returnValue = false;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
+            }
 
-            if (!responseXML) responseXML = err.message;
+            return returnValue;
         }
+    };
 
-        return responseXML;
+    // return {
+    //     process: process,
+    //     processRequest: processRequest,
+    //     processResponse: processResponse
+    // };
+
+    return {
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum;
+                CURRENT.vendorConfig = option.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.recordId) throw 'Missing record Id!';
+
+                returnValue = LibDnH.getOrderStatus(option);
+
+            } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
+                VC_Util.vcLog({
+                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
     }
 
-    function processResponse(options) {
+            return returnValue;
+        },
+        processResponse: function (option) {
         var logTitle = [LogTitle, 'processResponse'].join('::'),
-            returnValue;
-        log.audit(logTitle, options);
+                returnValue = [];
+            option = option || {};
 
-        var xmlString = options.responseXML;
+            try {
+                var xmlResponse = option.xmlResponse,
+                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
+                    itemArray = [];
 
-        // Create XML object from XML text returned from vendor, using Netsuite XML parser
-        var itemArray = [];
-        var xmlDoc = xml.Parser.fromString({
-            text: xmlString
-        });
+                if (!xmlDoc) throw 'Unable to parse XML';
+                var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
+                if (!arrItemNodes || !arrItemNodes.length) throw 'XML: Missing Item Details';
 
-        if (xmlDoc != null) {
-            var itemNodes = xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
-            if (itemNodes != null && itemNodes.length > 0) {
-                for (var i = 0; i < itemNodes.length; i++) {
+                for (var i = 0; i < arrItemNodes.length; i++) {
                     var xml_items = {
                         line_num: 'NA',
                         item_num: 'NA',
@@ -141,8 +150,8 @@ define([
                         serial_num: 'NA'
                     };
 
-                    var itemNum = util.getNodeTextContent(
-                        xml.XPath.select({ node: itemNodes[i], xpath: 'ITEMNO' })[0]
+                    var itemNum = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ITEMNO' })[0]
                     );
                     if (itemNum != null && itemNum.length > 0) {
                         xml_items.item_num = itemNum;
@@ -150,52 +159,52 @@ define([
 
                     //D&H does not support a separate vendorSKU as of Jan 9 2019
 
-                    var shipQty = util.getNodeTextContent(
-                        xml.XPath.select({ node: itemNodes[i], xpath: 'QUANTITY' })[0]
+                    var shipQty = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'QUANTITY' })[0]
                     );
                     if (shipQty != null && shipQty.length > 0) {
                         xml_items.ship_qty = shipQty;
                     }
 
-                    var orderStatusNode = itemNodes[i].parentNode.parentNode;
+                    var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
 
-                    var orderNum = util.getNodeTextContent(
-                        xml.XPath.select({ node: orderStatusNode, xpath: 'ORDERNUM' })[0]
+                    var orderNum = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'ORDERNUM' })[0]
                     );
                     if (orderNum != null && orderNum.length > 0) {
                         xml_items.order_num = orderNum;
                     }
 
-                    var orderDateTime = util.getNodeTextContent(
-                        xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
+                    var orderDateTime = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
                     );
                     if (orderDateTime != null && orderDateTime.length > 0) {
                         xml_items.order_date = orderDateTime;
                     }
 
-                    var packageNodes = xml.XPath.select({
+                    var packageNodes = ns_xml.XPath.select({
                         node: orderStatusNode,
                         xpath: 'PACKAGE'
                     });
                     if (packageNodes != null && packageNodes.length > 0) {
-                        for (var j = 0; j < packageNodes.length; j++) {
+                        for (var ii = 0; ii < packageNodes.length; ii++) {
                             var itemInPackage = false;
-                            var shipItemNodes = xml.XPath.select({
-                                node: packageNodes[j],
+                            var shipItemNodes = ns_xml.XPath.select({
+                                node: packageNodes[ii],
                                 xpath: 'SHIPITEM'
                             });
                             if (shipItemNodes != null && shipItemNodes.length > 0) {
-                                for (var x = 0; x < shipItemNodes.length; x++) {
+                                for (var iii = 0; iii < shipItemNodes.length; iii++) {
                                     if (
-                                        xml.XPath.select({
-                                            node: shipItemNodes[x],
+                                        ns_xml.XPath.select({
+                                            node: shipItemNodes[iii],
                                             xpath: 'SHIPITEMNO'
                                         })[0].textContent == itemNum
                                     ) {
                                         itemInPackage = true;
-                                        var serialNum = util.getNodeTextContent(
-                                            xml.XPath.select({
-                                                node: shipItemNodes[x],
+                                        var serialNum = VC_Util.getNodeTextContent(
+                                            ns_xml.XPath.select({
+                                                node: shipItemNodes[iii],
                                                 xpath: 'SERIALNO'
                                             })[0]
                                         );
@@ -208,14 +217,14 @@ define([
                                 }
                             }
                             if (itemInPackage) {
-                                var carrier = xml.XPath.select({
-                                    node: packageNodes[j],
+                                var carrier = ns_xml.XPath.select({
+                                    node: packageNodes[ii],
                                     xpath: 'CARRIER'
                                 })[0].textContent;
                                 if (carrier != null && carrier.length > 0) {
-                                    var carrierService = util.getNodeTextContent(
-                                        xml.XPath.select({
-                                            node: packageNodes[j],
+                                    var carrierService = VC_Util.getNodeTextContent(
+                                        ns_xml.XPath.select({
+                                            node: packageNodes[ii],
                                             xpath: 'SERVICE'
                                         })[0]
                                     );
@@ -230,9 +239,9 @@ define([
                                         else xml_items.carrier += ',' + carrier;
                                     }
                                 }
-                                var trackingNum = util.getNodeTextContent(
-                                    xml.XPath.select({
-                                        node: packageNodes[j],
+                                var trackingNum = VC_Util.getNodeTextContent(
+                                    ns_xml.XPath.select({
+                                        node: packageNodes[ii],
                                         xpath: 'TRACKNUM'
                                     })[0]
                                 );
@@ -242,9 +251,9 @@ define([
                                     else xml_items.tracking_num += ',' + trackingNum;
                                 }
 
-                                var dateShipped = util.getNodeTextContent(
-                                    xml.XPath.select({
-                                        node: packageNodes[j],
+                                var dateShipped = VC_Util.getNodeTextContent(
+                                    ns_xml.XPath.select({
+                                        node: packageNodes[ii],
                                         xpath: 'DATESHIPPED'
                                     })[0]
                                 );
@@ -265,35 +274,62 @@ define([
 
                     itemArray.push(xml_items);
                 }
-            }
-        }
 
-        return itemArray;
+                returnValue = itemArray;
+            } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
+                log.audit(
+                    logTitle,
+                    LogPrefix +
+                        '## ERROR ##' +
+                        [errorMsg, JSON.stringify(error, null, '\t')].join('\n\n')
+                );
+                VC_Util.vcLog({
+                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
     }
 
-    function process(options) {
+            return returnValue;
+        },
+        process: function (option) {
         var logTitle = [LogTitle, 'process'].join('::'),
-            returnValue;
-        log.audit(logTitle, options);
+                returnValue = [];
+            option = option || {};
 
-        var poNum = options.poNum,
-            vendorConfig = options.vendorConfig,
-            outputArray = null;
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum;
+                CURRENT.vendorConfig = option.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-        var responseXML = processRequest(options);
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.recordId) throw 'Missing record Id!';
 
-        if (responseXML)
-            outputArray = processResponse({
-                vendorConfig: vendorConfig,
-                responseXML: responseXML
+                var respOrderStatus = this.processRequest(option);
+                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
+            } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
+                VC_Util.vcLog({
+                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    error: error,
+                    recordId: CURRENT.recordId
             });
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-        return outputArray;
+                VC_Util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !VC_Util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                });
     }
 
-    return {
-        process: process,
-        processRequest: processRequest,
-        processResponse: processResponse
+            return returnValue;
+        }
     };
 });

@@ -23,6 +23,7 @@ define([
     './CTC_VCSP_Lib_WebService.js',
     '../VO/CTC_VCSP_PO.js'
 ], function (record, pref, libWebService, PO) {
+    var LogTitle = 'VCSendPO';
     function _setTransactionNum(options) {
         var response = options.response,
             rec = options.rec;
@@ -43,11 +44,13 @@ define([
     }
 
     function sendPO(options) {
+        var logTitle = [LogTitle, 'sendPO'].join('::');
+
         var recId = options.recId,
             response;
         var rec = record.load({
             type: record.Type.PURCHASE_ORDER,
-            id: recId, 
+            id: recId,
             isDynamic: true
         });
 
@@ -56,9 +59,33 @@ define([
                 nativePO: rec
             });
 
-            _setTransactionNum({
-                response: response,
-                rec: rec
+            log.audit(logTitle, '>> send PO response: ' + JSON.stringify(response));
+
+            var updateValues = {
+                custbody_ctc_vcsp_timestamp: new Date(),
+                custbody_ctc_vcsp_is_po_sent: true,
+                custbody_ctc_vcsp_vendor_rcpt: JSON.stringify(
+                    {
+                        code: response.responseCode,
+                        message: response.message
+                    },
+                    null,
+                    '\t'
+                )
+            };
+
+            if (response.isError) {
+                updateValues.custbody_ctc_vcsp_vendor_rcpt = JSON.stringify(response, null, '\t');
+            }
+
+            record.submitFields({
+                type: record.Type.PURCHASE_ORDER,
+                id: recId,
+                values: updateValues,
+                options: {
+                    enablesourcing: false,
+                    ignoreMandatoryFields: true
+                }
             });
         }
 

@@ -378,7 +378,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
 
-            log.audit(logTitle, option);
+            var VALID_RESP_CODE = [200, 207];
 
             var _DEFAULT = {
                 validMethods: ['post', 'get'],
@@ -407,13 +407,15 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
-
+                    isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
+                    isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
                     method: CTC_Util.inArray(option.method, _DEFAULT.validMethods)
                         ? option.method
                         : 'get'
                 };
 
+            if (option.isXML) param.isJSON = false;
             log.audit(logTitle, '>> param: ' + JSON.stringify(param));
             var LOG_STATUS = CTC_Global.Lists.VC_LOG_STATUS;
 
@@ -434,16 +436,27 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 response = ns_https[param.method](queryOption);
                 returnValue.RESPONSE = response;
 
-                parsedResponse = CTC_Util.safeParse(response ? response.body : '');
-                returnValue.PARSED_RESPONSE = parsedResponse;
+                log.audit(
+                    logTitle,
+                    '>> RESPONSE ' +
+                        JSON.stringify({
+                            code: response ? response.code : '-no response-',
+                            body: response ? response.body : '-empty response-'
+                        })
+                );
 
-                responseBody = response.body;
-
-                if (!response.code || response.code != 200) {
-                    throw 'Received invalid response code - ' + response.code;
-                }
                 if (!response || !response.body) {
                     throw 'Empty or Missing Response !';
+                }
+
+                responseBody = response.body;
+                if (param.isJSON) {
+                    parsedResponse = CTC_Util.safeParse(response);
+                    returnValue.PARSED_RESPONSE = parsedResponse;
+                }
+
+                if (!response.code || !CTC_Util.inArray(response.code, VALID_RESP_CODE)) {
+                    throw 'Received invalid response code - ' + response.code;
                 }
 
                 ////////////////////////////
@@ -474,15 +487,6 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                     returnValue = CTC_Util.sendRequest(option);
                 }
             } finally {
-                log.audit(
-                    logTitle,
-                    '>> RESPONSE ' +
-                        JSON.stringify({
-                            code: response.code || '-no response-',
-                            body: response.body || '-empty response-'
-                        })
-                );
-
                 if (!param.noLogs) {
                     CTC_Util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),

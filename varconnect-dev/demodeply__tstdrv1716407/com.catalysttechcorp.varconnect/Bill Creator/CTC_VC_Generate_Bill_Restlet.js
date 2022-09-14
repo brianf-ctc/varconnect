@@ -124,6 +124,46 @@ define([
 
             return returnValue;
         },
+        getSalesOrderDetails: function (option) {
+            var logTitle = [LOG_TITLE, 'getSalesOrderDetails'].join('::'),
+                returnValue;
+            option = option || {};
+            var poId = option.poId;
+            if (poId) {
+                var poDetails = search.lookupFields({
+                    type: 'transaction',
+                    id: poId,
+                    columns: ['createdfrom.entity']
+                });
+                var multiselectFields = ['createdfrom.entity'];
+                var soDetails = {};
+                for (var field in poDetails) {
+                    var soFieldName = field;
+                    if (field.indexOf('createdfrom.') == 0) {
+                        soFieldName = field.substr(12);
+                    }
+                    if (
+                        multiselectFields.indexOf(field) >= 0 &&
+                        poDetails[field] &&
+                        poDetails[field][0] &&
+                        poDetails[field][0].value
+                    ) {
+                        soDetails[soFieldName] = poDetails[field][0].value;
+                    } else {
+                        soDetails[soFieldName] = poDetails[field];
+                    }
+                }
+                log.debug(
+                    logTitle,
+                    '>> PO: ' +
+                        JSON.stringify(poDetails) +
+                        '<br />\nSO: ' +
+                        JSON.stringify(soDetails)
+                );
+                returnValue = soDetails;
+            }
+            return returnValue;
+        },
         isPeriodLocked: function (option) {
             var logTitle = [LOG_TITLE, 'isPeriodLocked'].join('::'),
                 returnValue;
@@ -162,7 +202,13 @@ define([
                 fieldId: 'description',
                 value: option.description || 'VC New Line'
             });
-
+            if (option.customer) {
+                record.setCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'customer',
+                    value: option.customer
+                });
+            }
             record.setCurrentSublistValue({
                 sublistId: 'item',
                 fieldId: 'quantity',
@@ -329,6 +375,11 @@ define([
                 ].join('');
                 // throw BILL_CREATOR.Code.NOT_BILLABLE;
             }
+            ///////////////////////////////////
+            // Get sales order details
+            var soDetails = Helper.getSalesOrderDetails({
+                poId: currentData.poId
+            });
             ///////////////////////////////////
 
             var hasVariance = false,
@@ -679,7 +730,6 @@ define([
 
             var varianceLines = [];
 
-
             if (billPayload.varianceLines && billPayload.varianceLines.length) {
                 hasVariance = true;
 
@@ -696,7 +746,8 @@ define([
                         qty: 1,
                         description: varianceData.description,
                         item: varianceData.item,
-                        rate: varianceData.rate
+                        rate: varianceData.rate,
+                        customer: soDetails.entity
                     });
 
                     return true;
@@ -708,7 +759,6 @@ define([
                 var shipVariance = { apply: false, amount: 0 };
                 var otherVariance = { apply: false, amount: 0 };
                 var adjustmentVariance = { apply: false, amount: 0 };
-
 
                 taxVariance.apply = param.hasTaxVariance;
                 taxVariance.amount = deltaCharges.tax;
@@ -755,7 +805,8 @@ define([
                             qty: 1,
                             description: 'VC: Tax Variance',
                             item: param.taxItem,
-                            rate: taxVariance.amount
+                            rate: taxVariance.amount,
+                            customer: soDetails.entity
                         });
 
                         varianceLines.push({
@@ -785,7 +836,8 @@ define([
                             qty: 1,
                             description: 'VC: Ship Variance',
                             item: param.shipItem,
-                            rate: shipVariance.amount
+                            rate: shipVariance.amount,
+                            customer: soDetails.entity
                         });
 
                         varianceLines.push({
@@ -815,7 +867,8 @@ define([
                             qty: 1,
                             item: param.otherItem,
                             description: 'VC: Other Charges',
-                            rate: otherVariance.amount
+                            rate: otherVariance.amount,
+                            customer: soDetails.entity
                         });
 
                         varianceLines.push({
@@ -845,7 +898,8 @@ define([
                             qty: 1,
                             item: param.otherItem,
                             description: 'VC: Adjustments',
-                            rate: adjustmentVariance.amount
+                            rate: adjustmentVariance.amount,
+                            customer: soDetails.entity
                         });
 
                         varianceLines.push({
@@ -956,7 +1010,7 @@ define([
                 }
 
                 if (varianceLines && varianceLines.length) {
-                    returnObj.varianceLines = varianceLines; 
+                    returnObj.varianceLines = varianceLines;
                 }
 
                 returnObj.details =

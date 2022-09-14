@@ -94,6 +94,7 @@ define(['N/search'], function (search) {
         this.total = recPO.getValue({ fieldId: 'total' });
         this.memo = recPO.getValue({ fieldId: 'memo' });
         this.trandate = recPO.getText({ fieldId: 'trandate' });
+        this.custPO = recPO.getText({ fieldId: 'custbody82' });
 
         var subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
         var addressFields = [

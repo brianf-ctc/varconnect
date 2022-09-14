@@ -118,6 +118,29 @@ define([], function () {
                 IR_LINE: 'custrecord_ctc_vc_ir_line',
                 INV_LINE: 'custrecord_ctc_vc_inv_line'
             }
+        },
+        BILLFILE: {
+            ID: 'customrecord_ctc_vc_bills',
+            FIELD: {
+                ID: 'id',
+                POID: 'custrecord_ctc_vc_bill_po',
+                PO_LINK: 'custrecord_ctc_vc_bill_linked_po',
+                BILL_NUM: 'custrecord_ctc_vc_bill_number',
+                BILL_LINK: 'custrecord_ctc_vc_bill_linked_bill',
+                DATE: 'custrecord_ctc_vc_bill_date',
+                DUEDATE: 'custrecord_ctc_vc_bill_due_date',
+                DDATE_INFILE: 'custrecord_ctc_vc_bill_due_date_f_file',
+                STATUS: 'custrecord_ctc_vc_bill_proc_status',
+                PROCESS_LOG: 'custrecord_ctc_vc_bill_log',
+                INTEGRATION: 'custrecord_ctc_vc_bill_integration',
+                SOURCE: 'custrecord_ctc_vc_bill_src',
+                JSON: 'custrecord_ctc_vc_bill_json',
+                NOTES: 'custrecord_ctc_vc_bill_notes',
+                HOLD_REASON: 'custrecord_ctc_vc_bill_hold_rsn',
+                IS_RCVBLE: 'custrecord_ctc_vc_bill_is_recievable',
+                PROC_VARIANCE: 'custrecord_ctc_vc_bill_proc_variance',
+                FILEPOS: 'custrecord_ctc_vc_bill_file_position'
+            }
         }
     };
 

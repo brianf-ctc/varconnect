@@ -49,40 +49,52 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
         constants.Fields.VendorConfig.QA_ACCESS_ENDPOINT, //22
         constants.Fields.VendorConfig.QA_API_KEY, //23
         constants.Fields.VendorConfig.QA_API_SECRET, //24
-        constants.Fields.VendorConfig.Bill.EMAIL //25
+        constants.Fields.VendorConfig.Bill.EMAIL, //25,
+        constants.Fields.VendorConfig.Bill.PHONENO, //26,
+        constants.Fields.VendorConfig.PAYMENT.MEAN, //26,
+        constants.Fields.VendorConfig.PAYMENT.OTHER, //26,
+        constants.Fields.VendorConfig.PAYMENT.TERM,
+        constants.Fields.VendorConfig.EVENT_TYPE //5 //26,
     ];
 
     function _generateVendorConfig(result) {
         // log.debug('vendor config', JSON.stringify(result));
+
+        var FieldSendPO = constants.Fields.VendorConfig;
         return {
-            id: result.getValue({ name: vendorConfigFields[0] }),
-            subsidiary: result.getValue({ name: vendorConfigFields[1] }),
-            apiVendor: result.getValue({ name: vendorConfigFields[2] }),
-            vendor: result.getValue({ name: vendorConfigFields[3] }),
-            endPoint: result.getValue({ name: vendorConfigFields[4] }),
-            user: result.getValue({ name: vendorConfigFields[5] }),
-            password: result.getValue({ name: vendorConfigFields[6] }),
-            customerNo: result.getValue({ name: vendorConfigFields[7] }),
-            apiKey: result.getValue({ name: vendorConfigFields[8] }),
-            apiSecret: result.getValue({ name: vendorConfigFields[9] }),
-            accessEndPoint: result.getValue({ name: vendorConfigFields[10] }),
-            skuColumn: result.getValue({ name: vendorConfigFields[11] }),
+            id: result.getValue({ name: FieldSendPO.ID }),
+            subsidiary: result.getValue({ name: FieldSendPO.SUBSIDIARY }),
+            apiVendor: result.getValue({ name: FieldSendPO.API_VENDOR }),
+            vendor: result.getValue({ name: FieldSendPO.API_VENDOR }),
+            endPoint: result.getValue({ name: FieldSendPO.WEBSERVICE_ENDPOINT }),
+            user: result.getValue({ name: FieldSendPO.USERNAME }),
+            password: result.getValue({ name: FieldSendPO.PASSWORD }),
+            customerNo: result.getValue({ name: FieldSendPO.CUSTOMER_NO }),
+            apiKey: result.getValue({ name: FieldSendPO.API_KEY }),
+            apiSecret: result.getValue({ name: FieldSendPO.API_SECRET }),
+            accessEndPoint: result.getValue({ name: FieldSendPO.ACCESS_ENDPOINT }),
+            skuColumn: result.getValue({ name: FieldSendPO.SKU_COLUMN }),
+            eventType: result.getValue({ name: FieldSendPO.EVENT_TYPE }),
             Bill: {
-                addressee: result.getValue({ name: vendorConfigFields[12] }),
-                attention: result.getValue({ name: vendorConfigFields[13] }),
-                address1: result.getValue({ name: vendorConfigFields[14] }),
-                address2: result.getValue({ name: vendorConfigFields[15] }),
-                city: result.getValue({ name: vendorConfigFields[16] }),
-                state: result.getValue({ name: vendorConfigFields[17] }),
-                zip: result.getValue({ name: vendorConfigFields[18] }),
-                country: result.getValue({ name: vendorConfigFields[19] }),
-                email: result.getValue({ name: vendorConfigFields[25] })
+                addressee: result.getValue({ name: FieldSendPO.Bill.ADDRESSEE }),
+                attention: result.getValue({ name: FieldSendPO.Bill.ATTENTION }),
+                address1: result.getValue({ name: FieldSendPO.Bill.ADDRESS_1 }),
+                address2: result.getValue({ name: FieldSendPO.Bill.ADDRESS_2 }),
+                phoneno: result.getValue({ name: FieldSendPO.Bill.PHONENO }),
+                city: result.getValue({ name: FieldSendPO.Bill.CITY }),
+                state: result.getValue({ name: FieldSendPO.Bill.STATE }),
+                zip: result.getValue({ name: FieldSendPO.Bill.ZIP }),
+                country: result.getValue({ name: FieldSendPO.Bill.COUNTRY }),
+                email: result.getValue({ name: FieldSendPO.Bill.EMAIL })
             },
-            testRequest: result.getValue({ name: vendorConfigFields[20] }),
-            qaEndPoint: result.getValue({ name: vendorConfigFields[21] }),
-            qaAccessEndPoint: result.getValue({ name: vendorConfigFields[22] }),
-            qaApiKey: result.getValue({ name: vendorConfigFields[23] }),
-            qaApiSecret: result.getValue({ name: vendorConfigFields[24] })
+            testRequest: result.getValue({ name: FieldSendPO.TEST_REQUEST }),
+            qaEndPoint: result.getValue({ name: FieldSendPO.QA_WEBSERVICE_ENDPOINT }),
+            qaAccessEndPoint: result.getValue({ name: FieldSendPO.QA_ACCESS_ENDPOINT }),
+            qaApiKey: result.getValue({ name: FieldSendPO.QA_API_KEY }),
+            qaApiSecret: result.getValue({ name: FieldSendPO.QA_API_SECRET }),
+            paymentMean: result.getText({ name: FieldSendPO.PAYMENT.MEAN }),
+            paymentOther: result.getText({ name: FieldSendPO.PAYMENT.OTHER }),
+            paymentTerm: result.getText({ name: FieldSendPO.PAYMENT.TERM })
         };
     }
 

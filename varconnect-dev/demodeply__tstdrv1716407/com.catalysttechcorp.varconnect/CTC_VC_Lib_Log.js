@@ -32,7 +32,6 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             logFields = constants.Fields.VarConnectLog,
             isDebugMode = options.isDebugMode;
 
-
         if (isDebugMode) return;
 
         var recLog = record.create({

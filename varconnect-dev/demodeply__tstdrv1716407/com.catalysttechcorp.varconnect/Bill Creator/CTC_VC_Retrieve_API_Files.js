@@ -129,13 +129,12 @@ define([
         var totalPending = searchObj.runPaged().count;
         log.audit(logTitle, LogPrefix + '>> Orders To Process: ' + totalPending);
 
-
         return searchObj;
     };
 
     MAP_REDUCE.reduce = function (context) {
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
-        
+
         var searchValues = VC2_Utils.safeParse(context.values.shift());
 
         log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
