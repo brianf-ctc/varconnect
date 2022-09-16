@@ -17,172 +17,163 @@
  * Script Name: CTC_VC_Lib_Arrow
  * Author: john.ramonel
  */
-define(['N/search', 'N/record', 'N/runtime', 'N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (
-    search,
-    record,
-    runtime,
-    log,
-    https,
-    vcLog
-) {
+define([
+    'N/search',
+    './CTC_VC_Constants.js',
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_search, VC_Log, VC_Global, VC_Util, moment) {
     'use strict';
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns string
-     **/
-    function generateToken(obj) {
-        if (!obj) var obj = {};
-        //obj.apiKey = '8e88d6d7-5f9d-4614-9f10-28a6f725c69d';
-        //obj.apiSecret = '4a95b3a7-02c3-4be7-9761-9e8ee12d2957';
-        obj.grantType = 'client_credentials';
-        //obj.tokenURL = 'https://qaecsoag.arrow.com/api/oauth/token';
+    var LogTitle = 'WS:Arrow',
+        LogPrefix;
 
-        var headers = {
+    var CURRENT = {};
+
+    var LibArrowAPI = {
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var tokenReq = VC_Util.sendRequest({
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'post',
+                    recordId: CURRENT.recordId,
+                    doRetry: true,
+                    maxRetry: 3,
+                    query: {
+                        url: CURRENT.vendorConfig.accessEndPoint,
+                        body: VC_Util.convertToQuery({
+                            client_id: CURRENT.vendorConfig.apiKey,
+                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            grant_type: 'client_credentials'
+                        }),
+                        headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
-        };
-
-        var jsonBody = {
-            client_id: obj.apiKey,
-            client_secret: obj.apiSecret,
-            grant_type: obj.grantType
-        };
-
-        var body = convertToXWWW(jsonBody);
-
-        var response = https.post({
-            url: obj.accessEndPoint,
-            body: body,
-            headers: headers
-        });
-
-        if (response) {
-            var responseBody = JSON.parse(response.body);
-
-            log.debug({
-                title: 'Response Body',
-                details: response.body
-            });
-
-            if (response.code == 200) {
-                log.debug({
-                    title: 'Token Generated',
-                    details: responseBody.access_token
+                        }
+                    }
                 });
-                return responseBody.access_token;
-            } else {
-                // retry 1 more time
-                var response = https.post({
-                    url: obj.accessEndPoint,
-                    body: body,
-                    headers: headers
-                });
-                if (response.code == 200) {
-                    log.debug({
-                        title: 'Token Generated',
-                        details: responseBody.access_token
-                    });
-                    return responseBody.access_token;
-                } else {
-                    log.error({
-                        title: 'generateToken Failure',
-                        details: response
-                    });
-                    return null;
-                }
+
+                if (tokenReq.isError) throw tokenReq.errorMsg;
+                var tokenResp = tokenReq.PARSED_RESPONSE;
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+
+                returnValue = tokenResp.access_token;
+                CURRENT.accessToken = tokenResp.access_token;
+            } catch (error) {
+                returnValue = false;
+                throw error;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Access Token: ' + JSON.stringify(returnValue));
             }
-        }
-    }
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns object
-     **/
-    function processRequest(obj) {
-        //if(!obj)
-        //	var obj = {};
-        //obj.url = 'https://qaecsoag.arrow.com/ArrowECS/SalesOrder_RS/Status';
-        //obj.partnerId = '81e07b92-a53a-459b-a1fe-92537ab1abcijk'
+            return returnValue;
+        },
+        getOrderStatus: function (option) {
+            var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
+                returnValue;
+            option = option || {};
 
-        var token = generateToken(obj.vendorConfig);
-        var headers = {
-            Authorization: 'Bearer ' + token,
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-        };
-
-        var body = {};
-        var requestHeader = {};
-        var orderRequest = {};
-        var poNumber = {
-            Number: obj.poNum,
-            Line: [{ Number: null }],
-            PartNumber: [{ Number: null }]
-        };
-
-        requestHeader.TransactionType = 'RESELLER_ORDER_STATUS';
-        requestHeader.Region = 'NORTH_AMERICAS';
-        requestHeader.SourceTransactionKeyID = null;
-        requestHeader.RequestTimestamp = null;
-        requestHeader.Country = 'US';
-        requestHeader.PartnerID = obj.vendorConfig.customerNo;
-
-        orderRequest.ResellerPOList = {
-            ResellerPO: [poNumber]
-        };
-
-        orderRequest.IncludeCancelledOrders = 'N';
-        orderRequest.IncludeClosedOrders = 'Y';
-
-        //form body here..
-        body.RequestHeader = requestHeader;
-        body.OrderRequest = orderRequest;
-        log.audit({ title: 'request body', details: body });
-
-        if (obj.poId)
-            vcLog.recordLog({
-                header: 'Arrow Get PO Request',
-                body: JSON.stringify(body),
-                transaction: obj.poId,
-                isDebugMode: obj.fromDebug
-            });
-
-        var response = https.post({
-            url: obj.vendorConfig.endPoint,
-            body: JSON.stringify(body),
-            headers: headers
+            try {
+                var reqOrderStatus = VC_Util.sendRequest({
+                    header: [LogTitle, 'Order Status'].join(' '),
+                    recordId: CURRENT.recordId,
+                    method: 'post',
+                    query: {
+                        url: CURRENT.vendorConfig.endPoint,
+                        body: JSON.stringify({
+                            RequestHeader: {
+                                TransactionType: 'RESELLER_ORDER_STATUS',
+                                Region: 'NORTH_AMERICAS',
+                                SourceTransactionKeyID: null,
+                                RequestTimestamp: null,
+                                Country: 'US',
+                                PartnerID: CURRENT.vendorConfig.customerNo
+                            },
+                            OrderRequest: {
+                                ResellerPOList: {
+                                    ResellerPO: [CURRENT.recordNum]
+                                },
+                                IncludeCancelledOrders: 'N',
+                                IncludeClosedOrders: 'Y'
+                            }
+                        }),
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }
         });
 
-        if (obj.poId)
-            vcLog.recordLog({
-                header: 'Arrow Get PO Response',
-                body: JSON.stringify(response),
-                transaction: obj.poId,
-                isDebugMode: obj.fromDebug
-            });
+                if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
+                if (!reqOrderStatus.PARSED_RESPONSE) throw 'Unable to fetch a valid server response';
 
-        if (response) {
-            log.debug({ title: 'Response', details: response });
-            var responseBody = JSON.parse(response.body);
-            log.debug({ title: 'Response', details: responseBody });
-            return responseBody;
-        }
+                returnValue = reqOrderStatus.PARSED_RESPONSE;
+            } catch (error) {
+                returnValue = false;
+                throw error;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Access Token: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
     }
+    };
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns object
-     **/
-    function processResponse(obj) {
-        var outputArray = [];
-        var objBody = obj.responseBody.OrderResponse;
-        var orderDate = null;
-        var arrowSONum;
-        if (objBody.OrderDetails.length) {
-            var orderResp = objBody.OrderDetails[0];
+    return {
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+
+                LibArrowAPI.generateToken();
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
+
+                returnValue = LibArrowAPI.getOrderStatus();
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Request Error',
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+                throw VC_Util.extractError(error);
+            }
+
+            return returnValue;
+        },
+        processResponse: function (option) {
+            var logTitle = [LogTitle, 'processResponse'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+
+                var response = option.response,
+                    itemArray = [];
+
+                var objOrderResponse = response.OrderResponse;
+                if (!objOrderResponse.OrderDetails.length) throw 'Missing order details';
+
+                var orderResp = objOrderResponse.OrderDetails[0];
             if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
             if (orderResp.hasOwnProperty('Reseller')) {
                 orderDate = orderResp.Reseller.PODate;
@@ -190,34 +181,20 @@ define(['N/search', 'N/record', 'N/runtime', 'N/log', 'N/https', './CTC_VC_Lib_L
 
             if (orderResp.hasOwnProperty('OrderLinesList')) {
                 var orderLines = orderResp.OrderLinesList.OrderLines;
-                log.audit({ title: 'orderLines length', details: orderLines.length });
+
                 if (orderLines.length) {
                     for (var i = 0; i < orderLines.length; i++) {
+                            var orderLineObj = orderLines[i];
                         // map here...
-                        var outputObj = { order_num: arrowSONum };
-                        var orderLineObj = orderLines[i];
-                        log.debug('orderLineObj', orderLineObj);
-                        outputObj.order_date = orderDate;
-                        if (orderLineObj.hasOwnProperty('ResellerPOLineNumber')) {
-                            outputObj.line_num = orderLineObj.ResellerPOLineNumber;
-                        }
-                        if (orderLineObj.hasOwnProperty('MFGPartNumber')) {
-                            outputObj.item_num = orderLineObj.MFGPartNumber;
-                        }
-                        if (orderLineObj.hasOwnProperty('VendorPartNumber')) {
-                            outputObj.vendorSKU = orderLineObj.VendorPartNumber;
-                        }
-                        if (orderLineObj.hasOwnProperty('InvoiceNumber')) {
-                            outputObj.order_num = orderLineObj.InvoiceNumber;
-                        }
-                        if (orderLineObj.hasOwnProperty('ShippedQty')) {
-                            var qty = parseInt(orderLineObj.ShippedQty);
-                            if (isNaN(qty) || qty < 1) continue;
-                            outputObj.ship_qty = orderLineObj.ShippedQty;
-                        }
-                        if (orderLineObj.hasOwnProperty('OracleShipViaCode')) {
-                            outputObj.carrier = orderLineObj.OracleShipViaCode;
-                        }
+                            var outputObj = {
+                                order_date: orderDate,
+                                line_num: orderLineObj.ResellerPOLineNumber,
+                                item_num: orderLineObj.MFGPartNumber,
+                                vendorSKU: orderLineObj.VendorPartNumber,
+                                order_num: orderLineObj.InvoiceNumber || arrowSONum,
+                                ship_qty: parseInt(orderLineObj.ShippedQty || '0'),
+                                carrier: orderLineObj.OracleShipViaCode
+                            };
 
                         // shipping details
                         if (orderLineObj.hasOwnProperty('StatusInfoList')) {
@@ -251,56 +228,53 @@ define(['N/search', 'N/record', 'N/runtime', 'N/log', 'N/https', './CTC_VC_Lib_L
                             }
                         }
                         log.audit({ title: 'outputObj', details: outputObj });
-                        outputArray.push(outputObj);
-                    } // end for-loop
+                            itemArray.push(outputObj);
                 }
             }
         }
-        return outputArray;
+
+                returnValue = itemArray;
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Process Response',
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+
+                throw VC_Util.extractError(error);
     }
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns object
-     **/
-    function convertToXWWW(json) {
-        if (typeof json !== 'object') {
-            return null;
-        }
+            return returnValue;
+        },
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = [];
+            option = option || {};
 
-        var u = encodeURIComponent;
-        var urljson = '';
-        var keys = Object.keys(json);
-        for (var i = 0; i < keys.length; i++) {
-            urljson += u(keys[i]) + '=' + u(json[keys[i]]);
-            if (i < keys.length - 1) urljson += '&';
-        }
-        return urljson;
-    }
+            log.audit(logTitle, option);
 
-    function process(options) {
-        log.audit({ title: 'options', details: options });
-        var outputArray = null;
+            try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-        var responseBody = processRequest({
-            poNum: options.poNum,
-            vendorConfig: options.vendorConfig,
-            poId: options.poId
-        });
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-        if (responseBody) {
-            outputArray = processResponse({
-                vendorConfig: options.vendorConfig,
-                responseBody: responseBody
+                var responseBody = this.processRequest();
+                if (!responseBody) throw 'Unable to get response';
+
+                returnValue = this.processResponse({ response: responseBody });
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Process Error',
+                    error: error,
+                    recordId: CURRENT.recordId
             });
+                throw VC_Util.extractError(error);
         }
-        log.emergency({ title: 'outputArray', details: outputArray });
-        return outputArray;
-    }
 
-    return {
-        process: process,
-        processRequest: processRequest
+            return returnValue;
+    }
     };
 });

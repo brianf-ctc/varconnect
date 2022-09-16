@@ -28,7 +28,7 @@ define([
     'N/https',
     './VC_Globals.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Utilities.js'
+    './CTC_VC2_Lib_Utils.js'
 ], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
     var LogTitle = 'WS:Ingram';
 

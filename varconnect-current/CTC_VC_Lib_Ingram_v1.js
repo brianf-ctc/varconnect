@@ -20,11 +20,11 @@
  */
 define([
     'N/search',
-    './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
+    './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (NS_Search, VC_Log, VC_Global, VC2_Utils, moment) {
+], function (NS_Search, VC_Global, VC_Log, VC_Util, moment) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -40,7 +40,7 @@ define([
             option = option || {};
 
             try {
-                var tokenReq = VC2_Utils.sendRequest({
+                var tokenReq = VC_Util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
@@ -48,7 +48,7 @@ define([
                     maxRetry: 3,
                     query: {
                         url: CURRENT.vendorConfig.accessEndPoint,
-                        body: VC2_Utils.convertToQuery({
+                        body: VC_Util.convertToQuery({
                             client_id: CURRENT.vendorConfig.apiKey,
                             client_secret: CURRENT.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -60,7 +60,7 @@ define([
                 });
 
                 if (tokenReq.isError) throw tokenReq.errorMsg;
-                var tokenResp = VC2_Utils.safeParse(tokenReq.RESPONSE);
+                var tokenResp = VC_Util.safeParse(tokenReq.RESPONSE);
                 if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
@@ -78,7 +78,7 @@ define([
             var logTitle = [LogTitle, 'getValidOrders'].join('::'),
                 returnValue;
             try {
-                var reqValidOrders = VC2_Utils.sendRequest({
+                var reqValidOrders = VC_Util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     query: {
                         url:
@@ -99,7 +99,7 @@ define([
                 });
 
                 if (reqValidOrders.isError) throw reqValidOrders.errorMsg;
-                var respIngramOrders = VC2_Utils.safeParse(reqValidOrders.RESPONSE);
+                var respIngramOrders = VC_Util.safeParse(reqValidOrders.RESPONSE);
                 if (!respIngramOrders) throw 'Unable to fetch server response';
 
                 var arrOrderDetails = [];
@@ -109,21 +109,22 @@ define([
                     var ingramOrder = respIngramOrders.orders[i];
 
                     if (!ingramOrder.orderStatus) continue;
-                    if (VC2_Utils.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
+                    if (VC_Util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
 
                     arrOrderDetails.push(ingramOrder);
                 }
 
                 returnValue = arrOrderDetails;
             } catch (error) {
-                var errorMsg = VC2_Utils.extractError(error);
+                var errorMsg = VC_Util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
 
-                VC2_Utils.vcLog({
-                    title: [LogTitle + ' Orders Search : Error', errorMsg].join(' - '),
+                VC_Util.vcLog({
+                    title: LogTitle + ' Orders Search : Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
+                throw errorMsg;
                 returnValue = false;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> valid orders: ' + JSON.stringify(returnValue));
@@ -139,7 +140,7 @@ define([
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                var reqOrderDetails = VC2_Utils.sendRequest({
+                var reqOrderDetails = VC_Util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
                     recordId: CURRENT.recordId,
                     query: {
@@ -156,15 +157,15 @@ define([
                 });
 
                 if (reqOrderDetails.isError) throw reqOrderDetails.errorMsg;
-                var respOrderDetail = VC2_Utils.safeParse(reqOrderDetails.RESPONSE);
+                var respOrderDetail = VC_Util.safeParse(reqOrderDetails.RESPONSE);
                 if (!respOrderDetail) throw 'Unable to fetch server response';
 
                 returnValue = respOrderDetail;
             } catch (error) {
-                var errorMsg = VC2_Utils.extractError(error);
+                var errorMsg = VC_Util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
-                VC2_Utils.vcLog({
-                    title: [LogTitle + ' Order Details:  Error', errorMsg].join(' - '),
+                VC_Util.vcLog({
+                    title: LogTitle + ' Order Details:  Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
@@ -181,7 +182,7 @@ define([
 
             try {
                 var respOrderDetail = option.orderDetails;
-                if (VC2_Utils.isEmpty(respOrderDetail)) throw 'Missing order details';
+                if (VC_Util.isEmpty(respOrderDetail)) throw 'Missing order details';
 
                 var arrLineItems = [];
 
@@ -211,13 +212,13 @@ define([
 
                 log.audit(logTitle, LogPrefix + '>> arrLineItems: ' + JSON.stringify(arrLineItems));
 
-                var reqItemAvail = VC2_Utils.sendRequest({
+                var reqItemAvail = VC_Util.sendRequest({
                     header: [LogTitle, 'Item Availability'].join(' : '),
                     method: 'post',
                     query: {
                         url:
                             CURRENT.vendorConfig.endPoint.replace(
-                                /orders.*$/gi,
+                                /orders\/$/gi,
                                 'catalog/priceandavailability?'
                             ) +
                             'includeAvailability=true&includePricing=true&includeProductAttributes=true',
@@ -240,14 +241,14 @@ define([
                     recordId: CURRENT.recordId
                 });
                 if (reqItemAvail.isError) throw reqItemAvail.errorMsg;
-                var respItemAvail = VC2_Utils.safeParse(reqItemAvail.RESPONSE);
+                var respItemAvail = VC_Util.safeParse(reqItemAvail.RESPONSE);
                 if (!respItemAvail) throw 'Unable to retrieve the item availability';
 
                 returnValue = respItemAvail;
             } catch (error) {
-                var errorMsg = VC2_Utils.extractError(error);
-                VC2_Utils.vcLog({
-                    title: [LogTitle + ' Item Availability:  Error', errorMsg].join(' - '),
+                var errorMsg = VC_Util.extractError(error);
+                VC_Util.vcLog({
+                    title: LogTitle + ' Item Availability:  Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
@@ -303,7 +304,7 @@ define([
                 LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd)
             );
 
-            if (VC2_Utils.isEmpty(arrDateBackOrderd)) return;
+            if (VC_Util.isEmpty(arrDateBackOrderd)) return;
 
             var nearestDate = arrDateBackOrderd.sort(function (a, b) {
                 return a.dateObj - b.dateObj;
@@ -316,7 +317,7 @@ define([
             var logTitle = [LogTitle, 'extractOrderShipmentDetails'].join('::');
 
             var shipmentDetails = option.shipmentDetails;
-            if (VC2_Utils.isEmpty(shipmentDetails)) return false;
+            if (VC_Util.isEmpty(shipmentDetails)) return false;
 
             var shipData = {
                 quantity: 0,
@@ -362,8 +363,8 @@ define([
                 }
             }
 
-            shipData.serials = VC2_Utils.uniqueArray(shipData.serials);
-            shipData.trackingNumbers = VC2_Utils.uniqueArray(shipData.trackingNumbers);
+            shipData.serials = VC_Util.uniqueArray(shipData.serials);
+            shipData.trackingNumbers = VC_Util.uniqueArray(shipData.trackingNumbers);
 
             log.audit(logTitle, LogPrefix + '>> Ship Data: ' + JSON.stringify(shipData));
             return shipData;
@@ -389,7 +390,7 @@ define([
                         status: (lineDetail.lineStatus || '').toUpperCase()
                     };
 
-                    if (!VC2_Utils.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
+                    if (!VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
                         log.audit(
                             logTitle,
                             '.... skipping line, invalid status :  [' + lineData.status + ']'
@@ -411,7 +412,7 @@ define([
                 log.audit(
                     logTitle,
                     LogPrefix +
-                        ('## ERROR ## ' + VC2_Utils.extractError(error)) +
+                        ('## ERROR ## ' + VC_Util.extractError(error)) +
                         ('\n' + JSON.stringify(error))
                 );
                 returnValue = false;
@@ -467,48 +468,58 @@ define([
                 returnValue = [];
             option = option || {};
 
-            CURRENT.recordId = option.poId || option.recordId;
-            CURRENT.recordNum = option.poNum || option.transactionNum;
-            CURRENT.vendorConfig = option.vendorConfig;
-            LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+            try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-            if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-            if (!CURRENT.recordId) throw 'Missing record Id!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
+                // generate the
+                LibIngramAPI.generateToken();
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
-            // generate the
-            LibIngramAPI.generateToken();
-            if (!CURRENT.accessToken) throw 'Unable to generate access token';
+                // get all the valid orders
+                var arrValidOrders = LibIngramAPI.getValidOrders();
+                var arrResponse = [];
 
-            // get all the valid orders
-            var arrValidOrders = LibIngramAPI.getValidOrders();
+                for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                    var validOrder = arrValidOrders[i];
+                    LogPrefix =
+                        '' +
+                        ('[purchaseorder:' + CURRENT.recordId + '][') +
+                        (validOrder.ingramOrderNumber + '] ');
 
-            var arrResponse = [];
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder)
+                    );
 
-            for (var i = 0, j = arrValidOrders.length; i < j; i++) {
-                var validOrder = arrValidOrders[i];
-                LogPrefix =
-                    '' +
-                    ('[purchaseorder:' + CURRENT.recordId + '][') +
-                    (validOrder.ingramOrderNumber + '] ');
+                    var respOrderDetails = LibIngramAPI.getOrderDetails({
+                        ingramOrder: validOrder
+                    });
 
-                log.audit(logTitle, LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder));
+                    var respItemAvail = LibIngramAPI.getItemAvailability({
+                        orderDetails: respOrderDetails
+                    });
 
-                var respOrderDetails = LibIngramAPI.getOrderDetails({
-                    ingramOrder: validOrder
+                    arrResponse.push({
+                        orderInfo: validOrder,
+                        orderDetails: respOrderDetails,
+                        itemAvailability: respItemAvail
+                    });
+                }
+                returnValue = arrResponse;
+            } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
+                VC_Util.vcLog({
+                    title: LogTitle + ': Request Error',
+                    error: error,
+                    recordId: CURRENT.recordId
                 });
-
-                var respItemAvail = LibIngramAPI.getItemAvailability({
-                    orderDetails: respOrderDetails
-                });
-
-                arrResponse.push({
-                    orderInfo: validOrder,
-                    orderDetails: respOrderDetails,
-                    itemAvailability: respItemAvail
-                });
+                throw errorMsg;
             }
-            returnValue = arrResponse;
 
             return returnValue;
         },
@@ -525,7 +536,6 @@ define([
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-                if (!CURRENT.recordId) throw 'Missing record Id!';
 
                 log.audit(logTitle, LogPrefix + '>> CURRENT: ' + JSON.stringify(CURRENT));
 
@@ -560,7 +570,7 @@ define([
                             line_num: itemDetail.customerLineNumber,
                             item_num: itemDetail.vendorPartNumber,
                             item_num_alt: itemDetail.ingramPartNumber,
-                            is_shipped: VC2_Utils.inArray(
+                            is_shipped: VC_Util.inArray(
                                 lineStatus,
                                 LibIngramAPI.ValidShippedStatus
                             ),
@@ -582,9 +592,9 @@ define([
                         if (!allSerials[outputLineData.item_num])
                             allSerials[outputLineData.item_num] = [];
 
-                        if (!VC2_Utils.isEmpty(shipment.serials)) {
+                        if (!VC_Util.isEmpty(shipment.serials)) {
                             // add the shipment serials
-                            allSerials[outputLineData.item_num] = VC2_Utils.uniqueArray(
+                            allSerials[outputLineData.item_num] = VC_Util.uniqueArray(
                                 allSerials[outputLineData.item_num].concat(shipment.serials)
                             );
 
@@ -595,7 +605,7 @@ define([
                             outputLineData.serial_num = 'NA';
                         }
 
-                        if (!VC2_Utils.isEmpty(shipment.trackingNumbers)) {
+                        if (!VC_Util.isEmpty(shipment.trackingNumbers)) {
                             outputLineData.tracking_num = shipment.trackingNumbers.join(',');
                         } else {
                             outputLineData.tracking_num = 'NA';
@@ -622,18 +632,19 @@ define([
 
                 returnValue = arrLineOutput;
             } catch (error) {
-                var errorMsg = VC2_Utils.extractError(error);
-                VC2_Utils.vcLog({
-                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                var errorMsg = VC_Util.extractError(error);
+                VC_Util.vcLog({
+                    title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
+                throw errorMsg;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC2_Utils.vcLog({
+                VC_Util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC2_Utils.isEmpty(returnValue)
+                    body: !VC_Util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,

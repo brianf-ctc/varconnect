@@ -26,14 +26,13 @@ define([
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
     './CTC_VC_Lib_LicenseValidator',
-    './CTC_VC_Lib_Utilities',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js'
 ], function (
     ns_search,
     ns_runtime,
     ns_record,
-    vc2Utils,
+    vc_util,
     vcGlobals,
     vcCreateIF,
     vcCreateIR,
@@ -42,7 +41,6 @@ define([
     vcVendorCfg,
     vcWebSvc,
     vcLicense,
-    vcUtil,
     constants,
     vcLog
 ) {
@@ -61,7 +59,7 @@ define([
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? vcUtil.extractError(option.error) : option.errorMsg),
+                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
                 status:
                     option.status ||
                     (option.error || option.isError
@@ -224,7 +222,7 @@ define([
 
                 vcLog.recordLog({
                     header: 'Fulfillment/Receipt Creation | Error',
-                    body: vc2Utils.extractError(e),
+                    body: vc_util.extractError(e),
                     transaction: docid,
                     status: constants.Lists.VC_LOG_STATUS.ERROR
                 });
@@ -293,7 +291,7 @@ define([
             }
         } catch (error) {
             log.error(logTitle, ' ## ERROR ## ' + JSON.stringify(error));
-            throw vcUtil.extractError(error);
+            throw vc_util.extractError(error);
             returnValue = false;
         }
 
@@ -427,7 +425,7 @@ define([
                 if (updateStatus.error && updateStatus.lineuniquekey) {
                     vcLog.recordLog({
                         header: 'PO Update | Error',
-                        body: vc2Utils.extractError(updateStatus.error),
+                        body: vc_util.extractError(updateStatus.error),
                         transaction: docid,
                         transactionLineKey: updateStatus.lineuniquekey,
                         status: constants.Lists.VC_LOG_STATUS.ERROR
@@ -437,7 +435,7 @@ define([
 
             log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(so_ID));
 
-            if (!vc2Utils.isEmpty(so_ID)) {
+            if (!vc_util.isEmpty(so_ID)) {
                 var so_rec = ns_record.load({
                     type: ns_record.Type.SALES_ORDER,
                     id: so_ID

@@ -23,7 +23,7 @@ define(function (require) {
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
-    var VC_Util = {
+    var vc_util = {
         CACHE: {},
         isEmpty: function (stValue) {
             return (
@@ -46,15 +46,15 @@ define(function (require) {
             return i > -1;
         },
         getCache: function (cacheKey) {
-            return VC_Util.CACHE.hasOwnProperty(cacheKey) ? VC_Util.CACHE[cacheKey] : null;
+            return vc_util.CACHE.hasOwnProperty(cacheKey) ? vc_util.CACHE[cacheKey] : null;
         },
         setCache: function (cacheKey, objVar) {
-            VC_Util.CACHE[cacheKey] = objVar;
+            vc_util.CACHE[cacheKey] = objVar;
         },
         uniqueArray: function (arrVar) {
             var arrNew = [];
             for (var i = 0, j = arrVar.length; i < j; i++) {
-                if (VC_Util.inArray(arrVar[i], arrNew)) continue;
+                if (vc_util.inArray(arrVar[i], arrNew)) continue;
                 arrNew.push(arrVar[i]);
             }
 
@@ -101,11 +101,11 @@ define(function (require) {
         },
         getNodeTextContent: function (node) {
             // log.debug('node', node);
-            if (!VC_Util.isUndefined(node)) return node.textContent;
+            if (!vc_util.isUndefined(node)) return node.textContent;
             else return null;
         },
         generateSerialLink: function (params) {
-            var NS_Url = VC_Util.loadModule('N/url');
+            var NS_Url = vc_util.loadModule('N/url');
 
             var protocol = 'https://';
             var domain = NS_Url.resolveDomain({
@@ -166,7 +166,7 @@ define(function (require) {
                     option.message ||
                     option.errorMessage ||
                     option.errorMsg ||
-                    (option.error ? VC_Util.extractError(option.error) : '');
+                    (option.error ? vc_util.extractError(option.error) : '');
 
                 logOption.BODY = util.isString(logOption.BODY)
                     ? logOption.BODY
@@ -174,7 +174,7 @@ define(function (require) {
 
                 if (
                     option.status &&
-                    VC_Util.inArray(option.status, [
+                    vc_util.inArray(option.status, [
                         LOG_STATUS.ERROR,
                         LOG_STATUS.INFO,
                         LOG_STATUS.SUCCESS
@@ -243,7 +243,7 @@ define(function (require) {
                     // log.audit(logOption.HEADER, logOption.BODY);
                 }
             } catch (error) {
-                log.error(logTitle, LogPrefix + '## ERROR ## ' + VC_Util.extractError(error));
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc_util.extractError(error));
             }
             return true;
         },
@@ -257,8 +257,6 @@ define(function (require) {
 
             var VALID_RESP_CODE = [200, 207];
 
-            // log.audit(logTitle, option);
-
             var _DEFAULT = {
                 validMethods: ['post', 'get'],
                 maxRetries: 3,
@@ -267,7 +265,7 @@ define(function (require) {
             var NS_Https = require('N/https');
 
             var queryOption = option.query || option.queryOption;
-            if (!queryOption || VC_Util.isEmpty(queryOption)) throw 'Missing query option';
+            if (!queryOption || vc_util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
             var response,
@@ -286,19 +284,21 @@ define(function (require) {
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
-
+                    isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
+                    isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: VC_Util.inArray(option.method, _DEFAULT.validMethods)
+                    method: vc_util.inArray(option.method, _DEFAULT.validMethods)
                         ? option.method
                         : 'get'
                 };
+            if (option.isXML) param.isJSON = false;
 
             // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
             var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
             try {
                 if (!param.noLogs) {
-                    VC_Util.vcLog({
-                        title: [param.logHeader, 'Request'].join(' - '),
+                    vc_util.vcLog({
+                        title: [param.logHeader, ' Request ', '(' + param.method + ')'].join(''),
                         content: queryOption,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
@@ -321,27 +321,30 @@ define(function (require) {
                         })
                 );
 
-                parsedResponse = VC_Util.safeParse(response);
-                returnValue.PARSED_RESPONSE = parsedResponse;
-
-                responseBody = response.body;
-
-                if (!response.code || !VC_Util.inArray(response.code, VALID_RESP_CODE)) {
-                    throw 'Received invalid response code - ' + response.code;
-                }
                 if (!response || !response.body) {
                     throw 'Empty or Missing Response !';
+                }
+                responseBody = response.body;
+                if (param.isJSON) {
+                    parsedResponse = vc_util.safeParse(response);
+                    returnValue.PARSED_RESPONSE = parsedResponse;
+                }
+
+                if (!response.code || !vc_util.inArray(response.code, VALID_RESP_CODE)) {
+                    throw parsedResponse
+                        ? JSON.stringify(parsedResponse)
+                        : 'Received invalid response code - ' + response.code;
                 }
 
                 ////////////////////////////
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc_util.extractError(error);
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
                 returnValue.details = parsedResponse || response;
 
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
                         (param.doRetry
@@ -357,14 +360,16 @@ define(function (require) {
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
                     option.retryCount = param.retryCount + 1;
-                    VC_Util.waitMs(param.waitMs);
-                    returnValue = VC_Util.sendRequest(option);
+                    vc_util.waitMs(param.waitMs);
+                    returnValue = vc_util.sendRequest(option);
                 }
             } finally {
                 if (!param.noLogs) {
-                    VC_Util.vcLog({
+                    vc_util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
-                        content: parsedResponse || responseBody || response,
+                        content: param.isJSON
+                            ? JSON.stringify(parsedResponse || responseBody || response)
+                            : responseBody,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
                     });
@@ -381,13 +386,12 @@ define(function (require) {
             try {
                 returnValue = JSON.parse(response.body || response);
             } catch (error) {
-                log.error(logTitle, '## ERROR ##' + VC_Util.extractError(error));
+                log.error(logTitle, '## ERROR ##' + vc_util.extractError(error));
                 returnValue = null;
             }
 
             return returnValue;
         },
-
         searchAllPaged: function (option) {
             var objSearch,
                 arrResults = [],
@@ -457,7 +461,7 @@ define(function (require) {
             log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
             var dateString = option.dateString || option,
-                dateFormat = VC_Util.CACHE.DATE_FORMAT,
+                dateFormat = vc_util.CACHE.DATE_FORMAT,
                 date = '';
 
             if (!dateFormat) {
@@ -477,7 +481,7 @@ define(function (require) {
                     } catch (e) {}
                     // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
                 }
-                VC_Util.CACHE.DATE_FORMAT = dateFormat;
+                vc_util.CACHE.DATE_FORMAT = dateFormat;
                 log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
             }
 
@@ -564,7 +568,7 @@ define(function (require) {
             return str.substring(str.length - len, str.length);
         },
         roundOff: function (value) {
-            var flValue = this.forceFloat(value || '0');
+            var flValue = util.isNumber(value) ? value : this.forceFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
@@ -592,8 +596,196 @@ define(function (require) {
         },
         isOneWorld: function () {
             return NS_Runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
+        },
+        extend: function (source, contrib) {
+            // do this to preserve the source values
+            return util.extend(util.extend({}, source), contrib);
+        },
+        findMatchingEntry: function (option) {
+            var logTitle = [LogTitle, 'findMatchingEntry'].join('::'),
+                returnValue;
+
+            var dataSource = option.dataSource || option.dataSet,
+                filter = option.filter,
+                findAll = option.findAll;
+
+            if (vc_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
+
+            var arrResults = [];
+            for (var i = 0, j = dataSource.length; i < j; i++) {
+                var isFound = true;
+                for (var fld in filter) {
+                    if (vc_util.isEmpty(dataSource[i][fld]) || dataSource[i][fld] != filter[fld]) {
+                        isFound = false;
+                        break;
+                    }
+                }
+                if (isFound) {
+                    arrResults.push(dataSource[i]);
+                    if (!findAll) break;
+                }
+            }
+
+            returnValue =
+                arrResults && arrResults.length
+                    ? findAll
+                        ? arrResults
+                        : arrResults.shift()
+                    : false;
+
+            return returnValue;
+        },
+        getCurrentFolder: function (option) {
+            var returnValue = null,
+                logTitle = [LogTitle, 'getCurrentFolder'].join('::');
+            option = option || {};
+
+            try {
+                var cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
+                returnValue = this.CACHE[cacheKey];
+
+                if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+                    var scriptId = option.scriptId;
+                    if (!scriptId) {
+                        if (!option.currentScript) {
+                            if (!option.runtime) option.runtime = this.loadModule('N/runtime');
+                            option.currentScript = option.runtime.getCurrentScript();
+                        }
+                        scriptId = option.currentScript.id;
+                    }
+                    if (!scriptId) return false;
+
+                    var objSearch = NS_Search.create({
+                        type: 'script',
+                        filters: [['scriptid', 'is', scriptId]],
+                        columns: ['scriptfile', 'name']
+                    });
+
+                    var fileId = null;
+                    objSearch.run().each(function (row) {
+                        fileId = row.getValue('scriptfile');
+                        return true;
+                    });
+
+                    var NS_File = this.loadModule('N/file');
+                    var fileObj = NS_File.load({
+                        id: fileId
+                    });
+
+                    // get the actual folderPathj
+                    var folderInfo = {
+                        path: (function (path) {
+                            var pathNew = path.split('/');
+                            pathNew.pop();
+                            return pathNew.join('/');
+                        })(fileObj.path),
+                        id: fileObj.folder
+                    };
+
+                    log.audit(logTitle, folderInfo);
+
+                    returnValue = folderInfo;
+                    this.CACHE[cacheKey] = folderInfo;
+                }
+            } catch (e) {
+                log.error(logTitle, JSON.stringify(e));
+            } finally {
+                // log.debug(logTitle, '>> current folder: ' + returnValue);
+            }
+
+            return returnValue;
+        },
+        searchFile: function (option) {
+            var fileName = option.filename || option.name;
+            if (!fileName) return false;
+
+            var arrCols = [
+                'name',
+                'folder',
+                'documentsize',
+                'url',
+                'created',
+                'modified',
+                'filetype'
+            ];
+            var searchOption = {
+                type: 'file',
+                columns: arrCols,
+                filters: [['name', 'is', fileName]]
+            };
+
+            var folderId = option.folder || option.folderId;
+            if (folderId) {
+                searchOption.filters.push('AND');
+                searchOption.filters.push(['folder', 'is', folderId]);
+            }
+
+            var returnValue = null;
+
+            var cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
+            var fileInfo = this.CACHE[cacheKey];
+
+            if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+                var objSearch = NS_Search.create(searchOption);
+                fileInfo = []; // prepare for multiple results?
+                objSearch.run().each(function (row) {
+                    var fInfo = {};
+
+                    for (var i = 0, j = row.columns.length; i < j; i++) {
+                        var col = row.columns[i];
+                        fInfo[col.name] = row.getValue(col);
+                    }
+                    fInfo.folderName = row.getText({
+                        name: 'folder'
+                    });
+                    fInfo.id = row.id;
+
+                    fileInfo.push(fInfo);
+                    return true;
+                });
+
+                this.CACHE[cacheKey] = fileInfo;
+            }
+
+            returnValue =
+                option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
+
+            return returnValue;
+        },
+        getFileContent: function (option) {
+            var returnValue = null;
+            var logTitle = [LogTitle, 'getFileContent'];
+
+            try {
+                var fileId = option.fileId;
+                if (!fileId) {
+                    var fileName = option.filename || option.name;
+                    if (!fileName) return false;
+
+                    var folderId = option.folder || option.folderId || this.getCurrentFolder();
+                    var fileInfo = this.searchFile({
+                        name: fileName,
+                        folder: folderId
+                    });
+
+                    if (!fileInfo) return false;
+                    fileId = fileInfo.id;
+                }
+
+                // load the file
+                var NS_File = this.loadModule('N/file');
+                var fileObj = NS_File.load({
+                    id: fileId
+                });
+
+                returnValue = fileObj.getContents();
+            } catch (e) {
+                log.error(logTitle, JSON.stringify(e));
+            }
+
+            return returnValue;
         }
     };
 
-    return VC_Util;
+    return vc_util;
 });

@@ -26,6 +26,7 @@
  * 1.01		Sep 7, 2017		jcorrea		Removed call to updateFieldList function, just copying all of the data over now
  * 2.00     Jan 20, 2019    jcorrea     Updated to VR connect v2 and including all VAR Cnnect fields (not just serial nums)
  * 2.10     Feb 20, 2019    jcorrea     Updated isEmpty to use === when testing for empty string
+ * 2.11     Aug 12, 2022    christian   Clearing a value from PO will also clear the value on SO
  */
 define([
     'N/record',
@@ -205,6 +206,11 @@ define([
                                 ? 'TEXT'
                                 : 'TEXT';
 
+                            var currentValue = soRec.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: xmlFields[xmlField],
+                                value: fieldValue
+                            });
                             // log.debug({
                             //     title: 'Update SO V2',
                             //     details: JSON.stringify({
@@ -232,6 +238,20 @@ define([
                                     sublistId: 'item',
                                     fieldId: xmlFields[xmlField],
                                     value: fieldValue
+                                });
+                            } else if (!isEmpty(currentValue)) {
+                                soRec.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: xmlFields[xmlField],
+                                    value: ''
+                                });
+                                log.debug({
+                                    title: 'Update SO V2',
+                                    details: 'Clearing field: ' + JSON.stringify({
+                                        field: xmlFields[xmlField],
+                                        type: fieldType,
+                                        value: ''
+                                    })
                                 });
                             }
                         }

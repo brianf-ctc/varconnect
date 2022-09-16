@@ -70,7 +70,8 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js', './CTC_VC2_Lib_Util
         createIF: constants.Fields.MainConfig.CREATE_ITEM_FULFILLMENTS, //6
         createIR: constants.Fields.MainConfig.CREATE_ITEM_RECEIPTS, //7
         ignoreDirectShipDropship: constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
-        ignoreDirectShipSpecialOrder: constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
+        ignoreDirectShipSpecialOrder:
+            constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
         createSerialDropship: constants.Fields.MainConfig.CREATE_SERIAL_DROPSHIPS, //10
         createSerialSpecialOrder: constants.Fields.MainConfig.CREATE_SERIAL_SPECIAL_ORDERS, //11
         useInboundTrackingNumbers: constants.Fields.MainConfig.USE_INB_TRACKING_SPECIAL_ORDERS, //12
@@ -84,7 +85,8 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js', './CTC_VC2_Lib_Util
         fulfillmentSearch: constants.Fields.MainConfig.FULFILMENT_SEARCH, //20,
         defaultBillForm: constants.Fields.MainConfig.DEFAULT_BILL_FORM, //21
         defaultVendorBillStatus: constants.Fields.MainConfig.DEFAULT_VENDOR_BILL_STATUS, //22
-        allowedVarianceAmountThreshold: constants.Fields.MainConfig.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
+        allowedVarianceAmountThreshold:
+            constants.Fields.MainConfig.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
         isVarianceOnTax: constants.Fields.MainConfig.VARIANCE_ON_TAX, //24
         defaultTaxItem: constants.Fields.MainConfig.DEFAULT_TAX_ITEM, //25
         defaultTaxItem2: constants.Fields.MainConfig.DEFAULT_TAX_ITEM2, //25

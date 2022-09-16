@@ -28,9 +28,9 @@ define([
     'N/url',
     'N/ui/serverWidget',
     'N/format',
-    './CTC_VC_Lib_Utilities',
+    './CTC_VC2_Lib_Utils',
     './CTC_VC_Constants.js'
-], function (record, runtime, search, url, serverWidget, format, util, constants) {
+], function (record, runtime, search, url, serverWidget, format, vc_util, constants) {
     var LogTitle = 'VC UE Set Status';
 
     var EventActionsHelper = {},
@@ -228,7 +228,7 @@ define([
                 [CONTEXT_TYPE.USER_INTERFACE].indexOf(ContextData.execType) >= 0
             ) {
                 var paramSudo = context.request.parameters.sudo;
-                if (!util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
+                if (!vc_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
                     var result = SUDO_ACTIONS[paramSudo].call(SUDO_ACTIONS, context);
 
                     if (result) {

@@ -142,13 +142,13 @@ define([
             var record_id = searchValues.id;
 
             try {
-                var rec = ns_search.lookupFields({
+                var billFileData = ns_search.lookupFields({
                     type: 'customrecord_ctc_vc_bills',
                     id: record_id,
                     columns: parentSearchFields
                 });
 
-                log.debug(logTitle, '>> results: ' + JSON.stringify(rec));
+                log.debug(logTitle, '>> results: ' + JSON.stringify(billFileData));
 
                 var updateValues = {};
                 var restletHeaders = {
@@ -156,10 +156,11 @@ define([
                 };
 
                 // get any updated values from the record
-                var requestObj = JSON.parse(JSON.stringify(rec));
+                var requestObj = JSON.parse(JSON.stringify(billFileData));
                 log.debug(logTitle, '>> requestObj: ' + JSON.stringify(requestObj));
 
                 requestObj.paramBillInAdv = paramBillInAdv;
+                requestObj.billFileId = record_id;
 
                 var createBillResponse = ns_https.requestRestlet({
                     headers: restletHeaders,
@@ -169,30 +170,30 @@ define([
                     body: JSON.stringify(requestObj)
                 });
 
-                var r = JSON.parse(createBillResponse.body);
-                log.debug(logTitle, '>> responseBody: ' + JSON.stringify(r));
+                var respBody = JSON.parse(createBillResponse.body);
+                log.debug(logTitle, '>> responseBody: ' + JSON.stringify(respBody));
 
-                if (r.status) {
-                    updateValues.custrecord_ctc_vc_bill_proc_status = r.status;
+                if (respBody.status) {
+                    updateValues.custrecord_ctc_vc_bill_proc_status = respBody.status;
                 }
 
-                if (r.msg) {
+                if (respBody.msg) {
                     // var currentMessages = rec.custrecord_ctc_vc_bill_log;
                     // var newMessage = moment().format(_getDateFormat()) + ' - ' + r.msg;
                     // updateValues.custrecord_ctc_vc_bill_log = newMessage + '\r\n' + currentMessages;
                     updateValues.custrecord_ctc_vc_bill_log = vcBillFile.addNote({
-                        note: r.msg,
-                        current: rec.custrecord_ctc_vc_bill_log
+                        note: respBody.msg,
+                        current: billFileData.custrecord_ctc_vc_bill_log
                     });
                 }
 
-                if (r.id) {
-                    updateValues.custrecord_ctc_vc_bill_linked_bill = r.id;
+                if (respBody.id) {
+                    updateValues.custrecord_ctc_vc_bill_linked_bill = respBody.id;
                 }
 
-                if (r.varianceLines) {
-                    var jsonData = JSON.parse(rec.custrecord_ctc_vc_bill_json);
-                    jsonData.varianceLines = r.varianceLines;
+                if (respBody.varianceLines) {
+                    var jsonData = JSON.parse(billFileData.custrecord_ctc_vc_bill_json);
+                    jsonData.varianceLines = respBody.varianceLines;
                     updateValues.custrecord_ctc_vc_bill_json = JSON.stringify(jsonData);
                 }
 

@@ -12,273 +12,196 @@
  * @NModuleScope Public
  */
 
+var hlFolder = 'SuiteScripts/VAR Connect/highlight';
 define([
     'N/search',
     'N/currentRecord',
-    'N/https',
-    './CTC_VC_Constants.js',
-    './CTC_VC_Lib_VendorConfig',
-    './CTC_VC_Lib_WebService',
-    './VC_Globals.js',
-    './highlight/highlight.js',
-    './highlight/languages/xml.min.js',
-    './highlight/languages/json.min.js'
+    '../CTC_VC_Lib_VendorConfig.js',
+    '../CTC_VC_Lib_WebService.js',
+    '../CTC_VC_Constants.js',
+    '../CTC_VC2_Lib_Utils.js',
+    '../VC_Globals.js',
+    hlFolder + '/highlight.js',
+    hlFolder + '/languages/xml.min.js',
+    hlFolder + '/languages/json.min.js'
 ], function (
-    nsSearch,
-    currentRecord,
-    https,
-    constants,
-    libVendorConfig,
-    libWebService,
-    vcGlobals,
+    ns_search,
+    ns_currentRecord,
+    vc_vendorcfg,
+    vc_websvc,
+    vc_constants,
+    vc_util,
+    vc_global,
     hljs,
-    hljsXmlLanguage,
-    hljsJsonLanguage
+    hljsXml,
+    hljsJson
 ) {
-    if (!hljs) {
-        require([
-            'SuiteScripts/VAR Connect/highlight/highlight.js',
-            'SuiteScripts/VAR Connect/highlight/languages/xml.min.js',
-            'SuiteScripts/VAR Connect/highlight/languages/json.min.js'
-        ], function (rehljs, rehljsXmlLanguage, rehljsJsonLanguage) {
-            hljs = rehljs;
-            hljsXmlLanguage = rehljsXmlLanguage;
-            hljsJsonLanguage = rehljsJsonLanguage;
-            hljs.registerLanguage('xml', hljsXmlLanguage);
-            hljs.registerLanguage('json', hljsJsonLanguage);
-        });
-    } else {
-        hljs.registerLanguage('xml', hljsXmlLanguage);
-        hljs.registerLanguage('json', hljsJsonLanguage);
+    // get current folder
+    if (hljs) {
+        hljs.registerLanguage('xml', hljsXml);
+        hljs.registerLanguage('json', hljsJson);
     }
 
-    function _getPODetails(poNum) {
-        var columns = [nsSearch.createColumn({ name: 'entity' })];
-        if (vcGlobals.ENABLE_SUBSIDIARIES)
-            columns.push(nsSearch.createColumn({ name: 'subsidiary' }));
+    var Helper = {
+        getPODetails: function (poNum) {
+            var columns = [ns_search.createColumn({ name: 'entity' })];
+            if (vc_global.ENABLE_SUBSIDIARIES)
+                columns.push(ns_search.createColumn({ name: 'subsidiary' }));
 
-        var poObj = {},
-            purchaseorderSearchObj = nsSearch.create({
-                type: 'purchaseorder',
-                filters: [
-                    ['type', 'anyof', 'PurchOrd'],
-                    'AND',
-                    ['numbertext', 'is', poNum],
-                    'AND',
-                    ['mainline', 'is', true]
-                ],
-                columns: columns
-            });
-        var searchResultCount = purchaseorderSearchObj.runPaged().count;
-        log.debug('purchaseorderSearchObj result count', searchResultCount);
-        purchaseorderSearchObj.run().each(function (result) {
-            if (vcGlobals.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
-            poObj['vendor'] = result.getValue('entity');
-            poObj['id'] = result.id;
-            // ?
-            //            if (vcGlobals.ENABLE_SUBSIDIARIES)
-            //            	poObj['subsidiary'] = result.getValue('subsidiary');
+            var poObj = {},
+                purchaseorderSearchObj = ns_search.create({
+                    type: 'purchaseorder',
+                    filters: [
+                        ['type', 'anyof', 'PurchOrd'],
+                        'AND',
+                        ['numbertext', 'is', poNum],
+                        'AND',
+                        ['mainline', 'is', true]
+                    ],
+                    columns: columns
+                });
+            var searchResultCount = purchaseorderSearchObj.runPaged().count;
+            log.debug('purchaseorderSearchObj result count', searchResultCount);
+            purchaseorderSearchObj.run().each(function (result) {
+                if (vc_global.ENABLE_SUBSIDIARIES)
+                    poObj['subsidiary'] = result.getValue('subsidiary');
+                poObj['vendor'] = result.getValue('entity');
+                poObj['id'] = result.id;
+                // ?
+                //            if (vcGlobals.ENABLE_SUBSIDIARIES)
+                //            	poObj['subsidiary'] = result.getValue('subsidiary');
 
-            return false;
-        });
-
-        return poObj;
-    }
-
-    function _loadDebugVendorConfig(options) {
-        var xmlVendor = options.xmlVendor,
-            xmlSubsidiary = options.xmlSubsidiary,
-            vendorConfig = libVendorConfig.getDebugVendorConfiguration({
-                xmlVendor: xmlVendor,
-                subsidiary: xmlSubsidiary
+                return false;
             });
 
-        if (!vendorConfig) {
-            log.debug('No configuration set up for xml vendor ' + xmlVendor);
-        } else return vendorConfig;
-    }
+            return poObj;
+        },
 
-    function _loadVendorConfig(vendor, subsidiary) {
-        var vendorConfig = libVendorConfig.getVendorConfiguration({
-            vendor: vendor,
-            subsidiary: subsidiary
-        });
+        loadDebugVendorConfig: function (options) {
+            var xmlVendor = options.xmlVendor,
+                xmlSubsidiary = options.xmlSubsidiary,
+                vendorConfig = vc_vendorcfg.getDebugVendorConfiguration({
+                    xmlVendor: xmlVendor,
+                    subsidiary: xmlSubsidiary
+                });
 
-        if (!vendorConfig) {
-            log.debug(
-                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
-            );
-        } else return vendorConfig;
-    }
-
-    function showVendorName() {
-        var xmlViewer = document.getElementById('custpage_xml_viewer_frame');
-        var xmlViewerDocument = xmlViewer.contentDocument || xmlViewer.contentWindow.document;
-        xmlViewerDocument.getElementById('custpage_xml__viewer').style.display = 'none';
-        xmlViewerDocument.getElementById('custpage_json__viewer').style.display = 'none';
-        
-        var thisRecord = currentRecord.get();
-        var xmlVendor = thisRecord.getValue({ fieldId: 'vendors' });
-
-        var ponum = thisRecord.getValue({ fieldId: 'ponum' });
-        var objPO = _getPODetails(ponum);
-
-        if (!ponum || !ponum.length) {
-            alert('Please Select a vendor and enter a PO number');
-        } else {
-            var xmlContent = 'Your PO = ' + ponum;
-            var vendorConfig = _loadDebugVendorConfig({
-                xmlVendor: xmlVendor,
-                xmlSubsidiary: objPO.subsidiary
-            });
-            var elementIdToShow, elementIdToHide;
             if (!vendorConfig) {
-                alert('Please Select a valid PO with vendor properly configured');
-            } else {
-                jQuery('#custpage_xml__loader').show();
-                setTimeout(function () {
-                    try {
-                        console.log('debug lib: Calling library webservice');
-                        var promiseResponse = new Promise(function (resolve) {
-                            var outputObj;
-                            try {
-                                outputObj = libWebService.handleRequest({
-                                    vendorConfig: vendorConfig,
-                                    poNum: ponum,
-                                    poId: objPO.id,
-                                    country:
-                                        vendorConfig.country == 'CA'
-                                            ? constants.Lists.COUNTRY.CA
-                                            : constants.Lists.COUNTRY.US,
-                                    countryCode: vendorConfig.country
-                                });
-                            } catch (processErr) {
-                                outputObj =
-                                    'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
-                                    (processErr.name + ': ') +
-                                    (processErr.message + ']');
-                                console.log(
-                                    'debug lib: ' +
-                                        (processErr.name + '- ') +
-                                        (processErr.message + '==\n' + processErr.stack)
-                                );
-                            }
-                            resolve(outputObj);
-                        });
-                        promiseResponse.then(function (outputObj) {
-                            console.log(
-                                'debug lib: webservice return ' + JSON.stringify(outputObj)
-                            );
-                            if (outputObj) {
-                                if (
-                                    vendorConfig.xmlVendor ==
-                                    constants.Lists.XML_VENDOR.INGRAM_MICRO
-                                ) {
-                                    xmlContent =
-                                        '<!--Retrieved XML-->\n' +
-                                        outputObj.detailxml +
-                                        '\n<!--Tracking XML-->\n' +
-                                        outputObj.trackxml;
-                                    try {
-                                        xmlContent = vkbeautify.xml(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
-                                        elementIdToShow = 'custpage_xml__viewer';
-                                        elementIdToHide = 'custpage_json__viewer';
-                                    } catch (parseErr) {
-                                        xmlContent = JSON.stringify(outputObj);
-                                        xmlContent = vkbeautify.json(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
-                                        elementIdToShow = 'custpage_json__viewer';
-                                        elementIdToHide = 'custpage_xml__viewer';
-                                    }
-                                } else if (
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
-                                    vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.SYNNEX_API ||
-                                    vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
-                                    vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
-                                ) {
-                                    xmlContent = JSON.stringify(outputObj);
-                                    try {
-                                        xmlContent = vkbeautify.json(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
-                                        elementIdToShow = 'custpage_json__viewer';
-                                        elementIdToHide = 'custpage_xml__viewer';
-                                    } catch (parseErr) {
-                                        xmlContent = vkbeautify.xml(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
-                                        elementIdToShow = 'custpage_xml__viewer';
-                                        elementIdToHide = 'custpage_json__viewer';
-                                    }
-                                } else {
-                                    xmlContent = outputObj;
-                                    if (typeof xmlContent == 'string') {
-                                        try {
-                                            xmlContent = vkbeautify.xml(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
-                                            elementIdToShow = 'custpage_xml__viewer';
-                                            elementIdToHide = 'custpage_json__viewer';
-                                        } catch (parseErr) {
-                                            xmlContent = JSON.stringify(outputObj);
-                                            xmlContent = vkbeautify.json(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
-                                            elementIdToShow = 'custpage_json__viewer';
-                                            elementIdToHide = 'custpage_xml__viewer';
-                                        }
-                                    } else {
-                                        xmlContent = JSON.stringify(outputObj);
-                                        try {
-                                            xmlContent = vkbeautify.json(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
-                                            elementIdToShow = 'custpage_json__viewer';
-                                            elementIdToHide = 'custpage_xml__viewer';
-                                        } catch (parseErr) {
-                                            xmlContent = vkbeautify.xml(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
-                                            elementIdToShow = 'custpage_xml__viewer';
-                                            elementIdToHide = 'custpage_json__viewer';
-                                        }
-                                    }
-                                }
-                                xmlViewerDocument.getElementById(elementIdToShow).style.display =
-                                    '';
-                                xmlViewerDocument.getElementById(elementIdToHide).style.display =
-                                    'none';
-                            }
-                            xmlViewerDocument.getElementById(
-                                elementIdToShow || 'custpage_xml__viewer'
-                            ).style.display = '';
-                            xmlViewerDocument.getElementById(
-                                [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
-                            ).innerHTML = xmlContent;
-                        });
-                    } finally {
-                        jQuery('#custpage_xml__loader').hide();
-                    }
-                }, 500);
-            }
+                log.debug('No configuration set up for xml vendor ' + xmlVendor);
+            } else return vendorConfig;
         }
-    }
+    };
 
+    var DebugToolHelper = {
+        pageInit: function () {
+            console.log('load page');
+        },
+        showResults: function () {
+            var xmlViewer = jQuery('#custpage_xml_viewer_frame').contents();
+            jQuery('#custpage_xml__loader').show();
+
+            if (hljs) {
+                xmlViewer.find('#custpage_xml__viewer').hide();
+                xmlViewer.find('#custpage_json__viewer').hide();
+                jQuery('#vcdebugcontent').hide();
+            } else {
+                jQuery('#vcdebugcontent').hide().get(0).value = '';
+            }
+
+            var thisRecord = ns_currentRecord.get();
+
+            var xmlVendor = thisRecord.getValue({ fieldId: 'custpage_vendor' }),
+                poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' });
+
+            setTimeout(function () {
+                try {
+                    // set the content
+                    var promiseObj = new Promise(function (resolve) {
+                        var outputObj;
+
+                        try {
+                            var objPO = Helper.getPODetails(poNum),
+                                vendorConfig = Helper.loadDebugVendorConfig({
+                                    xmlVendor: xmlVendor,
+                                    xmlSubsidiary: objPO.subsidiary
+                                });
+                            if (!objPO || !poNum) throw 'Valid PO Number is required';
+
+                            outputObj = vc_websvc.handleRequest({
+                                vendorConfig: vendorConfig,
+                                poNum: poNum,
+                                poId: objPO.id,
+                                country:
+                                    vendorConfig.country == 'CA'
+                                        ? vc_constants.Lists.COUNTRY.CA
+                                        : vc_constants.Lists.COUNTRY.US,
+                                countryCode: vendorConfig.country
+                            });
+                        } catch (processErr) {
+                            outputObj =
+                                'Error while handling request. Please make sure Vendor configuration was setup correctly.<br/><br/> [' +
+                                (vc_util.extractError(processErr) + ']');
+                            // (processErr.name + ': ') +
+                            // (processErr.message +
+
+                            console.log(
+                                'debug lib: ' +
+                                    (processErr.name + '- ') +
+                                    (processErr.message + '==\n' + processErr.stack)
+                            );
+                        }
+                        resolve(outputObj);
+                    });
+                    promiseObj.then(function (outputObj) {
+                        var xmlContent = outputObj;
+
+                        try {
+                            if (!util.isObject(outputObj)) throw outputObj;
+                            xmlContent = JSON.stringify(outputObj);
+                            xmlContent = vkbeautify.json(xmlContent, 4);
+
+                            if (hljs) {
+                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                elementIdToShow = 'custpage_json__viewer';
+                                elementIdToHide = 'custpage_xml__viewer';
+                            }
+                        } catch (err) {
+                            xmlContent = vkbeautify.xml(outputObj, 4);
+                            if (hljs) {
+                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                elementIdToShow = 'custpage_xml__viewer';
+                                elementIdToHide = 'custpage_json__viewer';
+                            }
+                        }
+
+                        if (hljs) {
+                            xmlViewer.find('#' + elementIdToShow).show();
+                            xmlViewer.find('#' + elementIdToHide).hide();
+
+                            xmlViewer.find('#' + [elementIdToHide, '_content'].join('')).hide();
+                            xmlViewer
+                                .find('#' + [elementIdToShow, '_content'].join(''))
+                                .show()
+                                .get(0).innerHTML = xmlContent;
+                        } else {
+                            xmlViewer.find('#custpage_xml__viewer').hide();
+                            xmlViewer.find('#custpage_json__viewer').hide();
+
+                            jQuery('#vcdebugcontent').show().get(0).value = xmlContent;
+                            jQuery('#custpage_xml_viewer_frame').hide();
+                        }
+
+                        return true;
+                    });
+                } finally {
+                    jQuery('#custpage_xml__loader').hide();
+                }
+            }, 500);
+
+            return true;
+        }
+    };
+
+    //////////////////////////////////////////////////////////////////////////////
     (function () {
         function createShiftArr(step) {
             var space = '    ';
@@ -620,8 +543,7 @@ define([
 
         window.vkbeautify = new vkbeautify();
     })();
+    //////////////////////////////////////////////////////////////////////////////
 
-    return {
-        showVendorName: showVendorName
-    };
+    return DebugToolHelper;
 });

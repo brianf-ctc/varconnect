@@ -2,7 +2,8 @@
 	"info": {
 		"_postman_id": "929f6f8f-5ee7-4225-a0e5-f2fb57519c75",
 		"name": "VAR Connect",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "773534"
 	},
 	"item": [
 		{
@@ -36,7 +37,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<SynnexB2B version=\"2.2\">\r\n    <Credential>\r\n        <UserID>mspsupport@integra1.net</UserID>\r\n        <Password>Quosal7248!</Password>\r\n    </Credential>\r\n    <OrderStatusRequest>\r\n        <CustomerNumber>102904</CustomerNumber>\r\n        <PONumber>210568</PONumber>\r\n    </OrderStatusRequest>\r\n</SynnexB2B>",
+							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<SynnexB2B>\r\n    <Credential>\r\n        <UserID>developer@quadbridge.com</UserID>\r\n        <Password>9H95egyKy&amp;3?F@EB</Password>\r\n    </Credential>\r\n    <OrderStatusRequest>\r\n        <CustomerNumber>1157904</CustomerNumber>\r\n        <PONumber>86096</PONumber>\r\n    </OrderStatusRequest>\r\n</SynnexB2B>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -44,12 +45,63 @@
 							}
 						},
 						"url": {
-							"raw": "https://ec.synnex.com/SynnexXML/POStatus",
+							"raw": "https://ec.synnex.ca/SynnexXML/POStatus",
 							"protocol": "https",
 							"host": [
 								"ec",
 								"synnex",
-								"com"
+								"ca"
+							],
+							"path": [
+								"SynnexXML",
+								"POStatus"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO Submit",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"connection": true,
+							"accept-encoding": true,
+							"accept": true,
+							"user-agent": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml; charset=utf-8",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Content-Length",
+								"value": "length",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<SynnexB2B>\r\n    <Credential>\r\n        <UserID>developer@quadbridge.com</UserID>\r\n        <Password>9H95egyKy&amp;3?F@EB</Password>\r\n    </Credential>\r\n    <OrderStatusRequest>\r\n        <CustomerNumber>1157904</CustomerNumber>\r\n        <PONumber>86096</PONumber>\r\n    </OrderStatusRequest>\r\n</SynnexB2B>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://ec.synnex.ca/SynnexXML/POStatus",
+							"protocol": "https",
+							"host": [
+								"ec",
+								"synnex",
+								"ca"
 							],
 							"path": [
 								"SynnexXML",
@@ -144,7 +196,68 @@
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?orderStatus=PROCESSING",
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?customerOrderNumber={{PO_NUM}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"search"
+							],
+							"query": [
+								{
+									"key": "customerOrderNumber",
+									"value": "{{PO_NUM}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status PO Copy",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{INGRAM_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "IM-CustomerNumber",
+								"value": "{{INGRAM_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CountryCode",
+								"value": "{{INGRAM_CCODE}}",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "Q10004-RND-TEST",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?orderStatus=SHIPPED",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -161,7 +274,7 @@
 							"query": [
 								{
 									"key": "orderStatus",
-									"value": "PROCESSING"
+									"value": "SHIPPED"
 								}
 							]
 						}
@@ -310,17 +423,17 @@
 							},
 							{
 								"key": "IM-CorrelationID",
-								"value": "DNP-000409",
+								"value": "249088",
 								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com/resellers/v6/orders/search?customerOrderNumber=DNP-000362",
+							"raw": "https://api.ingrammicro.ca/resellers/v6/orders/search?customerOrderNumber=POQ0143",
 							"protocol": "https",
 							"host": [
 								"api",
 								"ingrammicro",
-								"com"
+								"ca"
 							],
 							"path": [
 								"resellers",
@@ -331,7 +444,7 @@
 							"query": [
 								{
 									"key": "customerOrderNumber",
-									"value": "DNP-000362"
+									"value": "POQ0143"
 								}
 							]
 						}
@@ -341,44 +454,19 @@
 				{
 					"name": "InvoiceSearch",
 					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{INGRAM_TOKEN}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "IM-CustomerNumber",
-								"value": "10-471580",
-								"type": "text",
-								"disabled": true
-							},
-							{
-								"key": "IM-CountryCode",
-								"value": "CA",
-								"type": "text",
-								"disabled": true
-							},
-							{
-								"key": "IM-CorrelationID",
-								"value": "R485215",
-								"type": "text",
-								"disabled": true
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>02</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>212215</RefID>\r\n        </RefInfo>\r\n        <RefInfo>\r\n            <RefIDQual>ON</RefIDQual>\r\n            <RefID>6032601562</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
 							}
-						],
+						},
 						"url": {
-							"raw": "https://api.ingrammicro.com:443/resellers/v5/invoices/40-L926Q-11?customerNumber={{INGRAM_PARTNERID}}&isoCountryCode={{INGRAM_CCODE}}",
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/invoices/60-BHGW9-21",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -390,17 +478,7 @@
 								"resellers",
 								"v5",
 								"invoices",
-								"40-L926Q-11"
-							],
-							"query": [
-								{
-									"key": "customerNumber",
-									"value": "{{INGRAM_PARTNERID}}"
-								},
-								{
-									"key": "isoCountryCode",
-									"value": "{{INGRAM_CCODE}}"
-								}
+								"60-BHGW9-21"
 							]
 						}
 					},
@@ -459,7 +537,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"showAvailableDiscounts\": true,\r\n    \"showReserveInventoryDetails\": true,\r\n    \"specialBidNumber\": \"\",\r\n    \"products\": [\r\n      {\r\n        \"ingramPartNumber\": \"713HHF\",\r\n        \"customerPartNumber\": \"713HHF\",\r\n        \"vendorPartNumber\": \"40ANY230US\",\r\n        \"upc\": \"0193638285168\",\r\n        \"quantityRequested\": 1\r\n      }, \r\n      {\r\n        \"ingramPartNumber\": \"979PPU\",\r\n        \"customerPartNumber\": \"979PPU\",\r\n        \"vendorPartNumber\": \"20T40035US\",\r\n        \"upc\": \"0195042602630\",\r\n        \"quantityRequested\": 1\r\n      }\r\n\r\n    ]\r\n  }",
+							"raw": " {\r\n    \"showAvailableDiscounts\": true,\r\n    \"showReserveInventoryDetails\": true,\r\n    \"specialBidNumber\": \"\",\r\n    \"products\": [\r\n      {\r\n        \"ingramPartNumber\": \"4A2585\",\r\n        \"customerPartNumber\": \"4A2585\",\r\n        \"vendorPartNumber\": \"MR52-HW\",\r\n        \"quantityRequested\": 114\r\n      }\r\n    ]\r\n  }",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -565,12 +643,12 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer jfGHILjjMX7euSegly74AH6ztCXL",
+								"value": "Bearer {{INGRAM_TOKEN}}",
 								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "https://api.ingrammicro.com:443/resellers/v5/orders/search/?customerNumber=10-CFB9F&isocountrycode=CA&customerordernumber=PO00586",
+							"raw": "https://api.ingrammicro.com:443/resellers/v5/orders/search/?customerNumber={{INGRAM_PARTNERID}}&isocountrycode={{INGRAM_CCODE}}&customerordernumber={{PO_NUM}}",
 							"protocol": "https",
 							"host": [
 								"api",
@@ -588,15 +666,15 @@
 							"query": [
 								{
 									"key": "customerNumber",
-									"value": "10-CFB9F"
+									"value": "{{INGRAM_PARTNERID}}"
 								},
 								{
 									"key": "isocountrycode",
-									"value": "CA"
+									"value": "{{INGRAM_CCODE}}"
 								},
 								{
 									"key": "customerordernumber",
-									"value": "PO00586"
+									"value": "{{PO_NUM}}"
 								}
 							]
 						}
@@ -759,7 +837,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XMLFORMPOST>\r\n    <REQUEST>itemInquiry</REQUEST>\r\n    <LOGIN>\r\n        <USERID>157720XML</USERID>\r\n        <PASSWORD>Ergo6093!</PASSWORD>\r\n    </LOGIN>\r\n    <PARTNUM>910-002974</PARTNUM>\r\n    <LOOKUPTYPE>DH</LOOKUPTYPE>            \r\n    <QUANTITY>1</QUANTITY>            \r\n</XMLFORMPOST>",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>itemInquiry</REQUEST>\r\n    <LOGIN>\r\n        <USERID>157720XML</USERID>\r\n        <PASSWORD>Ergo6093!</PASSWORD>\r\n    </LOGIN>\r\n    <PARTNUM>9VH72AA#ABA</PARTNUM>\r\n    <LOOKUPTYPE>MFR</LOOKUPTYPE>            \r\n    <QUANTITY>1</QUANTITY>            \r\n</XMLFORMPOST>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -819,7 +897,37 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XMLFORMPOST>\r\n    <REQUEST>orderStatus</REQUEST>\r\n    <LOGIN>\r\n        <USERID>8036670000</USERID>\r\n        <PASSWORD>383DjcCXiLnA#MdF</PASSWORD>\r\n    </LOGIN>\r\n    <STATUSREQUEST>\r\n        <PONUM></PONUM>\r\n    </STATUSREQUEST>\r\n</XMLFORMPOST>",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>orderStatus</REQUEST>\r\n    <LOGIN>\r\n        <USERID>{{DH_USER}}</USERID>\r\n        <PASSWORD>{{DH_PASS}}</PASSWORD>\r\n    </LOGIN>\r\n    <STATUSREQUEST>\r\n        <PONUM>POQ1268</PONUM>\r\n    </STATUSREQUEST>\r\n</XMLFORMPOST>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://www.dandh.ca/dhXML/xmlDispatch",
+							"protocol": "https",
+							"host": [
+								"www",
+								"dandh",
+								"ca"
+							],
+							"path": [
+								"dhXML",
+								"xmlDispatch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "xmlorderStatus-2",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<XMLFORMPOST>\r\n    <REQUEST>orderStatus</REQUEST>\r\n    <LOGIN>\r\n        <USERID>157720XML</USERID>\r\n        <PASSWORD>Ergo6093!</PASSWORD>\r\n    </LOGIN>\r\n    <STATUSREQUEST>\r\n        <PONUM>82018856</PONUM>\r\n    </STATUSREQUEST>\r\n</XMLFORMPOST>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -854,7 +962,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n        <ResponseVersion>1.7</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>211633</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>752352</UserName>\r\n        <Password>7vX$gdGSt%4</Password>\r\n        <ResponseVersion>1.7</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>2022-1011</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -883,7 +991,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>789812</UserName>\r\n        <Password>j5xxT3qLJNbpcDD#</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID></RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>789808</UserName>\r\n        <Password>&N8JG48@rspgQ4Ks</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>01</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>D10001</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -912,7 +1020,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>02</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>212215</RefID>\r\n        </RefInfo>\r\n        <RefInfo>\r\n            <RefIDQual>ON</RefIDQual>\r\n            <RefID>6032601562</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
+							"raw": "<XML_OrderStatus_Submit>\r\n    <Header>\r\n        <UserName>752352</UserName>\r\n        <Password>7vX$gdGSt%4</Password>\r\n    </Header>\r\n    <Detail>\r\n        <PurposeCode>02</PurposeCode>\r\n        <RefInfo>\r\n            <RefIDQual>PO</RefIDQual>\r\n            <RefID>2022-1011</RefID>\r\n        </RefInfo>\r\n    </Detail>\r\n</XML_OrderStatus_Submit>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -936,12 +1044,17 @@
 				},
 				{
 					"name": "InvoiceDetail By PO",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"content-type": true
+						}
+					},
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "<XML_InvoiceDetailByPO_Submit>\r\n    <Header>\r\n        <UserName>{{TD_USERNAME}}</UserName>\r\n        <Password>{{TD_PASSWD}}</Password>\r\n        <ResponseVersion>1.7</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <POInfo>\r\n            <PONbr>211472</PONbr>\r\n        </POInfo>\r\n    </Detail>\r\n</XML_InvoiceDetailByPO_Submit>",
+							"raw": "<XML_InvoiceDetailByPO_Submit>\r\n    <Header>\r\n        <UserName>517633</UserName>\r\n        <Password>RDae5Njzt#n&amp;6CsF</Password>\r\n        <ResponseVersion>1.4</ResponseVersion>\r\n    </Header>\r\n    <Detail>\r\n        <POInfo>\r\n            <PONbr>82572</PONbr>\r\n        </POInfo>\r\n    </Detail>\r\n</XML_InvoiceDetailByPO_Submit>",
 							"options": {
 								"raw": {
 									"language": "xml"
@@ -949,15 +1062,1105 @@
 							}
 						},
 						"url": {
-							"raw": "https://tdxml.techdata.com/xmlservlet",
+							"raw": "https://tdxml.techdata.ca/xmlservlet",
 							"protocol": "https",
 							"host": [
 								"tdxml",
 								"techdata",
-								"com"
+								"ca"
 							],
 							"path": [
 								"xmlservlet"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dell (Quadbridge)",
+			"item": [
+				{
+					"name": "Generate Token",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "client_id",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "text"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"auth",
+								"oauth",
+								"v2",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status Search",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{DELL_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "CustomerNumber",
+								"value": "{{DELL_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "CountryCode",
+								"value": "US",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "4390",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?orderStatus=PROCESSING",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"search"
+							],
+							"query": [
+								{
+									"key": "orderStatus",
+									"value": "PROCESSING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-us-001\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": \"true\",\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213-xx\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/v1/PurchaseOrder/SubmitPurchaseOrder",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"v1",
+								"PurchaseOrder",
+								"SubmitPurchaseOrder"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT CA",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "9706412b83bb4915837e9ab591722f81",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l734893dad04584588ba8af088429e7a00",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Version",
+								"value": "2",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Accepts-Version",
+								"value": "2.0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-ca-001\",\r\n        \"ProfileId\": \"QUADBRIDGECA_API\",\r\n        \"isTestPayload\": true,\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/v1/PurchaseOrder/SubmitPurchaseOrder",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"v1",
+								"PurchaseOrder",
+								"SubmitPurchaseOrder"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT (v2)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Version",
+								"value": "2",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Accepts-Version",
+								"value": "2.0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-us-001\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": true,\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/procurement/purchase-order",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"procurement",
+								"purchase-order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT (v2) CA",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "9706412b83bb4915837e9ab591722f81",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l734893dad04584588ba8af088429e7a00",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Version",
+								"value": "2",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Accepts-Version",
+								"value": "2.0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-ca-001\",\r\n        \"ProfileId\": \"QUADBRIDGECA_API\",\r\n        \"isTestPayload\": true,\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/procurement/purchase-order",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"procurement",
+								"purchase-order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ORDER Status (US)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"searchParameter\": [\r\n        {\r\n            \"key\": \"po_numbers\",\r\n            \"values\": [\r\n                \"97491\"\r\n            ]\r\n        }\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/order-status/api/search",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"order-status",
+								"api",
+								"search"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ORDER STATUS (CA)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "9706412b83bb4915837e9ab591722f81",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l734893dad04584588ba8af088429e7a00",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Version",
+								"value": "2",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Accepts-Version",
+								"value": "2.0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"searchParameter\": [\r\n        {\r\n            \"key\": \"po_numbers\",\r\n            \"values\": [\r\n                \"83231\"\r\n            ]\r\n        }\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/order-status/api/search",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"order-status",
+								"api",
+								"search"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-us-001\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": \"true\",\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/v1/PurchaseOrder/SubmitPurchaseOrder",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"v1",
+								"PurchaseOrder",
+								"SubmitPurchaseOrder"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dell (DynTek)",
+			"item": [
+				{
+					"name": "Generate Token",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "client_id",
+									"value": "{{DELL_APIKEY}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{DELL_SECRET}}",
+									"type": "text"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"auth",
+								"oauth",
+								"v2",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status Search",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{DELL_TOKEN}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "CustomerNumber",
+								"value": "{{DELL_PARTNERID}}",
+								"type": "text"
+							},
+							{
+								"key": "CountryCode",
+								"value": "US",
+								"type": "text"
+							},
+							{
+								"key": "IM-CorrelationID",
+								"value": "4390",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.ingrammicro.com:443/resellers/v6/orders/search?orderStatus=PROCESSING",
+							"protocol": "https",
+							"host": [
+								"api",
+								"ingrammicro",
+								"com"
+							],
+							"port": "443",
+							"path": [
+								"resellers",
+								"v6",
+								"orders",
+								"search"
+							],
+							"query": [
+								{
+									"key": "orderStatus",
+									"value": "PROCESSING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"PO-03810\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": \"true\",\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213-xx\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/v1/PurchaseOrder/SubmitPurchaseOrder",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"v1",
+								"PurchaseOrder",
+								"SubmitPurchaseOrder"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PO SUBMIT (v2)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "clientSecret",
+									"value": "fd2bc241b03e4101bad83c29292278cb",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l70d8d7b37691147ea95206aee14bc9dc6",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "QUADBRIDGE",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Version",
+								"value": "2",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Accepts-Version",
+								"value": "2.0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-us-001\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": true,\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/procurement/purchase-order",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"procurement",
+								"purchase-order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ORDER Status (US)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "tokenType",
+									"value": "Bearer",
+									"type": "string"
+								},
+								{
+									"key": "accessToken",
+									"value": "ad100dc1-c0c3-42bd-abc3-0688b11ea9f3",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "DYNTEK_API",
+									"type": "string"
+								},
+								{
+									"key": "clientSecret",
+									"value": "7861c873e9134c83abaf726270b6cac9",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "l7e873ab362bfd4d82bfdce76664157358",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "client_authentication",
+									"value": "body",
+									"type": "string"
+								},
+								{
+									"key": "accessTokenUrl",
+									"value": "https://apigtwb2c.us.dell.com/auth/oauth/v2/token",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"searchParameter\": [\r\n        {\r\n            \"key\": \"po_numbers\",\r\n            \"values\": [\r\n                \"PO-04883\"\r\n            ]\r\n        }\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/order-status/api/search",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"order-status",
+								"api",
+								"search"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Status",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n        \"PoNumber\": \"testpo-quadbridge-us-001\",\r\n        \"ProfileId\": \"QUADBRIDGE_API\",\r\n        \"isTestPayload\": \"true\",\r\n        \"RequestedDeliveryDate\": \"11/24/2019\",\r\n        \"OrderContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"ShippingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Cmail\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"BillingContact\": {\r\n            \"Company\": \"ABC Company\",\r\n            \"ContactName\": \"John Doe\",\r\n            \"Email\": \"john.doe@email.com\",\r\n            \"Telephone\": \"1234567890\",\r\n            \"Address\": {\r\n                \"Address1\": \"Test Address Line 1\",\r\n                \"Address2\": \"Address Line 2\",\r\n                \"City\": \"San Diego\",\r\n                \"StateOrProvince\": \"CA\",\r\n                \"PostalCode\": \"85214\",\r\n                \"Country\": \"US\"\r\n            }\r\n        },\r\n        \"Payment\": {\r\n            \"PaymentMean\": \"Other\",\r\n            \"PaymentMeanOther\": \"FP\",\r\n            \"PaymentTerm\": \"Instant\"\r\n        },\r\n        \"OrderDetails\": [ {\r\n            \"LineItemNum\": \"1\",\r\n            \"SupplierPartId\": \"123213213\",\r\n            \"SupplierPartIdExt\": \"XXX:123123213213\",\r\n            \"Quantity\": \"1\",\r\n            \"UnitPrice\": \"299.99\",\r\n            \"Currency\": \"USD\",\r\n            \"EndUser\": {\r\n                \"Company\": \"ABC Company\",\r\n                \"ContactName\": \"John Doe\",\r\n                \"Email\": \"john.doe@email.com\",\r\n                \"Telephone\": \"1234567890\",\r\n                \"Address\": {\r\n                    \"Address1\": \"Test Address Line 1\",\r\n                    \"Address2\": \"Address Line 2\",\r\n                    \"City\": \"San Diego\",\r\n                    \"StateOrProvince\": \"CA\",\r\n                    \"PostalCode\": \"85214\",\r\n                    \"Country\": \"US\"\r\n                }\r\n            }\r\n        }],\r\n        \"CustomFields\": [{\r\n                \"Name\": \"Corp ID\",\r\n                \"Type\": \"string\",\r\n                \"Value\": \"123213\"\r\n        }]\r\n    }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://apigtwb2c.us.dell.com/PROD/v1/PurchaseOrder/SubmitPurchaseOrder",
+							"protocol": "https",
+							"host": [
+								"apigtwb2c",
+								"us",
+								"dell",
+								"com"
+							],
+							"path": [
+								"PROD",
+								"v1",
+								"PurchaseOrder",
+								"SubmitPurchaseOrder"
 							]
 						}
 					},

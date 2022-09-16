@@ -19,7 +19,7 @@ define([
     '../../CTC_VC2_Lib_Utils',
     '../Libraries/moment',
     '../Libraries/lodash'
-], function (ns_https, ns_search, ns_runtime, vc2_utils, moment, lodash) {
+], function (ns_https, ns_search, ns_runtime, vc_util, moment, lodash) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -27,10 +27,11 @@ define([
     function processXml(recordId, config) {
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
+
         log.audit(logTitle, [recordId, config]);
         LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
 
-        var recordData = vc2_utils.flatLookup({
+        var recordData = vc_util.flatLookup({
             type: ns_search.Type.PURCHASE_ORDER,
             id: recordId,
             columns: ['tranid']
@@ -85,7 +86,7 @@ define([
                 invoiceData.xmlStr = JSON.stringify({
                     invoiceDetails: JSON.parse(invoiceData.xmlStr),
                     miscCharges: orderDetails.miscCharges[orderKey]
-        });
+                });
 
                 // add the misc charges ///
                 for (var ii = 0, jj = orderDetails.miscCharges[orderKey].length; ii < jj; ii++) {
@@ -94,16 +95,16 @@ define([
                     if (chargeInfo.description) {
                         if (chargeInfo.description.match(/freight/gi)) {
                             // add it to as shipping charge
-                            invoiceData.ordObj.charges.shipping += vc2_utils.parseFloat(
+                            invoiceData.ordObj.charges.shipping += vc_util.parseFloat(
                                 chargeInfo.amount
                             );
                         } else {
-                            invoiceData.ordObj.charges.other += vc2_utils.parseFloat(
+                            invoiceData.ordObj.charges.other += vc_util.parseFloat(
                                 chargeInfo.amount
                             );
                         }
                     } else {
-                        invoiceData.ordObj.charges.other += vc2_utils.parseFloat(chargeInfo.amount);
+                        invoiceData.ordObj.charges.other += vc_util.parseFloat(chargeInfo.amount);
                     }
                 }
             }
@@ -132,15 +133,15 @@ define([
             orderMiscCharges;
 
         try {
-        var pageNum = 1,
-            pageSize = 10,
+            var pageNum = 1,
+                pageSize = 10,
                 recordsCount = 0,
-            pageComplete = false;
+                pageComplete = false;
 
-        while (!pageComplete) {
-            var searchUrl =
-                '/resellers/v6/orders/search?' +
-                    vc2_utils.convertToQuery({
+            while (!pageComplete) {
+                var searchUrl =
+                    '/resellers/v6/orders/search?' +
+                    vc_util.convertToQuery({
                         customerNumber: config.partner_id,
                         isoCountryCode: config.country,
                         customerOrderNumber: recordData.tranid,
@@ -151,7 +152,7 @@ define([
                 log.audit(logTitle, LogPrefix + '>> searchUrl: ' + searchUrl);
 
                 // send the request
-                var searchOrderReq = vc2_utils.sendRequest({
+                var searchOrderReq = vc_util.sendRequest({
                     header: [LogTitle, 'OrderSearch'].join(' '),
                     method: 'get',
                     recordId: recordId,
@@ -172,7 +173,7 @@ define([
                 var searchOrderResp =
                     searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
 
-                if (searchOrderReq.isError || vc2_utils.isEmpty(searchOrderResp)) {
+                if (searchOrderReq.isError || vc_util.isEmpty(searchOrderResp)) {
                     throw (
                         searchOrderReq.errorMsg +
                         (searchOrderReq.details
@@ -201,7 +202,7 @@ define([
                         })
                 );
 
-                if (vc2_utils.isEmpty(ordersResults)) break;
+                if (vc_util.isEmpty(ordersResults)) break;
 
                 for (var i = 0, j = ordersResults.length; i < j; i++) {
                     var orderInfo = ordersResults[i];
@@ -216,24 +217,24 @@ define([
 
                             arrInvoiceLinks.push(subOrderLink.href);
                             arrOrderNums.push(orderInfo.ingramOrderNumber);
+                        }
                     }
                 }
-            }
 
                 // get the
                 if (recordsCount >= searchOrderResp.recordsFound) {
-                pageComplete = true;
-                break;
-            } else {
-                pageNum++;
-                    vc2_utils.waitMs(1000);
+                    pageComplete = true;
+                    break;
+                } else {
+                    pageNum++;
+                    vc_util.waitMs(1000);
+                }
             }
-        }
 
             log.audit(logTitle, LogPrefix + '>> Invoice Links: ' + JSON.stringify(arrInvoiceLinks));
             log.audit(logTitle, LogPrefix + '>> Order Numbers: ' + JSON.stringify(arrOrderNums));
-            arrInvoiceLinks = vc2_utils.uniqueArray(arrInvoiceLinks);
-            arrOrderNums = vc2_utils.uniqueArray(arrOrderNums);
+            arrInvoiceLinks = vc_util.uniqueArray(arrInvoiceLinks);
+            arrOrderNums = vc_util.uniqueArray(arrOrderNums);
 
             log.audit(logTitle, LogPrefix + '>> Prep to fetch miscellaneous charges.... ');
             orderMiscCharges = getMiscCharges(
@@ -244,7 +245,7 @@ define([
             );
             log.audit(logTitle, LogPrefix + '>> misc charges: ' + JSON.stringify(orderMiscCharges));
         } catch (error) {
-            var errorMsg = vc2_utils.extractError(error);
+            var errorMsg = vc_util.extractError(error);
             log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
         } finally {
             returnValue = {
@@ -255,7 +256,7 @@ define([
         }
 
         return returnValue;
-                }
+    }
 
     function getMiscCharges(option) {
         var logTitle = [LogTitle, 'getMiscCharges'].join('::'),
@@ -271,11 +272,11 @@ define([
         var objMischCharges = {};
 
         try {
-            if (vc2_utils.isEmpty(option.orderNums)) throw 'Missing purchase order numbers';
+            if (vc_util.isEmpty(option.orderNums)) throw 'Missing purchase order numbers';
             for (var i = 0, j = option.orderNums.length; i < j; i++) {
                 var orderNum = option.orderNums[i];
 
-                var orderDetailsReq = vc2_utils.sendRequest({
+                var orderDetailsReq = vc_util.sendRequest({
                     header: [LogTitle, 'Misc Charge'].join(' '),
                     method: 'get',
                     recordId: recordId,
@@ -289,14 +290,14 @@ define([
                             customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
                             'IM-CorrelationID': recordData.tranid
+                        }
                     }
-                }
                 });
 
                 var orderDetailsResp =
                     orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
 
-                if (orderDetailsReq.isError || vc2_utils.isEmpty(orderDetailsReq)) {
+                if (orderDetailsReq.isError || vc_util.isEmpty(orderDetailsReq)) {
                     throw (
                         orderDetailsReq.errorMsg +
                         (orderDetailsReq.details
@@ -317,21 +318,21 @@ define([
 
                     objMischCharges[chargeInfo.subOrderNumber].push({
                         description: chargeInfo.chargeDescription,
-                        amount: vc2_utils.forceFloat(chargeInfo.chargeAmount)
+                        amount: vc_util.forceFloat(chargeInfo.chargeAmount)
                     });
-                    }
+                }
 
-                vc2_utils.waitMs(1200);
+                vc_util.waitMs(1200);
             }
         } catch (error) {
-            var errorMsg = vc2_utils.extractError(error);
+            var errorMsg = vc_util.extractError(error);
             log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
         } finally {
             returnValue = objMischCharges;
         }
 
         return returnValue;
-                }
+    }
 
     function getInvoiceDetails(option) {
         var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
@@ -347,12 +348,12 @@ define([
         var objInvoiceDetails = {};
 
         try {
-            if (vc2_utils.isEmpty(option.invoiceLinks)) throw 'Missing invoice links';
+            if (vc_util.isEmpty(option.invoiceLinks)) throw 'Missing invoice links';
 
             for (var i = 0, j = option.invoiceLinks.length; i < j; i++) {
                 var invoiceLink = option.invoiceLinks[i];
 
-                var invoiceDetailsReq = vc2_utils.sendRequest({
+                var invoiceDetailsReq = vc_util.sendRequest({
                     header: [LogTitle, 'Invoice Details'].join(' '),
                     recordId: recordId,
                     query: {
@@ -361,22 +362,22 @@ define([
                             invoiceLink +
                             ('?customerNumber=' + config.partner_id) +
                             ('&isoCountryCode=' + config.country),
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
                             Authorization: 'Bearer ' + token,
-                    'IM-CustomerNumber': config.partner_id,
-                    customerNumber: config.partner_id,
+                            'IM-CustomerNumber': config.partner_id,
+                            customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
                             'IM-CorrelationID': recordData.tranid
                         }
-                }
-            });
+                    }
+                });
 
                 var invoiceDetailsResp =
                     invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
-                if (invoiceDetailsReq.isError || vc2_utils.isEmpty(invoiceDetailsResp)) {
+                if (invoiceDetailsReq.isError || vc_util.isEmpty(invoiceDetailsResp)) {
                     throw (
                         invoiceDetailsReq.errorMsg +
                         (invoiceDetailsReq.details
@@ -398,25 +399,35 @@ define([
                             ? moment(invoiceInfo.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY')
                             : moment().format('MM/DD/YYYY'),
                         invoice: invoiceInfo.globalorderid,
-                        total: vc2_utils.parseFloat(invoiceInfo.totalamount),
+                        total: vc_util.parseFloat(invoiceInfo.totalamount),
                         charges: {
-                            tax: vc2_utils.parseFloat(invoiceInfo.totaltaxamount),
+                            tax: vc_util.parseFloat(invoiceInfo.totaltaxamount),
                             shipping:
-                                vc2_utils.parseFloat(invoiceInfo.customerfreightamount) +
-                                vc2_utils.parseFloat(invoiceInfo.customerforeignfrightamt),
-                            other: vc2_utils.parseFloat(invoiceInfo.discountamount)
+                                vc_util.parseFloat(invoiceInfo.customerfreightamount) +
+                                vc_util.parseFloat(invoiceInfo.customerforeignfrightamt),
+                            other: vc_util.parseFloat(invoiceInfo.discountamount)
                         },
                         lines: []
                     };
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> Invoice Data (initial): ' + JSON.stringify(invoiceData)
+                );
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> Processing lines: ' + JSON.stringify(invoiceInfo.lines.length)
+                );
 
                 for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
                     var lineInfo = invoiceInfo.lines[ii];
-                    if (vc2_utils.isEmpty(lineInfo.vendorpartnumber)) continue;
+                    log.audit(logTitle, LogPrefix + '>> ...Line Info: ' + JSON.stringify(lineInfo));
+
+                    if (vc_util.isEmpty(lineInfo.vendorpartnumber)) continue;
 
                     var lineData = {
                         ITEMNO: lineInfo.vendorpartnumber,
-                        PRICE: vc2_utils.parseFloat(lineInfo.unitprice),
-                        QUANTITY: vc2_utils.forceInt(lineInfo.shippedquantity),
+                        PRICE: vc_util.parseFloat(lineInfo.unitprice),
+                        QUANTITY: vc_util.forceInt(lineInfo.shippedquantity),
                         DESCRIPTION: lineInfo.partdescription
                     };
 
@@ -435,20 +446,28 @@ define([
                         lineInfo.trackingnumberdetails.forEach(function (tracking) {
                             if (tracking.trackingnumber) listTracking.push(tracking.trackingnumber);
                             return true;
-                    });
+                        });
                         lineData.TRACKING = listTracking;
-                }
+                    }
 
                     // look for the item
                     var lineIdx = lodash.findIndex(invoiceData.lines, {
                         ITEMNO: lineData.ITEMNO
                     });
+                    log.audit(logTitle, LogPrefix + '>> ...lineIdx: ' + JSON.stringify(lineIdx));
 
-                    if (lineIdx >= 0) {
+                    var lineItemRate = lodash.findIndex(invoiceData.lines, {
+                        ITEMNO: lineData.ITEMNO,
+                        PRICE: vc_util.parseFloat(lineInfo.unitprice)
+                    });
+                    log.audit(logTitle, LogPrefix + '>> ...lineItemRate: ' + JSON.stringify(lineItemRate));
+
+
+                    if (lineItemRate >= 0) {
                         // increment the quantity
                         invoiceData.lines[lineIdx].QUANTITY += lineData.QUANTITY;
 
-                        if (!vc2_utils.isEmpty(lineData.SERIAL)) {
+                        if (!vc_util.isEmpty(lineData.SERIAL)) {
                             if (!invoiceData.lines[lineIdx].SERIAL)
                                 invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
                             else
@@ -456,12 +475,12 @@ define([
                                     invoiceData.lines[lineIdx].SERIAL
                                 );
                             // trim unique serials
-                            invoiceData.lines[lineIdx].SERIAL = vc2_utils.uniqueArray(
+                            invoiceData.lines[lineIdx].SERIAL = vc_util.uniqueArray(
                                 invoiceData.lines[lineIdx].SERIAL
                             );
-            }
+                        }
 
-                        if (!vc2_utils.isEmpty(lineData.TRACKING)) {
+                        if (!vc_util.isEmpty(lineData.TRACKING)) {
                             if (!invoiceData.lines[lineIdx].TRACKING)
                                 invoiceData.lines[lineIdx].TRACKING = lineData.TRACKING;
                             else
@@ -469,7 +488,7 @@ define([
                                     invoiceData.lines[lineIdx].TRACKING
                                 );
                             // trim unique tracking
-                            invoiceData.lines[lineIdx].TRACKING = vc2_utils.uniqueArray(
+                            invoiceData.lines[lineIdx].TRACKING = vc_util.uniqueArray(
                                 invoiceData.lines[lineIdx].TRACKING
                             );
                         }
@@ -484,10 +503,10 @@ define([
                     xmlStr: JSON.stringify(invoiceDetailsResp)
                 };
 
-                // vc2_utils.waitMs(500);
+                // vc_util.waitMs(500);
             }
         } catch (error) {
-            var errorMsg = vc2_utils.extractError(error);
+            var errorMsg = vc_util.extractError(error);
             log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
         } finally {
             returnValue = objInvoiceDetails;
@@ -500,7 +519,7 @@ define([
         var logTitle = [LogTitle, 'generateToken'].join('::');
         // log.audit(logTitle, option);
 
-        var tokenReq = vc2_utils.sendRequest({
+        var tokenReq = vc_util.sendRequest({
             header: [LogTitle, 'GenerateToken'].join(' '),
             method: 'post',
             recordId: option.recordId,
@@ -508,7 +527,7 @@ define([
             maxRetry: 3,
             query: {
                 url: option.config.url + '/oauth/oauth20/token',
-                body: vc2_utils.convertToQuery({
+                body: vc_util.convertToQuery({
                     grant_type: 'client_credentials',
                     client_id: option.config.user_id,
                     client_secret: option.config.user_pass
@@ -520,7 +539,7 @@ define([
         });
 
         if (tokenReq.isError) throw tokenReq.errorMsg;
-        var tokenResp = vc2_utils.safeParse(tokenReq.RESPONSE);
+        var tokenResp = vc_util.safeParse(tokenReq.RESPONSE);
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;

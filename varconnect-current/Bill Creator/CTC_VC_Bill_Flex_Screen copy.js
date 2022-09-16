@@ -121,6 +121,9 @@ define([
                         'closed'
                     ])
                 ) {
+                    // Current.WarnMessage.push(
+                    //     'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
+                    // );
                     Current.WarnMessage.push(
                         'Purchase Order is not ready for billing: ' + Current.PO_DATA.statusText
                     );
@@ -1286,6 +1289,72 @@ define([
                     applyOther: mainConfig.isVarianceOnOther,
                     otherItem: mainConfig.defaultOtherItem
                 };
+            },
+            findLineItem: function (option) {
+                var logTitle = [LOG_TITLE, 'findLineItem'].join('::'),
+                    returnValue;
+                try {
+                    var lineCount = option.record.getLineCount({
+                        sublistId: 'item'
+                    });
+
+                    var linesFound = {
+                        item: [],
+                        itemRate: [],
+                        itemQty: []
+                    };
+
+                    var logPrefix = [option.item, option.rate, option.quantity].join(' | ');
+
+                    for (var line = 0; line < lineCount; line++) {
+                        var lineInfo = {
+                            line: line,
+                            item: option.record.getSublistValue({
+                                sublistId: 'item',
+                                line: line,
+                                fieldId: 'item'
+                            }),
+                            quantity: option.record.getSublistValue({
+                                sublistId: 'item',
+                                line: line,
+                                fieldId: 'quantity'
+                            }),
+                            rate: option.record.getSublistValue({
+                                sublistId: 'item',
+                                line: line,
+                                fieldId: 'rate'
+                            })
+                        };
+                        if (!option.item || option.item != lineInfo.item) continue;
+                        linesFound.item.push(lineInfo);
+
+                        if (option.rate && option.rate != lineInfo.rate) {
+                            linesFound.itemRate.push(lineInfo);
+                            if (option.quantity && option.quantity != lineInfo.quantity) {
+                                linesFound.itemQty.push(lineInfo);
+                            }
+                        } else continue;
+                    }
+
+                    log.audit(
+                        logTitle,
+                        logPrefix + '.... found lines: ' + JSON.stringify(linesFound)
+                    );
+
+                    returnValue = linesFound.itemQty.length
+                        ? linesFound.itemQty.shift()
+                        : linesFound.itemRate.length
+                        ? linesFound.itemRate.shift()
+                        : linesFound.item.length
+                        ? linesFound.item.shift()
+                        : -1;
+                } catch (error) {
+                    returnValue = false;
+                } finally {
+                    log.audit(logTitle, '>> found line: ' + JSON.stringify(returnValue));
+                }
+
+                return returnValue;
             }
         },
         Param = {
@@ -1572,11 +1641,21 @@ define([
 
                 if (billLineData.NSITEM && Current.BILL_REC) {
                     // find the line
-                    var lineNo = Current.BILL_REC.findSublistLineWithValue({
-                        sublistId: 'item',
-                        fieldId: 'item',
-                        value: billLineData.NSITEM
+                    // var lineNo = Current.BILL_REC.findSublistLineWithValue({
+                    //     sublistId: 'item',
+                    //     fieldId: 'item',
+                    //     value: billLineData.NSITEM
+                    // });
+
+                    var lineFound = Helper.findLineItem({
+                        record: Current.BILL_REC,
+                        item: billLineData.NSITEM,
+                        rate: lineData.frate,
+                        quantity: lineData.fqty
                     });
+
+                    var lineNo = lineFound ? lineFound.line : -1;
+
                     // log.debug(logTitle, '>> lineNo:  ' + JSON.stringify(lineNo));
 
                     if (lineNo >= 0) {
@@ -1724,7 +1803,6 @@ define([
 
             Current.Form.getField({ id: 'custpage_polinetaxtotal' }).defaultValue = Total.lineTax;
             Current.Form.getField({ id: 'custpage_poshiptotal' }).defaultValue = Total.lineShip;
-
 
             log.debug(logTitle, '## Totals : ' + JSON.stringify(Total));
             log.debug(logTitle, '## Charges : ' + JSON.stringify(Current.BILL_DATA.charges));

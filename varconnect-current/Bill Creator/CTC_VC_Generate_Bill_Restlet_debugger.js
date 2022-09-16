@@ -12,35 +12,803 @@
  * @NModuleScope Public
  * @NScriptType Restlet
  */
-
-var VCFolder = 'SuiteScripts/CTC.ACP/VCFolder/Bill Creator';
+var VCFolder = 'SuiteScripts/VCFolder/Bill Creator';
 require([
     'N/record',
     'N/search',
     'N/format',
     'N/runtime',
-    VCFolder + '/Libraries/moment',
-    VCFolder + '/../CTC_VC2_Lib_Utils',
     VCFolder + '/../CTC_VC2_Constants',
-    VCFolder + '/../CTC_VC_Lib_Log'
-], function (ns_record, ns_search, ns_format, ns_runtime, moment, VC2_Lib, VC_Constants, VC_Log) {
+    VCFolder + '/../CTC_VC2_Lib_Utils',
+    VCFolder + '/../CTC_VC_Lib_MainConfiguration',
+    VCFolder + '/Libraries/moment'
+], function (
+    ns_record,
+    ns_search,
+    ns_format,
+    ns_runtime,
+    VC_Constants,
+    VC2_Util,
+    VC_MainCfg,
+    moment
+) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
-        LogPrefix = '',
         CURRENT_PO = '',
-        BILL_CREATOR = VC_Constants.Bill_Creator,
-        PARAM_FIELDS = {
-            shipItem: 'custscript_ctc_bc_ship_item',
-            taxItem: 'custscript_ctc_bc_tax_item',
-            otherItem: 'custscript_ctc_bc_other_item',
-            hasShippingVariance: 'custscript_ctc_bc_ship_var',
-            hasTaxVariance: 'custscript_ctc_bc_tax_var',
-            hasOtherVariance: 'custscript_ctc_bc_other_var',
-            billDefaultStatus: 'custscript_ctc_bc_bill_status',
-            dontSaveBill: 'custscript_ctc_bc_bill_dontcreate',
-            allowedThreshold: 'custscript_ctc_bc_variance_threshold',
-            defaultBillForm: 'custscript_ctc_bc_bill_form'
-        };
+        Current = {},
+        LogPrefix = '',
+        BILL_CREATOR = VC_Constants.Bill_Creator;
+
+    function _post(context) {
+        var logTitle = [LOG_TITLE, 'POST'].join('::'),
+            returnObj = {},
+            currScript = ns_runtime.getCurrentScript();
+
+        var param = Helper.getBillingConfig();
+
+        try {
+            log.audit(logTitle, LogPrefix + 'Params: ' + JSON.stringify(param));
+            log.audit(logTitle, LogPrefix + 'Request: ' + context);
+
+            Current = {
+                poId:
+                    context.custrecord_ctc_vc_bill_linked_po &&
+                    context.custrecord_ctc_vc_bill_linked_po[0]
+                        ? context.custrecord_ctc_vc_bill_linked_po[0].value
+                        : false,
+                billInAdvance: context.billInAdvance || false,
+                processVariance: context.custrecord_ctc_vc_bill_proc_variance
+            };
+
+            ///////////////////
+            if (!Current.poId) {
+                returnObj.details = ' PO ID:' + Current.poId + ' is missing or inactive.';
+                throw BILL_CREATOR.Code.MISSING_PO;
+            }
+            ///////////////////
+            LogPrefix = '[purchaseorder:' + Current.poId + '] ';
+
+            Current.PO_REC = RecordHelper.load({
+                type: 'purchaseorder',
+                id: Current.poId
+            });
+
+            Current.PO_DATA = RecordHelper.loadData({
+                record: Current.PO_REC,
+                fields: ['tranid', 'entity', 'taxtotal', 'tax2total', 'status', 'statusRef']
+            });
+
+            Current.PO_DATA.taxTotal =
+                parseFloat(Current.PO_DATA.taxtotal || 0) +
+                parseFloat(Current.PO_DATA.tax2total || 0);
+
+            log.debug(
+                logTitle,
+                LogPrefix + '>> Current.PO_DATA: ' + JSON.stringify(Current.PO_DATA)
+            );
+            /////////////////////////////////////////////
+
+            /// STATUS CHECK ////////////////////////////
+            if (
+                VC2_Util.inArray(Current.PO_DATA.statusRef, [
+                    'pendingBilling',
+                    'pendingBillPartReceived'
+                ]) ||
+                Current.billInAdvance
+            ) {
+                // continue processing
+                log.debug(logTitle, LogPrefix + '>> PO is ready for billing: ');
+            } else {
+                /// not ready for billing!
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>>  Skipping poId, Purchase Order not Ready to Bill'
+                );
+
+                util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
+                returnObj.details = [
+                    'PO #' + Current.tranid,
+                    ' - : ' + Current.PO_DATA.status
+                ].join('');
+
+                return returnObj;
+            }
+            ///////////////////////////////////
+
+            Current.PayloadData = JSON.parse(context.custrecord_ctc_vc_bill_json);
+            log.audit(
+                logTitle,
+                LogPrefix + '>> Bill Payload:' + JSON.stringify(Current.PayloadData)
+            );
+
+            /// FIND EXISTING BILLS ////////////////////////////
+            log.debug(logTitle, LogPrefix + ' // Checking for existing bills...');
+
+            var arrExistingBills = Helper.getExistingBill({
+                entity: Current.PO_DATA.entity,
+                invoiceNo: Current.PayloadData.invoice
+            });
+
+            if (arrExistingBills && arrExistingBills.length) {
+                var billRec = ns_record.load({
+                    type: 'vendorbill',
+                    id: arrExistingBills[0]
+                });
+
+                returnObj = JSON.parse(JSON.stringify(billRec));
+                returnObj.existingBills = JSON.stringify(arrExistingBills);
+                returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
+                util.extend(returnObj, BILL_CREATOR.Code.EXISTING_BILLS);
+
+                return returnObj;
+            }
+            ///////////////////////////////////
+
+            // /// VALIDATE REMAING ITEMS TO BILL /////////////////////////
+            // var arrLinesToBill = Helper.getLinesToBill({
+            //     payload: Current.PayloadData,
+            //     record: Current.PO_REC
+            // });
+            // log.debug(logTitle, 'Lines to bill..' + JSON.stringify(arrLinesToBill));
+
+            // if (!arrLinesToBill || !arrLinesToBill.length) {
+            //     returnObj.details = 'All items on the bill are already billed.';
+            //     util.extend(returnObj, BILL_CREATOR.Code.ITEMS_ALREADY_BILLED);
+            //     return returnObj;
+            // }
+            // ///////////////////////////////////
+
+            ///////////////////////////////////
+            // Get sales order details
+            Current.SO_DATA = Helper.getSalesOrderDetails({
+                poId: Current.poId
+            });
+            ///////////////////////////////////
+
+            var hasVariance = false,
+                totalVarianceAmount = 0,
+                listVarianceDetails = [],
+                listVariance = [];
+
+            //// TRANSFORM TO VENDOR BILL ////////////////
+            var transformOption = {
+                fromType: 'purchaseorder',
+                fromId: Current.poId,
+                toType: 'vendorbill',
+                isDynamic: true
+            };
+
+            if (param.defaultBillForm) {
+                transformOption.customform = param.defaultBillForm;
+            }
+
+            log.debug(
+                logTitle,
+                LogPrefix +
+                    '***** Vendor Bill record creation:start *****' +
+                    JSON.stringify(transformOption)
+            );
+
+            Current.BILL_REC = RecordHelper.transform(transformOption);
+
+            if (param.defaultBillForm) {
+                Current.BILL_REC.setValue({ fieldId: 'customform', value: param.defaultBillForm });
+            }
+
+            // store the current posting period
+            var currentPostingPeriod = Current.BILL_REC.getValue({ fieldId: 'postingperiod' });
+            log.audit(
+                logTitle,
+                LogPrefix + '>> posting period: ' + JSON.stringify(currentPostingPeriod)
+            );
+
+            Current.BILL_REC.setValue({
+                fieldId: 'trandate',
+                value: ns_format.parse({
+                    value: moment(Current.PayloadData.date).toDate(),
+                    type: ns_format.Type.DATE
+                })
+            });
+            if (Current.PayloadData.duedate) {
+                Current.BILL_REC.setValue({
+                    fieldId: 'duedate',
+                    value: ns_format.parse({
+                        value: moment(Current.PayloadData.duedate).toDate(),
+                        type: ns_format.Type.DATE
+                    })
+                });
+            }
+
+            //// CHECK THE POSTING PERIOD ////////////////
+            var isPeriodLocked = Helper.isPeriodLocked({ recordBill: Current.BILL_REC });
+            if (isPeriodLocked) {
+                // set to original period
+                Current.BILL_REC.setValue({
+                    fieldId: 'postingperiod',
+                    value: currentPostingPeriod
+                });
+            }
+            ///////////////////////////////////
+            log.debug(logTitle, '.. set invoice name: ' + Current.PayloadData.invoice);
+            Current.BILL_REC.setValue({
+                fieldId: 'tranid',
+                value: Current.PayloadData.invoice
+            });
+
+            /// VALIDATE THE LINES /////////////
+            var lineCount = Current.BILL_REC.getLineCount({ sublistId: 'item' });
+
+            log.debug(
+                logTitle,
+                'Matching vb-to-payload lines...line count: ' +
+                    JSON.stringify({
+                        vbLines: lineCount,
+                        payloadLines: Current.PayloadData.lines.length
+                    })
+            );
+
+            // run through the billfile lines
+            var arrLines = Helper.preprocessBillLines(),
+                hasUnmatchedLines = false;
+
+            for (var i = 0, j = arrLines.length; i < j; i++) {
+                var lineData = arrLines[i];
+
+                if (!lineData.matchingLinesBill || lineData.matchingLinesBill.length) {
+                    hasUnmatchedLines = true;
+                    continue;
+                }
+
+                    for (var ii = 0, jj = lineData.matchingLinesBill.length; ii < jj; ii++) {
+                        var matchedLine = lineData.matchingLinesBill[ii];
+
+                        RecordHelper.updateLine({
+                            record: Current.BILL_REC,
+                            lineData: {
+                                line: matchedLine.line,
+                                rate: lineData.rate,
+                                quantity: ii == 0 ? lineData.quantity : 0 // only apply on the first matched line
+                            }
+                        });
+                    }
+
+                    lineData.processed = true;
+                }
+            ///////////////////////////////
+            return returnObj;
+
+            var fileFullyProcessed = true;
+            log.debug(logTitle, 'Checking unprocessed payload line...');
+            Current.PayloadData.lines.forEach(function (line) {
+                if (line.QUANTITY > 0) {
+                    fileFullyProcessed = false;
+
+                    returnObj.details = [
+                        'Bill line quantity exceeds PO line quantity: ',
+                        JSON.stringify({
+                            item: line.ITEMNO,
+                            qty: line.QUANTITY
+                        })
+                    ].join('');
+                    log.debug(
+                        logTitle,
+                        '// line has remaining unprocessed qty' + JSON.stringify(line)
+                    );
+                }
+            });
+
+            if (!fileFullyProcessed) {
+                throw BILL_CREATOR.Code.NOT_FULLY_PROCESSED;
+            }
+
+            arrLines.reverse();
+
+            /// PROCESS THE LINES /////////////
+            log.debug(logTitle, 'Validating lines to process: ' + JSON.stringify(arrLines));
+
+            var taxTotal = 0;
+
+            for (var lineVB = 0; lineVB < arrLines.length; lineVB++) {
+                var lineDataVB = arrLines[lineVB],
+                    lineVariance = [],
+                    lineTaxTotal = 0;
+
+                log_prefix = ['[line #', lineDataVB.lineNo, '] ...'].join('');
+                log.debug(logTitle, log_prefix + 'Proceessing line: ' + JSON.stringify(lineDataVB));
+
+                // remove line, if not included in the payload bill
+                if (!lineDataVB.process || !lineDataVB.billQty || lineDataVB.billQty < 1) {
+                    log.debug(logTitle, log_prefix + '// removing line, not part of the bill');
+                    Current.BILL_REC.removeLine({
+                        sublistId: 'item',
+                        line: lineDataVB.lineNo
+                    });
+                    continue;
+                }
+
+                ////////////////
+                Current.BILL_REC.selectLine({
+                    sublistId: 'item',
+                    line: lineDataVB.lineNo
+                });
+                var currentLineData = {
+                    qty: Current.BILL_REC.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'quantity'
+                    }),
+                    rate: Current.BILL_REC.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'rate'
+                    }),
+                    amount: Current.BILL_REC.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'amount'
+                    }),
+                    taxrate1: Current.BILL_REC.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'taxrate1'
+                    }),
+                    taxrate2: Current.BILL_REC.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'taxrate2'
+                    })
+                };
+
+                // calculate tax
+                currentLineData.taxrate1 = util.isString(currentLineData.taxrate1)
+                    ? parseFloat(currentLineData.taxrate1 || '0')
+                    : currentLineData.taxrate1;
+                if (currentLineData.taxrate1 > 0) {
+                    currentLineData.taxAmount1 =
+                        currentLineData.amount * (currentLineData.taxrate1 / 100);
+                    lineTaxTotal += currentLineData.taxAmount1;
+                }
+
+                currentLineData.taxrate2 = util.isString(currentLineData.taxrate2)
+                    ? parseFloat(currentLineData.taxrate2 || '0')
+                    : currentLineData.taxrate2;
+                if (currentLineData.taxrate2 > 0) {
+                    currentLineData.taxAmount2 =
+                        currentLineData.amount * (currentLineData.taxrate2 / 100);
+                    lineTaxTotal += currentLineData.taxAmount2;
+                }
+
+                log.debug(
+                    logTitle,
+                    log_prefix + 'Checking for variance: ' + JSON.stringify(currentLineData)
+                );
+
+                /// LINE: QTY Variance /////////////////////
+                ///////////////////////////////////
+                if (lineDataVB.billQty != currentLineData.qty) {
+                    log.debug(logTitle, log_prefix + '// bill quantity is > po quantity');
+
+                    if (lineDataVB.billQty > currentLineData.qty) {
+                        log.debug(logTitle, log_prefix + '// bill quantity is > po quantity');
+
+                        lineVariance.push('Quantity');
+                        listVariance.push('Quantity');
+
+                        listVarianceDetails.push({
+                            type: 'line',
+                            label: 'Quantity',
+                            diffQty: lineDataVB.billQty - currentLineData.qty,
+                            diffAmount: Helper.roundOff(
+                                (lineDataVB.billQty - currentLineData.qty) *
+                                    (lineDataVB.billRate - currentLineData.rate)
+                            )
+                        });
+                    } else {
+                        Current.BILL_REC.setCurrentSublistValue({
+                            sublistId: 'item',
+                            fieldId: 'quantity',
+                            value: lineDataVB.billQty
+                        });
+                    }
+                }
+                ///////////////////////////////////
+
+                /// LINE: RATE Variance /////////////////////
+                ///////////////////////////////////
+                if (lineDataVB.billRate != currentLineData.rate) {
+                    log.debug(logTitle, log_prefix + '// bill rate doesnt match po rate');
+
+                    lineVariance.push('Price');
+                    listVariance.push('Price');
+
+                    Current.BILL_REC.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'rate',
+                        value: lineDataVB.billRate
+                    });
+
+                    listVarianceDetails.push({
+                        type: 'line',
+                        label: 'Rate',
+                        diffAmount: Helper.roundOff(lineDataVB.billRate - currentLineData.rate)
+                    });
+                }
+                ///////////////////////////////////
+
+                if (lineVariance.length) {
+                    hasVariance = true;
+                    Current.BILL_REC.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'custcol_ctc_create_bill_variance',
+                        value: true
+                    });
+                    Current.BILL_REC.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'custcol_ctc_bill_variance_rsn',
+                        value: lineVariance.join('\r\n')
+                    });
+                }
+
+                taxTotal += lineTaxTotal;
+
+                log.debug(logTitle, log_prefix + ' line tax total:  ' + lineTaxTotal);
+
+                Current.BILL_REC.commitLine({ sublistId: 'item' });
+            }
+            ///////////////////////////////
+            log.debug(
+                logTitle,
+                'Processing charges :  ' + JSON.stringify(Current.PayloadData.charges)
+            );
+            log.debug(logTitle, '// variances :  ' + JSON.stringify(Current.PayloadData.variance));
+
+            taxTotal = Helper.roundOff(taxTotal) || 0;
+
+            var vbTaxTotal =
+                parseFloat(Current.BILL_REC.getValue({ fieldId: 'taxtotal' }) || 0) +
+                parseFloat(Current.BILL_REC.getValue({ fieldId: 'tax2total' }) || 0);
+
+            var deltaCharges = {
+                tax: Helper.roundOff(Current.PayloadData.charges.tax - taxTotal)
+            };
+
+            log.debug(
+                logTitle,
+                'Tax Total: ' +
+                    JSON.stringify({
+                        lineTaxTotal: taxTotal,
+                        vbTaxTotal: vbTaxTotal,
+                        poTaxTotal: Current.taxTotal,
+                        taxCharges: Current.PayloadData.charges.tax,
+                        delta: deltaCharges.tax
+                    })
+            );
+
+            var ignoreVariance =
+                Current.PayloadData.hasOwnProperty('ignoreVariance') &&
+                Current.PayloadData.ignoreVariance == 'T';
+
+            log.audit(
+                logTitle,
+                '>> variance lines: ' + JSON.stringify(Current.PayloadData.varianceLines)
+            );
+            log.audit(logTitle, '>> variance: ' + JSON.stringify(Current.PayloadData.variance));
+
+            var varianceLines = [];
+
+            if (Current.PayloadData.varianceLines && Current.PayloadData.varianceLines.length) {
+                hasVariance = true;
+
+                Current.PayloadData.varianceLines.forEach(function (varianceData) {
+                    if (varianceData.hasOwnProperty('applied') && varianceData.applied == 'T') {
+                        listVariance.push(varianceData.name);
+                        listVarianceDetails.push({
+                            label: varianceData.name,
+                            diffAmount: varianceData.rate
+                        });
+
+                        Helper.addNewLine({
+                            record: Current.BILL_REC,
+                            qty: 1,
+                            description: varianceData.description,
+                            item: varianceData.item,
+                            rate: varianceData.rate,
+                            customer: Current.SO_DATA.entity
+                        });
+                    }
+
+                    return true;
+                });
+            } else {
+                var varianceValues = Current.PayloadData.variance || {};
+
+                var taxVariance = { apply: false, amount: 0 };
+                var shipVariance = { apply: false, amount: 0 };
+                var otherVariance = { apply: false, amount: 0 };
+                var adjustmentVariance = { apply: false, amount: 0 };
+
+                taxVariance.apply = param.hasTaxVariance;
+                taxVariance.amount = deltaCharges.tax;
+                if (varianceValues.hasOwnProperty('applyTax')) {
+                    taxVariance.apply = varianceValues.applyTax == 'T';
+                    taxVariance.amount = varianceValues.tax;
+                }
+                log.debug(logTitle, '>> taxVariance: ' + JSON.stringify(taxVariance));
+
+                shipVariance.apply = param.hasShippingVariance;
+                shipVariance.amount = Current.PayloadData.charges.shipping;
+                if (varianceValues.hasOwnProperty('applyShip')) {
+                    shipVariance.apply = varianceValues.applyShip == 'T';
+                    shipVariance.amount = varianceValues.shipping;
+                }
+                log.debug(logTitle, '>> shipVariance: ' + JSON.stringify(shipVariance));
+
+                otherVariance.apply = param.hasOtherVariance;
+                otherVariance.amount = Current.PayloadData.charges.other;
+                if (varianceValues.hasOwnProperty('applyShip')) {
+                    otherVariance.apply = varianceValues.applyOther == 'T';
+                    otherVariance.amount = varianceValues.other;
+                }
+                log.debug(logTitle, '>> otherVariance: ' + JSON.stringify(otherVariance));
+
+                if (varianceValues.hasOwnProperty('applyAdjustment')) {
+                    adjustmentVariance.apply = varianceValues.applyAdjustment == 'T';
+                    adjustmentVariance.amount = varianceValues.adjustment;
+                }
+                log.debug(logTitle, '>> adjustmentVariance: ' + JSON.stringify(adjustmentVariance));
+
+                if (!ignoreVariance && taxVariance.apply && taxVariance.amount) {
+                    hasVariance = true;
+                    listVariance.push('Tax');
+
+                    listVarianceDetails.push({
+                        label: 'Tax',
+                        diffAmount: taxVariance.amount
+                    });
+
+                    try {
+                        Helper.addNewLine({
+                            record: Current.BILL_REC,
+                            qty: 1,
+                            description: 'VC: Tax Variance',
+                            item: param.taxItem,
+                            rate: taxVariance.amount,
+                            customer: Current.SO_DATA.entity
+                        });
+
+                        varianceLines.push({
+                            type: 'tax',
+                            item: param.taxItem,
+                            rate: taxVariance.amount,
+                            quantity: 1
+                        });
+                    } catch (line_err) {
+                        returnObj.details = Helper.extractError(line_err);
+                        throw 'Unable to add tax variance line';
+                    }
+                }
+
+                if (!ignoreVariance && shipVariance.apply && shipVariance.amount) {
+                    hasVariance = true;
+                    listVariance.push('Shipping');
+
+                    listVarianceDetails.push({
+                        label: 'Shipping',
+                        diffAmount: shipVariance.amount
+                    });
+
+                    try {
+                        Helper.addNewLine({
+                            record: Current.BILL_REC,
+                            qty: 1,
+                            description: 'VC: Ship Variance',
+                            item: param.shipItem,
+                            rate: shipVariance.amount,
+                            customer: Current.SO_DATA.entity
+                        });
+
+                        varianceLines.push({
+                            type: 'shipping',
+                            item: param.shipItem,
+                            rate: shipVariance.amount,
+                            quantity: 1
+                        });
+                    } catch (line_err) {
+                        returnObj.details = Helper.extractError(line_err);
+                        throw 'Unable to add shipping variance line';
+                    }
+                }
+
+                if (!ignoreVariance && otherVariance.apply && otherVariance.amount) {
+                    hasVariance = true;
+                    listVariance.push('Other');
+
+                    listVarianceDetails.push({
+                        label: 'Other',
+                        diffAmount: otherVariance.amount
+                    });
+
+                    try {
+                        Helper.addNewLine({
+                            record: Current.BILL_REC,
+                            qty: 1,
+                            item: param.otherItem,
+                            description: 'VC: Other Charges',
+                            rate: otherVariance.amount,
+                            customer: Current.SO_DATA.entity
+                        });
+
+                        varianceLines.push({
+                            type: 'other',
+                            item: param.otherItem,
+                            rate: otherVariance.amount,
+                            quantity: 1
+                        });
+                    } catch (line_err) {
+                        returnObj.details = Helper.extractError(line_err);
+                        throw 'Unable to add other charges line';
+                    }
+                }
+
+                if (adjustmentVariance.apply && adjustmentVariance.amount) {
+                    hasVariance = true;
+                    listVariance.push('Adjustments');
+
+                    listVarianceDetails.push({
+                        label: 'Adjustments',
+                        diffAmount: otherVariance.amount
+                    });
+
+                    try {
+                        Helper.addNewLine({
+                            record: Current.BILL_REC,
+                            qty: 1,
+                            item: param.otherItem,
+                            description: 'VC: Adjustments',
+                            rate: adjustmentVariance.amount,
+                            customer: Current.SO_DATA.entity
+                        });
+
+                        varianceLines.push({
+                            type: 'adjustment',
+                            item: param.otherItem,
+                            description: 'VC: Adjustments',
+                            rate: adjustmentVariance.amount,
+                            quantity: 1
+                        });
+                    } catch (line_err) {
+                        returnObj.details = Helper.extractError(line_err);
+                        throw 'Unable to add adjustments line';
+                    }
+                }
+            }
+
+            /////////////////////////////////
+            var allowBillVariance = false,
+                allowableVarianceThreshold = param.allowedThreshold;
+            totalVarianceAmount = 0;
+
+            // param.allowedThreshold;
+
+            if (allowableVarianceThreshold && listVarianceDetails.length) {
+                listVarianceDetails.forEach(function (variance) {
+                    totalVarianceAmount += variance.diffAmount;
+                    return true;
+                });
+                totalVarianceAmount = Helper.roundOff(totalVarianceAmount);
+
+                log.debug(logTitle, '>>> totalVarianceAmount: ' + totalVarianceAmount);
+                log.debug(
+                    logTitle,
+                    '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
+                );
+
+                allowBillVariance =
+                    Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
+                log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
+            }
+
+            if (hasVariance && !Current.processVariance && !allowBillVariance) {
+                util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
+
+                // make listVariance unique
+                var objVariance = {},
+                    tmpArray = [];
+                listVariance.forEach(function (varValue) {
+                    if (!objVariance.hasOwnProperty(varValue)) {
+                        objVariance[varValue] = 1;
+                        tmpArray.push(varValue);
+                    }
+                });
+                listVariance = tmpArray;
+
+                returnObj.details = listVariance.length ? ' -- ' + listVariance.join(', ') : '';
+                returnObj.msg += returnObj.details;
+
+                if (!allowBillVariance && allowableVarianceThreshold) {
+                    returnObj.msg =
+                        'Variance Total exceeded the Allowable Threshold - ' +
+                        JSON.stringify({
+                            total: totalVarianceAmount,
+                            threshold: allowableVarianceThreshold
+                        }) +
+                        '\n' +
+                        returnObj.msg;
+                }
+
+                return returnObj;
+            }
+
+            /////////////////////////////////
+
+            log.debug(logTitle, '** Saving the bill record ** ');
+
+            // attempt to save the record ////
+            Current.BILL_REC.setValue({
+                fieldId: 'approvalstatus',
+                value: param.billDefaultStatus || 1
+            }); // defaults to pending approval
+
+            if (param.dontSaveBill) {
+                util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
+                return returnObj;
+            }
+
+            var newRecordId = Current.BILL_REC.save({
+                enableSourcing: true,
+                ignoreMandatoryFields: true
+            });
+
+            if (newRecordId) {
+                log.debug(
+                    logTitle,
+                    '>>> Bill Created succesfully...' +
+                        [Current.tranid, Current.PayloadData.invoice]
+                );
+
+                returnObj = JSON.parse(JSON.stringify(Current.BILL_REC));
+                util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
+
+                if (allowableVarianceThreshold && allowBillVariance) {
+                    returnObj.msg =
+                        'Variance Total is less than Allowable Threshold - ' +
+                        JSON.stringify({
+                            total: totalVarianceAmount,
+                            threshold: allowableVarianceThreshold
+                        }) +
+                        '\n\t\t' +
+                        returnObj.msg;
+                }
+
+                if (varianceLines && varianceLines.length) {
+                    returnObj.varianceLines = varianceLines;
+                }
+
+                returnObj.details =
+                    'Linked to vendor bill ' +
+                    JSON.stringify({ id: newRecordId, name: Current.PayloadData.invoice });
+            } else {
+                log.debug(
+                    logTitle,
+                    '// bill creation fail...' + [Current.tranid, Current.PayloadData.invoice]
+                );
+                util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
+                return returnObj;
+            }
+
+            return returnObj;
+        } catch (error) {
+            returnObj.msg = error.msg || Helper.extractError(error);
+            returnObj.details = returnObj.details || Helper.extractError(error);
+            returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
+            returnObj.isError = true;
+            returnObj.msg = [
+                returnObj.msg,
+                returnObj.details != returnObj.msg ? returnObj.details : ''
+            ].join(' ');
+
+            log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
+        } finally {
+            log.debug(logTitle, '## EXIT SCRIPT ## ' + JSON.stringify(returnObj));
+        }
+
+        return returnObj;
+    }
 
     var Helper = {
         extractError: function (option) {
@@ -60,40 +828,29 @@ require([
 
             var arrLinesToBill = [];
 
-            var recPO = option.record,
+            var record = option.record,
                 billPayload = option.payload;
 
-            var lineCount = recPO.getLineCount({ sublistId: 'item' });
+            var lineCount = record.getLineCount({ sublistId: 'item' });
             var hasFoundLines = false;
             for (var line = 0; line < lineCount; line++) {
-                var vbLineData = {
-                    lineNo: line,
-                    item: recPO.getSublistValue({
-                        sublistId: 'item',
-                        line: line,
-                        fieldId: 'item'
-                    }),
-                    item_text: recPO.getSublistText({
-                        sublistId: 'item',
-                        line: line,
-                        fieldId: 'item'
-                    }),
-                    qty: recPO.getSublistValue({
-                        sublistId: 'item',
-                        line: line,
-                        fieldId: 'quantity'
-                    }),
-                    qtybilled: recPO.getSublistValue({
-                        sublistId: 'item',
-                        line: line,
-                        fieldId: 'quantitybilled'
-                    })
-                };
+                var lineData = RecordHelper.extractLineValues({
+                    record: record,
+                    columns: ['item', 'rate', 'quantity', 'quantityreceived', 'quantitybilled']
+                });
+                lineData.line = line;
+
+                lineData.remainingQty =
+                    parseFloat(lineData.quantityreceived || '0') -
+                    parseFloat(lineData.quantitybilled || '0');
+
+                log.audit(logTitle, '...>> vbline: ' + JSON.stringify(vbLineData));
+
                 billPayload.lines.forEach(function (lineBill) {
-                    if (lineBill.NSITEM == vbLineData.item) hasFoundLines = true;
+                    if (lineBill.NSITEM == lineData.item) hasFoundLines = true;
                     if (
-                        lineBill.NSITEM == vbLineData.item &&
-                        lineBill.QUANTITY > vbLineData.qtybilled
+                        lineBill.NSITEM == lineData.item &&
+                        lineBill.QUANTITY <= lineData.remainingQty
                     ) {
                         arrLinesToBill.push(lineBill);
                     }
@@ -104,7 +861,7 @@ require([
 
             if (!hasFoundLines) throw 'Unable to find matching lines';
 
-            log.audit(logTitle, LogPrefix + '>> Lines To Bill: ' + JSON.stringify(arrLinesToBill));
+            log.audit(logTitle, '>> Lines To Bill: ' + JSON.stringify(arrLinesToBill));
             returnValue = arrLinesToBill;
 
             return returnValue;
@@ -140,6 +897,45 @@ require([
             );
             returnValue = arrExistingBills;
 
+            return returnValue;
+        },
+        getSalesOrderDetails: function (option) {
+            var logTitle = [LOG_TITLE, 'getSalesOrderDetails'].join('::'),
+                returnValue;
+            option = option || {};
+            var poId = option.poId;
+            if (poId) {
+                var poDetails = ns_search.lookupFields({
+                    type: 'transaction',
+                    id: poId,
+                    columns: ['createdfrom.entity']
+                });
+                var multiselectFields = ['createdfrom.entity'];
+                var soDetails = {};
+                for (var field in poDetails) {
+                    var soFieldName = field;
+                    if (field.indexOf('createdfrom.') == 0) {
+                        soFieldName = field.substr(12);
+                    }
+                    if (
+                        multiselectFields.indexOf(field) >= 0 &&
+                        poDetails[field] &&
+                        poDetails[field][0] &&
+                        poDetails[field][0].value
+                    ) {
+                        soDetails[soFieldName] = poDetails[field][0].value;
+                    } else {
+                        soDetails[soFieldName] = poDetails[field];
+                    }
+                }
+                log.debug(
+                    logTitle,
+                    LogPrefix +
+                        ('>> PO: ' + JSON.stringify(poDetails)) +
+                        ('<br />\nSO: ' + JSON.stringify(soDetails))
+                );
+                returnValue = soDetails;
+            }
             return returnValue;
         },
         isPeriodLocked: function (option) {
@@ -180,7 +976,13 @@ require([
                 fieldId: 'description',
                 value: option.description || 'VC New Line'
             });
-
+            if (option.customer) {
+                record.setCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'customer',
+                    value: option.customer
+                });
+            }
             record.setCurrentSublistValue({
                 sublistId: 'item',
                 fieldId: 'quantity',
@@ -204,857 +1006,345 @@ require([
             return returnValue;
         },
         roundOff: function (value) {
-            var flValue = VC2_Lib.forceFloat(value);
+            var flValue = parseFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
-        }
-    };
-
-    function _post(context) {
-        var logTitle = [LOG_TITLE, 'POST'].join('::'),
-            returnObj = {},
-            currentData = {},
-            currScript = ns_runtime.getCurrentScript();
-
-        var scriptParam = {};
-
-        for (var paramName in PARAM_FIELDS) {
-            scriptParam[paramName] = currScript.getParameter({ name: PARAM_FIELDS[paramName] });
-        }
-
-        try {
-            log.audit(logTitle, LogPrefix + 'Params: ' + JSON.stringify(scriptParam));
-            log.audit(logTitle, LogPrefix + 'Request: ' + context);
-
-            currentData = {
-                poId:
-                    context.custrecord_ctc_vc_bill_linked_po &&
-                    context.custrecord_ctc_vc_bill_linked_po[0]
-                        ? context.custrecord_ctc_vc_bill_linked_po[0].value
-                        : false,
-                billInAdvance: context.billInAdvance || false,
-                processVariance: context.custrecord_ctc_vc_bill_proc_variance
+        },
+        getBillingConfig: function () {
+            var mainConfig = VC_MainCfg.getMainConfiguration();
+            if (!mainConfig) {
+                log.error('No Configuration available');
+                throw new Error('No Configuration available');
+            }
+            return {
+                defaultBillForm: mainConfig.defaultBillForm,
+                billDefaultStatus: mainConfig.defaultVendorBillStatus,
+                allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
+                hasTaxVariance: mainConfig.isVarianceOnTax,
+                taxItem: mainConfig.defaultTaxItem,
+                hasShippingVariance: mainConfig.isVarianceOnShipping,
+                shipItem: mainConfig.defaultShipItem,
+                hasOtherVariance: mainConfig.isVarianceOnOther,
+                otherItem: mainConfig.defaultOtherItem,
+                dontSaveBill: mainConfig.isBillCreationDisabled
             };
-            log.debug(logTitle, LogPrefix + 'CurrentData: ' + JSON.stringify(currentData));
+        },
+        preprocessBillLines: function (option) {
+            var logTitle = [LOG_TITLE, 'preprocessBillLines'].join('::');
+            var arrLines = [],
+                matchedLinesBill = {};
 
-            ///////////////////
-            if (!currentData.poId) {
-                returnObj.details = ' PO ID:' + currentData.poId + ' is missing or inactive.';
-                throw BILL_CREATOR.Code.MISSING_PO;
-            }
-            ///////////////////
-            var log_prefix;
-            LogPrefix = ' [purchaseorder:' + currentData.poId + '] ';
-            var recPO = ns_record.load({ type: 'purchaseorder', id: currentData.poId });
-            CURRENT_PO = currentData.poId;
+            if (!Current.BILL_REC) return false;
 
-            currentData.poNum = recPO.getValue({ fieldId: 'tranid' });
-            currentData.poEntity = recPO.getValue({ fieldId: 'entity' });
-            currentData.taxTotal =
-                VC2_Lib.forceFloat(recPO.getValue({ fieldId: 'taxtotal' })) +
-                VC2_Lib.forceFloat(recPO.getValue({ fieldId: 'tax2total' }));
+            log.audit(logTitle, LogPrefix + '/// Look for matched bill lines...');
 
-            var billPayload = JSON.parse(context.custrecord_ctc_vc_bill_json);
+            var i, j, ii, jj, lineInfo, logPrefix;
+            for (i = 0, j = Current.PayloadData.lines.length; i < j; i++) {
+                lineInfo = Current.PayloadData.lines[i];
 
-            log.audit(logTitle, LogPrefix + 'Bill Payload:' + JSON.stringify(billPayload));
-            log.debug(logTitle, LogPrefix + 'Validating remaining items to bill...');
-
-            VC2_Lib.vcLog({
-                title: LOG_APP,
-                recordId: CURRENT_PO,
-                body: '*** VENDOR BILL CREATION START *****: ' + JSON.stringify(currentData)
-            });
-
-            /// FIND EXISTING BILLS ////////////////////////////
-            log.debug(logTitle, LogPrefix + 'Checking for existing bills...');
-
-            var arrExistingBills = Helper.getExistingBill({
-                entity: currentData.poEntity,
-                invoiceNo: billPayload.invoice
-            });
-
-            if (arrExistingBills && arrExistingBills.length) {
-                var billRec = ns_record.load({
-                    type: 'vendorbill',
-                    id: arrExistingBills[0]
-                });
-
-                returnObj = JSON.parse(JSON.stringify(billRec));
-                returnObj.existingBills = JSON.stringify(arrExistingBills);
-                returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
-                util.extend(returnObj, BILL_CREATOR.Code.EXISTING_BILLS);
-
-                return returnObj;
-            }
-            ///////////////////////////////////
-
-            /// VALIDATE REMAING ITEMS TO BILL /////////////////////////
-            var arrLinesToBill = Helper.getLinesToBill({
-                payload: billPayload,
-                record: recPO
-            });
-            log.debug(logTitle, LogPrefix + 'Lines to bill..' + JSON.stringify(arrLinesToBill));
-
-            if (!arrLinesToBill || !arrLinesToBill.length) {
-                returnObj.details = 'All items on the bill are already billed.';
-                util.extend(returnObj, BILL_CREATOR.Code.ITEMS_ALREADY_BILLED);
-                return returnObj;
-            }
-            ///////////////////////////////////
-
-            ///////////////////////////////////
-            // Status check
-            var poStatus = {
-                status: recPO.getValue({ fieldId: 'status' }),
-                statusRef: recPO.getValue({ fieldId: 'statusRef' })
-            };
-
-            log.debug(logTitle, LogPrefix + 'PO Status: ' + JSON.stringify(poStatus));
-
-            VC2_Lib.vcLog({
-                title: LOG_APP,
-                recordId: CURRENT_PO,
-                body: 'PO Status: ' + JSON.stringify(poStatus)
-            });
-
-            if (
-                poStatus.statusRef == 'pendingBilling' ||
-                poStatus.statusRef == 'pendingBillPartReceived' ||
-                currentData.billInAdvance
-            ) {
-                // continue processing
-                log.debug(logTitle, LogPrefix + 'PO is ready for billing: ');
-            } else {
-                /// not ready for billing!
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        '// Skipping poId, Purchase Order not Ready to Bill' +
-                        JSON.stringify({
-                            poNum: currentData.poNum,
-                            status: poStatus
-                        })
-                );
-
-                returnObj.details = [
-                    'PO #' + currentData.poNum,
-                    ' - current status: ' + poStatus.status
-                ].join('');
-
-                throw BILL_CREATOR.Code.NOT_BILLABLE;
-            }
-            ///////////////////////////////////
-
-            var hasVariance = false,
-                totalVarianceAmount = 0,
-                listVarianceDetails = [],
-                listVariance = [];
-
-            //// TRANSFORM TO VENDOR BILL ////////////////
-            var transformOption = {
-                fromType: 'purchaseorder',
-                fromId: currentData.poId,
-                toType: 'vendorbill',
-                isDynamic: true
-            };
-
-            if (scriptParam.defaultBillForm) {
-                transformOption.customform = scriptParam.defaultBillForm;
-            }
-
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    '***** Vendor Bill record creation:start *****' +
-                    JSON.stringify(transformOption)
-            );
-
-            ////////////////////////////////
-            var recBill;
-            try {
-                recBill = ns_record.transform(transformOption);
-            } catch (transform_error) {
-                var transform_error_msg = VC2_Lib.extractError(transform_error);
-                returnObj.details = 'Error: ' + transform_error_msg;
-                throw BILL_CREATOR.Code.BILL_NOT_CREATED;
-            }
-            ////////////////////////////////
-
-            if (scriptParam.defaultBillForm) {
-                recBill.setValue({ fieldId: 'customform', value: scriptParam.defaultBillForm });
-            }
-
-            /// SET THE DATE/DUE DATE ///////////////////
-            var postingPeriod = recBill.getValue({ fieldId: 'postingperiod' });
-            recBill.setValue({
-                fieldId: 'trandate',
-                value: ns_format.parse({
-                    value: moment(billPayload.date).toDate(),
-                    type: ns_format.Type.DATE
-                })
-            });
-            if (billPayload.duedate) {
-                recBill.setValue({
-                    fieldId: 'duedate',
-                    value: ns_format.parse({
-                        value: moment(billPayload.duedate).toDate(),
-                        type: ns_format.Type.DATE
-                    })
-                });
-            }
-
-            //// CHECK THE POSTING PERIOD ////////////////
-            var isPeriodLocked = Helper.isPeriodLocked({ recordBill: recBill });
-            if (isPeriodLocked) {
-                // set to original period
-                recBill.setValue({
-                    fieldId: 'postingperiod',
-                    value: postingPeriod
-                });
-            }
-
-            /// TRANSACTION NAME  ///////////////////
-            log.debug(logTitle, LogPrefix + '.. set invoice name: ' + billPayload.invoice);
-            recBill.setValue({
-                fieldId: 'tranid',
-                value: billPayload.invoice
-            });
-
-            /// VALIDATE THE LINES /////////////
-            var lineCount = recBill.getLineCount({ sublistId: 'item' });
-            var arrLines = [];
-
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    'Matching vb-to-payload lines...line count: ' +
-                    JSON.stringify({
-                        vbLines: lineCount,
-                        payloadLines: billPayload.lines.length
-                    })
-            );
-
-            for (var line = 0; line < lineCount; line++) {
-                log_prefix = ['[line #', line, '] ...'].join('');
-
-                recBill.selectLine({ sublistId: 'item', line: line });
-                var vbLineData = {
-                    lineNo: line,
-                    item: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'item'
-                    }),
-                    rate: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'rate'
-                    }),
-                    quantity: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'quantity'
-                    }),
-                    taxRate1: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'taxrate1'
-                    }),
-                    taxRate2: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'taxrate2'
-                    }),
-                    billQty: 0,
-                    billRate: 0,
-                    process: false
-                };
-                log.debug(
-                    logTitle,
-                    LogPrefix + log_prefix + 'validating line: ' + JSON.stringify(vbLineData)
-                );
-
-                var isLineFound = false;
-
-                for (var bpline = 0; bpline < billPayload.lines.length; bpline++) {
-                    var payloadLineData = billPayload.lines[bpline];
-                    if (payloadLineData.NSITEM != vbLineData.item) continue;
-
-                    isLineFound = true;
-
-                    log.debug(
-                        logTitle,
-                        LogPrefix +
-                            log_prefix +
-                            'matching lines: ' +
-                            JSON.stringify(payloadLineData)
-                    );
-
-                    var billQty =
-                        payloadLineData.QUANTITY > vbLineData.quantity
-                            ? vbLineData.quantity
-                            : payloadLineData.QUANTITY;
-
-                    vbLineData.billQty += billQty;
-                    vbLineData.billRate = payloadLineData.PRICE;
-                    payloadLineData.QUANTITY -= billQty;
-                    vbLineData.process = true;
-                }
-                if (!isLineFound) {
-                    log.debug(
-                        logTitle,
-                        LogPrefix + log_prefix + '// unable to find matching payload line'
-                    );
-                }
-
-                arrLines.push(vbLineData);
-            }
-            ///////////////////////////////
-
-            var fileFullyProcessed = true;
-            log.debug(logTitle, LogPrefix + 'Checking unprocessed payload line...');
-            billPayload.lines.forEach(function (line) {
-                if (line.QUANTITY > 0) {
-                    fileFullyProcessed = false;
-
-                    returnObj.details = [
-                        'Bill line quantity exceeds PO line quantity: ',
-                        JSON.stringify({
-                            item: line.ITEMNO,
-                            qty: line.QUANTITY
-                        })
-                    ].join('');
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '// line has remaining unprocessed qty' + JSON.stringify(line)
-                    );
-                }
-            });
-
-            if (!fileFullyProcessed) {
-                throw BILL_CREATOR.Code.NOT_FULLY_PROCESSED;
-            }
-
-            arrLines.reverse();
-
-            /// PROCESS THE LINES /////////////
-            log.debug(
-                logTitle,
-                LogPrefix + 'Validating lines to process: ' + JSON.stringify(arrLines)
-            );
-
-            var taxTotal = 0;
-
-            for (var lineVB = 0; lineVB < arrLines.length; lineVB++) {
-                var lineDataVB = arrLines[lineVB],
-                    lineVariance = [],
-                    lineTaxTotal = 0;
-
-                log_prefix = ['[line #', lineDataVB.lineNo, '] ...'].join('');
-                log.debug(
-                    logTitle,
-                    LogPrefix + log_prefix + 'Proceessing line: ' + JSON.stringify(lineDataVB)
-                );
-
-                // remove line, if not included in the payload bill
-                if (!lineDataVB.process || !lineDataVB.billQty || lineDataVB.billQty < 1) {
-                    log.debug(
-                        logTitle,
-                        LogPrefix + log_prefix + '// removing line, not part of the bill'
-                    );
-                    recBill.removeLine({
-                        sublistId: 'item',
-                        line: lineDataVB.lineNo
-                    });
-                    continue;
-                }
-
-                ////////////////
-                recBill.selectLine({
-                    sublistId: 'item',
-                    line: lineDataVB.lineNo
-                });
-                var currentLineData = {
-                    qty: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'quantity'
-                    }),
-                    rate: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'rate'
-                    }),
-                    amount: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'amount'
-                    }),
-                    taxrate1: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'taxrate1'
-                    }),
-                    taxrate2: recBill.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'taxrate2'
-                    })
+                var lineData = {
+                    item: lineInfo.ITEMNO,
+                    nsitem: lineInfo.NSITEM || '',
+                    quantity: lineInfo.QUANTITY,
+                    description: lineInfo.DESCRIPTION,
+                    rate: lineInfo.BILLRATE || lineInfo.PRICE,
+                    amount: lineInfo.QUANTITY * (lineInfo.BILLRATE || lineInfo.PRICE),
+                    info: lineInfo
                 };
 
-                // calculate tax
-                currentLineData.taxrate1 = util.isString(currentLineData.taxrate1)
-                    ? VC2_Lib.forceFloat(currentLineData.taxrate1)
-                    : currentLineData.taxrate1;
-                if (currentLineData.taxrate1 > 0) {
-                    currentLineData.taxAmount1 =
-                        currentLineData.amount * (currentLineData.taxrate1 / 100);
-                    lineTaxTotal += currentLineData.taxAmount1;
-                }
+                logPrefix = LogPrefix + ' [item:' + lineInfo.ITEMNO + '] ';
+                log.audit(logTitle, logPrefix + '>> lineData: ' + JSON.stringify(lineData));
 
-                currentLineData.taxrate2 = util.isString(currentLineData.taxrate2)
-                    ? VC2_Lib.forceFloat(currentLineData.taxrate2)
-                    : currentLineData.taxrate2;
-                if (currentLineData.taxrate2 > 0) {
-                    currentLineData.taxAmount2 =
-                        currentLineData.amount * (currentLineData.taxrate2 / 100);
-                    lineTaxTotal += currentLineData.taxAmount2;
-                }
+                if (!lineInfo.NSITEM) continue;
+                if (Current.BILL_REC) {
+                    var matchingLinesBill =
+                        RecordHelper.extractRecordLines({
+                            record: Current.BILL_REC,
+                            findAll: true,
+                            filter: {
+                                item: lineData.nsitem,
+                                rate: lineData.rate,
+                                quantity: lineData.quantity
+                            }
+                        }) ||
+                        // if none found, search for matching item, rate
+                        RecordHelper.extractRecordLines({
+                            record: Current.BILL_REC,
+                            findAll: true,
+                            filter: {
+                                item: lineData.nsitem,
+                                rate: lineData.rate
+                            }
+                        }) ||
+                        RecordHelper.extractRecordLines({
+                            record: Current.BILL_REC,
+                            findAll: true,
+                            filter: {
+                                item: lineData.nsitem,
+                                quantity: lineData.quantity
+                            }
+                        });
 
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        log_prefix +
-                        'Checking for variance: ' +
-                        JSON.stringify(currentLineData)
-                );
-
-                /// LINE: QTY Variance /////////////////////
-                ///////////////////////////////////
-                if (lineDataVB.billQty != currentLineData.qty) {
-                    log.debug(
+                    log.audit(
                         logTitle,
-                        LogPrefix + log_prefix + '// bill quantity is > po quantity'
+                        logPrefix + '>> matchingLinesBill: ' + JSON.stringify(matchingLinesBill)
                     );
 
-                    if (lineDataVB.billQty > currentLineData.qty) {
-                        log.debug(
-                            logTitle,
-                            LogPrefix + log_prefix + '// bill quantity is > po quantity'
-                        );
-
-                        lineVariance.push('Quantity');
-                        listVariance.push('Quantity');
-
-                        listVarianceDetails.push({
-                            type: 'line',
-                            label: 'Quantity',
-                            diffQty: lineDataVB.billQty - currentLineData.qty,
-                            diffAmount: VC2_Lib.roundOff(
-                                (lineDataVB.billQty - currentLineData.qty) *
-                                    (lineDataVB.billRate - currentLineData.rate)
-                            )
-                        });
-                    } else {
-                        recBill.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'quantity',
-                            value: lineDataVB.billQty
-                        });
+                    lineData.matchingLinesBill = [];
+                    for (
+                        ii = 0, jj = matchingLinesBill ? matchingLinesBill.length : 0;
+                        ii < jj;
+                        ii++
+                    ) {
+                        var matchedLine = matchingLinesBill[ii];
+                        if (matchedLinesBill[matchedLine.line]) continue;
+                        matchedLinesBill[matchedLine.line] = lineInfo;
+                        lineData.matchingLinesBill.push(matchedLine);
                     }
                 }
-                ///////////////////////////////////
 
-                /// LINE: RATE Variance /////////////////////
-                ///////////////////////////////////
-                if (lineDataVB.billRate != currentLineData.rate) {
-                    log.debug(
-                        logTitle,
-                        LogPrefix + log_prefix + '// bill rate doesnt match po rate'
-                    );
-
-                    lineVariance.push('Price');
-                    listVariance.push('Price');
-
-                    recBill.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'rate',
-                        value: lineDataVB.billRate
-                    });
-
-                    listVarianceDetails.push({
-                        type: 'line',
-                        label: 'Rate',
-                        diffAmount: VC2_Lib.roundOff(lineDataVB.billRate - currentLineData.rate)
-                    });
-                }
-                ///////////////////////////////////
-
-                if (lineVariance.length) {
-                    hasVariance = true;
-                    recBill.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_create_bill_variance',
-                        value: true
-                    });
-                    recBill.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_bill_variance_rsn',
-                        value: lineVariance.join('\r\n')
-                    });
-                }
-
-                taxTotal += lineTaxTotal;
-
-                log.debug(logTitle, LogPrefix + log_prefix + ' line tax total:  ' + lineTaxTotal);
-
-                recBill.commitLine({ sublistId: 'item' });
+                arrLines.push(lineData);
             }
-            ///////////////////////////////
-            log.debug(
-                logTitle,
-                LogPrefix + 'Processing charges :  ' + JSON.stringify(billPayload.charges)
-            );
-            log.debug(
-                logTitle,
-                LogPrefix + '// variances :  ' + JSON.stringify(billPayload.variance)
-            );
-
-            taxTotal = VC2_Lib.roundOff(taxTotal) || 0;
-
-            var vbTaxTotal =
-                VC2_Lib.forceFloat(recBill.getValue({ fieldId: 'taxtotal' })) +
-                VC2_Lib.forceFloat(recBill.getValue({ fieldId: 'tax2total' }));
-
-            var deltaCharges = {
-                tax: VC2_Lib.roundOff(billPayload.charges.tax - taxTotal)
-            };
-
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    'Tax Total: ' +
-                    JSON.stringify({
-                        lineTaxTotal: taxTotal,
-                        vbTaxTotal: vbTaxTotal,
-                        poTaxTotal: currentData.taxTotal,
-                        taxCharges: billPayload.charges.tax,
-                        delta: deltaCharges.tax
-                    })
-            );
-
-            var ignoreVariance =
-                billPayload.hasOwnProperty('ignoreVariance') && billPayload.ignoreVariance == 'T';
 
             log.audit(
                 logTitle,
-                LogPrefix + '>> variance lines: ' + JSON.stringify(billPayload.varianceLines)
+                LogPrefix + '/// Look for bill lines that doesnt have direct matches...'
             );
-            log.audit(logTitle, LogPrefix + '>> variance: ' + JSON.stringify(billPayload.variance));
+            // do a second round, and look for unmatched lines
+            for (i = 0, j = arrLines.length; i < j; i++) {
+                lineInfo = arrLines[i];
+                logPrefix = LogPrefix + ' [item:' + lineInfo.item + '] ';
+                if (lineInfo.matchingLinesBill && lineInfo.matchingLinesBill.length) continue;
 
-            if (billPayload.varianceLines && billPayload.varianceLines.length) {
-                hasVariance = true;
-
-                billPayload.varianceLines.forEach(function (varianceData) {
-                    listVariance.push(varianceData.name);
-
-                    listVarianceDetails.push({
-                        label: varianceData.name,
-                        diffAmount: varianceData.rate
-                    });
-
-                    Helper.addNewLine({
-                        record: recBill,
-                        qty: 1,
-                        description: varianceData.description,
-                        item: varianceData.item,
-                        rate: varianceData.rate
-                    });
-
-                    return true;
+                var matchedLines = RecordHelper.extractRecordLines({
+                    record: Current.BILL_REC,
+                    findAll: true,
+                    filter: { item: lineInfo.nsitem }
                 });
-            } else {
-                var varianceValues = billPayload.variance || {};
 
-                var taxVariance = { apply: false, amount: 0 };
-                var shipVariance = { apply: false, amount: 0 };
-                var otherVariance = { apply: false, amount: 0 };
-                var adjustmentVariance = { apply: false, amount: 0 };
+                for (ii = 0, jj = matchedLines ? matchedLines.length : 0; ii < jj; ii++) {
+                    if (matchedLinesBill[matchedLines[ii].line]) continue;
+                    arrLines[i].matchingLinesBill.push(matchedLines[ii]);
 
-                taxVariance.apply = scriptParam.hasTaxVariance;
-                taxVariance.amount = deltaCharges.tax;
-                if (varianceValues.hasOwnProperty('applyTax')) {
-                    taxVariance.apply = varianceValues.applyTax == 'T';
-                    taxVariance.amount = varianceValues.tax;
-                }
-                log.debug(logTitle, LogPrefix + '>> taxVariance: ' + JSON.stringify(taxVariance));
+                    matchedLinesBill[matchedLines[ii].line] = lineInfo.info;
 
-                shipVariance.apply = scriptParam.hasShippingVariance;
-                shipVariance.amount = billPayload.charges.shipping;
-                if (varianceValues.hasOwnProperty('applyShip')) {
-                    shipVariance.apply = varianceValues.applyShip == 'T';
-                    shipVariance.amount = varianceValues.shipping;
-                }
-                log.debug(logTitle, LogPrefix + '>> shipVariance: ' + JSON.stringify(shipVariance));
-
-                otherVariance.apply = scriptParam.hasOtherVariance;
-                otherVariance.amount = billPayload.charges.other;
-                if (varianceValues.hasOwnProperty('applyShip')) {
-                    otherVariance.apply = varianceValues.applyOther == 'T';
-                    otherVariance.amount = varianceValues.other;
-                }
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> otherVariance: ' + JSON.stringify(otherVariance)
-                );
-
-                if (varianceValues.hasOwnProperty('applyAdjustment')) {
-                    adjustmentVariance.apply = varianceValues.applyAdjustment == 'T';
-                    adjustmentVariance.amount = varianceValues.adjustment;
-                }
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> adjustmentVariance: ' + JSON.stringify(adjustmentVariance)
-                );
-
-                if (!ignoreVariance && taxVariance.apply && taxVariance.amount) {
-                    hasVariance = true;
-                    listVariance.push('Tax');
-
-                    listVarianceDetails.push({
-                        label: 'Tax',
-                        diffAmount: taxVariance.amount
-                    });
-
-                    try {
-                        Helper.addNewLine({
-                            record: recBill,
-                            qty: 1,
-                            description: 'VC: Tax Variance',
-                            item: scriptParam.taxItem,
-                            rate: taxVariance.amount
-                        });
-                    } catch (line_err) {
-                        returnObj.details = Helper.extractError(line_err);
-                        throw 'Unable to add tax variance line';
-                    }
-                }
-
-                if (!ignoreVariance && shipVariance.apply && shipVariance.amount) {
-                    hasVariance = true;
-                    listVariance.push('Shipping');
-
-                    listVarianceDetails.push({
-                        label: 'Shipping',
-                        diffAmount: shipVariance.amount
-                    });
-
-                    try {
-                        Helper.addNewLine({
-                            record: recBill,
-                            qty: 1,
-                            description: 'VC: Ship Variance',
-                            item: scriptParam.shipItem,
-                            rate: shipVariance.amount
-                        });
-                    } catch (line_err) {
-                        returnObj.details = Helper.extractError(line_err);
-                        throw 'Unable to add shipping variance line';
-                    }
-                }
-
-                if (!ignoreVariance && otherVariance.apply && otherVariance.amount) {
-                    hasVariance = true;
-                    listVariance.push('Other');
-
-                    listVarianceDetails.push({
-                        label: 'Other',
-                        diffAmount: otherVariance.amount
-                    });
-
-                    try {
-                        Helper.addNewLine({
-                            record: recBill,
-                            qty: 1,
-                            item: scriptParam.otherItem,
-                            description: 'VC: Other Charges',
-                            rate: otherVariance.amount
-                        });
-                    } catch (line_err) {
-                        returnObj.details = Helper.extractError(line_err);
-                        throw 'Unable to add other charges line';
-                    }
-                }
-
-                if (adjustmentVariance.apply && adjustmentVariance.amount) {
-                    hasVariance = true;
-                    listVariance.push('Adjustments');
-
-                    listVarianceDetails.push({
-                        label: 'Adjustments',
-                        diffAmount: otherVariance.amount
-                    });
-
-                    try {
-                        Helper.addNewLine({
-                            record: recBill,
-                            qty: 1,
-                            item: scriptParam.otherItem,
-                            description: 'VC: Adjustments',
-                            rate: adjustmentVariance.amount
-                        });
-                    } catch (line_err) {
-                        returnObj.details = Helper.extractError(line_err);
-                        throw 'Unable to add adjustments line';
-                    }
+                    log.audit(
+                        logTitle,
+                        logPrefix + '>> matching items: ' + JSON.stringify(matchedLines[ii])
+                    );
                 }
             }
 
-            /////////////////////////////////
-            var allowBillVariance = false,
-                allowableVarianceThreshold = scriptParam.allowedThreshold;
+            Current.MatchedLines = matchedLinesBill;
 
-            // scriptParam.allowedThreshold;
-
-            if (allowableVarianceThreshold && listVarianceDetails.length) {
-                listVarianceDetails.forEach(function (variance) {
-                    totalVarianceAmount += variance.diffAmount;
-                    return true;
-                });
-                totalVarianceAmount = VC2_Lib.roundOff(totalVarianceAmount);
-
-                log.debug(logTitle, LogPrefix + '>>> totalVarianceAmount: ' + totalVarianceAmount);
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
-                );
-
-                allowBillVariance =
-                    Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
-                log.debug(logTitle, LogPrefix + '>>> allowBillVariance: ' + allowBillVariance);
-            }
-
-            if (hasVariance && !currentData.processVariance && !allowBillVariance) {
-                util.extend(returnObj, BILL_CREATOR.Code.HAS_VARIANCE);
-
-                // make listVariance unique
-                var objVariance = {},
-                    tmpArray = [];
-                listVariance.forEach(function (varValue) {
-                    if (!objVariance.hasOwnProperty(varValue)) {
-                        objVariance[varValue] = 1;
-                        tmpArray.push(varValue);
-                    }
-                });
-                listVariance = tmpArray;
-
-                returnObj.details = listVariance.length ? ' -- ' + listVariance.join(', ') : '';
-                returnObj.msg += returnObj.details;
-
-                if (!allowBillVariance && allowableVarianceThreshold) {
-                    returnObj.msg =
-                        'Variance Total exceeded the Allowable Threshold - ' +
-                        JSON.stringify({
-                            total: totalVarianceAmount,
-                            threshold: allowableVarianceThreshold
-                        }) +
-                        '\n' +
-                        returnObj.msg;
-                }
-
-                return returnObj;
-            }
-
-            /////////////////////////////////
-
-            log.debug(logTitle, LogPrefix + '** Saving the bill record ** ');
-
-            // attempt to save the record ////
-            recBill.setValue({
-                fieldId: 'approvalstatus',
-                value: scriptParam.billDefaultStatus || 1
-            }); // defaults to pending approval
-
-            if (scriptParam.dontSaveBill) {
-                util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
-                return returnObj;
-            }
-
-            var newRecordId = recBill.save({
-                enableSourcing: true,
-                ignoreMandatoryFields: true
-            });
-
-            if (newRecordId) {
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        '>>> Bill Created succesfully...' +
-                        [currentData.poNum, billPayload.invoice]
-                );
-
-                returnObj = JSON.parse(JSON.stringify(recBill));
-                util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
-
-                if (allowableVarianceThreshold && allowBillVariance) {
-                    returnObj.msg =
-                        'Variance Total is less than Allowable Threshold - ' +
-                        JSON.stringify({
-                            total: totalVarianceAmount,
-                            threshold: allowableVarianceThreshold
-                        }) +
-                        '\n\t\t' +
-                        returnObj.msg;
-                }
-
-                returnObj.details =
-                    'Linked to vendor bill ' +
-                    JSON.stringify({ id: newRecordId, name: billPayload.invoice });
-            } else {
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        '// bill creation fail...' +
-                        [currentData.poNum, billPayload.invoice]
-                );
-                util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
-                return returnObj;
-            }
-
-            return returnObj;
-        } catch (error) {
-            returnObj.msg = error.msg || Helper.extractError(error);
-            returnObj.details = returnObj.details || Helper.extractError(error);
-            returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
-            returnObj.isError = true;
-            returnObj.msg = [
-                returnObj.msg,
-                returnObj.details != returnObj.msg ? returnObj.details : ''
-            ].join(' ');
-
-            log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(returnObj));
-        } finally {
-            VC2_Lib.vcLog({
-                title: LOG_APP,
-                recordId: CURRENT_PO,
-                body: [
-                    returnObj.msg,
-                    returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' '),
-                status: returnObj.isError
-                    ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
-                    : VC_Constants.LIST.VC_LOG_STATUS.INFO,
-                doLog: true
-            });
-
-            // VC_Log.add({
-            //     header: LOG_APP,
-            //     transaction: CURRENT_PO,
-            //     body: [
-            //         returnObj.msg,
-            //         returnObj.details != returnObj.msg ? returnObj.details : ''
-            //     ].join(' '),
-            //     status: returnObj.isError
-            //         ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
-            //         : VC_Constants.LIST.VC_LOG_STATUS.INFO
-            // });
-
-            log.debug(logTitle, LogPrefix + '## EXIT SCRIPT ## ' + JSON.stringify(returnObj));
+            return arrLines;
+        },
+        extend: function (source, contrib) {
+            // do this to preserve the source values
+            return util.extend(util.extend({}, source), contrib);
         }
+    };
 
-        return returnObj;
-    }
+    var RecordHelper = {
+        transform: function (option) {
+            var returnRec;
+            try {
+                if (!option.fromType) throw 'Record fromType is required. [fromType]';
+                if (!option.fromId) throw 'Record fromId is required. [fromId]';
+                if (!option.toType) throw 'Record toType is required. [toType]';
+
+                returnRec = ns_record.transform(option);
+            } catch (err) {
+                throw (
+                    'Unable to transform record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
+            }
+            return returnRec;
+        },
+        load: function (option) {
+            var returnRec;
+            try {
+                if (!option.type) throw 'Record type is required. [type]';
+                if (!option.id) throw 'Record ID is required. [id]';
+
+                returnRec = ns_record.load(option);
+            } catch (err) {
+                throw (
+                    'Unable to load record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
+            }
+            return returnRec;
+        },
+        loadData: function (option) {
+            var returnData;
+            try {
+                if (!option.record || !option.fields) return false;
+                returnData = {};
+
+                for (var fld in option.fields) {
+                    var fieldId = option.fields[fld];
+                    var fieldName = util.isArray(option.fields) ? fieldId : fld;
+
+                    var value = option.record.getValue({ fieldId: fieldId }) || '',
+                        textValue = option.record.getText({ fieldId: fieldId });
+                    returnData[fieldName] = value;
+
+                    if (textValue !== null && textValue != value) {
+                        returnData[fieldName + '_text'] = textValue;
+                    }
+                }
+            } catch (error) {
+                throw (
+                    'Unable to load record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
+            }
+            return returnData;
+        },
+        extractLineValues: function (option) {
+            var record = option.record,
+                sublistId = option.sublistId || 'item',
+                groupId = option.groupId,
+                line = option.line,
+                columns = option.columns;
+
+            if (!record || !columns) return false;
+            if (line == null || line < 0) return false;
+
+            var lineData = {};
+            for (var i = 0, j = columns.length; i < j; i++) {
+                var lineOption = {
+                    sublistId: sublistId,
+                    group: groupId,
+                    fieldId: columns[i],
+                    line: line
+                };
+                var value = record.getSublistValue(lineOption),
+                    textValue = record.getSublistText(lineOption);
+                lineData[columns[i]] = value;
+                if (textValue !== null && value != textValue)
+                    lineData[columns[i] + '_text'] = textValue;
+            }
+
+            return lineData;
+        },
+        extractRecordLines: function (option) {
+            var record = option.record;
+            var columns = option.columns || [
+                'item',
+                'rate',
+                'quantity',
+                'amount',
+                'quantityreceived',
+                'quantitybilled',
+                'taxrate',
+                'taxrate1',
+                'taxrate2'
+            ];
+            var sublistId = option.sublistId || 'item';
+            if (!record) return false;
+
+            var lineCount = record.getLineCount({ sublistId: sublistId }),
+                arrRecordLines = [];
+            for (var line = 0; line < lineCount; line++) {
+                var lineData = RecordHelper.extractLineValues({
+                    record: record,
+                    sublistId: sublistId,
+                    line: line,
+                    columns: columns
+                });
+                lineData.line = line;
+
+                if (!option.filter) {
+                    arrRecordLines.push(lineData);
+                    continue;
+                }
+
+                var isFound = true;
+                // check if this line satisfy our filters
+                for (var field in option.filter) {
+                    var lineValue = lineData.hasOwnProperty(field)
+                        ? lineData[field]
+                        : record.getSublistValue({
+                              sublistId: sublistId,
+                              fieldId: field,
+                              line: line
+                          });
+
+                    if (option.filter[field] != lineValue) {
+                        isFound = false;
+                        break;
+                    }
+                }
+                if (isFound) {
+                    arrRecordLines.push(lineData);
+                    if (!option.findAll) break;
+                }
+            }
+
+            return arrRecordLines && arrRecordLines.length
+                ? option.findAll
+                    ? arrRecordLines
+                    : arrRecordLines.shift()
+                : false;
+        },
+        updateLine: function (option) {
+            var record = option.record,
+                sublistId = option.sublistId || 'item',
+                lineData = option.lineData;
+
+            if (!record || !lineData) return false;
+
+            if (!lineData.hasOwnProperty('line')) return;
+
+            var lineOption = { sublistId: sublistId, line: lineData.line };
+
+            record.selectLine(lineOption);
+
+            for (var fieldId in lineData) {
+                if (fieldId == 'line') continue;
+                if (VC2_Util.isEmpty(lineData[fieldId])) continue;
+
+                record.setCurrentSublistValue(
+                    Helper.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
+                );
+            }
+
+            record.commitLine(lineOption);
+            return record;
+        },
+        addLine: function (option) {
+            var record = option.record,
+                sublistId = option.sublistId || 'item',
+                lineData = option.lineData;
+
+            if (!record || !lineData) return false;
+
+            var lineOption = { sublistId: sublistId };
+            record.selectNewLine(lineOption);
+
+            for (var fieldId in lineData) {
+                if (VC2_Util.isEmpty(lineData[fieldId])) continue;
+
+                record.setCurrentSublistValue(
+                    Helper.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
+                );
+            }
+            record.commitLine(lineOption);
+
+            var lineCount = record.getLineCount(lineOption);
+            return lineCount - 1;
+        }
+    };
 
     //////////////////////////////
     var arrFields = [
@@ -1067,13 +1357,9 @@ require([
         ],
         searchValues = ns_search.lookupFields({
             type: 'customrecord_ctc_vc_bills',
-            id: '4417',
+            id: '71201',
             columns: arrFields
         });
 
     _post(searchValues);
-
-    // return {
-    //     post: _post
-    // };
 });

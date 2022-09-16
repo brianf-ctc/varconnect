@@ -12,11 +12,11 @@
  * @NModuleScope Public
  */
 
-define(['N/log', '../Libraries/papa', 'N/sftp'], function (log, papa, sftp) {
+define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
     function processXml(input, config) {
         // establish connection to remote FTP server
 
-        var connection = sftp.createConnection({
+        var connection = ns_sftp.createConnection({
             username: config.user_id,
             passwordGuid: config.user_pass,
             url: config.url,

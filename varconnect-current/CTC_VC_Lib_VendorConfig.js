@@ -22,8 +22,8 @@ define([
     'N/search',
     './VC_Globals.js',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Utilities'
-], function (search, vcGlobals, constants, util) {
+    './CTC_VC2_Lib_Utils'
+], function (search, vcGlobals, constants, vc_util) {
     var LogTitle = 'VendorCFG',
         LogPrefix = LogPrefix || '';
 
@@ -137,7 +137,7 @@ define([
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -194,7 +194,7 @@ define([
                 end: 5
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -272,7 +272,7 @@ define([
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
         }
 
         if (result && result[0]) {

@@ -166,7 +166,6 @@ define([
 
         var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            // country: searchValues.values['country.subsidiary'].value,
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
             user_id: vendorConfig.custrecord_vc_bc_user,
@@ -184,13 +183,11 @@ define([
             // get it from ns runtime
             configObj.country = ns_runtime.country;
         }
-
         log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
         try {
             var entryFunction = configObj.entry_function;
 
             var myArr = [];
-
             switch (entryFunction) {
                 case 'arrow_api':
                     myArr = VCLib_VendorMap.arrow_api(context.key, configObj);

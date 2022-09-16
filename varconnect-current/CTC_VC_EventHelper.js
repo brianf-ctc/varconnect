@@ -68,13 +68,8 @@ define([
                         '</span></span>',
                         '<textarea cols="60" rows="10" disabled="true" ',
                         'style="padding: 5px 10px; margin: 5px; border:1px solid #CCC !important; color: #363636 !important;">',
-                        // Helper.escapeHtml(fldOrig.defaultValue),
                         strValue,
                         '</textarea>',
-                        // '<span class="uir-field inputreadonly uir-resizable">',
-                        //     Helper.escapeHtml(fldOrig.defaultValue.substring(0, 500)), '...',
-                        //     '<p><a href="#"> See More </a></p>',
-                        // '</span>',
                         '</div>'
                     ].join('');
 

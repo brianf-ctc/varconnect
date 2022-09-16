@@ -118,6 +118,29 @@ define([], function () {
                 IR_LINE: 'custrecord_ctc_vc_ir_line',
                 INV_LINE: 'custrecord_ctc_vc_inv_line'
             }
+        },
+        BILLFILE: {
+            ID: 'customrecord_ctc_vc_bills',
+            FIELD: {
+                ID: 'id',
+                POID: 'custrecord_ctc_vc_bill_po',
+                PO_LINK: 'custrecord_ctc_vc_bill_linked_po',
+                BILL_NUM: 'custrecord_ctc_vc_bill_number',
+                BILL_LINK: 'custrecord_ctc_vc_bill_linked_bill',
+                DATE: 'custrecord_ctc_vc_bill_date',
+                DUEDATE: 'custrecord_ctc_vc_bill_due_date',
+                DDATE_INFILE: 'custrecord_ctc_vc_bill_due_date_f_file',
+                STATUS: 'custrecord_ctc_vc_bill_proc_status',
+                PROCESS_LOG: 'custrecord_ctc_vc_bill_log',
+                INTEGRATION: 'custrecord_ctc_vc_bill_integration',
+                SOURCE: 'custrecord_ctc_vc_bill_src',
+                JSON: 'custrecord_ctc_vc_bill_json',
+                NOTES: 'custrecord_ctc_vc_bill_notes',
+                HOLD_REASON: 'custrecord_ctc_vc_bill_hold_rsn',
+                IS_RCVBLE: 'custrecord_ctc_vc_bill_is_recievable',
+                PROC_VARIANCE: 'custrecord_ctc_vc_bill_proc_variance',
+                FILEPOS: 'custrecord_ctc_vc_bill_file_position'
+            }
         }
     };
 
@@ -177,17 +200,22 @@ define([], function () {
     Bill_Creator.Code = {
         MISSING_PO: {
             code: 'MISSING_PO',
-            msg: 'Unable to find the PO record',
+            msg: 'Unable to find the PO record. ',
             status: Bill_Creator.Status.ERROR
         },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
-            msg: 'PO is not ready for billing',
+            msg: 'PO is not ready for billing. ',
             status: Bill_Creator.Status.ERROR
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
-            msg: 'Could not fully process Bill File',
+            msg: 'Could not fully process Bill File. ',
+            status: Bill_Creator.Status.ERROR
+        },
+        INSUFFICIENT_QUANTITY: {
+            code: 'INSUFFICIENT_QUANTITY',
+            msg: 'PO Qty is insufficient for the bill.',
             status: Bill_Creator.Status.ERROR
         },
         ITEMS_ALREADY_BILLED: {
@@ -197,12 +225,12 @@ define([], function () {
         },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
-            msg: 'Linked to existing Bill',
+            msg: 'Linked to existing Bill.',
             status: Bill_Creator.Status.CLOSED
         },
         HAS_VARIANCE: {
             code: 'HAS_VARIANCE',
-            msg: 'One or More Variances in Vendor Bill ',
+            msg: 'One or More Variances in Vendor Bill.',
             status: Bill_Creator.Status.VARIANCE
         },
         BILL_CREATED: {
