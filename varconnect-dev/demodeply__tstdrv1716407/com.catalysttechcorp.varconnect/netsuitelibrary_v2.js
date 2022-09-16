@@ -36,10 +36,10 @@ define([
     'N/record',
     'N/config',
     'N/format',
-    './CTC_VC_Lib_Utilities',
+    './CTC_VC2_Lib_Utils',
     './VC_Globals.js',
     './CTC_VC_Constants.js'
-], function (search, runtime, r, config, format, util, vcGlobals, constants) {
+], function (search, runtime, r, config, format, vc_util, vcGlobals, constants) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -616,7 +616,7 @@ define([
                     }
                 }
             } catch (err) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(err));
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err));
             }
         }
     }
@@ -722,7 +722,7 @@ define([
                     }
                 }
             } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e));
             }
         }
 

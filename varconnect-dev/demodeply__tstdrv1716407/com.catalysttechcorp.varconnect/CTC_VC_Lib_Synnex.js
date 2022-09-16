@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2017 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,9 +7,6 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
- *
- * @NApiVersion 2.x
- * @NModuleScope Public
  */
 
 /**
@@ -17,96 +14,148 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
- * 1.10		April 19, 2022	christian	Updated library to new standards/ Updated logs
- * 1.11		May 17, 2022	christian	Add shipped status
  *
+ */ /**
+ * @NApiVersion 2.x
+ * @NModuleScope SameAccount
  */
 
 define([
     'N/xml',
-    './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (ns_xml, vcLog, VC_Global, VC2_Utils) {
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, VC_Global, VC_Log, VC_Util, moment) {
     var LogTitle = 'WS:Synnex';
 
-    function processRequest(option) {
-        var logTitle = [LogTitle, 'processRequest'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
-
-        var poNum = option.poNum,
-            poId = option.poId,
-            vendorConfig = option.vendorConfig,
+    var CURRENT = {};
+    var LibSynnexAPI = {
+        getOrderStatus: function (option) {
+            var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
             returnValue;
+            option = option || {};
 
         try {
-            var orderStatusReq = VC2_Utils.sendRequest({
-                header: [LogTitle, 'Order Status'].join(':'),
+                var reqOrderStatus = VC_Util.sendRequest({
+                    header: [LogTitle, 'Orders Search'].join(' : '),
                 method: 'post',
-                recordId: poId,
+                    isXML: true,
                 query: {
-                    url: vendorConfig.endPoint,
-                    headers: {
-                        'Content-Type': 'text/xml; charset=utf-8',
-                        'Content-Length': 'length'
-                    },
+                        url: CURRENT.vendorConfig.endPoint,
                     body:
                         '<?xml version="1.0" encoding="UTF-8" ?>' +
                         '<SynnexB2B version="2.2">' +
                         '<Credential>' +
-                        ('<UserID>' + vendorConfig.user + '</UserID>') +
-                        ('<Password>' + vendorConfig.password + '</Password>') +
+                            ('<UserID>' + CURRENT.vendorConfig.user + '</UserID>') +
+                            ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
                         '</Credential>' +
                         '<OrderStatusRequest>' +
-                        ('<CustomerNumber>' + vendorConfig.customerNo + '</CustomerNumber>') +
-                        ('<PONumber>' + poNum + '</PONumber>') +
+                            ('<CustomerNumber>' +
+                                CURRENT.vendorConfig.customerNo +
+                                '</CustomerNumber>') +
+                            ('<PONumber>' + CURRENT.recordNum + '</PONumber>') +
                         '</OrderStatusRequest>' +
-                        '</SynnexB2B>'
+                            '</SynnexB2B>',
+                        headers: {
+                            'Content-Type': 'text/xml; charset=utf-8',
+                            'Content-Length': 'length'
                 }
+                    },
+                    recordId: CURRENT.recordId
             });
 
-            if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
-            if (!orderStatusReq.RESPONSE.body) throw 'Unable to fetch server response';
+                if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
+                var respOrderStatus = reqOrderStatus.RESPONSE.body;
+                if (!respOrderStatus) throw 'Unable to fetch server response';
 
-            returnValue = orderStatusReq.RESPONSE.body;
+                returnValue = respOrderStatus;
         } catch (error) {
-            var errorMsg = VC2_Utils.extractError(error);
-            vcLog.recordLog({
-                header: [LogTitle + ': Error', errorMsg].join(' - '),
-                body: JSON.stringify(error),
-                transaction: option.poId,
-                status: VC_Global.Lists.VC_LOG_STATUS.ERROR,
-                isDebugMode: option.fromDebug
-            });
+                returnValue = false;
+                throw error;
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Access Token: ' + JSON.stringify(returnValue));
         }
-
-        // if (!response || !response.body) throw 'Unable to retrieve response';
-        // responseXml = response.body;
 
         return returnValue;
     }
+    };
 
-    function processResponse(option) {
-        var logTitle = [LogTitle, 'processResponse'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
-
-        var xmlString = option.responseXML;
-        // log.audit('parseSynnex', xmlString);
-        var itemArray = [];
+    return {
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = [];
+            option = option || {};
 
         try {
-            var xmlDoc = ns_xml.Parser.fromString({
-                text: xmlString
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+
+                var respOrderStatus = this.processRequest(option);
+                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Process Error',
+                    error: error,
+                    recordId: CURRENT.recordId
             });
+                throw VC_Util.extractError(error);
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
+
+                VC_Util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !VC_Util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                });
+    }
+
+            return returnValue;
+        },
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+        try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+
+                returnValue = LibSynnexAPI.getOrderStatus(option);
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Request Error',
+                    error: error,
+                    recordId: CURRENT.recordId
+            });
+                throw VC_Util.extractError(error);
+            }
+
+            return returnValue;
+        },
+        processResponse: function (option) {
+            var logTitle = [LogTitle, 'processResponse'].join('::'),
+                returnValue = [];
+            option = option || {};
+            try {
+                var xmlResponse = option.xmlResponse,
+                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
+                    itemArray = [];
+
+                if (!xmlDoc) throw 'Unable to parse XML';
 
             var itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
             var orderDateTime = xmlDoc.getElementsByTagName({ tagName: 'PODatetime' });
-            var orderCodes = xmlDoc.getElementsByTagName({ tagName: 'Code' });
-            if (orderCodes && orderCodes.length) {
-                itemArray.header_info = {
-                    order_status: orderCodes[0].textContent
-                };
-            }
 
             for (var i = 0; i < itemNodesArray.length; i++) {
                 var itemRow = {
@@ -120,8 +169,7 @@ define([
                     tracking_num: 'NA',
                     vendorSKU: 'NA',
                     carrier: 'NA',
-                    serial_num: 'NA',
-                    order_status: 'NA'
+                        serial_num: 'NA'
                 };
                 var itemCode = '';
 
@@ -133,18 +181,10 @@ define([
                 var itemChildNodes = itemNode.childNodes;
 
                 var packageNodes;
-
-                // for (let childNode of itemChildNodes) {
-                //     log.audit(logTitle, '>> childNode: ' + JSON.stringify(childNode));
-                // }
-
                 for (var j = 0; j < itemChildNodes.length; j++) {
-                    // log.audit(logTitle, '>> itemChildNodes: ' + JSON.stringify(itemChildNodes[j]));
-
                     switch (itemChildNodes[j].nodeName) {
                         case 'Code':
                             itemCode = itemChildNodes[j].textContent;
-                            itemRow.order_status = itemCode;
                             break;
                         case 'OrderNumber':
                             itemRow.order_num = itemChildNodes[j].textContent;
@@ -169,7 +209,6 @@ define([
                             break;
                         case 'Packages':
                             packageNodes = itemChildNodes[j].childNodes;
-                            // itemRow.tracking_num = '';
                             for (var x = 0; x < packageNodes.length; x++) {
                                 if (packageNodes[x].nodeName == 'Package') {
                                     var packageChildNodes = packageNodes[x].childNodes;
@@ -199,69 +238,251 @@ define([
                     }
                 }
 
-                // ShipQuantity //
-                if (!parseInt(itemRow.ship_qty, 10)) {
-                    itemRow.is_shipped = false;
-                }
-
-                if (itemRow.is_shipped) {
-                    itemRow.is_shipped = VC2_Utils.inArray(itemCode, ['invoiced', 'shipped']);
-                }
-
-                // ignore items unles they have been invoiced or accepted or shipped
-                if (VC2_Utils.inArray(itemCode, ['invoiced', 'accepted', 'shipped'])) {
+                    // ignore items unles they have been invoiced or accepted
+                    if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
                     itemArray.push(itemRow);
                 }
             }
-        } catch (err) {
-            log.error(logTitle + '::ERROR', '!! ERROR !! ' + VC2_Utils.extractError(err));
-        }
 
-        // log.debug(logTitle, itemArray);
-        return itemArray;
+                returnValue = itemArray;
+            } catch (error) {
+                VC_Util.vcLog({
+                    title: LogTitle + ': Response Error',
+                    error: error,
+                    recordId: CURRENT.recordId
+                });
+                throw VC_Util.extractError(error);
+                returnValue = errorMsg;
     }
 
-    function process(option) {
-        var logTitle = [LogTitle, 'process'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(option));
-
-        var poNum = option.poNum,
-            poId = option.poId,
-            vendorConfig = option.vendorConfig,
-            outputArray = null;
-
-        var responseXML = processRequest({
-            poNum: poNum,
-            poId: poId,
-            vendorConfig: vendorConfig
-        });
-
-        if (responseXML)
-            outputArray = processResponse({
-                poNum: poNum,
-                poId: poId,
-                vendorConfig: vendorConfig,
-                responseXML: responseXML
-            });
-
-        log.audit(logTitle, '>> outputArray: ' + JSON.stringify(outputArray));
-
-        vcLog.recordLog({
-            header: [LogTitle, 'Lines'].join(' - '),
-            body: !VC2_Utils.isEmpty(outputArray)
-                ? JSON.stringify(outputArray)
-                : '-no lines to process-',
-            transaction: poId,
-            status: VC_Global.Lists.VC_LOG_STATUS.INFO,
-            isDebugMode: option.fromDebug
-        });
-
-        return outputArray;
+            return returnValue;
     }
-
-    return {
-        process: process,
-        processRequest: processRequest,
-        processResponse: processResponse
     };
+
+    // function processRequest(options) {
+    //     var logTitle = [LogTitle, 'processRequest'].join('::');
+    //     log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+
+    //     var poNum = options.poNum,
+    //         poId = options.poId,
+    //         vendorConfig = options.vendorConfig,
+    //         requestURL = vendorConfig.endPoint,
+    //         userName = vendorConfig.user,
+    //         password = vendorConfig.password,
+    //         customerNo = vendorConfig.customerNo;
+
+    //     var orderXMLLineData = [];
+
+    //     var xmlorderStatus =
+    //         '<?xml version="1.0" encoding="UTF-8" ?>' +
+    //         '<SynnexB2B version="2.2">' +
+    //         '<Credential>' +
+    //         ('<UserID>' + userName + '</UserID>') +
+    //         ('<Password>' + password + '</Password>') +
+    //         '</Credential>' +
+    //         '<OrderStatusRequest>' +
+    //         ('<CustomerNumber>' + customerNo + '</CustomerNumber>') +
+    //         ('<PONumber>' + poNum + '</PONumber>') +
+    //         '</OrderStatusRequest>' +
+    //         '</SynnexB2B>';
+
+    //     var headers = {
+    //         'Content-Type': 'text/xml; charset=utf-8',
+    //         'Content-Length': 'length'
+    //     };
+
+    //     VC_Log.recordLog({
+    //         header: 'Synnex OrderStatus:Request',
+    //         body: JSON.stringify({
+    //             URL: requestURL,
+    //             Header: headers,
+    //             Body: xmlorderStatus
+    //         }),
+    //         transaction: poId,
+    //         status: VC_Global.Lists.VC_LOG_STATUS.INFO
+    //     });
+
+    //     var responseXML;
+    //     // log.debug('prerequest ' + poNum);
+    //     try {
+    //         var response = https.post({
+    //             url: requestURL,
+    //             body: xmlorderStatus,
+    //             headers: headers
+    //         });
+    //         responseXML = response.body;
+
+    //         VC_Log.recordLog({
+    //             header: 'Synnex OrderStatus:Response',
+    //             body: JSON.stringify(responseXML),
+    //             transaction: poId,
+    //             status: VC_Global.Lists.VC_LOG_STATUS.SUCCESS
+    //         });
+
+    //         // log.debug({
+    //         //     title: 'Synnex Scheduled',
+    //         //     details: 'length of response ' + responseXML.length
+    //         // });
+    //     } catch (err) {
+    //         VC_Log.recordLog({
+    //             header: 'Synnex OrderStatus:Error',
+    //             body: JSON.stringify({
+    //                 error: VC_Util.extractError(err),
+    //                 details: JSON.stringify(err)
+    //             }),
+    //             transaction: poId,
+    //             status: VC_Global.Lists.VC_LOG_STATUS.ERROR
+    //         });
+    //         log.error(logTitle + '::ERROR', '!! ERROR !! ' + VC_Util.extractError(err));
+    //         responseXML = null;
+    //     }
+
+    //     return responseXML;
+    // }
+
+    // function processResponse(options) {
+    //     var logTitle = [LogTitle, 'processResponse'].join('::');
+    //     log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+
+    //     var xmlString = options.responseXML;
+    //     // log.audit('parseSynnex', xmlString);
+    //     var itemArray = [];
+
+    //     try {
+    //         var xmlDoc = xml.Parser.fromString({
+    //             text: xmlString
+    //         });
+
+    //         var itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
+    //         var orderDateTime = xmlDoc.getElementsByTagName({ tagName: 'PODatetime' });
+
+    //         for (var i = 0; i < itemNodesArray.length; i++) {
+    //             var itemRow = {
+    //                 line_num: 'NA',
+    //                 item_num: 'NA',
+    //                 order_num: 'NA',
+    //                 order_date: 'NA',
+    //                 order_eta: 'NA',
+    //                 ship_qty: 'NA',
+    //                 ship_date: 'NA',
+    //                 tracking_num: 'NA',
+    //                 vendorSKU: 'NA',
+    //                 carrier: 'NA',
+    //                 serial_num: 'NA'
+    //             };
+    //             var itemCode = '';
+
+    //             var itemNode = itemNodesArray[i];
+
+    //             itemRow.line_num = itemNode.getAttribute({ name: 'lineNumber' });
+    //             itemRow.order_date = orderDateTime[0].textContent;
+
+    //             var itemChildNodes = itemNode.childNodes;
+    //             var packageNodes;
+    //             for (var j = 0; j < itemChildNodes.length; j++) {
+    //                 switch (itemChildNodes[j].nodeName) {
+    //                     case 'Code':
+    //                         itemCode = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'OrderNumber':
+    //                         itemRow.order_num = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'MfgPN':
+    //                         itemRow.item_num = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'ShipDatetime':
+    //                         itemRow.ship_date = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'SKU':
+    //                         itemRow.vendorSKU = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'ShipMethodDescription':
+    //                         itemRow.carrier = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'ShipQuantity':
+    //                         itemRow.ship_qty = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'ETADate':
+    //                         itemRow.order_eta = itemChildNodes[j].textContent;
+    //                         break;
+    //                     case 'Packages':
+    //                         packageNodes = itemChildNodes[j].childNodes;
+    //                         for (var x = 0; x < packageNodes.length; x++) {
+    //                             if (packageNodes[x].nodeName == 'Package') {
+    //                                 var packageChildNodes = packageNodes[x].childNodes;
+    //                                 for (var z = 0; z < packageChildNodes.length; z++) {
+    //                                     switch (packageChildNodes[z].nodeName) {
+    //                                         case 'TrackingNumber':
+    //                                             if (itemRow.tracking_num === 'NA')
+    //                                                 itemRow.tracking_num =
+    //                                                     packageChildNodes[z].textContent;
+    //                                             else
+    //                                                 itemRow.tracking_num +=
+    //                                                     ',' + packageChildNodes[z].textContent;
+    //                                             break;
+    //                                         case 'SerialNo':
+    //                                             if (itemRow.serial_num === 'NA')
+    //                                                 itemRow.serial_num =
+    //                                                     packageChildNodes[z].textContent;
+    //                                             else
+    //                                                 itemRow.serial_num +=
+    //                                                     ',' + packageChildNodes[z].textContent;
+    //                                             break;
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                         break;
+    //                 }
+    //             }
+
+    //             // ignore items unles they have been invoiced or accepted
+    //             if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
+    //                 itemArray.push(itemRow);
+    //             }
+    //             // if (itemCode == 'invoiced') {
+    //             //     itemArray.push(itemRow);
+    //             // }
+    //         }
+    //     } catch (err) {
+    //         log.error(logTitle + '::ERROR', '!! ERROR !! ' + VC_Util.extractError(err));
+    //     }
+    //     log.debug('exiting Parse Synnex', itemArray);
+    //     return itemArray;
+    // }
+
+    // function process(options) {
+    //     var logTitle = [LogTitle, 'process'].join('::');
+    //     log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+
+    //     var poNum = options.poNum,
+    //         poId = options.poId,
+    //         vendorConfig = options.vendorConfig,
+    //         outputArray = null;
+    //     var responseXML = processRequest({
+    //         poNum: poNum,
+    //         vendorConfig: vendorConfig
+    //     });
+
+    //     // VC_Log.recordLog({
+    //     //     header: 'Response',
+    //     //     body: responseXML,
+    //     //     transaction: poId
+    //     // });
+
+    //     // log.debug('process responseXML ' + poNum, responseXML);
+    //     if (responseXML)
+    //         outputArray = processResponse({
+    //             vendorConfig: vendorConfig,
+    //             responseXML: responseXML
+    //         });
+
+    //     return outputArray;
+    // }
+
+    // return {
+    //     process: process,
+    //     processRequest: processRequest,
+    //     processResponse: processResponse
+    // };
 });

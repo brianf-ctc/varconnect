@@ -93,15 +93,15 @@ define([
                 // load email template, build and insert item table
                 var myHTML = buildEmail(CURRENT.emailTemplate, itemTableHTML);
 
-                        try {
-                            email.send({
+                try {
+                    email.send({
                         author: CURRENT.senderId,
-                                recipients: newSendTo,
+                        recipients: newSendTo,
                         subject: 'Order Shipping Update - Item Fulfillments',
                         body: myHTML
-                            });
+                    });
                     log.debug(logTitle, '...email succesfully sent');
-                        } catch (err) {
+                } catch (err) {
                     log.error(logTitle, '## Error sending email: ' + JSON.stringify(err));
                 }
             }
@@ -171,7 +171,7 @@ define([
             var tempTracking = bodyList[i].getValue({ name: 'custcol_ctc_xml_tracking_num' });
             var tempCarrier = bodyList[i].getValue({ name: 'custcol_ctc_xml_carrier' });
             // var tempCompany = bodyList[i].getText({ name: 'entity', join: 'createdFrom' });
-            //            var tempContact = bodyList[z].getValue({ name: 'contact', join: "customerMain" });
+            // var tempContact = bodyList[z].getValue({ name: 'contact', join: "customerMain" });
             // var tempShipTo = bodyList[i].getValue({ name: 'shipaddress', join: 'createdFrom' });
 
             emailItemTable +=
@@ -208,7 +208,7 @@ define([
         var renderer = render.create();
 
         // render the subject line
-        //        renderer.templateContent = emailSubj;
+        // renderer.templateContent = emailSubj;
         renderer.templateContent = emailBody;
 
         // render email body
@@ -218,7 +218,7 @@ define([
         newBody = newBody.replace('%%TABLEINFO%%', itemTableHTML);
 
         // log.audit(logTitle, '>> email body:  ' + newBody);
-                
+
         return newBody;
     }
 

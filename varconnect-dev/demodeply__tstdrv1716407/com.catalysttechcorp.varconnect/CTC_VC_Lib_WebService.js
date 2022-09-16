@@ -17,7 +17,6 @@ define([
     'N/search',
     'N/format',
     './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Utilities',
     './CTC_VC2_Lib_Utils',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_Synnex',
@@ -35,8 +34,7 @@ define([
     search,
     format,
     constants,
-    util,
-    vc2Utils,
+    vc_util,
     libVendorConfig,
     libSynnex,
     libTechData,
@@ -184,8 +182,8 @@ define([
             tranDate = option.tranDate,
             xmlVendorText = option.xmlVendorText;
 
-        var dtStartDate = vc2Utils.parseDate(startDate),
-            dtTranDate = vc2Utils.parseDate(tranDate);
+        var dtStartDate = vc_util.parseDate(startDate),
+            dtTranDate = vc_util.parseDate(tranDate);
 
         log.audit(
             logTitle,
@@ -248,12 +246,12 @@ define([
                     vendorConfig: vendorConfig
                 });
             } catch (e) {
-                log.error(logTitle, '!! ERROR !!' + util.extractError(e));
+                log.error(logTitle, '!! ERROR !!' + vc_util.extractError(e));
 
                 vcLog.recordLog({
                     header: 'VAR Connect ERROR',
                     body: JSON.stringify({
-                        error: util.extractError(e),
+                        error: vc_util.extractError(e),
                         details: JSON.stringify(e)
                     }),
                     status: constants.Lists.VC_LOG_STATUS.ERROR,
@@ -326,7 +324,7 @@ define([
 
                 vcLog.recordLog({
                     header: 'WebService',
-                    body: 'Error encountered: ' + vc2Utils.extractError(e),
+                    body: 'Error encountered: ' + vc_util.extractError(e),
                     transaction: poId,
                     status: constants.Lists.VC_LOG_STATUS.ERROR
                 });
@@ -387,7 +385,7 @@ define([
 
             vcLog.recordLog({
                 header: 'WebService::process',
-                body: 'Error encountered: ' + vc2Utils.extractError(e),
+                body: 'Error encountered: ' + vc_util.extractError(e),
                 transaction: poId,
                 status: constants.Lists.VC_LOG_STATUS.ERROR
             });

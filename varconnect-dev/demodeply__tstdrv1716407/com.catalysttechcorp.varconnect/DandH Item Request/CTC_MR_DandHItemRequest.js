@@ -29,7 +29,7 @@ define([
     'N/runtime',
     'N/https',
     'N/xml',
-    '../CTC_VC_Lib_Utilities.js',
+    '../CTC_VC2_Lib_Utils.js',
     '../CTC_VC_Lib_MainConfiguration',
     '../CTC_VC_Lib_VendorConfig',
     '../CTC_VC_Lib_LicenseValidator',

@@ -258,7 +258,12 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
         goToProcessBill: function () {
             var curRec = currentRecord.get();
             var url = curRec.getValue({ fieldId: 'custpage_suitelet_url' });
-            return window.open(url, '_blank');
+            url += '&taskact=processbill';
+
+            return window.open(url);
+        },
+        returnBack: function () {
+            return history.back();
         }
     };
 });

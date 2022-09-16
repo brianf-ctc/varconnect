@@ -20,11 +20,11 @@
  */
 define([
     'N/search',
-    './CTC_VC_Lib_Log.js',
     './CTC_VC_Constants.js',
+    './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (NS_Search, VC_Log, VC_Global, VC_Util, moment) {
+], function (NS_Search, VC_Global, VC_Log, VC_Util, moment) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -125,6 +125,7 @@ define([
                     recordId: CURRENT.recordId
                 });
                 throw errorMsg;
+                returnValue = false;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> valid orders: ' + JSON.stringify(returnValue));
             }
@@ -217,7 +218,7 @@ define([
                     query: {
                         url:
                             CURRENT.vendorConfig.endPoint.replace(
-                                /orders.*$/gi,
+                                /orders\/$/gi,
                                 'catalog/priceandavailability?'
                             ) +
                             'includeAvailability=true&includePricing=true&includeProductAttributes=true',
@@ -471,53 +472,53 @@ define([
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
-            LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-            if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-            // generate the
-            LibIngramAPI.generateToken();
-            if (!CURRENT.accessToken) throw 'Unable to generate access token';
+                // generate the
+                LibIngramAPI.generateToken();
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
-            // get all the valid orders
-            var arrValidOrders = LibIngramAPI.getValidOrders();
+                // get all the valid orders
+                var arrValidOrders = LibIngramAPI.getValidOrders();
+                var arrResponse = [];
 
-            var arrResponse = [];
-
-            for (var i = 0, j = arrValidOrders.length; i < j; i++) {
-                var validOrder = arrValidOrders[i];
-                LogPrefix =
-                    '' +
-                    ('[purchaseorder:' + CURRENT.recordId + '][') +
-                    (validOrder.ingramOrderNumber + '] ');
+                for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                    var validOrder = arrValidOrders[i];
+                    LogPrefix =
+                        '' +
+                        ('[purchaseorder:' + CURRENT.recordId + '][') +
+                        (validOrder.ingramOrderNumber + '] ');
 
                     log.audit(
                         logTitle,
                         LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder)
                     );
 
-                var respOrderDetails = LibIngramAPI.getOrderDetails({
-                    ingramOrder: validOrder
-                });
+                    var respOrderDetails = LibIngramAPI.getOrderDetails({
+                        ingramOrder: validOrder
+                    });
 
-                var respItemAvail = LibIngramAPI.getItemAvailability({
-                    orderDetails: respOrderDetails
-                });
+                    var respItemAvail = LibIngramAPI.getItemAvailability({
+                        orderDetails: respOrderDetails
+                    });
 
-                arrResponse.push({
-                    orderInfo: validOrder,
-                    orderDetails: respOrderDetails,
-                    itemAvailability: respItemAvail
-                });
-            }
-            returnValue = arrResponse;
+                    arrResponse.push({
+                        orderInfo: validOrder,
+                        orderDetails: respOrderDetails,
+                        itemAvailability: respItemAvail
+                    });
+                }
+                returnValue = arrResponse;
             } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
                 VC_Util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw errorMsg;
             }
 
             return returnValue;
@@ -631,12 +632,13 @@ define([
 
                 returnValue = arrLineOutput;
             } catch (error) {
+                var errorMsg = VC_Util.extractError(error);
                 VC_Util.vcLog({
-                    title: LogTitle + ': Error',
+                    title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw errorMsg;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 

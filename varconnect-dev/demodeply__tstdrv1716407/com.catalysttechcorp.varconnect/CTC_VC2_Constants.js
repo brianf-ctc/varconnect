@@ -200,17 +200,22 @@ define([], function () {
     Bill_Creator.Code = {
         MISSING_PO: {
             code: 'MISSING_PO',
-            msg: 'Unable to find the PO record',
+            msg: 'Unable to find the PO record. ',
             status: Bill_Creator.Status.ERROR
         },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
-            msg: 'PO is not ready for billing',
+            msg: 'PO is not ready for billing. ',
             status: Bill_Creator.Status.ERROR
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
-            msg: 'Could not fully process Bill File',
+            msg: 'Could not fully process Bill File. ',
+            status: Bill_Creator.Status.ERROR
+        },
+        INSUFFICIENT_QUANTITY: {
+            code: 'INSUFFICIENT_QUANTITY',
+            msg: 'PO Qty is insufficient for the bill.',
             status: Bill_Creator.Status.ERROR
         },
         ITEMS_ALREADY_BILLED: {
@@ -220,12 +225,12 @@ define([], function () {
         },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
-            msg: 'Linked to existing Bill',
+            msg: 'Linked to existing Bill.',
             status: Bill_Creator.Status.CLOSED
         },
         HAS_VARIANCE: {
             code: 'HAS_VARIANCE',
-            msg: 'One or More Variances in Vendor Bill ',
+            msg: 'One or More Variances in Vendor Bill.',
             status: Bill_Creator.Status.VARIANCE
         },
         BILL_CREATED: {

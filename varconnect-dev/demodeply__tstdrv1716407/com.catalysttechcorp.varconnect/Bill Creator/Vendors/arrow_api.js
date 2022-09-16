@@ -12,12 +12,11 @@
  * @NModuleScope Public
  */
 
-define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/search'], function (
-    log,
-    https,
+define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_https,
+    ns_search,
     moment,
-    lodash,
-    search
+    lodash
 ) {
     function processXml(input, config) {
         //var config = JSON.parse(configStr)
@@ -28,8 +27,8 @@ define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/sea
 
         log.debug('ar: input', tranNsid);
 
-        var findDocumentNumber = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
+        var findDocumentNumber = ns_search.lookupFields({
+            type: ns_search.Type.PURCHASE_ORDER,
             id: tranNsid,
             columns: ['tranid']
         });
@@ -53,7 +52,7 @@ define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/sea
             client_secret: config.user_pass
         };
 
-        var authResponse = https.post({
+        var authResponse = ns_https.post({
             url: baseUrl + authUrl,
             headers: headers,
             body: authBody
@@ -89,7 +88,7 @@ define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/sea
             }
         };
 
-        var invoiceResponse = https.post({
+        var invoiceResponse = ns_https.post({
             url: baseUrl + searchUrl,
             headers: headers,
             body: JSON.stringify(searchBody)
@@ -133,29 +132,27 @@ define(['N/log', 'N/https', '../Libraries/moment', '../Libraries/lodash', 'N/sea
 
                 for (var i = 0; i < xmlObj.LineDetails.DetailRecord.length; i++) {
                     //xmlObj.LineDetails.DetailRecord[i]
-
                     var item = xmlObj.LineDetails.DetailRecord[i].CustPartNumber;
-
                     if (!item || item == '' || item == null) {
                         continue;
                     }
 
+                    var lineObj = {
+                        processed: false,
+                        ITEMNO: item,
+                        PRICE: xmlObj.LineDetails.DetailRecord[i].UnitPrice * 1,
+                        QUANTITY: xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1,
+                        DESCRIPTION: xmlObj.LineDetails.DetailRecord[i].PartDescription
+                    };
+
                     var itemIdx = lodash.findIndex(myObj.lines, {
-                        ITEMNO: item
+                        ITEMNO: item,
+                        PRICE: lineObj.PRICE
                     });
 
                     if (itemIdx !== -1) {
-                        myObj.lines[itemIdx].QUANTITY +=
-                            xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
+                        myObj.lines[itemIdx].QUANTITY += lineObj.QUANTITY;
                     } else {
-                        var lineObj = {};
-
-                        lineObj.processed = false;
-                        lineObj.ITEMNO = item;
-                        lineObj.PRICE = xmlObj.LineDetails.DetailRecord[i].UnitPrice * 1;
-                        lineObj.QUANTITY = xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1;
-                        lineObj.DESCRIPTION = xmlObj.LineDetails.DetailRecord[i].PartDescription;
-
                         myObj.lines.push(lineObj);
                     }
                 }

@@ -12,16 +12,15 @@
  * @NModuleScope Public
  */
 
-define(['N/log', '../Libraries/moment', '../Libraries/lodash', 'N/sftp', 'N/encode'], function (
-    log,
+define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_sftp,
+    ns_encode,
     moment,
-    lodash,
-    sftp,
-    encode
+    lodash
 ) {
     function processXml(input, config) {
         // establish connection to remote FTP server
-        var connection = sftp.createConnection({
+        var connection = ns_sftp.createConnection({
             username: config.user_id,
             passwordGuid: config.user_pass,
             url: config.url,
@@ -33,10 +32,10 @@ define(['N/log', '../Libraries/moment', '../Libraries/lodash', 'N/sftp', 'N/enco
             filename: input
         });
 
-        xmlStr = encode.convert({
+        xmlStr = ns_encode.convert({
             string: downloadedFile.getContents(),
-            inputEncoding: encode.Encoding.BASE_64,
-            outputEncoding: encode.Encoding.UTF_8
+            inputEncoding: ns_encode.Encoding.BASE_64,
+            outputEncoding: ns_encode.Encoding.UTF_8
         });
 
         var fileObj = xmlStr.split(/\r?\n/);

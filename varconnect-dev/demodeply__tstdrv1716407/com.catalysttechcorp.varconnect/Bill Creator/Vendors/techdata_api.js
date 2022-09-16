@@ -12,12 +12,12 @@
  * @NModuleScope Public
  */
 
-define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], function (
-    log,
-    xml,
-    https,
+define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_xml,
+    ns_https,
+    ns_search,
     moment,
-    search
+    lodash
 ) {
     function processXml(input, config) {
         var tranNsid = input;
@@ -27,8 +27,8 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
         headers['Content-Type'] = 'application/json';
         headers['Accept'] = 'application/json';
 
-        var findDocumentNumber = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
+        var findDocumentNumber = ns_search.lookupFields({
+            type: ns_search.Type.PURCHASE_ORDER,
             id: tranNsid,
             columns: ['tranid']
         });
@@ -50,7 +50,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
         searchBody += '</Detail>';
         searchBody += '</XML_InvoiceDetailByPO_Submit>';
 
-        var searchResponse = https.post({
+        var searchResponse = ns_https.post({
             url: baseUrl,
             headers: headers,
             body: searchBody
@@ -58,9 +58,9 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
         log.debug('td: searchResponse', input + ': ' + searchResponse.body);
 
-        var searchObj = xml.Parser.fromString(searchResponse.body);
+        var searchObj = ns_xml.Parser.fromString(searchResponse.body);
 
-        var orders = xml.XPath.select({
+        var orders = ns_xml.XPath.select({
             node: searchObj,
             xpath: '/XML_InvoiceDetailByPO_Response/Detail/OrderInfo'
         });
@@ -115,7 +115,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
             invoiceBody += '</Summary>';
             invoiceBody += '</XML_OrderStatus_Submit>';
 
-            var invoiceResponse = https.post({
+            var invoiceResponse = ns_https.post({
                 url: baseUrl,
                 headers: headers,
                 body: invoiceBody
@@ -127,7 +127,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             log.debug('td: billXml', input + ': ' + xmlStr);
 
-            var xmlObj = xml.Parser.fromString(xmlStr);
+            var xmlObj = ns_xml.Parser.fromString(xmlStr);
 
             var myObj = {};
             myObj.po = docNum;
@@ -136,11 +136,11 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             //XML XPath Tool https://xmlgrid.net/
 
-            //        var rawDate = xml.XPath.select({ //12/16/16
+            //        var rawDate = ns_xml.XPath.select({ //12/16/16
             //          node: xmlObj,
             //          xpath: '/XML_OrderStatus_Response/Detail/InvoiceDate'
             //        })[0].textContent;
-            var rawDate = xml.XPath.select({
+            var rawDate = ns_xml.XPath.select({
                 //12/16/16
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/InvoiceDate'
@@ -153,7 +153,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             myObj.date = moment(rawDate, 'MM/DD/YY').format('MM/DD/YYYY');
 
-            // myObj.invoice = xml.XPath.select({
+            // myObj.invoice = ns_xml.XPath.select({
             //   node: xmlObj,
             //   xpath: '/XML_OrderStatus_Response/Detail/RefInfo[2]/RefID'
             // })[0].textContent;
@@ -166,13 +166,13 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
                 'td: tax node',
                 input +
                     ': ' +
-                    xml.XPath.select({
+                    ns_xml.XPath.select({
                         node: xmlObj,
                         xpath: '/XML_OrderStatus_Response/Detail/TaxCharge'
                     })
             );
 
-            var tax = xml.XPath.select({
+            var tax = ns_xml.XPath.select({
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/TaxCharge'
             });
@@ -185,7 +185,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             log.debug('td: tax', input + ': ' + myObj.charges.tax);
 
-            var other = xml.XPath.select({
+            var other = ns_xml.XPath.select({
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/StateFee'
             });
@@ -198,7 +198,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             log.debug('other', myObj.charges.other);
 
-            var shipping = xml.XPath.select({
+            var shipping = ns_xml.XPath.select({
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/NetFreightCharge'
             });
@@ -211,7 +211,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             log.debug('td: shipping', input + ': ' + myObj.charges.shipping);
 
-            var shipping2 = xml.XPath.select({
+            var shipping2 = ns_xml.XPath.select({
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/HandlingCharge'
             });
@@ -223,7 +223,7 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
             log.debug('td: shipping', input + ': ' + myObj.charges.shipping);
 
             myObj.total =
-                xml.XPath.select({
+                ns_xml.XPath.select({
                     node: xmlObj,
                     xpath: '/XML_OrderStatus_Response/Detail/InvoiceTotal'
                 })[0].textContent * 1;
@@ -232,36 +232,60 @@ define(['N/log', 'N/xml', 'N/https', '../Libraries/moment', 'N/search'], functio
 
             myObj.lines = [];
 
-            var lineItem = xml.XPath.select({
+            var lineItem = ns_xml.XPath.select({
                 node: xmlObj,
                 xpath: '/XML_OrderStatus_Response/Detail/LineInfo'
             });
 
             for (var i = 0; i < lineItem.length; i++) {
-                var lineObj = {};
-
-                lineObj.processed = false;
-
-                lineObj.ITEMNO = lineItem[i].getElementsByTagName({
+                var lineObj = {
+                    ITEMNO: lineItem[i].getElementsByTagName({
                     tagName: 'ProductID2'
-                })[0].textContent;
-
-                lineObj.PRICE =
+                    })[0].textContent,
+                    PRICE:
                     lineItem[i].getElementsByTagName({
                         tagName: 'UnitPrice'
-                    })[0].textContent * 1;
-
-                lineObj.QUANTITY =
+                        })[0].textContent * 1,
+                    QUANTITY:
                     lineItem[i].getElementsByTagName({
-                        //tagName: 'QtyShipped'
                         tagName: 'QtyOrdered'
-                    })[0].textContent * 1;
-
-                lineObj.DESCRIPTION = lineItem[i].getElementsByTagName({
+                        })[0].textContent * 1,
+                    DESCRIPTION: lineItem[i].getElementsByTagName({
                     tagName: 'ProductDesc'
-                })[0].textContent;
+                    })[0].textContent,
+                    processed: false
+                };
 
+                var lineIdx = lodash.findIndex(myObj.lines, {
+                    ITEMNO: lineObj.ITEMNO,
+                    PRICE: lineObj.PRICE
+                });
+
+                if (lineIdx >= 0) {
+                    myObj.lines[lineIdx].QUANTITY+=lineObj.QUANTITY;
+                } else {
                 myObj.lines.push(lineObj);
+                }
+
+                // lineObj.ITEMNO = lineItem[i].getElementsByTagName({
+                //     tagName: 'ProductID2'
+                // })[0].textContent;
+
+                // lineObj.PRICE =
+                //     lineItem[i].getElementsByTagName({
+                //         tagName: 'UnitPrice'
+                //     })[0].textContent * 1;
+
+                // lineObj.QUANTITY =
+                //     lineItem[i].getElementsByTagName({
+                //         //tagName: 'QtyShipped'
+                //         tagName: 'QtyOrdered'
+                //     })[0].textContent * 1;
+
+                // lineObj.DESCRIPTION = lineItem[i].getElementsByTagName({
+                //     tagName: 'ProductDesc'
+                // })[0].textContent;
+
             }
 
             var returnObj = {};

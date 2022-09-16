@@ -13,9 +13,9 @@
  */
 
 define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
-    search,
-    sftp,
-    file,
+    ns_search,
+    ns_sftp,
+    ns_file,
     moment
 ) {
     function sendAck(input, config, billId) {
@@ -23,23 +23,23 @@ define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
         //log.debug('config', config)
         //log.debug('billId', billId)
 
-        var transaction = search.lookupFields({
-            type: search.Type.TRANSACTION,
+        var transaction = ns_search.lookupFields({
+            type: ns_search.Type.TRANSACTION,
             id: billId,
             columns: ['entity', 'tranid']
         });
 
         log.audit('transaction', transaction);
 
-        var parent = search.lookupFields({
-            type: search.Type.TRANSACTION,
+        var parent = ns_search.lookupFields({
+            type: ns_search.Type.TRANSACTION,
             id: input,
             columns: ['entity', 'tranid']
         });
 
         log.audit('parent', parent);
 
-        var connection = sftp.createConnection({
+        var connection = ns_sftp.createConnection({
             username: config.user_id,
             passwordGuid: config.user_pass,
             url: config.url,
@@ -56,9 +56,9 @@ define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
         ackString += transaction.tranid + '|';
         ackString += moment().format();
 
-        var ackFile = file.create({
+        var ackFile = ns_file.create({
             name: 'ErgonomicGroup_InvoiceAck_' + moment().format('YYYYMMDDTHHmmssS') + '.txt',
-            fileType: file.Type.PLAINTEXT,
+            fileType: ns_file.Type.PLAINTEXT,
             contents: ackString
         });
 

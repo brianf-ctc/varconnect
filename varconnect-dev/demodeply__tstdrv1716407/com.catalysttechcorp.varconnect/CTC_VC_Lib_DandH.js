@@ -51,18 +51,18 @@ define([
                             'Content-Length': 'length'
                         },
                         body:
-            '<XMLFORMPOST>' +
-            '<REQUEST>orderStatus</REQUEST>' +
-            '<LOGIN>' +
+                            '<XMLFORMPOST>' +
+                            '<REQUEST>orderStatus</REQUEST>' +
+                            '<LOGIN>' +
                             ('<USERID>' + CURRENT.vendorConfig.user + '</USERID>') +
                             ('<PASSWORD>' + CURRENT.vendorConfig.password + '</PASSWORD>') +
-            '</LOGIN>' +
-            '<STATUSREQUEST>' +
+                            '</LOGIN>' +
+                            '<STATUSREQUEST>' +
                             ('<PONUM>' + CURRENT.recordNum + '</PONUM>') +
-            '</STATUSREQUEST>' +
+                            '</STATUSREQUEST>' +
                             '</XMLFORMPOST>'
                     }
-        });
+                });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
@@ -77,8 +77,8 @@ define([
                     title: [LogTitle + ' Orders Status : Error', errorMsg].join(' - '),
                     error: error,
                     recordId: CURRENT.recordId
-            });
-                returnValue = false;
+                });
+                throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
             }
@@ -87,12 +87,6 @@ define([
         }
     };
 
-    // return {
-    //     process: process,
-    //     processRequest: processRequest,
-    //     processResponse: processResponse
-    // };
-
     return {
         processRequest: function (option) {
             var logTitle = [LogTitle, 'processRequest'].join('::'),
@@ -100,33 +94,37 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-                if (!CURRENT.recordId) throw 'Missing record Id!';
 
                 returnValue = LibDnH.getOrderStatus(option);
-
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
                 VC_Util.vcLog({
-                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-    }
+                throw VC_Util.extractError(error);
+            }
 
             return returnValue;
         },
         processResponse: function (option) {
-        var logTitle = [LogTitle, 'processResponse'].join('::'),
+            var logTitle = [LogTitle, 'processResponse'].join('::'),
                 returnValue = [];
             option = option || {};
 
             try {
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
                 var xmlResponse = option.xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
                     itemArray = [];
@@ -277,45 +275,39 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
-                log.audit(
-                    logTitle,
-                    LogPrefix +
-                        '## ERROR ##' +
-                        [errorMsg, JSON.stringify(error, null, '\t')].join('\n\n')
-                );
                 VC_Util.vcLog({
-                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    title: LogTitle + ': Response Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-    }
+                throw VC_Util.extractError(error);
+                returnValue = errorMsg;
+            }
 
             return returnValue;
         },
         process: function (option) {
-        var logTitle = [LogTitle, 'process'].join('::'),
+            var logTitle = [LogTitle, 'process'].join('::'),
                 returnValue = [];
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-                if (!CURRENT.recordId) throw 'Missing record Id!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
                 VC_Util.vcLog({
-                    title: [LogTitle + ': Error', errorMsg].join(' - '),
+                    title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
-            });
+                });
+                throw VC_Util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
@@ -327,7 +319,7 @@ define([
                     recordId: CURRENT.recordId,
                     status: VC_Global.Lists.VC_LOG_STATUS.INFO
                 });
-    }
+            }
 
             return returnValue;
         }

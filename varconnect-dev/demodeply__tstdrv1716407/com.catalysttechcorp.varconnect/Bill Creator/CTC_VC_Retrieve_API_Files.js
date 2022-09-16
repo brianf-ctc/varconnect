@@ -165,7 +165,6 @@ define([
 
         var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            // country: searchValues.values['country.subsidiary'].value,
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
             user_id: vendorConfig.custrecord_vc_bc_user,

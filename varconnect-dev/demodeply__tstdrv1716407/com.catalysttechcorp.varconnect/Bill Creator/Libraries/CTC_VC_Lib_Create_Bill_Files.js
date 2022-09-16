@@ -20,17 +20,178 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
     moment,
     Fuse
 ) {
-    var LogTitle = 'LIB::BillFiles';
+    var LogTitle = 'LIB::BillFiles',
+        LogPrefix;
+
+    var Helper = {
+        inArray: function (stValue, arrValue) {
+            if (!stValue || !arrValue) return false;
+            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
+            return i > -1;
+        },
+        uniqueArray: function (arrVar) {
+            var arrNew = [];
+            for (var i = 0, j = arrVar.length; i < j; i++) {
+                if (Helper.inArray(arrVar[i], arrNew)) continue;
+                arrNew.push(arrVar[i]);
+            }
+
+            return arrNew;
+        },
+        isEmpty: function (stValue) {
+            return (
+                stValue === '' ||
+                stValue == null ||
+                stValue == undefined ||
+                stValue == 'undefined' ||
+                stValue == 'null' ||
+                (util.isArray(stValue) && stValue.length == 0) ||
+                (util.isObject(stValue) &&
+                    (function (v) {
+                        for (var k in v) return false;
+                        return true;
+                    })(stValue))
+            );
+        },
+        parseDate: function (option) {
+            var logTitle = [LogTitle, 'parseDate'].join('::'),
+                returnValue;
+
+            var dateString = option.dateString || option,
+                dateValue = '';
+
+            try {
+                if (dateString && dateString.length > 0 && dateString != 'NA') {
+                    dateValue = moment(dateString).toDate();
+                }
+
+                //Convert to string
+                if (dateValue) {
+                    dateValue = ns_format.format({
+                        value: dateValue,
+                        type: ns_format.Type.DATE
+                    });
+                }
+
+                returnValue = dateValue;
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                throw error;
+            } finally {
+                log.audit(
+                    logTitle,
+                    LogPrefix +
+                        ('Parsed Date [' + dateString + ']: ') +
+                        JSON.stringify([dateValue, typeof dateValue])
+                );
+            }
+            return returnValue;
+        },
+        searchPO: function (poName) {
+            var logTitle = [LogTitle, 'searchPO'].join('::'),
+                returnValue;
+
+            log.audit(logTitle, LogPrefix + '// search for existing PO: ' + poName);
+
+            var searchObj = ns_search.create({
+                type: 'purchaseorder',
+                filters: [
+                    ['numbertext', 'is', poName],
+                    'AND',
+                    ['mainline', 'is', 'T'],
+                    'AND',
+                    ['type', 'anyof', 'PurchOrd']
+                ],
+                columns: [
+                    'trandate',
+                    'postingperiod',
+                    'type',
+                    'tranid',
+                    'entity',
+                    'amount',
+                    'internalid'
+                ]
+            });
+
+            var poData = false;
+            if (searchObj.runPaged().count) {
+                var searchResult = searchObj.run().getRange({ start: 0, end: 1 }).shift();
+
+                poData = {
+                    id: searchResult.getValue({ name: 'internalid' }),
+                    entityId: searchResult.getValue({ name: 'entity' }),
+                    tranId: searchResult.getValue({ name: 'tranid' }),
+                    date: searchResult.getValue({ name: 'trandate' })
+                };
+            }
+            returnValue = poData;
+            log.audit(logTitle, LogPrefix + '... PO Data : ' + JSON.stringify(poData));
+
+            return returnValue;
+        },
+        billFileExists: function (option) {
+            var logTitle = [LogTitle, 'searchBillFile'].join('::'),
+                returnValue;
+
+            var parsedDate = parseDate({ dateString: option.date });
+            var searchObj = ns_search.create({
+                type: 'customrecord_ctc_vc_bills',
+                filters: [
+                    ['custrecord_ctc_vc_bill_number', 'is', option.invoice],
+                    'AND',
+                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
+                    'AND',
+                    ['isinactive', 'is', 'F']
+                ],
+                columns: ['id']
+            });
+            returnValue = searchObj.runPaged().count;
+
+            return !!returnValue;
+        },
+        collectItemsFromPO: function (option) {
+            var logTitle = [LogTitle, 'collectItemsFromPO'],
+                returnValue = [];
+
+            if (!option.poId) return false;
+
+            var itemSearch = ns_search.create({
+                type: 'transaction',
+                filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
+                columns: [
+                    ns_search.createColumn({
+                        name: 'item',
+                        summary: 'GROUP'
+                    })
+                ]
+            });
+
+            var arrSKUs = [];
+            itemSearch.run().each(function (result) {
+                arrSKUs.push({
+                    text: result.getText({
+                        name: 'item',
+                        summary: 'GROUP'
+                    }),
+                    value: result.getValue({
+                        name: 'item',
+                        summary: 'GROUP'
+                    })
+                });
+                return true;
+            });
+            returnValue = arrSKUs;
+
+            return returnValue;
+        }
+    };
 
     var dateFormat;
-
-    // TODO: a universal date parser with config
-
-    function parseDate(options) {
+    function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(options));
+        log.audit(logTitle, '>> options: ' + JSON.stringify(option));
 
-        var dateString = options.dateString || options,
+        var dateString = option.dateString || option,
             dateValue = '';
 
         if (dateString && dateString.length > 0 && dateString != 'NA') {
@@ -75,290 +236,167 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
         }
 
-        //TODO: Parse the date before searching
-
         for (var i = 0; i < myArr.length; i++) {
-            log.audit(logTitle, '>>>> logfile: ' + JSON.stringify({ idx: i, data: myArr[i] }));
+            var currentOrder = myArr[i].ordObj;
+            LogPrefix = '[bill:' + currentOrder.invoice + '] ';
 
-            var parsedDate = parseDate({ dateString: myArr[i].ordObj.date });
+            log.audit(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
+            log.audit(logTitle, { idx: i, data: myArr[i] });
 
-            var billFileSearchObj = ns_search.create({
-                type: 'customrecord_ctc_vc_bills',
-                filters: [
-                    ['custrecord_ctc_vc_bill_number', 'is', myArr[i].ordObj.invoice],
-                    'AND',
-                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
-                    'AND',
-                    ['isinactive', 'is', 'F']
-                ],
-                columns: ['id']
-            });
-
-            var billFileSearch = billFileSearchObj.run().getRange({ start: 0, end: 1 });
-
-            if (billFileSearch.length > 0) {
-                // this bill already exists so skip it
-                log.audit(logTitle, 'Already exists, skipping');
+            log.audit(logTitle, LogPrefix + '// Look for existing bills...');
+            if (Helper.billFileExists(currentOrder)) {
+                log.audit(logTitle, LogPrefix + '...already exists, skipping');
                 continue;
             }
 
-            var objRecord = ns_record.create({
-                type: 'customrecord_ctc_vc_bills',
-                isDynamic: true
-            });
-
+            log.audit(logTitle, LogPrefix + ' /// Initiate bill file record.');
             var billFileNotes = [];
-            objRecord.setValue({ fieldId: 'name', value: name });
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_file_position',
-                value: i + 1
-            });
+            var billFileValues = {
+                name: name,
+                custrecord_ctc_vc_bill_file_position: i + 1,
+                custrecord_ctc_vc_bill_po: currentOrder.po,
+                custrecord_ctc_vc_bill_number: currentOrder.invoice,
+                custrecord_ctc_vc_bill_date: moment(currentOrder.date).toDate(),
+                custrecord_ctc_vc_bill_proc_status: 1,
+                custrecord_ctc_vc_bill_integration: configObj.id,
+                custrecord_ctc_vc_bill_src: myArr[i].xmlStr
+            };
 
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_po',
-                value: myArr[i].ordObj.po
-            });
+            var dueDate = null,
+                manualDueDate = false;
 
-            var poName = myArr[i].ordObj.po.trim();
-            log.audit(logTitle, '>>>> PO search: ' + JSON.stringify([poName, myArr[i].ordObj.po]));
-
-            var purchaseorderSearchObj = ns_search.create({
-                type: 'purchaseorder',
-                filters: [
-                    ['numbertext', 'is', poName],
-                    'AND',
-                    ['mainline', 'is', 'T'],
-                    'AND',
-                    ['type', 'anyof', 'PurchOrd']
-                ],
-                columns: [
-                    'trandate',
-                    'postingperiod',
-                    'type',
-                    'tranid',
-                    'entity',
-                    'amount',
-                    'internalid'
-                ]
-            });
-
-            var poSearch = purchaseorderSearchObj.run().getRange({ start: 0, end: 1 });
-            log.audit(logTitle, '>>>> PO Search Results: ' + poSearch.length);
-
-            var poId, entityId, poTranId;
-
-            var dueDate = null;
-            var manualDueDate = false;
-
-            if (myArr[i].ordObj.hasOwnProperty('duedate') == true) {
-                dueDate = myArr[i].ordObj.duedate;
+            if (currentOrder.hasOwnProperty('duedate') == true) {
+                dueDate = currentOrder.duedate;
                 manualDueDate = true;
             }
 
-            if (poSearch.length > 0) {
-                poId = poSearch[0].getValue('internalid');
-                entityId = poSearch[0].getValue('entity');
-                poTranId = poSearch[0].getValue('tranid');
+            var poData = Helper.searchPO(currentOrder.po.trim());
+            if (!poData) {
+                billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
+            } else {
+                billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
+                billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
 
-                log.audit(
-                    logTitle,
-                    '>>>> PO Data : ' +
-                        JSON.stringify({
-                            poId: poId,
-                            entityId: entityId
-                        })
-                );
-
-                objRecord.setValue({
-                    fieldId: 'custrecord_ctc_vc_bill_linked_po',
-                    value: poId
-                });
-                billFileNotes.push('Linked to PO: ' + poTranId + ' (' + poId + ') ');
-
-                // if (entityId == '75' || entityId == '203' || entityId == '216' || entityId == '371' || entityId == '496') { // Cisco, Dell, EMC, Scansource, Westcon
-
-                //     objRecord.setValue({
-                //         fieldId: 'custrecord_ctc_vc_bill_is_recievable',
-                //         value: true
-                //     });
-
-                // }
+                ///////////////////////////////////
+                //For Ergo:  Cisco, Dell, EMC, Scansource, Westcon
+                if (Helper.inArray(poData.entityId, ['75', '203', '216', '371', '496'])) {
+                    billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
+                }
+                ///////////////////////////////////
 
                 var vendorTerms = 0;
 
                 var searchTerms = ns_search.lookupFields({
                     type: ns_search.Type.VENDOR,
-                    id: entityId,
+                    id: poData.entityId,
                     columns: ['terms']
                 });
 
                 if (searchTerms.terms.length > 0) {
                     vendorTerms = searchTerms.terms[0].value;
-                }
 
-                if (manualDueDate == false) {
+                    if (!manualDueDate) {
                     var daysToPay = ns_search.lookupFields({
                         type: ns_search.Type.TERM,
                         id: vendorTerms,
                         columns: ['daysuntilnetdue']
                     }).daysuntilnetdue;
 
-                    dueDate = moment(myArr[i].ordObj.date)
+                        dueDate = moment(currentOrder.date)
                         .add(parseInt(daysToPay), 'days')
                         .format('MM/DD/YYYY');
                 }
-            } else {
-                billFileNotes.push('PO Link is not found : [' + myArr[i].ordObj.po + ']');
-            }
-
-            log.audit(
-                logTitle,
-                '>> due date: ' + JSON.stringify([dueDate, dueDate !== null, dueDate === null])
-            );
-            if (dueDate !== null) {
-                objRecord.setValue({
-                    fieldId: 'custrecord_ctc_vc_bill_due_date',
-                    value: moment(dueDate).toDate()
-                });
-
-                if (manualDueDate == true) {
-                    objRecord.setValue({
-                        fieldId: 'custrecord_ctc_vc_bill_due_date_f_file',
-                        value: true
-                    });
                 }
             }
 
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_number',
-                value: myArr[i].ordObj.invoice
-            });
-            log.audit(logTitle, '>> set invoice: ' + JSON.stringify(myArr[i].ordObj.invoice));
+            if (dueDate !== null) {
+                billFileValues.custrecord_ctc_vc_bill_due_date = moment(dueDate).toDate();
+                if (manualDueDate) {
+                    billFileValues.custrecord_ctc_vc_bill_due_date_f_file = true;
+                }
+            }
 
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_date',
-                value: moment(myArr[i].ordObj.date).toDate()
-            });
-            log.audit(
-                logTitle,
-                '>> set bill date: ' + JSON.stringify(moment(myArr[i].ordObj.date).toDate())
-            );
-
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_proc_status',
-                value: '1'
-            });
-
-            if (poId) {
+            var ii;
+            if (poData.id) {
                 // match payload items to transaction items
-                var availableSkus = [];
-
-                var transactionSearchObj = ns_search.create({
-                    type: 'transaction',
-                    filters: [['internalid', 'anyof', poId], 'AND', ['mainline', 'is', 'F']],
-                    columns: [
-                        ns_search.createColumn({
-                            name: 'item',
-                            summary: 'GROUP'
-                        })
-                    ]
-                });
-                var searchResultCount = transactionSearchObj.runPaged().count;
-
-                transactionSearchObj.run().each(function (result) {
-                    var skuObj = {};
-
-                    skuObj.text = result.getText({
-                        name: 'item',
-                        summary: 'GROUP'
-                    });
-
-                    skuObj.value = result.getValue({
-                        name: 'item',
-                        summary: 'GROUP'
-                    });
-
-                    availableSkus.push(skuObj);
-
-                    return true;
-                });
-
-                log.audit(logTitle, '>>>> availableSkus: ' + JSON.stringify(availableSkus));
-
+                var availableSkus = Helper.collectItemsFromPO({ poId: poData.id });
                 var arrMatchedSKU = [];
 
-                for (var l = 0; l < myArr[i].ordObj.lines.length; l++) {
+                for (ii = 0; ii < currentOrder.lines.length; ii++) {
+                    var itemNo = currentOrder.lines[ii].ITEMNO;
+
+                    var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
+
+                    var matchedSku = false;
+                    for (var iii = 0; iii < availableSkus.length; iii++) {
+                        if (availableSkus[iii].text == itemNo) {
+                            matchedSku = availableSkus[iii].value;
+                            break;
+                        }
+                    }
                     log.audit(
                         logTitle,
-                        '>>>>>> initial SKU: ' + JSON.stringify(myArr[i].ordObj.lines[l].ITEMNO)
+                        logPrefix + '.. exact match: ' + JSON.stringify(matchedSku)
                     );
 
-                    var matchedSku;
-                    availableSkus.forEach(function (sku) {
-                        if (myArr[i].ordObj.lines[l].ITEMNO == sku.text) {
-                            matchedSku = sku.value;
+                    if (!matchedSku) {
+                        // do the fuzzy search
+                        const options = {
+                            includeScore: true,
+                            threshold: 0.4,
+                            keys: ['text']
+                        };
+                        var fuse = new Fuse(availableSkus, options);
+                        var fuseOutput = fuse.search(itemNo);
+                        if (fuseOutput.length > 0) {
+                            matchedSku = fuseOutput[0].item.value;
                         }
-                        return true;
-                    });
 
-                    if (matchedSku) {
-                        myArr[i].ordObj.lines[l].NSITEM = matchedSku;
+                    log.audit(
+                        logTitle,
+                            logPrefix + '.. fuzzy match: ' + JSON.stringify(matchedSku)
+                    );
+                        }
+
+                    if (!matchedSku) {
+                        billFileNotes.push('Not matched SKU: ' + itemNo);
+                        log.audit(logTitle, logPrefix + '.. match not found. ');
+                    } else {
+                        currentOrder.lines[ii].NSITEM = matchedSku;
                         arrMatchedSKU.push(matchedSku);
                     }
-
-                    // // try to autoselect item using fuse;
-                    // const options = {
-                    //     includeScore: true,
-                    //     threshold: 0.4,
-                    //     keys: ['text']
-                    // };
-
-                    // var fuse = new Fuse(availableSkus, options);
-
-                    // var fuseOutput = fuse.search(myArr[i].ordObj.lines[l].ITEMNO);
-
-                    // if (fuseOutput.length > 0) {
-                    //     var matchedSku = fuseOutput[0].item.value;
-
-                    //     myArr[i].ordObj.lines[l].NSITEM = matchedSku;
-                    //     arrMatchedSKU.push(matchedSku);
-                    //     // billFileNotes.push('Matched SKU: ' + matchedSku);
-                    // }
                 }
 
+                log.audit(
+                    logTitle,
+                    LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
+                );
+
                 if (arrMatchedSKU.length) {
-                    // billFileNotes.push('Matched SKU: (' + arrMatchedSKU.join(',') + ')');
                     billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
                 }
             } else {
-                for (var l = 0; l < myArr[i].ordObj.lines.length; l++) {
-                    myArr[i].ordObj.lines[l].NSITEM = '';
+                for (ii = 0; ii < currentOrder.lines.length; ii++) {
+                    currentOrder.lines[ii].NSITEM = '';
                 }
             }
-
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_json',
-                value: JSON.stringify(myArr[i].ordObj)
+            billFileValues.custrecord_ctc_vc_bill_json = JSON.stringify(currentOrder);
+            billFileValues.custrecord_ctc_vc_bill_log = addNote({
+                note: billFileNotes.join(' | ')
             });
-            log.audit(logTitle, '>> set json: ' + JSON.stringify(myArr[i].ordObj));
 
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_src',
-                value: myArr[i].xmlStr
+            // create the bill file record
+            var objRecord = ns_record.create({
+                type: 'customrecord_ctc_vc_bills',
+                isDynamic: true
             });
-            log.audit(logTitle, '>> set xml: ' + JSON.stringify(myArr[i].xmlStr));
 
+            for (var fieldId in billFileValues) {
             objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_integration',
-                value: configObj.id
+                    fieldId: fieldId,
+                    value: billFileValues[fieldId]
             });
-            log.audit(logTitle, '>> set integration id: ' + JSON.stringify(configObj.id));
-
-            objRecord.setValue({
-                fieldId: 'custrecord_ctc_vc_bill_log',
-                value: addNote({ note: billFileNotes.join(' | ') })
-            });
-            log.audit(logTitle, '>> saving record...');
+            }
             var record_id = objRecord.save();
 
             log.audit(logTitle, '>> Bill File created: ' + record_id);
