@@ -155,7 +155,7 @@ define([
                         var xmlContent = outputObj;
 
                         try {
-                            if (!util.isObject(outputObj)) throw outputObj;
+                            if (util.isString(outputObj)) throw outputObj;
                             xmlContent = JSON.stringify(outputObj);
                             xmlContent = vkbeautify.json(xmlContent, 4);
 

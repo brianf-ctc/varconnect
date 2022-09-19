@@ -75,9 +75,7 @@ define([
 
                 if (Current.task == 'viewForm') {
                     Current.Form = ns_ui.createForm({ title: 'VAR Connect | Debug Tool' });
-                    Current.Form.clientScriptModulePath =
-                        'SuiteBundles/Bundle 293929/com.catalysttechcorp.varconnect/DebugTool/' +
-                        'CTC_VC_DebugTool_CS.js';
+                    Current.Form.clientScriptModulePath = './CTC_VC_DebugTool_CS.js';
 
                     var hiddenFields = {
                         suiteleturl: ns_url.resolveScript({

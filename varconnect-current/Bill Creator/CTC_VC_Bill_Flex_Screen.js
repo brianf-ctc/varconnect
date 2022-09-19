@@ -458,26 +458,28 @@ define([
                 }
 
                 ////////////////////
-                var newLine = vc_recordlib.addLine({
-                    record: Current.BILL_REC,
-                    lineData: {
-                        item: lineData.nsitem,
-                        rate: lineData.amount || lineData.rate,
-                        quantity: 1
+                try {
+                    var newLine = vc_recordlib.addLine({
+                        record: Current.BILL_REC,
+                        lineData: {
+                            item: lineData.nsitem,
+                            rate: lineData.amount || lineData.rate,
+                            quantity: 1
+                        }
+                    });
+
+                    billLineData = vc_recordlib.extractLineValues({
+                        record: Current.BILL_REC,
+                        line: newLine,
+                        columns: ['amount', 'taxrate1', 'taxrate2']
+                    });
+
+                    if (lineData.applied == 'T') {
+                        lineData.amounttax =
+                            (lineData.amounttax || 0) + Helper.calculateLineTax(billLineData);
+                        totalVariance += billLineData.amount + lineData.amounttax;
                     }
-                });
-
-                billLineData = vc_recordlib.extractLineValues({
-                    record: Current.BILL_REC,
-                    line: newLine,
-                    columns: ['amount', 'taxrate1', 'taxrate2']
-                });
-
-                if (lineData.applied == 'T') {
-                    lineData.amounttax =
-                        (lineData.amounttax || 0) + Helper.calculateLineTax(billLineData);
-                    totalVariance += billLineData.amount + lineData.amounttax;
-                }
+                } catch (line_err) {}
 
                 ////////////////////
 
@@ -736,7 +738,7 @@ define([
             var errorMessage = vc_util.extractError(error);
 
             FormHelper.Form.addPageInitMessage({
-                title: 'Error : ' + errorMessage,
+                title: 'Error ' + errorMessage,
                 message: util.isString(error) ? error : JSON.stringify(error),
                 type: ns_msg.Type.ERROR
             });
@@ -791,7 +793,14 @@ define([
             var returnValue = true;
             if (!Current.PO_DATA) return false;
 
-            if (vc_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'closed'])) {
+            if (
+                vc_util.inArray(Current.BILLFILE_DATA.STATUS, [
+                    BILL_CREATOR.Status.PROCESSED,
+                    BILL_CREATOR.Status.CLOSED,
+                ])
+            ) {
+                returnValue = false;
+            } else if (vc_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'closed'])) {
                 Current.WarnMessage.push('Purchase Order is already ' + Current.PO_DATA.status);
                 returnValue = false;
             } else if (
@@ -1061,7 +1070,7 @@ define([
                     rate: lineInfo.BILLRATE || lineInfo.PRICE,
                     amount: lineInfo.QUANTITY * (lineInfo.BILLRATE || lineInfo.PRICE)
                 };
-                if (!lineInfo.NSITEM) continue;
+                // if (!lineInfo.NSITEM) continue;
 
                 /// SEARCH FOR matching PO Lines /////
                 if (Current.PO_REC) {
@@ -1211,6 +1220,8 @@ define([
                         dataSet: Current.JSON_DATA.varianceLines,
                         filter: { type: varType }
                     });
+
+                if (matchingVarianceLine.item) delete matchingVarianceLine.item;
 
                 if (!vc_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
                 varianceInfo.type = varType;
