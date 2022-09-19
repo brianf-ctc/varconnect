@@ -248,10 +248,10 @@ define([
                                 log.debug({
                                     title: 'Update SO V2',
                                     details: 'Clearing field: ' + JSON.stringify({
-                                            field: xmlFields[xmlField],
-                                            type: fieldType,
-                                            value: ''
-                                        })
+                                        field: xmlFields[xmlField],
+                                        type: fieldType,
+                                        value: ''
+                                    })
                                 });
                             }
                         }

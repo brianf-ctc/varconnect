@@ -392,7 +392,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         searchAllPaged: function (option) {
             var objSearch,
                 arrResults = [],
@@ -633,6 +632,156 @@ define(function (require) {
                         ? arrResults
                         : arrResults.shift()
                     : false;
+
+            return returnValue;
+        },
+        getCurrentFolder: function (option) {
+            var returnValue = null,
+                logTitle = [LogTitle, 'getCurrentFolder'].join('::');
+            option = option || {};
+
+            try {
+                var cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
+                returnValue = this.CACHE[cacheKey];
+
+                if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+                    var scriptId = option.scriptId;
+                    if (!scriptId) {
+                        if (!option.currentScript) {
+                            if (!option.runtime) option.runtime = this.loadModule('N/runtime');
+                            option.currentScript = option.runtime.getCurrentScript();
+                        }
+                        scriptId = option.currentScript.id;
+                    }
+                    if (!scriptId) return false;
+
+                    var objSearch = NS_Search.create({
+                        type: 'script',
+                        filters: [['scriptid', 'is', scriptId]],
+                        columns: ['scriptfile', 'name']
+                    });
+
+                    var fileId = null;
+                    objSearch.run().each(function (row) {
+                        fileId = row.getValue('scriptfile');
+                        return true;
+                    });
+
+                    var NS_File = this.loadModule('N/file');
+                    var fileObj = NS_File.load({
+                        id: fileId
+                    });
+
+                    // get the actual folderPathj
+                    var folderInfo = {
+                        path: (function (path) {
+                            var pathNew = path.split('/');
+                            pathNew.pop();
+                            return pathNew.join('/');
+                        })(fileObj.path),
+                        id: fileObj.folder
+                    };
+
+                    log.audit(logTitle, folderInfo);
+
+                    returnValue = folderInfo;
+                    this.CACHE[cacheKey] = folderInfo;
+                }
+            } catch (e) {
+                log.error(logTitle, JSON.stringify(e));
+            } finally {
+                // log.debug(logTitle, '>> current folder: ' + returnValue);
+            }
+
+            return returnValue;
+        },
+        searchFile: function (option) {
+            var fileName = option.filename || option.name;
+            if (!fileName) return false;
+
+            var arrCols = [
+                'name',
+                'folder',
+                'documentsize',
+                'url',
+                'created',
+                'modified',
+                'filetype'
+            ];
+            var searchOption = {
+                type: 'file',
+                columns: arrCols,
+                filters: [['name', 'is', fileName]]
+            };
+
+            var folderId = option.folder || option.folderId;
+            if (folderId) {
+                searchOption.filters.push('AND');
+                searchOption.filters.push(['folder', 'is', folderId]);
+            }
+
+            var returnValue = null;
+
+            var cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
+            var fileInfo = this.CACHE[cacheKey];
+
+            if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+                var objSearch = NS_Search.create(searchOption);
+                fileInfo = []; // prepare for multiple results?
+                objSearch.run().each(function (row) {
+                    var fInfo = {};
+
+                    for (var i = 0, j = row.columns.length; i < j; i++) {
+                        var col = row.columns[i];
+                        fInfo[col.name] = row.getValue(col);
+                    }
+                    fInfo.folderName = row.getText({
+                        name: 'folder'
+                    });
+                    fInfo.id = row.id;
+
+                    fileInfo.push(fInfo);
+                    return true;
+                });
+
+                this.CACHE[cacheKey] = fileInfo;
+            }
+
+            returnValue =
+                option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
+
+            return returnValue;
+        },
+        getFileContent: function (option) {
+            var returnValue = null;
+            var logTitle = [LogTitle, 'getFileContent'];
+
+            try {
+                var fileId = option.fileId;
+                if (!fileId) {
+                    var fileName = option.filename || option.name;
+                    if (!fileName) return false;
+
+                    var folderId = option.folder || option.folderId || this.getCurrentFolder();
+                    var fileInfo = this.searchFile({
+                        name: fileName,
+                        folder: folderId
+                    });
+
+                    if (!fileInfo) return false;
+                    fileId = fileInfo.id;
+                }
+
+                // load the file
+                var NS_File = this.loadModule('N/file');
+                var fileObj = NS_File.load({
+                    id: fileId
+                });
+
+                returnValue = fileObj.getContents();
+            } catch (e) {
+                log.error(logTitle, JSON.stringify(e));
+            }
 
             return returnValue;
         }

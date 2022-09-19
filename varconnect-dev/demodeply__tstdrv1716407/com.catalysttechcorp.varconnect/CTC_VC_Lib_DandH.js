@@ -51,18 +51,18 @@ define([
                             'Content-Length': 'length'
                         },
                         body:
-                            '<XMLFORMPOST>' +
-                            '<REQUEST>orderStatus</REQUEST>' +
-                            '<LOGIN>' +
+            '<XMLFORMPOST>' +
+            '<REQUEST>orderStatus</REQUEST>' +
+            '<LOGIN>' +
                             ('<USERID>' + CURRENT.vendorConfig.user + '</USERID>') +
                             ('<PASSWORD>' + CURRENT.vendorConfig.password + '</PASSWORD>') +
-                            '</LOGIN>' +
-                            '<STATUSREQUEST>' +
+            '</LOGIN>' +
+            '<STATUSREQUEST>' +
                             ('<PONUM>' + CURRENT.recordNum + '</PONUM>') +
-                            '</STATUSREQUEST>' +
+            '</STATUSREQUEST>' +
                             '</XMLFORMPOST>'
                     }
-                });
+        });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
@@ -77,7 +77,7 @@ define([
                     title: [LogTitle + ' Orders Status : Error', errorMsg].join(' - '),
                     error: error,
                     recordId: CURRENT.recordId
-                });
+            });
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
@@ -102,6 +102,7 @@ define([
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibDnH.getOrderStatus(option);
+
             } catch (error) {
                 VC_Util.vcLog({
                     title: LogTitle + ': Request Error',
@@ -109,12 +110,12 @@ define([
                     recordId: CURRENT.recordId
                 });
                 throw VC_Util.extractError(error);
-            }
+    }
 
             return returnValue;
         },
         processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
+        var logTitle = [LogTitle, 'processResponse'].join('::'),
                 returnValue = [];
             option = option || {};
 
@@ -282,12 +283,12 @@ define([
                 });
                 throw VC_Util.extractError(error);
                 returnValue = errorMsg;
-            }
+    }
 
             return returnValue;
         },
         process: function (option) {
-            var logTitle = [LogTitle, 'process'].join('::'),
+        var logTitle = [LogTitle, 'process'].join('::'),
                 returnValue = [];
             option = option || {};
 
@@ -306,7 +307,7 @@ define([
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
-                });
+            });
                 throw VC_Util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
@@ -319,7 +320,7 @@ define([
                     recordId: CURRENT.recordId,
                     status: VC_Global.Lists.VC_LOG_STATUS.INFO
                 });
-            }
+    }
 
             return returnValue;
         }

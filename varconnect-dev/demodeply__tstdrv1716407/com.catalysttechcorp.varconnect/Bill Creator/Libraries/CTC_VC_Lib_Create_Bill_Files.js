@@ -285,7 +285,6 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                 ///////////////////////////////////
 
                 var vendorTerms = 0;
-
                 var searchTerms = ns_search.lookupFields({
                     type: ns_search.Type.VENDOR,
                     id: poData.entityId,
@@ -296,16 +295,16 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                     vendorTerms = searchTerms.terms[0].value;
 
                     if (!manualDueDate) {
-                    var daysToPay = ns_search.lookupFields({
-                        type: ns_search.Type.TERM,
-                        id: vendorTerms,
-                        columns: ['daysuntilnetdue']
-                    }).daysuntilnetdue;
+                        var daysToPay = ns_search.lookupFields({
+                            type: ns_search.Type.TERM,
+                            id: vendorTerms,
+                            columns: ['daysuntilnetdue']
+                        }).daysuntilnetdue;
 
                         dueDate = moment(currentOrder.date)
-                        .add(parseInt(daysToPay), 'days')
-                        .format('MM/DD/YYYY');
-                }
+                            .add(parseInt(daysToPay), 'days')
+                            .format('MM/DD/YYYY');
+                    }
                 }
             }
 
@@ -352,11 +351,11 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                             matchedSku = fuseOutput[0].item.value;
                         }
 
-                    log.audit(
-                        logTitle,
+                        log.audit(
+                            logTitle,
                             logPrefix + '.. fuzzy match: ' + JSON.stringify(matchedSku)
-                    );
-                        }
+                        );
+                    }
 
                     if (!matchedSku) {
                         billFileNotes.push('Not matched SKU: ' + itemNo);
@@ -392,13 +391,12 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             });
 
             for (var fieldId in billFileValues) {
-            objRecord.setValue({
+                objRecord.setValue({
                     fieldId: fieldId,
                     value: billFileValues[fieldId]
-            });
+                });
             }
             var record_id = objRecord.save();
-
             log.audit(logTitle, '>> Bill File created: ' + record_id);
         }
 

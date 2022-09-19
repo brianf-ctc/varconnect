@@ -27,6 +27,7 @@ define([
     function processXml(recordId, config) {
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
+
         log.audit(logTitle, [recordId, config]);
         LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
 

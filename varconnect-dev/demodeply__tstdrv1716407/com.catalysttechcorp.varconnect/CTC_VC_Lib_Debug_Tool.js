@@ -9,47 +9,30 @@
  * with Catalyst Tech.
  *
  * @NApiVersion 2.x
- * @NModuleScope Public
+ * @NModuleScope SameAccount
  */
 
-define([
-    'N/search',
-    'N/currentRecord',
-    'N/https',
-    './CTC_VC_Constants.js',
-    './CTC_VC_Lib_VendorConfig',
-    './CTC_VC_Lib_WebService',
-    './VC_Globals.js',
-    './highlight/highlight.js',
-    './highlight/languages/xml.min.js',
-    './highlight/languages/json.min.js'
-], function (
-    nsSearch,
-    currentRecord,
-    https,
-    constants,
-    libVendorConfig,
-    libWebService,
-    vcGlobals,
-    hljs,
-    hljsXmlLanguage,
-    hljsJsonLanguage
-) {
-    if (!hljs) {
-        require([
-            'SuiteScripts/VAR Connect/highlight/highlight.js',
-            'SuiteScripts/VAR Connect/highlight/languages/xml.min.js',
-            'SuiteScripts/VAR Connect/highlight/languages/json.min.js'
-        ], function (rehljs, rehljsXmlLanguage, rehljsJsonLanguage) {
-            hljs = rehljs;
-            hljsXmlLanguage = rehljsXmlLanguage;
-            hljsJsonLanguage = rehljsJsonLanguage;
-            hljs.registerLanguage('xml', hljsXmlLanguage);
-            hljs.registerLanguage('json', hljsJsonLanguage);
-        });
-    } else {
-        hljs.registerLanguage('xml', hljsXmlLanguage);
-        hljs.registerLanguage('json', hljsJsonLanguage);
+define(function (require) {
+    var nsSearch = require('N/search'),
+        currentRecord = require('N/currentRecord'),
+        constants = require('./CTC_VC_Constants.js'),
+        vc_util = require('./CTC_VC2_Lib_Utils.js'),
+        libVendorConfig = require('./CTC_VC_Lib_VendorConfig.js'),
+        libWebService = require('./CTC_VC_Lib_WebService.js'),
+        vcGlobals = require('./VC_Globals.js');
+    var hljs = require('./highlight/highlight.js'),
+        hljsXml = require('./highlight/languages/xml.min.js'),
+        hljsJson = require('./highlight/languages/json.min.js');
+
+    // get current folder
+    if (hljs) {
+        hljs.registerLanguage('xml', hljsXml);
+        hljs.registerLanguage('json', hljsJson);
+    }
+
+    function pageInit(scriptContext) {
+        console.log('page init', scriptContext);
+        return true;
     }
 
     function _getPODetails(poNum) {
@@ -180,17 +163,19 @@ define([
                                         outputObj.trackxml;
                                     try {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
+                                        if (hljs)
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
                                     } catch (parseErr) {
                                         xmlContent = JSON.stringify(outputObj);
                                         xmlContent = vkbeautify.json(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
+                                        if (hljs)
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                         elementIdToShow = 'custpage_json__viewer';
                                         elementIdToHide = 'custpage_xml__viewer';
                                     }
@@ -207,16 +192,21 @@ define([
                                     xmlContent = JSON.stringify(outputObj);
                                     try {
                                         xmlContent = vkbeautify.json(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
+                                        if (hljs)
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
+                                        else xmlContent = '<pre>' + xmlContent + '</pre>';
+
                                         elementIdToShow = 'custpage_json__viewer';
                                         elementIdToHide = 'custpage_xml__viewer';
                                     } catch (parseErr) {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
+                                        if (hljs)
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
+                                        else xmlContent = '<pre>' + xmlContent + '</pre>';
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
                                     }
@@ -225,17 +215,21 @@ define([
                                     if (typeof xmlContent == 'string') {
                                         try {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                            if (hljs)
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
+                                            else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
                                         } catch (parseErr) {
                                             xmlContent = JSON.stringify(outputObj);
                                             xmlContent = vkbeautify.json(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                            if (hljs)
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
+                                            else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
                                         }
@@ -243,16 +237,20 @@ define([
                                         xmlContent = JSON.stringify(outputObj);
                                         try {
                                             xmlContent = vkbeautify.json(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                            if (hljs)
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
+
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
                                         } catch (parseErr) {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                            if (hljs)
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
+
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
                                         }
@@ -277,6 +275,151 @@ define([
             }
         }
     }
+
+    function showVendorResults() {
+        var thisRecord = currentRecord.get();
+
+        var xmlVendor = thisRecord.getValue({ fieldId: 'custpage_vendor' }),
+            poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' });
+
+        jQuery('#vcdebugcontent').get(0).value = 'Please wait...';
+
+        setTimeout(function () {
+            // set the content
+            var promiseObj = new Promise(function (resolve) {
+                var outputObj,
+                    objPO = _getPODetails(poNum),
+                    vendorConfig = _loadDebugVendorConfig({
+                        xmlVendor: xmlVendor,
+                        xmlSubsidiary: objPO.subsidiary
+                    });
+
+                try {
+                    outputObj = libWebService.handleRequest({
+                        vendorConfig: vendorConfig,
+                        poNum: poNum,
+                        poId: objPO.id,
+                        country:
+                            vendorConfig.country == 'CA'
+                                ? constants.Lists.COUNTRY.CA
+                                : constants.Lists.COUNTRY.US,
+                        countryCode: vendorConfig.country
+                    });
+                } catch (processErr) {
+                    outputObj =
+                        'Error while handling request. Please make sure Vendor configuration was setup correctly. [' +
+                        (processErr.name + ': ') +
+                        (processErr.message + ']');
+                    console.log(
+                        'debug lib: ' +
+                            (processErr.name + '- ') +
+                            (processErr.message + '==\n' + processErr.stack)
+                    );
+                }
+                resolve(outputObj);
+            });
+
+            promiseObj.then(function (outputObj) {
+                // console.log(outputObj);\
+                var xmlContent = outputObj;
+                jQuery('#custpage_xml__loader').hide();
+                try {
+                    if (!util.isObject(outputObj)) throw outputObj;
+                    xmlContent = JSON.stringify(outputObj);
+                    xmlContent = vkbeautify.json(xmlContent, 4);
+                } catch (err) {
+                    xmlContent = vkbeautify.xml(outputObj, 4);
+                }
+                jQuery('#vcdebugcontent').get(0).value =
+                    xmlContent;
+
+                return true;
+            });
+            return true;
+        }, 500);
+
+        return true;
+    }
+
+    var QueueTasks = function (qname, cb) {
+        var queueList = [],
+            currentIndex = -1,
+            isComplete = false,
+            isStopped = false,
+            hasStarted = false,
+            callBack = { onFinished: function () {} };
+
+        var runNext = function () {
+            if (!hasStarted) throw 'Queue is not yet started!';
+            currentIndex++;
+            if (currentIndex == queueList.length) {
+                isComplete = true;
+                try {
+                    callBack.onFinished.call(this);
+                } catch (err) {}
+            } else {
+                queueList[currentIndex].run();
+            }
+            return true;
+        };
+        var QTask = function (task) {
+            this.isDone = false;
+            this.name =
+                task.name || ['taskName', queueList.length + 1, new Date().getTime()].join('_');
+
+            this.markDone = function () {
+                this.isDone = true;
+                if (task.onComplete && typeof task.onComplete == 'function') {
+                    try {
+                        task.onComplete.call(this);
+                    } catch (err) {}
+                }
+                runNext();
+            };
+            this.run = function () {
+                var fn = task.fn || task.FN;
+                if (!fn || typeof fn != 'function') throw 'Task has no action';
+
+                fn.call(this);
+                if (task.delay) {
+                    var _this = this;
+                    console.log(this.name, '..waiting for: ', task.delay);
+                    setTimeout(function () {
+                        _this.markDone();
+                    }, task.delay);
+                } else {
+                    if (!task.manualComplete) this.markDone();
+                }
+            };
+            return this;
+        };
+
+        this.setOnFinished = function (cbOnFinished) {
+            if (cbOnFinished && typeof cbOnFinished == 'function') {
+                callBack.onFinished = cbOnFinished;
+            }
+            return;
+        };
+
+        this.runNext = runNext;
+        this.queueLength = function () {
+            return queueList.length;
+        };
+        this.add = function (task) {
+            if (!task.fn || typeof task.fn != 'function') return;
+            queueList.push(new QTask(task));
+            return queueList[queueList.length];
+        };
+        this.start = function (option) {
+            hasStarted = true;
+            // var onFinished = option.onFinished;
+            // if ( onFinished && typeof onFinished == 'function') {
+            //     callBack.onFinished = onFinished;
+            // }
+            return runNext();
+        };
+        return this;
+    };
 
     (function () {
         function createShiftArr(step) {
@@ -621,6 +764,8 @@ define([
     })();
 
     return {
-        showVendorName: showVendorName
+        pageInit: pageInit,
+        showVendorName: showVendorName,
+        showVendorResults: showVendorResults
     };
 });

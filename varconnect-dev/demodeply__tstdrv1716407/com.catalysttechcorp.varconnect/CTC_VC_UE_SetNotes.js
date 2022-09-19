@@ -138,7 +138,7 @@ define([
                     FORM.addField({
                         id: 'custpage_ctc_vc_log_message',
                         label: 'VC Notes',
-                        type: serverWidget.FieldType.LONGTEXT,
+                        type: serverWidget.FieldType.LONGTEXT, 
                         container: 'custom186' // var connect tab
                     });
                     var itemSublist = FORM.getSublist({

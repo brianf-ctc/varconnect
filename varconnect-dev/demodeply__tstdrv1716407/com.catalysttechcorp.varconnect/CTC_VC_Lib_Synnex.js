@@ -17,7 +17,7 @@
  *
  */ /**
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  */
 
 define([
@@ -75,10 +75,10 @@ define([
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Access Token: ' + JSON.stringify(returnValue));
-        }
+            }
 
-        return returnValue;
-    }
+            return returnValue;
+        }
     };
 
     return {
@@ -87,7 +87,7 @@ define([
                 returnValue = [];
             option = option || {};
 
-        try {
+            try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
@@ -101,7 +101,7 @@ define([
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
-            });
+                });
                 throw VC_Util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
@@ -240,9 +240,9 @@ define([
 
                     // ignore items unles they have been invoiced or accepted
                     if (['invoiced', 'accepted'].indexOf(itemCode) >= 0) {
-                    itemArray.push(itemRow);
+                        itemArray.push(itemRow);
                 }
-            }
+                }
 
                 returnValue = itemArray;
             } catch (error) {
@@ -253,7 +253,7 @@ define([
                 });
                 throw VC_Util.extractError(error);
                 returnValue = errorMsg;
-    }
+        }
 
             return returnValue;
     }

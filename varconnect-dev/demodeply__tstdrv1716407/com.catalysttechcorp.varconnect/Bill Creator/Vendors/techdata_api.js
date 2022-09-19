@@ -240,18 +240,18 @@ define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lod
             for (var i = 0; i < lineItem.length; i++) {
                 var lineObj = {
                     ITEMNO: lineItem[i].getElementsByTagName({
-                    tagName: 'ProductID2'
+                        tagName: 'ProductID2'
                     })[0].textContent,
                     PRICE:
-                    lineItem[i].getElementsByTagName({
-                        tagName: 'UnitPrice'
+                        lineItem[i].getElementsByTagName({
+                            tagName: 'UnitPrice'
                         })[0].textContent * 1,
                     QUANTITY:
-                    lineItem[i].getElementsByTagName({
-                        tagName: 'QtyOrdered'
+                        lineItem[i].getElementsByTagName({
+                            tagName: 'QtyOrdered'
                         })[0].textContent * 1,
                     DESCRIPTION: lineItem[i].getElementsByTagName({
-                    tagName: 'ProductDesc'
+                        tagName: 'ProductDesc'
                     })[0].textContent,
                     processed: false
                 };
@@ -264,7 +264,7 @@ define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lod
                 if (lineIdx >= 0) {
                     myObj.lines[lineIdx].QUANTITY+=lineObj.QUANTITY;
                 } else {
-                myObj.lines.push(lineObj);
+                    myObj.lines.push(lineObj);
                 }
 
                 // lineObj.ITEMNO = lineItem[i].getElementsByTagName({

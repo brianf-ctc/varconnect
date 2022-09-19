@@ -13,8 +13,16 @@
  * @NScriptType Suitelet
  */
 
-define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, search, file) {
-    var logTitle = 'CTC XML Debug Tool';
+define([
+    'N/ui/serverWidget',
+    'N/ui/message',
+    'N/runtime',
+    'N/search',
+    'N/url',
+    'N/file',
+    './CTC_VC2_Lib_Utils'
+], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc_util) {
+    var LogTitle = 'VC DebugTool';
     var searchUtil = {
         getAllResults: function (searchObject, maxResults) {
             var resultSet = null,
@@ -63,32 +71,184 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
             return allResults;
         }
     };
+
+    var Helper = {
+        getActiveVendors: function () {
+            var arrSeachResults = vc_util.searchAllPaged({
+                type: 'customrecord_ctc_vc_vendor_config',
+                filterExpression: [['isinactive', 'is', 'F']],
+                columns: [
+                    ns_search.createColumn({
+                        name: 'custrecord_ctc_vc_xml_vendor',
+                        summary: ns_search.Summary.GROUP,
+                        sort: ns_search.Sort.ASC
+                    })
+                ]
+            });
+
+            var arrReturnValue = [];
+            arrSeachResults.forEach(function (result) {
+                arrReturnValue.push({
+                    value: result.getValue({
+                        name: 'custrecord_ctc_vc_xml_vendor',
+                        summary: ns_search.Summary.GROUP
+                    }),
+                    text: result.getText({
+                        name: 'custrecord_ctc_vc_xml_vendor',
+                        summary: ns_search.Summary.GROUP
+                    }),
+                    isSelected: !arrReturnValue.length
+                });
+                return true;
+            });
+
+            return arrReturnValue;
+        }
+    };
+
+    var DebugTool_UI = {
+        onRequest: function (scriptContext) {
+            var logTitle = [LogTitle, 'onRequest'].join('::');
+            log.debug(logTitle, '############################################');
+
+            var Current = {
+                task: scriptContext.request.parameters.vctask || 'viewForm',
+                vendorId: scriptContext.request.parameters.vcvendor,
+                poNum: scriptContext.request.parameters.vcponum,
+                method: scriptContext.request.method.toUpperCase()
+            };
+            log.debug(logTitle, '>> Params: ' + JSON.stringify(Current));
+
+            try {
+                if (Current.method != 'GET') return;
+
+                if (Current.task == 'viewForm') {
+                    Current.Form = ns_ui.createForm({ title: 'VAR Connect | Debug Tool' });
+                    Current.Form.clientScriptModulePath = './CTC_VC_Lib_Debug_Tool.js';
+
+                    ///// VENDOR CONFIG LIST ///////////////////////////////
+                    var fldVendors = Current.Form.addField({
+                        id: 'custpage_vendor',
+                        type: ns_ui.FieldType.SELECT,
+                        label: 'Select a Vendor Config'
+                    });
+                    fldVendors.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTCOL });
+                    fldVendors.isMandatory = true;
+
+                    var arrActiveVendors = Helper.getActiveVendors();
+                    arrActiveVendors.forEach(function (vendorEntry) {
+                        if (!vc_util.isEmpty(Current.vendorConfigId)) {
+                            vendorEntry.isSelected = Current.vendorConfigId == vendorEntry.value;
+                        }
+                        fldVendors.addSelectOption(vendorEntry);
+                        return true;
+                    });
+
+                    ////////////////////////////////////////////////////////
+
+                    ///// PO NUM ///////////////////////////////////////////
+                    var fldPONum = Current.Form.addField({
+                        id: 'custpage_ponum',
+                        type: ns_ui.FieldType.TEXT,
+                        label: 'Enter PO Number'
+                    });
+                    fldPONum.isMandatory = true;
+                    fldPONum.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
+                    if (Current.ponum) fldPONum.defaultValue = Current.ponum;
+                    ////////////////////////////////////////////////////////
+
+                    ////////////////////////////////////////
+                    var fldContent = Current.Form.addField({
+                        id: 'custpage_content',
+                        label: 'Retrieved Order Status',
+                        type: ns_ui.FieldType.INLINEHTML
+                    });
+
+                    fldContent.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
+                    fldContent.updateDisplaySize({ width: '250', height: '30' });
+
+                    fldContent.defaultValue = [
+                        '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea" id="vcdebug_container">',
+                        '<span class="smallgraytextnolink uir-label">',
+                        '<span class="smallgraytextnolink">',
+                        '<a class="smallgraytextnolink">Retrieved Order Status</a>',
+                        '</span></span>',
+                        // LOADER  ////////////
+                        '<textarea cols="250" rows="30" disabled="true" name="vcdebugcontent_loader" id="vcdebugcontent_loader" ',
+                        'style="display:none;padding: 5px 10px; margin: 5px; border:1px solid #CCC !important; color: #000 !important; font-size: 1.5em;">',
+                        'Please wait...',
+                        '</textarea>',
+                        // LOADER  ////////////
+
+                        '<textarea cols="250" rows="30" disabled="true" id="vcdebugcontent" ',
+                        'style="padding: 5px 10px; margin: 5px; border:1px solid #CCC !important; background-color: #EEE; color: #363636 !important;">',
+                        'Your PO',
+                        '</textarea>',
+                        '</div>'
+                    ].join('');
+
+                    //////////////////////////////
+
+                    var hiddenFields = {
+                        suiteleturl: ns_url.resolveScript({
+                            scriptId: ns_runtime.getCurrentScript().id,
+                            deploymentId: ns_runtime.getCurrentScript().deploymentId
+                        }),
+                        currentfolder: JSON.stringify(vc_util.getCurrentFolder())
+                    };
+
+                    for (var fld in hiddenFields) {
+                        var fldObj = Current.Form.addField({
+                            id: fld,
+                            label: fld,
+                            type: ns_ui.FieldType.LONGTEXT
+                        });
+                        fldObj.defaultValue = hiddenFields[fld];
+                        fldObj.updateDisplayType({ displayType: 'HIDDEN' });
+                    }
+                    ////////////////////////////////////////
+
+                    Current.Form.addButton({
+                        id: 'custpage_btnSubmit',
+                        label: 'Display Data',
+                        functionName: 'showVendorResults'
+                    });
+                    scriptContext.response.writePage(Current.Form);
+                } else {
+                    scriptContext.response.write({ output: JSON.stringify(Current) });
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+    };
+
     function onRequest(context) {
         if (context.request.method === 'GET') {
             var request = context.request;
-            var form = serverWidget.createForm({
+            var form = ns_ui.createForm({
                 title: 'XML Debug Tool 2'
             });
             form.clientScriptModulePath = './CTC_VC_Lib_Debug_Tool.js';
 
             var vendors = form.addField({
                 id: 'vendors',
-                type: serverWidget.FieldType.SELECT,
+                type: ns_ui.FieldType.SELECT,
                 label: 'Select a Vendor'
             });
             vendors.updateBreakType({
-                breakType: serverWidget.FieldBreakType.STARTCOL
+                breakType: ns_ui.FieldBreakType.STARTCOL
             });
             vendors.isMandatory = true;
             var activeVendors = searchUtil.getAllResults(
-                search.create({
+                ns_search.create({
                     type: 'customrecord_ctc_vc_vendor_config',
                     filters: [['isinactive', 'is', 'F']],
                     columns: [
-                        search.createColumn({
+                        ns_search.createColumn({
                             name: 'custrecord_ctc_vc_xml_vendor',
-                            summary: search.Summary.GROUP,
-                            sort: search.Sort.ASC
+                            summary: ns_search.Summary.GROUP,
+                            sort: ns_search.Sort.ASC
                         })
                     ]
                 })
@@ -97,22 +257,22 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 vendors.addSelectOption({
                     value: activeVendors[i].getValue({
                         name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: search.Summary.GROUP
+                        summary: ns_search.Summary.GROUP
                     }),
                     text: activeVendors[i].getText({
                         name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: search.Summary.GROUP
+                        summary: ns_search.Summary.GROUP
                     }),
                     isSelected: i == 0
                 });
             }
             var subject = form.addField({
                 id: 'ponum',
-                type: serverWidget.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Enter PO Number'
             });
             subject.updateBreakType({
-                breakType: serverWidget.FieldBreakType.STARTROW
+                breakType: ns_ui.FieldBreakType.STARTROW
             });
             subject.isMandatory = true;
             form.addTab({
@@ -121,7 +281,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
             });
             var xmlViewer = form.addField({
                 id: 'custpage_xml_viewer',
-                type: serverWidget.FieldType.INLINEHTML,
+                type: ns_ui.FieldType.INLINEHTML,
                 label: 'XML Viewer',
                 container: 'custpage_xml_tab'
             });
@@ -129,13 +289,13 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 url: ''
             };
             try {
-                xmlViewerStylesheet = file.load({
+                xmlViewerStylesheet = ns_file.load({
                     id: './highlight/styles/github.min.css'
                 });
             } catch (fileLoadErr) {
                 // VC might not recognize folders not in the original bundle
                 try {
-                    xmlViewerStylesheet = file.load({
+                    xmlViewerStylesheet = ns_file.load({
                         id: 'SuiteScripts/VAR Connect/highlight/styles/github.min.css'
                     });
                 } catch (missingLibErr) {
@@ -176,7 +336,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
                 '" width=100% height=100% scrolling=yes allowTransparency="true" ></iframe>'
             ].join('');
             xmlViewer.updateBreakType({
-                breakType: serverWidget.FieldBreakType.STARTROW
+                breakType: ns_ui.FieldBreakType.STARTROW
             });
             form.updateDefaultValues({
                 xmlViewer: '-',
@@ -187,7 +347,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
             form.addButton({
                 id: 'getxml',
                 label: 'Display Data',
-                functionName: 'showVendorName'
+                functionName: 'showVendorResults'
             });
 
             context.response.writePage(form);
@@ -195,7 +355,9 @@ define(['N/ui/serverWidget', 'N/search', 'N/file'], function (serverWidget, sear
             context.response.write('Vendor Selected: ' + selectedVendor);
         }
     }
-    return {
-        onRequest: onRequest
-    };
+    // return {
+    //     onRequest: onRequest
+    // };
+
+    return DebugTool_UI;
 });

@@ -53,8 +53,8 @@ define([
                         }),
                         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
+                        }
+                    }
                 });
 
                 if (tokenReq.isError) throw tokenReq.errorMsg;
@@ -105,8 +105,8 @@ define([
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
                             'Content-Type': 'application/json'
-        }
-    }
+                        }
+                    }
         });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
@@ -122,7 +122,7 @@ define([
 
             return returnValue;
     }
-        };
+    };
 
     return {
         processRequest: function (option) {
@@ -147,7 +147,7 @@ define([
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
-        });
+                });
                 throw VC_Util.extractError(error);
             }
 
@@ -184,7 +184,7 @@ define([
 
                 if (orderLines.length) {
                     for (var i = 0; i < orderLines.length; i++) {
-                        var orderLineObj = orderLines[i];
+                            var orderLineObj = orderLines[i];
                         // map here...
                             var outputObj = {
                                 order_date: orderDate,
@@ -272,7 +272,7 @@ define([
                     recordId: CURRENT.recordId
             });
                 throw VC_Util.extractError(error);
-    }
+        }
 
             return returnValue;
     }

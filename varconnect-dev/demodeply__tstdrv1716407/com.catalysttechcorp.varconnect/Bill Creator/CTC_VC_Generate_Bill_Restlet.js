@@ -110,7 +110,7 @@ define([
                         applied: Current.Config.applyOther ? 'T' : 'F',
                         enabled: Current.Config.applyOther,
                         description: 'VC | Other Charges'
-        },
+                    },
                     miscCharges: {
                         name: 'Misc Charges',
                         item: Current.Config.otherItem,
@@ -908,8 +908,8 @@ define([
                             filter: {
                                 item: lineInfo.NSITEM,
                                 quantity: lineInfo.QUANTITY
-        }
-            });
+                            }
+                        });
 
                     for (ii = 0, jj = matchingLines ? matchingLines.length : 0; ii < jj; ii++) {
                         matchedLine = matchingLines[ii];
@@ -920,11 +920,11 @@ define([
                         lineInfo.matchingLines.push(matchedLine);
 
                         log.audit(
-                logTitle,
+                            logTitle,
                             logPrefix + '>> matchedLine: ' + JSON.stringify(matchedLine)
-            );
-            }
-            }
+                        );
+                    }
+                }
 
                 arrLines.push(lineInfo);
             }
@@ -993,11 +993,11 @@ define([
 
                 if (!Current.MatchedLines[line] || lineValues.quantity == 0) {
                     log.audit(
-                    logTitle,
+                        logTitle,
                         LogPrefix +
                             '... non-matching found!:  ' +
                             JSON.stringify([lineValues, Current.MatchedLines[line]])
-                );
+                    );
 
                     try {
                         Current.BILL_REC.removeLine({ sublistId: 'item', line: line });
@@ -1007,7 +1007,7 @@ define([
                             logTitle,
                             LogPrefix + '## REMOVE ERROR ## ' + JSON.stringify(remove_err)
                         );
-                }
+                    }
                 }
             }
             return true;
@@ -1030,15 +1030,15 @@ define([
                     });
 
                 log.audit(
-                logTitle,
+                    logTitle,
                     logPrefix +
                         '// variance info: ' +
-                    JSON.stringify({
+                        JSON.stringify({
                             varianceInfo: varianceInfo,
                             chargeInfo: chargeInfo,
                             matchingVarianceLine: matchingVarianceLine
-                    })
-            );
+                        })
+                );
 
                 if (!vc_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
                 varianceInfo.type = varType;
@@ -1052,8 +1052,8 @@ define([
                                 filter: {
                                     type: varType,
                                     description: miscCharge.description
-                }
-                    });
+                                }
+                            });
 
                             // add it to our variance lines
                             arrVarianceLines.push(
@@ -1069,13 +1069,13 @@ define([
                             matchingVarianceLine || {
                                 rate: vc_util.roundOff(chargeInfo - Current.TOTALS.TAX_AMOUNT),
                                 amount: vc_util.roundOff(chargeInfo - Current.TOTALS.TAX_AMOUNT)
-                }
-                );
+                            }
+                        );
                         arrVarianceLines.push(taxVariance);
 
                         if (chargeInfo != Current.TOTALS.TAX_AMOUNT) {
                             Current.varianceParam.listVariance.push('Tax');
-            }
+                        }
 
                         break;
                     case VARIANCE_TYPE.SHIP:
@@ -1084,13 +1084,13 @@ define([
                             matchingVarianceLine || {
                                 rate: vc_util.roundOff(chargeInfo - Current.TOTALS.SHIP_AMOUNT),
                                 amount: vc_util.roundOff(chargeInfo - Current.TOTALS.SHIP_AMOUNT)
-                }
+                            }
                         );
                         arrVarianceLines.push(shipVariance);
 
                         if (chargeInfo != Current.TOTALS.SHIP_AMOUNT) {
                             Current.varianceParam.listVariance.push('Shipping');
-            }
+                        }
 
                         break;
                     case VARIANCE_TYPE.OTHER:
@@ -1101,9 +1101,9 @@ define([
                                 matchingVarianceLine || {
                                     rate: chargeInfo,
                                     amount: chargeInfo
-            }
+                                }
                             )
-                );
+                        );
 
                         break;
                 }
@@ -1121,7 +1121,7 @@ define([
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return vc_util.roundOff(taxAmount) || 0;
-    }
+        }
     };
 
     return RESTLET;

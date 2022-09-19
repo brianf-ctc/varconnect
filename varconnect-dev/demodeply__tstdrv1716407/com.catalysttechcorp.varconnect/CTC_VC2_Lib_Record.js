@@ -13,6 +13,7 @@
  */
 define(function (require) {
     var ns_record = require('N/record'),
+        ns_error = require('N/error'),
         vc_util = require('./CTC_VC2_Lib_Utils.js');
 
     var LogTitle = 'VC_RecordLib';
@@ -33,10 +34,10 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
 
-                throw (
-                    'Unable to transform record: ' +
-                    (vc_util.extractError(error) + '\n' + JSON.stringify(option))
-                );
+                throw ns_error.create({
+                    name: 'Unable to transform record',
+                    message: vc_util.extractError(error)
+                });
             }
             return returnValue;
         },
@@ -52,10 +53,14 @@ define(function (require) {
                 returnValue = ns_record.load(option);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                throw (
-                    'Unable to load record: ' +
-                    (vc_util.extractError(error) + '\n' + JSON.stringify(option))
-                );
+                throw ns_error.create({
+                    name: 'Unable to load record',
+                    message: vc_util.extractError(error)
+                });
+                // throw (
+                //     'Unable to load record: ' +
+                //     (vc_util.extractError(error) + '\n' + JSON.stringify(error))
+                // );
             }
 
             return returnValue;
@@ -84,10 +89,10 @@ define(function (require) {
                 }
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                throw (
-                    'Unable to extract values: ' +
-                    (vc_util.extractError(err) + '\n' + JSON.stringify(option))
-                );
+                throw ns_error.create({
+                    name: 'Unable to extract values',
+                    message: vc_util.extractError(error)
+                });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
             }
@@ -133,10 +138,10 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw (
-                    'Unable to extract values: ' +
-                    (vc_util.extractError(err) + '\n' + JSON.stringify(option))
-                );
+                throw ns_error.create({
+                    name: 'Unable to extract values',
+                    message: vc_util.extractError(error)
+                });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
             }
@@ -208,10 +213,11 @@ define(function (require) {
                         : false;
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                throw (
-                    'Unable to extract line values: ' +
-                    (vc_util.extractError(err) + '\n' + JSON.stringify(option))
-                );
+
+                throw ns_error.create({
+                    name: 'Unable to extract line values',
+                    message: vc_util.extractError(error)
+                });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
             }
@@ -249,10 +255,11 @@ define(function (require) {
             } catch (error) {
                 returnValue = false;
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                throw (
-                    'Unable to update line values: ' +
-                    (vc_util.extractError(err) + '\n' + JSON.stringify(option))
-                );
+
+                throw ns_error.create({
+                    name: 'Unable to update line values',
+                    message: vc_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -286,10 +293,11 @@ define(function (require) {
             } catch (error) {
                 returnValue = false;
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                throw (
-                    'Unable to update line values: ' +
-                    (vc_util.extractError(err) + '\n' + JSON.stringify(option))
-                );
+
+                throw ns_error.create({
+                    name: 'Unable to add line values',
+                    message: vc_util.extractError(error)
+                });
             }
             return returnValue;
         }

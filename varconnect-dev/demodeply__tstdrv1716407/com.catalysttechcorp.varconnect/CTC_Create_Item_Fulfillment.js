@@ -33,7 +33,7 @@
  * 2.06		 May 18, 2022	christian	Location lookup can have empty array
  * 2.07		 Aug 24, 2022	christian	Old parseDate renamed to formatDate. Revamped parseDate.
  * 3.00      Sep 15, 2022   brianff     Refactored code base
- *                                      Re-applied multi-ship changes, and
+ *                                      Re-applied multi-ship changes, and 
  *                                          prevent blanking locations if the serials are not applied
  */
 

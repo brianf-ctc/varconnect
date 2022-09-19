@@ -15,8 +15,8 @@
 /**
  * Module Description
  *
- * Version    Date          Author        Remarks
- * 1.00       July 25, 2019 paolodl       Library for retrieving Vendor Configuration
+ * Version	Date            Author		Remarks
+ * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
 
@@ -32,9 +32,9 @@ define([
     var Helper = {
         getNodeValue: function (node, xpath) {
             var logTitle = [LogTitle, 'getNodeValue'].join('::'),
-            returnValue;
+                returnValue;
 
-        try {
+            try {
                 var nodeValue = VC_Util.getNodeTextContent(
                     ns_xml.XPath.select({
                         node: node,
@@ -108,7 +108,7 @@ define([
 
         return returnValue;
     }
-            };
+    };
 
     return {
         process: function (option) {
@@ -144,7 +144,7 @@ define([
                     recordId: CURRENT.recordId,
                     status: VC_Global.Lists.VC_LOG_STATUS.INFO
         });
-            }
+        }
 
             return returnValue;
         },
@@ -236,7 +236,7 @@ define([
                     log.audit(logTitle, LogPrefix + '... xml item: ' + JSON.stringify(xml_items));
 
                     itemArray.push(xml_items);
-            }
+    }
 
                 returnValue = itemArray;
         } catch (error) {
@@ -250,6 +250,5 @@ define([
 
         return returnValue;
     }
-
     };
 });

@@ -129,12 +129,13 @@ define([
         var totalPending = searchObj.runPaged().count;
         log.audit(logTitle, LogPrefix + '>> Orders To Process: ' + totalPending);
 
+
         return searchObj;
     };
 
     MAP_REDUCE.reduce = function (context) {
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
-
+        
         var searchValues = VC2_Utils.safeParse(context.values.shift());
 
         log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
@@ -182,13 +183,11 @@ define([
             // get it from ns runtime
             configObj.country = ns_runtime.country;
         }
-
         log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
         try {
             var entryFunction = configObj.entry_function;
 
             var myArr = [];
-
             switch (entryFunction) {
                 case 'arrow_api':
                     myArr = VCLib_VendorMap.arrow_api(context.key, configObj);
