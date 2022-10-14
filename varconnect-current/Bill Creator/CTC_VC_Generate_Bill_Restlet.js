@@ -158,6 +158,20 @@ define([
                 ) {
                     // continue processing
                     log.debug(logTitle, LogPrefix + '>> PO is ready for billing: ');
+                } else if (vc_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled','closed'])) {
+                    /// Bill is already closed!
+                    log.debug(
+                        logTitle,
+                        LogPrefix + '>>  Skipping poId, Purchase Order is Fully Billed'
+                    );
+
+                    util.extend(returnObj, BILL_CREATOR.Code.FULLY_BILLED);
+                    returnObj.details = [
+                        'PO #' + Current.PO_DATA.tranid,
+                        ' - : ' + Current.PO_DATA.status
+                    ].join('');
+
+                    return returnObj;
                 } else {
                     /// not ready for billing!
                     log.debug(
@@ -167,7 +181,7 @@ define([
 
                     util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
                     returnObj.details = [
-                        'PO #' + Current.tranid,
+                        'PO #' + Current.PO_DATA.tranid,
                         ' - : ' + Current.PO_DATA.status
                     ].join('');
 
@@ -591,7 +605,7 @@ define([
                     log.debug(
                         logTitle,
                         '>>> Bill Created succesfully...' +
-                            [Current.tranid, Current.PayloadData.invoice]
+                            [Current.PO_DATA.tranid, Current.PayloadData.invoice]
                     );
 
                     returnObj = JSON.parse(JSON.stringify(Current.BILL_REC));
@@ -622,7 +636,7 @@ define([
                 } else {
                     log.debug(
                         logTitle,
-                        '// bill creation fail...' + [Current.tranid, Current.PayloadData.invoice]
+                        '// bill creation fail...' + [Current.PO_DATA.tranid, Current.PayloadData.invoice]
                     );
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
                     return returnObj;

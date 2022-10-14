@@ -39,7 +39,16 @@ define([
     './CTC_VC2_Lib_Utils',
     './VC_Globals.js',
     './CTC_VC_Constants.js'
-], function (search, runtime, r, config, format, vc_util, vcGlobals, constants) {
+], function (
+    ns_search,
+    ns_runtime,
+    ns_record,
+    ns_config,
+    ns_format,
+    vc_util,
+    vc_global,
+    vc_constants
+) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -79,7 +88,9 @@ define([
         var po_updated = false;
         var so_updated = false;
 
-        if (po_record != null) {
+        try {
+            if (!po_record || po_record == null) throw 'Unable to update PO Record';
+
             var bypassVAR = po_record.getValue({
                 fieldId: 'custbody_ctc_bypass_vc'
             });
@@ -88,79 +99,51 @@ define([
             var createdFromID = po_record.getValue({
                 fieldId: 'createdfrom'
             });
+
             returnValue.id = createdFromID;
+
             var specialOrder = false;
-            var isDropPO = po_record.getValue({
-                fieldId: 'custbody_isdropshippo'
-            });
-            //			var isDropPO = (po_record.getValue({
-            //				fieldId : "custbody_ctc_po_link_type"
-            //			})) == 'Drop Shipment';
+            var isDropPO = po_record.getValue({ fieldId: 'custbody_isdropshippo' });
 
-            /***  Code to supoort saving info to SO, not used at this time
-			if (!isEmpty(createdFromID)) {
-				var so_record = record.load({
-						type : "salesorder",
-						id : createdFromID,
-						isDynamic : false
-				});
+            checkForDuplicateItems(po_record);
+            log.audit(logTitle, LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
 
-				if (so_record != null){
-					var mySearchFilter = search.createFilter({
-							name: 'internalid',
-							operator: search.Operator.IS,
-							values : poNum
-					});
-					var lineNumSearch = search.load({id: PO_SO_Line_Numbers});
-					lineNumSearch.filters.push(mySearchFilter);
-					var searchresults = lineNumSearch.run();
+            //4.01
+            if (!dateFormat) {
+                var generalPref = ns_config.load({
+                    type: ns_config.Type.COMPANY_PREFERENCES
+                });
+                dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+                log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
+            }
 
-				}
-			}
-			else
-				var so_record = null;
-***/
-            // log.debug('netsuiteLibrary:beforeTry', 'createdFromID = ' + createdFromID);
-
-            try {
-                checkForDuplicateItems(po_record);
-                log.audit(logTitle, LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
-
-                //4.01
-                if (!dateFormat) {
-                    var generalPref = config.load({
-                        type: config.Type.COMPANY_PREFERENCES
-                    });
-                    dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                    log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
-                }
-
-                if (lineData.header_info) {
-                    for (var headerField in lineData.header_info) {
-                        var fieldValue = lineData.header_info[headerField];
-                        var fieldID = null;
-                        if (fieldValue) {
-                            switch (headerField) {
-                                case 'order_status':
-                                    fieldID = 'custbody_ctc_vc_order_status';
-                                    break;
-                                default:
-                                    fieldID = null;
-                                    break;
-                            }
-                            if (fieldID) {
-                                po_record.setValue({
-                                    fieldId: fieldID,
-                                    value: fieldValue
-                                });
-                                po_updated = true;
-                            }
+            if (lineData.header_info) {
+                for (var headerField in lineData.header_info) {
+                    var fieldValue = lineData.header_info[headerField];
+                    var fieldID = null;
+                    if (fieldValue) {
+                        switch (headerField) {
+                            case 'order_status':
+                                fieldID = 'custbody_ctc_vc_order_status';
+                                break;
+                            default:
+                                fieldID = null;
+                                break;
+                        }
+                        if (fieldID) {
+                            po_record.setValue({
+                                fieldId: fieldID,
+                                value: fieldValue
+                            });
+                            po_updated = true;
                         }
                     }
                 }
+            }
 
-                var mapLineOrderStatus = {};
-                for (var i = 0; i < lineData.length; i++) {
+            var mapLineOrderStatus = {};
+            for (var i = 0; i < lineData.length; i++) {
+                try {
                     // Find the line on the PO that matches the line data from the XML file
                     var line_num = validateLineNumber({
                         po_record: po_record,
@@ -177,13 +160,15 @@ define([
                     );
 
                     if (line_num == null) {
-                        log.error(
-                            logTitle,
-                            LogPrefix +
-                                '!! ERROR !! Could not find line number for item: ' +
-                                JSON.stringify(lineData[i])
+                        throw (
+                            'Could not find line number for item - ' +
+                            JSON.stringify(
+                                vc_util.extractValues({
+                                    source: lineData[i],
+                                    params: ['item_num', 'vendorSKU']
+                                })
+                            )
                         );
-                        continue;
                     }
                     po_updated = true;
                     //Serial num link is created with a UE now
@@ -255,31 +240,46 @@ define([
                     po_record.commitLine({
                         sublistId: 'item'
                     });
-                } //end for
-                // log.debug('netsuiteLibrary:beforeSavePO', 'poNum = ' + poNum);
-
-                if (po_updated) {
-                    po_record.save({
-                        enableSourcing: false,
-                        ignoreMandatoryFields: true
+                } catch (line_error) {
+                    log.error(
+                        logTitle,
+                        LogPrefix + '## LINE ERROR ## ' + JSON.stringify(line_error)
+                    );
+                    vc_util.vcLog({
+                        title: 'Update Record Line',
+                        error: line_error,
+                        transaction: po_record ? po_record.id : null,
+                        isError: true
                     });
-                    returnValue.lineuniquekey = null;
+                    continue;
                 }
-                return returnValue;
-            } catch (err) {
-                log.error(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
-                // log.error({
-                //     title: 'Update PO line data ERROR',
-                //     details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
-                // });
-                returnValue.id = null;
-                returnValue.error = err;
-                return returnValue;
-            }
-        } else {
-            log.error(logTitle, LogPrefix + '!! ERROR !! Could not update PO ');
+            } //end for
+            // log.debug('netsuiteLibrary:beforeSavePO', 'poNum = ' + poNum);
 
+            if (po_updated) {
+                po_record.save({
+                    enableSourcing: false,
+                    ignoreMandatoryFields: true
+                });
+                returnValue.lineuniquekey = null;
+            }
+            return returnValue;
+        } catch (err) {
+            log.error(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
+
+            vc_util.vcLog({
+                title: 'Update Record',
+                error: err,
+                transaction: po_record ? po_record.id : null,
+                isError: true
+            });
+
+            // log.error({
+            //     title: 'Update PO line data ERROR',
+            //     details: 'po ID = ' + poNum + ' updatePOItemData error = ' + err.message
+            // });
             returnValue.id = null;
+            returnValue.error = err;
             return returnValue;
         }
     }
@@ -303,8 +303,18 @@ define([
             xmlVendor = option.xmlVendor;
 
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        log.audit(logTitle, LogPrefix + '>> params: ' + JSON.stringify(option));
-        var vendorList = constants.Lists.XML_VENDOR;
+        log.audit(
+            logTitle,
+            LogPrefix +
+                '>> params: ' +
+                JSON.stringify(
+                    vc_util.extractValues({
+                        source: option,
+                        params: ['lineData', 'hashSpace', 'xmlVendor']
+                    })
+                )
+        );
+        var vendorList = vc_constants.Lists.XML_VENDOR;
 
         if (itemNum == null || itemNum.length == 0 || itemNum == 'NA') {
             log.error(logTitle, LogPrefix + 'Could not find line number for item ' + itemNum);
@@ -318,15 +328,15 @@ define([
             for (var i = 0; i < lineItemCount; i++) {
                 var tempItemNum = po_record.getSublistText({
                     sublistId: 'item',
-                    fieldId: vcGlobals.ITEM_ID_LOOKUP_COL,
+                    fieldId: vc_global.ITEM_ID_LOOKUP_COL,
                     line: i
                 });
                 //					log.debug('CTC Update PO line ' + i, tempItemNum + '=' + itemNum + ' | ' + tempVendorSKU + '=' + vendorSKU);
 
-                if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null && vendorSKU != '') {
+                if (vc_global.VENDOR_SKU_LOOKUP_COL != null && vendorSKU != '') {
                     var tempVendorSKU = po_record.getSublistText({
                         sublistId: 'item',
-                        fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
+                        fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
                         line: i
                     });
 
@@ -365,7 +375,7 @@ define([
                 //D&H Item replacement
                 var dAndhItem = po_record.getSublistValue({
                     sublistId: 'item',
-                    fieldId: constants.Columns.DH_MPN,
+                    fieldId: vc_constants.Columns.DH_MPN,
                     line: i
                 });
 
@@ -655,7 +665,7 @@ define([
                 for (var x = i + 1; x < lineItemCount; x++) {
                     var tempSubItem = po_record.getSublistText({
                         sublistId: 'item',
-                        fieldId: vcGlobals.ITEM_ID_LOOKUP_COL,
+                        fieldId: vc_global.ITEM_ID_LOOKUP_COL,
                         line: x
                     });
 
@@ -735,9 +745,9 @@ define([
                 date.setFullYear(year);
             }
 
-            date = format.format({
+            date = ns_format.format({
                 value: date,
-                type: dateFormat ? dateFormat : format.Type.DATE
+                type: dateFormat ? dateFormat : ns_format.Type.DATE
             });
         }
 

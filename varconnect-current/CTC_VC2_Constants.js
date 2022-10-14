@@ -206,7 +206,7 @@ define([], function () {
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.PENDING
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
@@ -217,6 +217,11 @@ define([], function () {
             code: 'INSUFFICIENT_QUANTITY',
             msg: 'PO Qty is insufficient for the bill.',
             status: Bill_Creator.Status.ERROR
+        },
+        FULLY_BILLED: {
+            code: 'FULLY_BILLED',
+            msg: 'PO is Fully Billed',
+            status: Bill_Creator.Status.CLOSED
         },
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',

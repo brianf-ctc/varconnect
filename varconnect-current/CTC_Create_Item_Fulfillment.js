@@ -33,7 +33,7 @@
  * 2.06		 May 18, 2022	christian	Location lookup can have empty array
  * 2.07		 Aug 24, 2022	christian	Old parseDate renamed to formatDate. Revamped parseDate.
  * 3.00      Sep 15, 2022   brianff     Refactored code base
- *                                      Re-applied multi-ship changes, and 
+ *                                      Re-applied multi-ship changes, and
  *                                          prevent blanking locations if the serials are not applied
  */
 
@@ -58,7 +58,7 @@ define([
     VC_Log,
     VC_Util
 ) {
-    var LogTitle = 'Create-ItemFF',
+    var LogTitle = 'ItemFFLIB',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
 
@@ -69,12 +69,13 @@ define([
         OrderLines: null,
         MainCFG: null,
         VendorCFG: null,
-        Vendor: null
+        Vendor: null,
+        REMUSAGE: 0
     };
 
-    //***********************************************************************
-    //** Update PO Fields with parsed XML data
-    //***********************************************************************
+    ///////////////////////////////////////////////////////////////////////
+    // Update PO Fields with parsed XML data
+    ///////////////////////////////////////////////////////////////////////
     function updateItemFulfillments(option) {
         var logTitle = [LogTitle, 'updateItemFulfillments'].join('::');
 
@@ -86,8 +87,16 @@ define([
         Current.PO_ID = option.poId || Current.PO_REC.id;
         Current.SO_ID = option.soId || Current.SO_REC.id;
 
+        Current.Script = NS_Runtime.getCurrentScript();
+
         Current.OrderLines = option.lineData;
         Current.Vendor = option.vendor;
+
+        Current.Features = {
+            MULTISHIPTO: NS_Runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
+            MULTILOCINVT: NS_Runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+        };
+        Helper.getUsage();
 
         var OrderLines = option.lineData;
 
@@ -109,6 +118,7 @@ define([
             OrderLines = Helper.sortLineData(OrderLines);
 
             var arrOrderNums = [],
+                arrVendorOrderNums = [],
                 i,
                 ii,
                 iii;
@@ -118,16 +128,20 @@ define([
 
             ///////////////////////////////////////////////////
             // Collect unique the Item Fulfillment orders from the response
+            log.debug(logTitle, LogPrefix + '**** Looking for unique orders: ' + OrderLines.length);
             for (i = 0; i < OrderLines.length; i++) {
-                LogPrefix = OrigLogPrefix + ' [' + OrderLines[i].order_num + '] ';
+                LogPrefix = OrigLogPrefix + ('[' + OrderLines[i].order_num + '] ');
 
                 if (VC_Util.inArray(OrderLines[i].order_num, arrOrderNums)) {
-                    log.debug(logTitle, LogPrefix + '......skipped: same order');
+                    // log.audit(logTitle, LogPrefix + '......skipped: same order');
                     continue;
                 }
 
                 if (!OrderLines[i].order_num || OrderLines[i].order_num == 'NA') {
-                    log.debug(logTitle, LogPrefix + '......skipped: no item order num');
+                    log.audit(
+                        logTitle,
+                        Helper.getUsage() + LogPrefix + '......skipped: no item order num'
+                    );
                     continue;
                 }
 
@@ -135,25 +149,45 @@ define([
                     OrderLines[i].hasOwnProperty('is_shipped') &&
                     OrderLines[i].is_shipped === false
                 ) {
-                    log.debug(logTitle, LogPrefix + '......skipped: not yet shipped');
+                    log.audit(
+                        logTitle,
+                        Helper.getUsage() + LogPrefix + '......skipped: not yet shipped'
+                    );
                     continue;
                 }
 
                 if (OrderLines[i].hasOwnProperty('ns_record') && OrderLines[i].ns_record) {
-                    log.debug(logTitle, LogPrefix + '......skipped: fulfillment already exists.');
+                    log.audit(
+                        logTitle,
+                        Helper.getUsage() + LogPrefix + '......skipped: fulfillment already exists.'
+                    );
                     continue;
                 }
 
                 OrderLines[i].ship_qty = parseInt(OrderLines[i].ship_qty || '0', 10);
                 OrderLines[i].vendorOrderNum = Current.NumPrefix + OrderLines[i].order_num;
 
-                log.debug(logTitle, LogPrefix + '......added order.');
+                log.audit(logTitle, Helper.getUsage() + LogPrefix + '......added order.');
                 arrOrderNums.push(OrderLines[i].order_num);
+                arrVendorOrderNums.push(Current.NumPrefix + OrderLines[i].order_num);
             }
             LogPrefix = OrigLogPrefix;
             log.debug(
                 logTitle,
-                LogPrefix + '>> Fulfillment Order Nums: ' + JSON.stringify(arrOrderNums)
+                Helper.getUsage() +
+                    LogPrefix +
+                    '>> Fulfillment Order Nums: ' +
+                    JSON.stringify([arrOrderNums, arrVendorOrderNums])
+            );
+
+            //// PRE-SEARCH of existing IFS ///
+            var arrExistingIFS = ItemFFLib.findExistingOrders({ orderNums: arrVendorOrderNums });
+            log.debug(
+                logTitle,
+                Helper.getUsage() +
+                    LogPrefix +
+                    '>> arrExistingIFS: ' +
+                    JSON.stringify(arrExistingIFS)
             );
 
             ///////////////////////////////////////////////////
@@ -162,24 +196,28 @@ define([
                 var orderNum = arrOrderNums[i],
                     vendorOrderNum = Current.NumPrefix + orderNum;
 
+                LogPrefix =
+                    OrigLogPrefix + ' [' + vendorOrderNum + '][usage: ' + Helper.getUsage() + '] ';
+
                 log.debug(
                     logTitle,
                     LogPrefix + '##################################################'
                 );
                 log.debug(
                     logTitle,
-                    LogPrefix + '****** PROCESSING ORDER [' + vendorOrderNum + '] ******'
+                    Helper.getUsage() +
+                        (LogPrefix + '****** PROCESSING ORDER [' + vendorOrderNum + '] ******')
                 );
-                LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
-
-                // skip any existing orders
-                if (orderNum == 'NA') continue;
 
                 /// check if order exists //////////////////
-                var isOrderExists = ItemFFLib.orderExists({ vendorOrderNum: vendorOrderNum });
+                var isOrderExists = VC_Util.inArray(vendorOrderNum, arrExistingIFS);
+
+                // ItemFFLib.orderExists({ vendorOrderNum: vendorOrderNum });
                 log.debug(
                     logTitle,
-                    LogPrefix + '/// Order Exists? ' + JSON.stringify(isOrderExists)
+                    Helper.getUsage() +
+                        (LogPrefix + '/// Order Exists? ') +
+                        JSON.stringify(isOrderExists)
                 );
                 if (isOrderExists) continue;
 
@@ -192,18 +230,19 @@ define([
                 }
 
                 if (!LinesToFulfill.length) {
-                    log.debug(logTitle, LogPrefix + '>>> No items to fulfill.');
+                    log.debug(logTitle, Helper.getUsage() + LogPrefix + '>>> No items to fulfill.');
                     continue;
                 }
 
                 log.debug(
                     logTitle,
-                    LogPrefix + '>> LinesToFulfill: ' + JSON.stringify(LinesToFulfill)
+                    Helper.getUsage() +
+                        (LogPrefix + '>> LinesToFulfill: ' + JSON.stringify(LinesToFulfill))
                 );
 
                 ///////////////////////////////////////////////
                 var defaultItemFFValues = {};
-                if (NS_Runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' })) {
+                if (Current.Features.MULTISHIPTO) {
                     var defaultShipGroup = Helper.getShipGroup({
                         recSalesOrd: Current.SO_REC,
                         recPurchOrd: Current.PO_REC
@@ -219,9 +258,10 @@ define([
                 var record;
                 log.debug(
                     logTitle,
-                    LogPrefix +
-                        ' ///// Transform to Fulfillment .....' +
-                        JSON.stringify(defaultItemFFValues)
+                    Helper.getUsage() +
+                        (LogPrefix +
+                            ' ///// Transform to Fulfillment .....' +
+                            JSON.stringify(defaultItemFFValues))
                 );
                 try {
                     // create item fulfillment from sales order
@@ -232,7 +272,7 @@ define([
                         isDynamic: true,
                         defaultValues: defaultItemFFValues
                     });
-                    log.debug(logTitle, LogPrefix + '...success.');
+                    log.debug(logTitle, Helper.getUsage() + LogPrefix + '...success.');
                 } catch (err) {
                     Helper.logMsg({
                         title: 'Transform Error on SO: ' + Current.SO_ID,
@@ -247,11 +287,13 @@ define([
 
                 log.debug(
                     logTitle,
-                    LogPrefix + ' ///// Remove fulfillment lines not in orders received .....'
+                    Helper.getUsage() +
+                        (LogPrefix + ' ///// Remove fulfillment lines not in orders received .....')
                 );
                 log.debug(
                     logTitle,
-                    LogPrefix + '>> Pending Fulfillment - line count: ' + lineItemCount
+                    Helper.getUsage() +
+                        (LogPrefix + '>> Pending Fulfillment - line count: ' + lineItemCount)
                 );
 
                 /// REMOVE any items that is not in the XML  Line Data /////////////
@@ -303,12 +345,16 @@ define([
 
                     log.debug(
                         logTitle,
-                        LogPrefix + '*** fulfillment line:  ' + JSON.stringify(lineFFData)
+                        Helper.getUsage() +
+                            (LogPrefix + '*** fulfillment line:  ' + JSON.stringify(lineFFData))
                     );
 
                     /// REMOVE lines from different POs
                     if (lineFFData.item_po != Current.PO_ID) {
-                        log.debug(logTitle, LogPrefix + '.... removed: not same PO ');
+                        log.debug(
+                            logTitle,
+                            Helper.getUsage() + LogPrefix + '.... removed: not same PO '
+                        );
                         ItemFFLib.removeFulfillmentLine({ record: record, line: line });
                         recordIsChanged = true;
                     }
@@ -324,11 +370,17 @@ define([
                     // );
 
                     if (!matchingLine) {
-                        log.debug(logTitle, LogPrefix + '.... removed: line item not found.');
+                        log.debug(
+                            logTitle,
+                            Helper.getUsage() + LogPrefix + '.... removed: line item not found.'
+                        );
                         ItemFFLib.removeFulfillmentLine({ record: record, line: line });
                         recordIsChanged = true;
                     } else {
-                        log.debug(logTitle, LogPrefix + '.... adding line to item fulfillment.');
+                        log.debug(
+                            logTitle,
+                            Helper.getUsage() + LogPrefix + '.... adding line to item fulfillment.'
+                        );
                         ItemFFLib.addFulfillmentLine({ record: record, line: line });
                         fulfillableLines.push(lineFFData);
 
@@ -340,7 +392,8 @@ define([
 
                 log.debug(
                     logTitle,
-                    LogPrefix + '>>> fulfillableLines: ' + JSON.stringify(fulfillableLines)
+                    Helper.getUsage() +
+                        (LogPrefix + '>>> fulfillableLines: ' + JSON.stringify(fulfillableLines))
                 );
 
                 // skip the order if no fulfillable items
@@ -349,7 +402,10 @@ define([
                 //////////////////////////////////////////////////////////////////////
                 // Build a list of unique items with their total quantities shipped for this shipment
                 var UniqueLineItems = [];
-                log.debug(logTitle, LogPrefix + '**** Collect all items to fulfill ****');
+                log.debug(
+                    logTitle,
+                    Helper.getUsage() + LogPrefix + '**** Collect all items to fulfill ****'
+                );
                 for (ii = 0; ii < LinesToFulfill.length; ii++) {
                     var lineToFulfill = LinesToFulfill[ii];
 
@@ -371,7 +427,10 @@ define([
                     };
                     log.debug(
                         logTitle,
-                        LogPrefix + '>>... currentItem: ' + JSON.stringify(currentItem.item_num)
+                        Helper.getUsage() +
+                            (LogPrefix +
+                                '>>... currentItem: ' +
+                                JSON.stringify(currentItem.item_num))
                     );
 
                     matchingLine = ItemFFLib.findMatchingItem({
@@ -384,9 +443,10 @@ define([
                         UniqueLineItems.push(currentItem);
                         log.debug(
                             logTitle,
-                            LogPrefix +
-                                ' ... added to unique items - ' +
-                                JSON.stringify(UniqueLineItems.length)
+                            Helper.getUsage() +
+                                (LogPrefix +
+                                    ' ... added to unique items - ' +
+                                    JSON.stringify(UniqueLineItems.length))
                         );
                         continue;
                     }
@@ -420,26 +480,30 @@ define([
 
                         log.debug(
                             logTitle,
-                            LogPrefix +
-                                ' ... updated unique item data - ' +
-                                JSON.stringify([UniqueLineItems.length, UniqueLineItems[iii]])
+                            Helper.getUsage() +
+                                (LogPrefix +
+                                    ' ... updated unique item data - ' +
+                                    JSON.stringify([UniqueLineItems.length, UniqueLineItems[iii]]))
                         );
                         // break;
                     }
                 }
                 log.debug(
                     logTitle,
-                    LogPrefix + ' ... Unique Items - ' + JSON.stringify(UniqueLineItems)
+                    Helper.getUsage() +
+                        (LogPrefix + ' ... Unique Items - ' + JSON.stringify(UniqueLineItems))
                 );
 
                 var lineItemFFCount = record.getLineCount({ sublistId: 'item' });
                 var recordLines = [];
                 log.debug(
                     logTitle,
-                    LogPrefix + '**** START ITEM FULFILLMENT LINES VALIDATION ****'
+                    Helper.getUsage() +
+                        LogPrefix +
+                        '**** START ITEM FULFILLMENT LINES VALIDATION ****'
                 );
 
-                log.debug(logTitle, LogPrefix + '>> count: ' + lineItemFFCount);
+                log.debug(logTitle, Helper.getUsage() + LogPrefix + '>> count: ' + lineItemFFCount);
 
                 // loop through all items in item fulfillment
                 for (line = 0; line < lineItemFFCount; line++) {
@@ -487,11 +551,15 @@ define([
                     lineFFData.quantity = parseInt(lineFFData.quantity || '0', 10);
                     log.debug(
                         logTitle,
-                        LogPrefix + '>> current line: ' + JSON.stringify(lineFFData)
+                        Helper.getUsage() +
+                            (LogPrefix + '>> current line: ' + JSON.stringify(lineFFData))
                     );
 
                     if (!lineFFData.isReceived) {
-                        log.debug(logTitle, LogPrefix + '....skipping: not received.');
+                        log.debug(
+                            logTitle,
+                            Helper.getUsage() + (LogPrefix + '....skipping: not received.')
+                        );
                         ItemFFLib.setLineValues({
                             record: record,
                             values: { itemreceive: false },
@@ -505,7 +573,8 @@ define([
 
                         log.debug(
                             logTitle,
-                            LogPrefix + '>> item to ship ? ' + JSON.stringify(itemToShip)
+                            Helper.getUsage() +
+                                (LogPrefix + '>> item to ship ? ' + JSON.stringify(itemToShip))
                         );
 
                         if (
@@ -517,7 +586,7 @@ define([
                                     VC_Constants.Lists.XML_VENDOR.DandH &&
                                 lineFFData.dandh == itemToShip.item_num)
                         ) {
-                            log.debug(logTitle, LogPrefix + '....selected');
+                            log.debug(logTitle, Helper.getUsage() + (LogPrefix + '....selected'));
 
                             var itemffValues = {
                                 quantity: itemToShip.totalShipped,
@@ -543,7 +612,8 @@ define([
                             if (itemToShip.totalShipped == 0) {
                                 log.debug(
                                     logTitle,
-                                    LogPrefix + '>> skipped: no more items left to ship.'
+                                    Helper.getUsage() +
+                                        (LogPrefix + '>> skipped: no more items left to ship.')
                                 );
                                 ItemFFLib.setLineValues({
                                     record: record,
@@ -559,9 +629,13 @@ define([
                             if (lineFFData.quantity < itemToShip.ship_qty) {
                                 log.debug(
                                     logTitle,
-                                    LogPrefix +
-                                        '>> skipped: remaining quantity is less than required ship quantity. [' +
-                                        (lineFFData.quantity + ' / ' + itemToShip.ship_qty + ']')
+                                    Helper.getUsage() +
+                                        (LogPrefix +
+                                            '>> skipped: remaining quantity is less than required ship quantity. [' +
+                                            (lineFFData.quantity +
+                                                ' / ' +
+                                                itemToShip.ship_qty +
+                                                ']'))
                                 );
 
                                 ItemFFLib.setLineValues({
@@ -598,7 +672,8 @@ define([
 
                             log.debug(
                                 logTitle,
-                                LogPrefix + '... line Serials: ' + JSON.stringify(arrSerials)
+                                Helper.getUsage() +
+                                    (LogPrefix + '... line Serials: ' + JSON.stringify(arrSerials))
                             );
 
                             record.setCurrentSublistValue({
@@ -624,10 +699,25 @@ define([
                                 arrSerials.length &&
                                 Helper.validateSerials({ serials: arrSerials })
                             ) {
+                                log.audit(
+                                    logTitle,
+                                    Helper.getUsage() +
+                                        LogPrefix +
+                                        ('*** SERIALIZED ITEM *** ' + JSON.stringify(arrSerials))
+                                );
+
                                 var currentLocation = record.getCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: 'location'
                                 });
+
+                                log.audit(
+                                    logTitle,
+                                    Helper.getUsage() +
+                                        LogPrefix +
+                                        ('... current location: ' + JSON.stringify(currentLocation))
+                                );
+
                                 if (!currentLocation)
                                     Helper.setLineLocation({
                                         record: record,
@@ -640,8 +730,10 @@ define([
                                 });
 
                                 if (!resultSerials) {
-                                    // do not clear location as some fulfillments fail when there is more than one
+                                    // do not clear location as some fulfillments fail when there is more than one loc
                                     // blanks are counted as another location
+
+                                    // only prevent inventory detail from being required after location changes
                                     record.setCurrentSublistValue({
                                         sublistId: 'item',
                                         fieldId: 'inventorydetailreq',
@@ -649,13 +741,16 @@ define([
                                     });
                                 }
                             }
-                        }
+                        } else log.audit(logTitle, Helper.getUsage() + LogPrefix + '...skipped.');
                     }
                     record.commitLine({ sublistId: 'item' });
                     recordIsChanged = true;
                 }
 
-                log.debug(logTitle, LogPrefix + '>> recordLines: ' + JSON.stringify(recordLines));
+                log.debug(
+                    logTitle,
+                    Helper.getUsage() + LogPrefix + '>> recordLines: ' + JSON.stringify(recordLines)
+                );
 
                 if (VC_Util.isEmpty(recordLines)) {
                     Helper.logMsg({
@@ -675,17 +770,58 @@ define([
                     })
                 });
 
-                var arrAllTrackingNumbers = [];
                 /*** Start Clemen - Package ***/
-                for (ii = 0; ii < UniqueLineItems.length; ii++) {
-                    var strTrackingNums = UniqueLineItems[ii].all_tracking_nums;
+                var arrAllTrackingNumbers = [];
+                try {
+                    for (ii = 0; ii < UniqueLineItems.length; ii++) {
+                        var strTrackingNums = UniqueLineItems[ii].all_tracking_nums;
 
-                    if (!VC_Util.isEmpty(strTrackingNums)) {
-                        var arrTrackingNums = strTrackingNums.split('\n');
-                        arrAllTrackingNumbers = arrAllTrackingNumbers.concat(arrTrackingNums);
+                        if (!VC_Util.isEmpty(strTrackingNums)) {
+                            var arrTrackingNums = strTrackingNums.split('\n');
+                            arrAllTrackingNumbers = arrAllTrackingNumbers.concat(arrTrackingNums);
+                        }
                     }
+                    log.debug(
+                        logTitle,
+                        Helper.getUsage() +
+                            LogPrefix +
+                            ('/// arrAllTrackingNumbers = ' + JSON.stringify(arrAllTrackingNumbers))
+                    );
+
+                    if (!VC_Util.isEmpty(arrAllTrackingNumbers)) {
+                        record = Helper.addNativePackages({
+                            record: record,
+                            trackingnumbers: arrAllTrackingNumbers
+                        });
+                    }
+
+                    log.debug(
+                        logTitle,
+                        Helper.getUsage() +
+                            LogPrefix +
+                            ('/// Package line count = ' +
+                                record.getLineCount({ sublistId: 'package' }))
+                    );
+                } catch (package_error) {
+                    log.error(
+                        logTitle,
+                        Helper.getUsage() +
+                            LogPrefix +
+                            ('/// PACKAGE ERROR: ' +
+                                Helper.extractError(package_error) +
+                                ('|  Details: ' + JSON.stringify(package_error)))
+                    );
+
+                    Helper.logMsg({
+                        error: package_error,
+                        title: 'Set Package Error'
+                    });
                 }
                 /*** End Clemen - Package ***/
+                if (Current.Features.MULTILOCINVT) {
+                    // set on the same location
+                    Helper.setSameLocation({ record: record });
+                }
 
                 try {
                     var objId;
@@ -707,44 +843,55 @@ define([
                         var lineItemCountX = record.getLineCount({
                             sublistId: 'item'
                         });
-
                         log.debug(
                             logTitle,
-                            LogPrefix +
+                            Helper.getUsage() +
+                                LogPrefix +
                                 'Before Item Fulfillment save : ' +
                                 ('Item line count = ' + lineItemCountX)
                         );
 
-                        /*** Start Clemen - Package ***/
-                        log.debug(
+                        ///////////////
+                        log.audit(
                             logTitle,
-                            LogPrefix +
-                                'Before Item Fulfillment save : ' +
-                                ('arrAllTrackingNumbers = ' + JSON.stringify(arrAllTrackingNumbers))
+                            Helper.getUsage() +
+                                LogPrefix +
+                                '// total line count - ' +
+                                JSON.stringify(lineItemCountX)
                         );
+                        for (line = 0; line < lineItemCountX; line++) {
+                            itemData = {
+                                item: record.getSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: 'item',
+                                    line: line
+                                }),
+                                location: record.getSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: 'location',
+                                    line: line
+                                }),
+                                location_text: record.getSublistText({
+                                    sublistId: 'item',
+                                    fieldId: 'location',
+                                    line: line
+                                })
+                            };
 
-                        if (
-                            !VC_Util.isEmpty(arrAllTrackingNumbers) &&
-                            arrAllTrackingNumbers.length > 0
-                        ) {
-                            record = Helper.addNativePackages({
-                                record: record,
-                                trackingnumbers: arrAllTrackingNumbers
-                            });
+                            log.audit(
+                                logTitle,
+                                Helper.getUsage() +
+                                    LogPrefix +
+                                    '// item/location: ' +
+                                    JSON.stringify(itemData)
+                            );
                         }
-                        /*** End Clemen - Package ***/
+                        ///////////////
 
                         log.debug(
                             logTitle,
-                            LogPrefix +
-                                'Before Item Fulfillment save : ' +
-                                ('Package line count = ' +
-                                    record.getLineCount({ sublistId: 'package' }))
-                        );
-
-                        log.debug(
-                            logTitle,
-                            LogPrefix +
+                            Helper.getUsage() +
+                                LogPrefix +
                                 '**** ITEM FULFILLMENT CREATION ****' +
                                 JSON.stringify(recordLines)
                         );
@@ -768,7 +915,11 @@ define([
 
                     log.debug(
                         logTitle,
-                        LogPrefix + '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
+                        Helper.getUsage() +
+                            LogPrefix +
+                            '## Created Item Fulfillment: [itemfulfillment:' +
+                            objId +
+                            ']'
                     );
 
                     Helper.logMsg({
@@ -780,7 +931,8 @@ define([
                     var errMsg = Helper.extractError(err);
                     log.error(
                         logTitle,
-                        LogPrefix +
+                        Helper.getUsage() +
+                            LogPrefix +
                             ('## Fulfillment Creation Error:  ' + errMsg) +
                             ('|  Details: ' + JSON.stringify(err))
                     );
@@ -796,13 +948,25 @@ define([
             var errorMsg = Helper.extractError(error);
             log.error(
                 logTitle,
-                LogPrefix + '## ERROR:  ' + errorMsg + '| Details: ' + JSON.stringify(error)
+                Helper.getUsage() +
+                    LogPrefix +
+                    '## ERROR:  ' +
+                    errorMsg +
+                    '| Details: ' +
+                    JSON.stringify(error)
             );
             Helper.logMsg({ title: logTitle + ':: Error', error: error });
             return false;
+        } finally {
+            log.debug(
+                logTitle,
+                Helper.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############'
+            );
         }
     }
+    ///////////////////////////////////////////////////////////////////////
 
+    ///////////////////////////////////////////////////////////////////////
     var ItemFFLib = {
         validateDate: function (option) {
             var logTitle = [LogTitle, 'validateDate'].join('::'),
@@ -1055,6 +1219,71 @@ define([
 
             return returnValue;
         },
+        findExistingOrders: function (option) {
+            var logTitle = [LogTitle, 'findExistingOrders'].join('::'),
+                logPrefix = LogPrefix + ' findExistingOrders || ',
+                returnValue;
+            option = option || {};
+
+            try {
+                var listOrderNum = option.vendorOrderNums || option.orderNums;
+                if (VC_Util.isEmpty(listOrderNum)) return false;
+
+                var searchOption = {
+                    type: 'itemfulfillment',
+                    filters: [['type', 'anyof', 'ItemShip'], 'AND', ['mainline', 'is', 'T']],
+                    columns: [
+                        'mainline',
+                        'internalid',
+                        'trandate',
+                        'tranid',
+                        'entity',
+                        'custbody_ctc_if_vendor_order_match'
+                    ]
+                };
+
+                searchOption.filters.push('AND');
+                var orderNumFilter = [];
+                listOrderNum.forEach(function (orderNum) {
+                    orderNumFilter.push([
+                        'custbody_ctc_if_vendor_order_match',
+                        NS_Search.Operator.IS,
+                        orderNum
+                    ]);
+                    orderNumFilter.push('OR');
+                    return true;
+                });
+                orderNumFilter.pop('OR');
+                searchOption.filters.push(orderNumFilter);
+
+                log.audit(logTitle, LogPrefix + '>> searchOption: ' + JSON.stringify(searchOption));
+
+                var arrResults = [];
+                var searchResults = VC_Util.searchAllPaged({
+                    searchObj: NS_Search.create(searchOption)
+                });
+
+                searchResults.forEach(function (result) {
+                    var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
+
+                    if (!VC_Util.inArray(orderNum, arrResults)) {
+                        arrResults.push(orderNum);
+                    }
+
+                    return true;
+                });
+
+                returnValue = arrResults;
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw Helper.extractError(error);
+            } finally {
+                // log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
         orderExists: function (option) {
             var logTitle = [LogTitle, 'orderExists'].join('::'),
                 logPrefix = LogPrefix + ' orderExists || ',
@@ -1167,17 +1396,14 @@ define([
                     });
                 }
 
+                log.audit(logTitle, logPrefix + '... ' + JSON.stringify(option.values));
+
                 for (var fld in option.values) {
                     option.record.setCurrentSublistValue({
                         sublistId: 'item',
                         fieldId: fld,
                         value: option.values[fld]
                     });
-
-                    log.audit(
-                        logTitle,
-                        logPrefix + '... ' + JSON.stringify([fld, option.values[fld]])
-                    );
                 }
 
                 if (option.line || option.doCommit) {
@@ -1191,6 +1417,7 @@ define([
             return returnValue;
         }
     };
+    ///////////////////////////////////////////////////////////////////////
     var dateFormat;
     var Helper = {
         uniqueList: function (option) {
@@ -1329,7 +1556,6 @@ define([
 
             return date;
         },
-
         parseDate_old: function (option) {
             var dateString = option.dateString,
                 date;
@@ -1626,18 +1852,11 @@ define([
 
             if (VC_Util.isEmpty(lineData.location)) {
                 //Use SO's header level Location
-                var locationLookup = recSO.getValue({
+                lineLoc = recSO.getValue({
                     fieldId: 'location'
                 });
 
-                if (locationLookup && locationLookup.location && locationLookup.location[0]) {
-                    lineLoc = locationLookup.location[0].value;
-                }
-
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> lookup search: ' + JSON.stringify([locationLookup, lineLoc])
-                );
+                log.audit(logTitle, LogPrefix + '>> SO Location - ' + JSON.stringify(lineLoc));
 
                 // set the line item
                 if (lineLoc) {
@@ -1658,6 +1877,91 @@ define([
             log.audit(logTitle, LogPrefix + '>> Line Location : after: ' + JSON.stringify(lineLoc));
 
             return record;
+        },
+        setSameLocation: function (option) {
+            var logTitle = [LogTitle, 'setSameLocation'].join('::'),
+                logPrefix = LogPrefix + '//SET SAME LOCATION: ';
+
+            var record = option.record;
+
+            // get location from line items
+            var arrLocation = [];
+            var lineCount = record.getLineCount({ sublistId: 'item' }),
+                line,
+                itemData;
+
+            log.audit(logTitle, logPrefix + '// total line count - ' + JSON.stringify(lineCount));
+            for (line = 0; line < lineCount; line++) {
+                itemData = {
+                    item: record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'item',
+                        line: line
+                    }),
+                    location: record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        line: line
+                    }),
+                    location_text: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        line: line
+                    })
+                };
+
+                if (!itemData.location || VC_Util.inArray(itemData.location, arrLocation)) continue;
+                arrLocation.push(itemData.location);
+            }
+            log.audit(logTitle, logPrefix + '// unique location: ' + JSON.stringify(arrLocation));
+
+            if (!arrLocation || arrLocation.length > 1) {
+                // just fetch the location from the SO
+
+                if (Current.SO_REC) {
+                    var orderLocation = Current.SO_REC.getValue({ fieldId: 'location' });
+                    log.audit(
+                        logTitle,
+                        logPrefix + '// orderLocation: ' + JSON.stringify(orderLocation)
+                    );
+                    if (orderLocation) arrLocation = [orderLocation];
+                }
+            }
+            if (!arrLocation || arrLocation.length > 1) return false;
+
+            for (line = 0; line < lineCount; line++) {
+                itemData = {
+                    item: record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'item',
+                        line: line
+                    }),
+                    location: record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        line: line
+                    })
+                };
+
+                log.audit(logTitle, LogPrefix + '... item data: ' + JSON.stringify(itemData));
+
+                // only set those who are empty, or not the same
+                if (!itemData.location || itemData.location != arrLocation[0]) {
+                    log.audit(
+                        logTitle,
+                        LogTitle + '... set line data to: ' + JSON.stringify(arrLocation)
+                    );
+                    record.selectLine({ sublistId: 'item', line: line });
+                    record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'location',
+                        value: arrLocation[0]
+                    });
+                    record.commitLine({ sublistId: 'item', ignoreRecalc: true });
+                }
+            }
+
+            return arrLocation;
         },
         getShipGroup: function (option) {
             var logTitle = [LogTitle, 'getShipGroup'].join('::'),
@@ -1681,6 +1985,10 @@ define([
                 }
             }
             return shipgroup;
+        },
+        getUsage: function () {
+            Current.REMUSAGE = NS_Runtime.getCurrentScript().getRemainingUsage();
+            return '[rem-usage:' + Current.REMUSAGE + ']';
         }
     };
 

@@ -32,7 +32,15 @@ define([
     var CURRENT = {};
     var LibIngramAPI = {
         ValidOrderStatus: ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'],
-        ValidLineStatus: ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'],
+        ValidLineStatus: [
+            'SHIPPED',
+            'PROCESSING',
+            'IN PROGRESS',
+            'ON HOLD',
+            'DELIVERED',
+            'BACKORDERED'
+        ],
+        NegativeStatus: ['CANCELED'],
         ValidShippedStatus: ['SHIPPED'],
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
@@ -218,7 +226,7 @@ define([
                     query: {
                         url:
                             CURRENT.vendorConfig.endPoint.replace(
-                                /orders\/$/gi,
+                                /orders.*$/gi,
                                 'catalog/priceandavailability?'
                             ) +
                             'includeAvailability=true&includePricing=true&includeProductAttributes=true',
@@ -344,7 +352,7 @@ define([
                                 // var trackingNumber = trackingDetails[ii].trackingNumber.split(/\s/gi);
 
                                 shipData.trackingNumbers = shipData.trackingNumbers.concat(
-                                    trackingDetails[ii].trackingNumber.split(/[\W\D]+/g)
+                                    trackingDetails[ii].trackingNumber.split(/[\W]+/g)
                                 );
 
                                 // shipData.trackingNumbers.push(trackingDetails[ii].trackingNumber);
@@ -390,7 +398,10 @@ define([
                         status: (lineDetail.lineStatus || '').toUpperCase()
                     };
 
-                    if (!VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
+                    if (
+                        !VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
+                        !VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)
+                    ) {
                         log.audit(
                             logTitle,
                             '.... skipping line, invalid status :  [' + lineData.status + ']'
@@ -402,6 +413,19 @@ define([
                         lineData.shipmentDetails = LibIngramAPI.extractOrderShipmentDetails({
                             shipmentDetails: lineDetail.shipmentDetails
                         });
+                    }
+
+                    if (VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)) {
+                        // only update status
+                        lineData = {
+                            detail: {
+                                customerLineNumber: lineDetail.customerLineNumber,
+                                vendorPartNumber: lineDetail.vendorPartNumber,
+                                ingramPartNumber: lineDetail.ingramPartNumber,
+                                subOrderNumber: lineDetail.subOrderNumber
+                            },
+                            status: lineData.status
+                        };
                     }
 
                     arrLineData.push(lineData);
@@ -575,24 +599,27 @@ define([
                                 LibIngramAPI.ValidShippedStatus
                             ),
                             line_status: lineStatus,
-                            ship_qty: shipment.quantity,
-                            order_num: itemDetail.subOrderNumber,
-                            order_date: shipment.detail.invoiceDate,
-                            ship_date: shipment.detail.shippedDate,
-                            order_eta: shipment.detail.estimatedDeliveryDate || defaultETA.text,
-                            order_eta_ship: shipment.detail.estimatedDeliveryDate,
-                            carrier: shipment.carrier
-                            // tracking_num: shipment.trackingNumbers.length
-                            //     ? shipment.trackingNumbers.join(',')
-                            //     : 'NA',
-                            // serial_num: shipment.serials.length ? shipment.serials.join(',') : 'NA'
+                            order_num: itemDetail.subOrderNumber
                         };
+
+                        if (!VC_Util.isEmpty(shipment)) {
+                            outputLineData.ship_qty = shipment.quantity;
+                            if (!VC_Util.isEmpty(shipment.detail)) {
+                                outputLineData.order_date = shipment.detail.invoiceDate;
+                                outputLineData.ship_date = shipment.detail.shippedDate;
+                                outputLineData.order_eta =
+                                    shipment.detail.estimatedDeliveryDate || defaultETA.text;
+                                outputLineData.order_eta_ship =
+                                    shipment.detail.estimatedDeliveryDate;
+                                outputLineData.carrier = shipment.carrier;
+                            }
+                        }
 
                         //// SERIALS / TRACKING //////////////////////
                         if (!allSerials[outputLineData.item_num])
                             allSerials[outputLineData.item_num] = [];
 
-                        if (!VC_Util.isEmpty(shipment.serials)) {
+                        if (!VC_Util.isEmpty(shipment) && !VC_Util.isEmpty(shipment.serials)) {
                             // add the shipment serials
                             allSerials[outputLineData.item_num] = VC_Util.uniqueArray(
                                 allSerials[outputLineData.item_num].concat(shipment.serials)
@@ -605,7 +632,10 @@ define([
                             outputLineData.serial_num = 'NA';
                         }
 
-                        if (!VC_Util.isEmpty(shipment.trackingNumbers)) {
+                        if (
+                            !VC_Util.isEmpty(shipment) &&
+                            !VC_Util.isEmpty(shipment.trackingNumbers)
+                        ) {
                             outputLineData.tracking_num = shipment.trackingNumbers.join(',');
                         } else {
                             outputLineData.tracking_num = 'NA';

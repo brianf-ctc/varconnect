@@ -23,7 +23,7 @@ define([
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (ns_search, VC_Log, VC_Global, VC_Util, moment) {
+], function (ns_search, VC_Global, VC_Log, VC_Util, moment) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
@@ -52,7 +52,7 @@ define([
                             grant_type: 'client_credentials'
                         }),
                         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+                            'Content-Type': 'application/x-www-form-urlencoded'
                         }
                     }
                 });
@@ -95,7 +95,21 @@ define([
                             },
                             OrderRequest: {
                                 ResellerPOList: {
-                                    ResellerPO: [CURRENT.recordNum]
+                                    ResellerPO: [
+                                        {
+                                            Number: CURRENT.recordNum,
+                                            Line: [
+                                                {
+                                                    Number: null
+                                                }
+                                            ],
+                                            PartNumber: [
+                                                {
+                                                    Number: null
+                                                }
+                                            ]
+                                        }
+                                    ]
                                 },
                                 IncludeCancelledOrders: 'N',
                                 IncludeClosedOrders: 'Y'
@@ -107,10 +121,11 @@ define([
                             'Content-Type': 'application/json'
                         }
                     }
-        });
+                });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
-                if (!reqOrderStatus.PARSED_RESPONSE) throw 'Unable to fetch a valid server response';
+                if (!reqOrderStatus.PARSED_RESPONSE)
+                    throw 'Unable to fetch a valid server response';
 
                 returnValue = reqOrderStatus.PARSED_RESPONSE;
             } catch (error) {
@@ -121,7 +136,7 @@ define([
             }
 
             return returnValue;
-    }
+        }
     };
 
     return {
@@ -174,18 +189,18 @@ define([
                 if (!objOrderResponse.OrderDetails.length) throw 'Missing order details';
 
                 var orderResp = objOrderResponse.OrderDetails[0];
-            if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
-            if (orderResp.hasOwnProperty('Reseller')) {
-                orderDate = orderResp.Reseller.PODate;
-            }
+                if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
+                if (orderResp.hasOwnProperty('Reseller')) {
+                    orderDate = orderResp.Reseller.PODate;
+                }
 
-            if (orderResp.hasOwnProperty('OrderLinesList')) {
-                var orderLines = orderResp.OrderLinesList.OrderLines;
+                if (orderResp.hasOwnProperty('OrderLinesList')) {
+                    var orderLines = orderResp.OrderLinesList.OrderLines;
 
-                if (orderLines.length) {
-                    for (var i = 0; i < orderLines.length; i++) {
+                    if (orderLines.length) {
+                        for (var i = 0; i < orderLines.length; i++) {
                             var orderLineObj = orderLines[i];
-                        // map here...
+                            // map here...
                             var outputObj = {
                                 order_date: orderDate,
                                 line_num: orderLineObj.ResellerPOLineNumber,
@@ -196,42 +211,42 @@ define([
                                 carrier: orderLineObj.OracleShipViaCode
                             };
 
-                        // shipping details
-                        if (orderLineObj.hasOwnProperty('StatusInfoList')) {
-                            var statusInfo = orderLineObj.StatusInfoList.StatusInfo;
-                            if (statusInfo.length) {
-                                var statusInfoObj = statusInfo[0]; // only contains 1
-                                if (statusInfoObj.hasOwnProperty('EstimatedShipDate')) {
-                                    outputObj.order_eta = statusInfoObj.EstimatedShipDate;
-                                }
-                                if (statusInfoObj.hasOwnProperty('ActualShipDate')) {
-                                    outputObj.ship_date = statusInfoObj.ActualShipDate;
-                                }
-                                if (statusInfoObj.hasOwnProperty('TrackingNumber')) {
-                                    outputObj.tracking_num = statusInfoObj.TrackingNumber;
+                            // shipping details
+                            if (orderLineObj.hasOwnProperty('StatusInfoList')) {
+                                var statusInfo = orderLineObj.StatusInfoList.StatusInfo;
+                                if (statusInfo.length) {
+                                    var statusInfoObj = statusInfo[0]; // only contains 1
+                                    if (statusInfoObj.hasOwnProperty('EstimatedShipDate')) {
+                                        outputObj.order_eta = statusInfoObj.EstimatedShipDate;
+                                    }
+                                    if (statusInfoObj.hasOwnProperty('ActualShipDate')) {
+                                        outputObj.ship_date = statusInfoObj.ActualShipDate;
+                                    }
+                                    if (statusInfoObj.hasOwnProperty('TrackingNumber')) {
+                                        outputObj.tracking_num = statusInfoObj.TrackingNumber;
+                                    }
                                 }
                             }
-                        }
 
-                        // serial number list
-                        if (orderLineObj.hasOwnProperty('SerialNumberList')) {
-                            var serialNumbers = [];
-                            var serialNumObj = orderLineObj.SerialNumberList.SerialNumber;
-                            log.debug('serialNumObj', serialNumObj);
-                            if (serialNumObj.length) {
-                                for (var j = 0; j < serialNumObj.length; j++) {
-                                    if (serialNumObj[j].hasOwnProperty('ID'))
-                                        serialNumbers.push(serialNumObj[j].ID);
-                                    else serialNumbers.push(JSON.stringify(serialNumObj[j]));
+                            // serial number list
+                            if (orderLineObj.hasOwnProperty('SerialNumberList')) {
+                                var serialNumbers = [];
+                                var serialNumObj = orderLineObj.SerialNumberList.SerialNumber;
+                                log.debug('serialNumObj', serialNumObj);
+                                if (serialNumObj.length) {
+                                    for (var j = 0; j < serialNumObj.length; j++) {
+                                        if (serialNumObj[j].hasOwnProperty('ID'))
+                                            serialNumbers.push(serialNumObj[j].ID);
+                                        else serialNumbers.push(JSON.stringify(serialNumObj[j]));
+                                    }
+                                    outputObj.serial_num = serialNumbers.join(',');
                                 }
-                                outputObj.serial_num = serialNumbers.join(',');
                             }
-                        }
-                        log.audit({ title: 'outputObj', details: outputObj });
+                            log.audit({ title: 'outputObj', details: outputObj });
                             itemArray.push(outputObj);
+                        }
+                    }
                 }
-            }
-        }
 
                 returnValue = itemArray;
             } catch (error) {
@@ -242,7 +257,18 @@ define([
                 });
 
                 throw VC_Util.extractError(error);
-    }
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
+
+                VC_Util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !VC_Util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                });
+            }
 
             return returnValue;
         },
@@ -270,11 +296,11 @@ define([
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
-            });
+                });
                 throw VC_Util.extractError(error);
-        }
+            }
 
             return returnValue;
-    }
+        }
     };
 });
