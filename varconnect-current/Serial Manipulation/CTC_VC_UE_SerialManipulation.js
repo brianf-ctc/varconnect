@@ -46,7 +46,8 @@ define([
     vc_licenselib,
     vc_util
 ) {
-    var LogTitle = 'UE_SerialManip';
+    var LogTitle = 'UE_SerialManip',
+        LogPrefix;
 
     function _validateLicense(options) {
         var mainConfig = options.mainConfig,
@@ -153,14 +154,11 @@ define([
 
             if (!param.vendor) return false;
 
-            log.audit(logTitle, param);
-
             var searchOption = {
                 type: 'customrecord_ctc_vc_vendor_config',
                 filters: [['custrecord_ctc_vc_vendor', 'anyof', param.vendor]],
                 columns: ['internalid', 'custrecord_ctc_vc_vendor']
             };
-            log.audit(logTitle, searchOption);
             var searchVendorCFG = ns_search.create(searchOption);
             if (!searchVendorCFG.runPaged().count) return false;
 
@@ -169,7 +167,7 @@ define([
                 return true;
             });
 
-            log.audit(logTitle, param);
+            log.audit(logTitle, LogPrefix + JSON.stringify(param));
 
             return param.vendorConfig;
         },
@@ -202,7 +200,6 @@ define([
                     })
                 ]
             };
-            log.audit(logTitle, searchOption);
 
             var searchPO = ns_search.create(searchOption);
             if (!searchPO.runPaged().count) return false;
@@ -216,7 +213,7 @@ define([
                 return true;
             });
 
-            log.audit(logTitle, param);
+            log.audit(logTitle, LogPrefix + JSON.stringify(param));
 
             return param.vendor;
         }
@@ -233,8 +230,16 @@ define([
      */
     function beforeLoad(scriptContext) {
         var logTitle = [LogTitle, 'beforeLoad'].join('::');
+
         if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
         var mainConfig = _loadMainConfig();
+
+        LogPrefix = [
+            scriptContext.type,
+            scriptContext.newRecord.type,
+            scriptContext.newRecord.id || '_NEW_'
+        ].join(':');
+        LogPrefix = '[' + LogPrefix + '] ';
 
         // log.debug(
         //     logTitle,
@@ -284,6 +289,7 @@ define([
             if (!vendorConfig) {
                 // serial sync checkbox
                 var chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
+
                 if (chkSerialSync)
                     chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
             }
@@ -303,11 +309,19 @@ define([
      */
     function afterSubmit(scriptContext) {
         var logTitle = [LogTitle, 'afterSubmit'].join('::');
-        var logPrefix =
-            '[' + scriptContext.newRecord.type + ':' + scriptContext.newRecord.id + '] ';
+        LogPrefix = [
+            scriptContext.type,
+            scriptContext.newRecord.type,
+            scriptContext.newRecord.id || '_NEW_'
+        ].join(':');
+        LogPrefix = '[' + LogPrefix + '] ';
 
         if (
-            scriptContext.type == scriptContext.UserEventType.DELETE ||
+            vc_util.inArray(scriptContext.type, [
+                scriptContext.UserEventType.CREATE,
+                scriptContext.UserEventType.EDIT,
+                scriptContext.UserEventType.XEDIT
+            ]) ||
             ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
         )
             return;
@@ -317,7 +331,8 @@ define([
 
         log.debug(
             logTitle,
-            logPrefix +
+            LogPrefix +
+                '****** START SCRIPT *****' +
                 JSON.stringify({
                     eventType: scriptContext.type,
                     contextType: ns_runtime.executionContext
@@ -360,56 +375,46 @@ define([
 
             if (hasSerials && hasNoSerials) break;
         }
+
+        var tranId = record.getValue({ fieldId: 'tranid' }),
+            taskOption = {};
         log.debug(
             logTitle,
-            logPrefix +
+            LogPrefix +
                 '>> settings: ' +
                 JSON.stringify({
+                    tranId: tranId,
                     hasSerials: hasSerials,
-                    hasNoSerials: hasNoSerials
+                    hasNoSerials: hasNoSerials,
+                    'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
+                    'mainConfig.copySerialsInv': mainConfig.copySerialsInv
                 })
         );
 
         //Also check if the corresponding features have been enabled before processing
-        if (hasNoSerials && record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
+        if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
             var vendorConfig = Helper.searchVendorConfig({
                 salesOrder: record.getValue({ fieldId: 'createdfrom' })
             });
 
-            var serialList = Helper.searchSerials({
-                salesOrder: record.getValue({ fieldId: 'createdfrom' })
-            });
+            if (vendorConfig) {
+                vc_util.waitRandom(10000);
 
-            log.audit(logTitle, {
-                vendorConfig: vendorConfig,
-                serialList: serialList
-            });
-
-            // if (vendorConfig) {
-            //     var tranId = record.getValue({ fieldId: 'tranid' });
-            //     log.debug(tranId + ' has no serials', true);
-
-            //     vc_util.waitRandom(10000);
-
-            //     var taskOption = {
-            //         isMapReduce: true,
-            //         scriptId: scripts.SERIAL_UPDATE_ALL_MR,
-            //         scriptParams: {}
-            //     };
-            //     taskOption.scriptParams['custscript_vc_all_type'] = record.type;
-            //     taskOption.scriptParams['custscript_vc_all_id'] = record.id;
-            //     vc_util.forceDeploy(taskOption);
-            // } else {
-            //     // just check it
-            // }
+                taskOption = {
+                    isMapReduce: true,
+                    scriptId: scripts.SERIAL_UPDATE_ALL_MR,
+                    scriptParams: {}
+                };
+                taskOption.scriptParams['custscript_vc_all_type'] = record.type;
+                taskOption.scriptParams['custscript_vc_all_id'] = record.id;
+                taskOption.deployId = vc_util.forceDeploy(taskOption);
+            }
         }
-        if (hasSerials && mainConfig.serialScanUpdate) {
-            var tranId = record.getValue({ fieldId: 'tranid' });
-            log.debug(tranId + ' has serials', true);
 
+        if (hasSerials && mainConfig.serialScanUpdate) {
             vc_util.waitRandom(10000);
 
-            var taskOption = {
+            taskOption = {
                 isMapReduce: true,
                 scriptId: scripts.SERIAL_UPDATE_MR,
                 scriptParams: {}
@@ -417,8 +422,11 @@ define([
             taskOption.scriptParams['custscript_vc_type'] = record.type;
             taskOption.scriptParams['custscript_vc_id'] = record.id;
             taskOption.scriptParams['custscript_vc_sender'] = ns_runtime.getCurrentUser().id;
-            vc_util.forceDeploy(taskOption);
+            taskOption.deployId = vc_util.forceDeploy(taskOption);
         }
+
+        log.audit(logTitle, LogPrefix + '>> Task Data:  ' + JSON.stringify(taskOption));
+        log.audit(logTitle, LogPrefix + '***** END SCRIPT *****');
     }
 
     return {

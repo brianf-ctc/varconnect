@@ -37,7 +37,7 @@
  *                                          prevent blanking locations if the serials are not applied
  */
 
-define([
+ define([
     'N/search',
     'N/runtime',
     'N/record',
@@ -640,8 +640,10 @@ define([
                                 });
 
                                 if (!resultSerials) {
-                                    // do not clear location as some fulfillments fail when there is more than one
+                                    // do not clear location as some fulfillments fail when there is more than one loc
                                     // blanks are counted as another location
+
+                                    // only prevent inventory detail from being required after location changes
                                     record.setCurrentSublistValue({
                                         sublistId: 'item',
                                         fieldId: 'inventorydetailreq',
@@ -1626,18 +1628,9 @@ define([
 
             if (VC_Util.isEmpty(lineData.location)) {
                 //Use SO's header level Location
-                var locationLookup = recSO.getValue({
+                var lineLoc = recSO.getValue({
                     fieldId: 'location'
                 });
-
-                if (locationLookup && locationLookup.location && locationLookup.location[0]) {
-                    lineLoc = locationLookup.location[0].value;
-                }
-
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> lookup search: ' + JSON.stringify([locationLookup, lineLoc])
-                );
 
                 // set the line item
                 if (lineLoc) {

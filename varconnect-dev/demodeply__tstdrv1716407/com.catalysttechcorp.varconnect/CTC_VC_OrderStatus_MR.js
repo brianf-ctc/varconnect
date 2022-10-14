@@ -146,7 +146,8 @@ define([
                 vendorConfig = option.vendorConfig,
                 isDropPO = option.isDropPO,
                 docid = option.docid,
-                so_ID = option.soID,
+                so_rec = option.so_rec,
+                po_rec = option.po_rec,
                 itemArray = option.itemArray,
                 vendor = option.vendor,
                 fulfillmentData = false;
@@ -175,7 +176,8 @@ define([
                             mainConfig: mainConfig,
                             vendorConfig: vendorConfig,
                             poId: docid,
-                            soId: so_ID,
+                            recSalesOrd: so_rec,
+                            recPurchOrd: po_rec,
                             lineData: itemArray,
                             vendor: vendor
                         });
@@ -446,7 +448,8 @@ define([
                     vendorConfig: vendorConfig,
                     isDropPO: isDropPO,
                     docid: docid,
-                    soID: so_ID,
+                    so_rec: so_rec,
+                    po_rec: po_record,
                     itemArray: outputObj.itemArray,
                     vendor: vendor
                 };
@@ -471,42 +474,56 @@ define([
                 // log.debug(logTitle, '>> xml app v2: MAP lineData length: ' + JSON.stringify(lineData.length));
 
                 // Move the searches outside of the for loop for governance issues
+
+                /// IF SEARCH ///////////////
                 var arrFulfillments = [];
-                var ifSearch = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
-                var ifFilters = ns_search.createFilter({
-                    name: 'custbody_ctc_if_vendor_order_match',
-                    operator: ns_search.Operator.STARTSWITH,
-                    values: numPrefix
-                });
-                ifSearch.filters.push(ifFilters);
-                ifSearch.run().each(function (result) {
+                var objSearchIF = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+                objSearchIF.filters.push(
+                    ns_search.createFilter({
+                        name: 'custbody_ctc_if_vendor_order_match',
+                        operator: ns_search.Operator.STARTSWITH,
+                        values: numPrefix
+                    })
+                );
+
+                var ItemFFSearchAll = vc_util.searchAllPaged({ searchObj: objSearchIF });
+                ItemFFSearchAll.forEach(function (result) {
                     arrFulfillments.push({
                         id: result.id,
                         num: result.getValue('custbody_ctc_if_vendor_order_match')
                     });
                     return true;
                 });
-                // log.debug(
-                //     logTitle,
-                //     LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
-                // );
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments.length)
+                );
+                //////////////////////////////////////////////////
 
+                /// IR SEARCH /////////////////
                 var arrReceipts = [];
-                var ifSearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
-                var ifFilters = ns_search.createFilter({
+                var objSearchIR = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+                objSearchIR.filters.push(ns_search.createFilter({
                     name: 'custbody_ctc_if_vendor_order_match',
                     operator: ns_search.Operator.STARTSWITH,
                     values: numPrefix
+                }));
+                var ItemRcptSearchAll = vc_util.searchAllPaged({
+                    searchObj: objSearchIR
                 });
-                ifSearch.filters.push(ifFilters);
-                ifSearch.run().each(function (result) {
+
+                ItemRcptSearchAll.forEach(function (result) {
                     arrReceipts.push({
                         id: result.id,
                         num: result.getValue('custbody_ctc_if_vendor_order_match')
                     });
                     return true;
                 });
-                // log.debug(logTitle, LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts.length)
+                );
+                //////////////////////////////////////////////////
 
                 log.debug(logTitle, LogPrefix + '>> lineData: ' + JSON.stringify(lineData));
 

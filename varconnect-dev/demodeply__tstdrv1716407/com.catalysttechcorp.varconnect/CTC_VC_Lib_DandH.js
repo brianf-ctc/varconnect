@@ -19,7 +19,7 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
-define([
+ define([
     'N/search',
     'N/xml',
     './CTC_VC_Constants.js',
@@ -146,7 +146,8 @@ define([
                         tracking_num: 'NA',
                         vendorSKU: 'NA',
                         carrier: 'NA',
-                        serial_num: 'NA'
+                        serial_num: 'NA',
+                        is_shipped: false
                     };
 
                     var itemNum = VC_Util.getNodeTextContent(
@@ -165,6 +166,13 @@ define([
                         xml_items.ship_qty = shipQty;
                     }
 
+                    var etaDate = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ETA' })[0]
+                    );
+                    if (etaDate != null && etaDate.length > 0) {
+                        xml_items.order_eta = etaDate;
+                    }
+
                     var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
 
                     var orderNum = VC_Util.getNodeTextContent(
@@ -173,6 +181,13 @@ define([
                     if (orderNum != null && orderNum.length > 0) {
                         xml_items.order_num = orderNum;
                     }
+
+                    var invoice = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'INVOICE' })[0]
+                    );
+                    var orderStatusMessage = VC_Util.getNodeTextContent(
+                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'MESSAGE' })[0]
+                    );
 
                     var orderDateTime = VC_Util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
@@ -263,12 +278,17 @@ define([
                                 }
                             }
                         }
-                    }
-
-                    // brianff 12/14
-                    // use the same shipdate
-                    if (xml_items.ship_date) {
-                        xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+                        
+                        // brianff 12/14
+                        // use the same shipdate
+                        if (xml_items.ship_date) {
+                            xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+                            // assume everything without a shipdate has NOT shipped
+                            xml_items.is_shipped = true;
+                        }
+                    } else if (!!invoice && invoice.length > 0 && invoice.toUpperCase() !== 'IN PROCESS') {
+                        // an order with no PACKAGE node but is invoiced will contain non-inventory items
+                        xml_items.is_shipped = true;
                     }
 
                     itemArray.push(xml_items);
