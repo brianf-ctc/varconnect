@@ -11,7 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/search'], function (search) {
+define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, constants) {
     function _getFieldValue(options) {
         var recPO = options.recPO,
             field = options.field;
@@ -30,7 +30,7 @@ define(['N/search'], function (search) {
         var recPO = options.recPO,
             subrecordId = options.subrecord,
             field = options.field,
-            value = undefined;
+            value;
 
         var subrecord = recPO.getSubrecord({ fieldId: subrecordId });
         if (subrecord) value = subrecord.getValue({ fieldId: field });
@@ -84,6 +84,17 @@ define(['N/search'], function (search) {
         return email;
     }
 
+    function _getAdditionalLookupValues(options) {
+        var recPO = options.recPO,
+            columns = options.columns;
+        var values = search.lookupFields({
+            type: search.Type.PURCHASE_ORDER,
+            id: recPO.id,
+            columns: columns
+        });
+        return values ? values : undefined;
+    }
+
     function PurchaseOrder(recPO) {
         this.id = recPO.id;
         this.tranId = recPO.getValue({ fieldId: 'tranid' });
@@ -93,8 +104,9 @@ define(['N/search'], function (search) {
         this.currency = recPO.getValue({ fieldId: 'currencysymbol' });
         this.total = recPO.getValue({ fieldId: 'total' });
         this.memo = recPO.getValue({ fieldId: 'memo' });
-        this.trandate = recPO.getText({ fieldId: 'trandate' });
-        this.custPO = recPO.getText({ fieldId: 'custbody82' });
+        this.tranDate = recPO.getText({ fieldId: 'trandate' });
+        this.dropShipPO = recPO.getValue({ fieldId: 'dropshippo' });
+        this.custPO = recPO.getText({ fieldId: constants.Fields.Transaction.CUSTOMER_PO_NUMBER });
 
         var subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
         var addressFields = [
@@ -155,8 +167,18 @@ define(['N/search'], function (search) {
         this.shipState = _getFieldValue({ recPO: recPO, field: 'shipstate' });
         this.shipZip = _getFieldValue({ recPO: recPO, field: 'shipzip' });
         this.shipCountry = _getFieldValue({ recPO: recPO, field: 'shipcountry' });
+        this.shipMethod = _getFieldValue({ recPO: recPO, field: 'shipmethod' });
+        this.shipMethodCode = _getFieldValue({ recPO: recPO, field: constants.Fields.Transaction.SHIP_CODE });
 
         this.shipEmail = _getEmail({ entityId: _getFieldValue({ recPO: recPO, field: 'shipto' }) });
+        
+        var poLookupValues = _getAdditionalLookupValues({
+            recPO: recPO,
+            columns: [
+                [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.')
+            ]
+        });
+        this.shipFromSynnexWarehouse = poLookupValues[ [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.') ];
 
         this.billAttention = _getSubrecordValue({
             recPO: recPO,
@@ -195,10 +217,12 @@ define(['N/search'], function (search) {
         this.terms = _getFieldText({ recPO: recPO, field: 'terms' });
 
         this.createdFrom = _getFieldValue({ recPO: recPO, field: 'createdfrom' });
+        // created a more generic custom ship method code field, but not dispensing of specific method code fields in case needed
+        this.synnexShippingCode = this.shipMethodCode;
         this.dellShippingCode = _getFieldValue({
             recPO: recPO,
             field: 'custbody_ctc_vcsp_dell_ship_code'
-        });
+        }) || this.shipMethodCode;
 
         this.paymentTerms = _getFieldValue({ recPO: recPO, field: 'terms' });
 
@@ -208,6 +232,12 @@ define(['N/search'], function (search) {
 
         for (var i = 0; i < itemCount; i++) {
             this.items.push({
+                lineuniquekey: _getSublistValue({
+                    recPO: recPO,
+                    sublist: 'item',
+                    field: 'lineuniquekey',
+                    line: i
+                }),
                 item: _getSublistText({ recPO: recPO, sublist: 'item', field: 'item', line: i }),
                 description: _getSublistValue({
                     recPO: recPO,
@@ -249,7 +279,7 @@ define(['N/search'], function (search) {
                 synnexSKU: _getSublistValue({
                     recPO: recPO,
                     sublist: 'item',
-                    field: 'custcol_ctc_vcsp_sku_synnex',
+                    field: constants.Fields.Transaction.Item.SYNNEX_SKU,
                     line: i
                 }),
                 dellSKU: _getSublistValue({
@@ -283,7 +313,6 @@ define(['N/search'], function (search) {
 
             this.billAttention = recVendorConfig.Bill.attention;
             this.billAddressee = recVendorConfig.Bill.addressee;
-            //			this.billPhone 		= recVendorConfig.Bill.phone;
             this.billEmail = recVendorConfig.Bill.email;
             this.billAddr1 = recVendorConfig.Bill.address1;
             this.billAddr2 = recVendorConfig.Bill.address2;

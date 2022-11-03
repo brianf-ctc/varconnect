@@ -16,9 +16,29 @@ define([], function () {
         Records: {
             VENDOR_CONFIG: 'customrecord_ctc_vcsp_vendor_config',
             MAIN_CONFIG: 'customrecord_ctc_vcsp_main_config',
-            VC_LOG: 'customrecord_ctc_vcsp_log'
+            VC_LOG: 'customrecord_ctc_vcsp_log',
+            VC_POLINE: 'customrecord_ctc_vc_poline',
+            VENDOR_SHIPMETHOD: 'customrecord_ctc_vcsp_vendor_shipmethod'
         },
         Fields: {
+            Transaction: {
+                SHIP_CODE: 'custbody_ctc_vcsp_ship_code',
+                DELL_SHIP_CODE: 'custbody_ctc_vcsp_dell_ship_code',
+                IS_PO_SENT: 'custbody_ctc_vcsp_is_po_sent',
+                VCSP_TIMESTAMP: 'custbody_ctc_vcsp_timestamp',
+                CUSTOMER_PO_NUMBER: 'custbody_ctc_vcsp_custpo',
+                VENDOR_PO_NUMBER: 'custbody_ctc_vcsp_transaction_num',
+                VENDOR_RECEIPT: 'custbody_ctc_vcsp_vendor_rcpt',
+                Item : {
+                    QUOTE_NUMBER: 'custcol_ctc_vcsp_quote_no',
+                    MANUFACTURER: 'custcol_ctc_manufacturer',
+                    DELL_SKU: 'custcol_ctc_vcsp_sku_dell',
+                    SYNNEX_SKU: 'custcol_ctc_vcsp_sku_synnex'
+                },
+            },
+            Location: {
+                SYNNEX_WAREHOUSE_CODE : 'custrecord_ctc_vcsp_synnex_warehouse'
+            },
             VendorConfig: {
                 ID: 'internalid',
                 SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
@@ -68,7 +88,34 @@ define([], function () {
                 BODY: 'custrecord_ctc_vcsp_log_body',
                 TRANSACTION: 'custrecord_ctc_vcsp_log_transaction',
                 STATUS: 'custrecord_ctc_vcsp_log_status'
-            }
+            },
+            VarConnectPOLine: {
+                ID: 'internalid',
+                PURCHASE_ORDER: 'custrecord_ctc_vc_poline_po',
+                LINE: 'custrecord_ctc_vc_poline_line',
+                STATUS: 'custrecord_ctc_vc_poline_status',
+                SHIP_DATE: 'custrecord_ctc_vc_poline_shipdate',
+                VENDOR_ORDER_NUMBER: 'custrecord_ctc_vc_poline_vendorordernum',
+                SKU: 'custrecord_ctc_vc_poline_itemname',
+                MPN: 'custrecord_ctc_vc_poline_mpn',
+                DESCRIPTION: 'custrecord_ctc_vc_poline_description',
+                QUANTITY: 'custrecord_ctc_vc_poline_quantity',
+                RATE: 'custrecord_ctc_vc_poline_rate',
+                QTY_SHIPPED: 'custrecord_ctc_vc_poline_qtyshipped',
+                SHIP_FROM: 'custrecord_ctc_vc_poline_shipfrom',
+                SHIP_METHOD: 'custrecord_ctc_vc_poline_shipmethod',
+                SHIP_METHOD_DESCRIPTION: 'custrecord_ctc_vc_poline_shipmethoddesc',
+                ETA_DATE: 'custrecord_ctc_vc_poline_etadate',
+                TRACKING_NUMBERS: 'custrecord_ctc_vc_poline_trackingnumber',
+                SERIAL_NUMBERS: 'custrecord_ctc_vc_poline_serialnumbers',
+                CREATE_LOG: 'custrecord_ctc_vc_poline_vccreatelog',
+                UPDATE_LOG: 'custrecord_ctc_vc_poline_vcupdatelog'
+            },
+            VendorShipMethod : {
+                VENDOR_CONFIG: 'custrecord_ctc_vcsp_shipmethod_vc',
+                SHIP_METHOD: 'custrecord_ctc_vcsp_shipmethod_item',
+                CODE: 'custrecord_ctc_vcsp_shipmethod_vcode'
+            },
         },
         Lists: {
             PO_EVENT: {

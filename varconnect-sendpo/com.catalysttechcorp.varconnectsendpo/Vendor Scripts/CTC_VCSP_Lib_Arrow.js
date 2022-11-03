@@ -25,8 +25,9 @@ define([
     'N/log',
     'N/https',
     '../VO/CTC_VCSP_Response.js',
-    '../Library/CTC_VCSP_Lib_Log.js'
-], function (search, record, runtime, log, https, response, vcLog) {
+    '../Library/CTC_VCSP_Lib_Log.js',
+    '../Library/CTC_VCSP_Constants.js'
+], function (search, record, runtime, log, https, response, vcLog, constants) {
     'use strict';
 
     /**
@@ -409,12 +410,12 @@ define([
             if (resp.code == 200) {
                 if (responseBody.hasOwnProperty('TransactionKeyID')) {
                     var arrowTransactionID = responseBody.TransactionKeyID;
+                    var values = {};
+                    values[constants.Fields.Transaction.VENDOR_PO_NUMBER] = arrowTransactionID;
                     record.submitFields({
                         type: record.Type.PURCHASE_ORDER,
                         id: poObj.id,
-                        values: {
-                            custbody_ctc_vcsp_transaction_num: arrowTransactionID
-                        }
+                        values: values
                     });
                     resp.message = null;
                 }

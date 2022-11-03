@@ -336,12 +336,12 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                         value: logOption[field] || ''
                     });
                 }
-                recLog.save();
+                return recLog.save();
                 // log.audit(logOption.HEADER, logOption.BODY);
             } catch (error) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + CTC_Util.extractError(error));
             }
-            return true;
+            return null;
         },
         extractError: function (option) {
             var errorMessage = util.isString(option)
@@ -488,7 +488,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 }
             } finally {
                 if (!param.noLogs) {
-                    CTC_Util.vcLog({
+                    returnValue.logId = CTC_Util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
                         content: parsedResponse || responseBody || response,
                         transaction: param.logTranId,

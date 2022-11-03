@@ -30,7 +30,7 @@ define(['N/url', 'N/https', './CTC_VCSP_Constants'], function (url, https, const
 
         if (external) link = linkUrl;
 
-        log.debug('link', link);
+        // log.debug('link', link);
 
         var res = https.get({
             url: link

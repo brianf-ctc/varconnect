@@ -23,6 +23,7 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
     pref,
     constants
 ) {
+    var LogTitle = 'VC:SENDPO';
     var vendorConfigFields = [
         constants.Fields.VendorConfig.ID, //0
         constants.Fields.VendorConfig.SUBSIDIARY, //1
@@ -65,7 +66,8 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
             id: result.getValue({ name: FieldSendPO.ID }),
             subsidiary: result.getValue({ name: FieldSendPO.SUBSIDIARY }),
             apiVendor: result.getValue({ name: FieldSendPO.API_VENDOR }),
-            vendor: result.getValue({ name: FieldSendPO.API_VENDOR }),
+            vendor: result.getValue({ name: FieldSendPO.VENDOR }),
+            vendorName: result.getText({ name: FieldSendPO.VENDOR }),
             endPoint: result.getValue({ name: FieldSendPO.WEBSERVICE_ENDPOINT }),
             user: result.getValue({ name: FieldSendPO.USERNAME }),
             password: result.getValue({ name: FieldSendPO.PASSWORD }),
@@ -99,11 +101,12 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
     }
 
     function getVendorConfiguration(options) {
-        var config = null,
+        var logTitle = [LogTitle, 'getVendorConfig'].join(':'),
+            config = null,
             vendor = options.vendor,
             subsidiary = options.subsidiary;
 
-        log.debug('params', 'vendor ' + vendor + '| subs: ' + subsidiary);
+        log.debug(logTitle, 'Params: ' + JSON.stringify(options));
         var filter = [];
         filter.push(
             search.createFilter({

@@ -13,9 +13,16 @@
  */
 define([], function () {
     function Response(options) {
-        this.code = options.code;
+        this.logId = options.logId;
+        this.status = options.status;
         this.message = options.message;
         this.transactionNum = options.transactionNum;
+        this.orderStatus = options.orderStatus;
+        this.responseBody = options.responseBody;
+        this.responseCode = options.responseCode;
+        this.isError = options.isError || (function(options) {
+            return (options.status == 'error' || !options.responseCode || options.responseCode < 200 || options.responseCode >= 300);
+        })(this);
     }
 
     return Response;

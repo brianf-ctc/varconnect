@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * @Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -27,17 +27,30 @@ define([
         var logTitle = [LogTitle, 'validateVendorConfig'].join('::');
 
         var recVendorConfig = options.recVendorConfig,
-            endpoint = recVendorConfig.endPoint,
-            apiKey = recVendorConfig.apiKey,
-            apiSecret = recVendorConfig.apiSecret;
+            apiVendor = recVendorConfig.apiVendor,
+            endpoint = recVendorConfig.endPoint;
 
-        log.debug(
-            logTitle,
-            ['endpoint:' + endpoint, 'apiKey:' + apiKey, 'apiSecret:' + apiSecret].join('|')
-        );
+        var requiredWebserviceInfo = {
+            endpoint : endpoint
+        };
+        switch (apiVendor) {
+            case constants.Lists.API_VENDOR.SYNNEX:
+                requiredWebserviceInfo.user = recVendorConfig.user;
+                requiredWebserviceInfo.password = recVendorConfig.password;
+                break;
+            case constants.Lists.API_VENDOR.DELL:
+            default:
+                requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
+                requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                break;
+        }
+        log.debug(logTitle, JSON.stringify(requiredWebserviceInfo));
 
-        if (!endpoint || !apiKey || !apiSecret)
-            throw 'Incomplete webservice information for ' + recVendorConfig.vendor;
+        for (var requiredParam in requiredWebserviceInfo) {
+            if (!requiredWebserviceInfo[requiredParam]) {
+                throw 'Incomplete webservice information for ' + recVendorConfig.vendorName;
+            }
+        }
 
         return;
     }
@@ -111,17 +124,17 @@ define([
                     recVendorConfig: recVendorConfig
                 });
 
-                resp = libVendor.process({
+                resp = new response(libVendor.process({
                     recVendorConfig: recVendorConfig,
                     recPO: recPO
-                });
+                }));
                 
             }
         } catch (e) {
-            resp = {
+            resp = new response({
                 code: 'error',
                 message: ctc_util.extractError(e)
-            };
+            });
         }
 
         return resp;

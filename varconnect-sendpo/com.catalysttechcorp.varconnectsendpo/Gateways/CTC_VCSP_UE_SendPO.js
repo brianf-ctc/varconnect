@@ -17,6 +17,7 @@ define([
     'N/search',
     'N/record',
     'N/ui/message',
+    'N/redirect',
     '../Library/CTC_Lib_EventRouter',
     '../Library/CTC_Lib_Utils',
     '../Library/CTC_VCSP_Lib_MainConfiguration',
@@ -29,6 +30,7 @@ define([
     NS_Search,
     NS_Record,
     NS_Msg,
+    NS_Redirect,
     EventRouter,
     CTC_Util,
     libMainConfig,
@@ -67,96 +69,123 @@ define([
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
-                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
-                /////////////////////////////////
-                var sessionObj = NS_Runtime.getCurrentSession();
-                var sessionData = {
-                        result: sessionObj.get({ name: 'sendpo-success' }),
-                        error: sessionObj.get({ name: 'sendpo-error' })
-                    },
-                    msgOption = {};
-                log.audit(logTitle, '>> sessionData: ' + JSON.stringify(sessionData));
+                switch (Current.eventType) {
+                    case (scriptContext.UserEventType.VIEW):
+                        /////////////////////////////////
+                        var sessionObj = NS_Runtime.getCurrentSession();
+                        var sessionData = {
+                                result: sessionObj.get({ name: 'sendpo-success' }),
+                                error: sessionObj.get({ name: 'sendpo-error' })
+                            },
+                            msgOption = {};
+                        log.audit(logTitle, '>> sessionData: ' + JSON.stringify(sessionData));
 
-                if (sessionData.result) {
-                    sessionObj.set({ name: 'sendpo-success', value: null });
-                    msgOption = {
-                        message: sessionData.result,
-                        title: 'Send PO Successful',
-                        type: NS_Msg.Type.CONFIRMATION
-                    };
-                }
-                if (sessionData.error) {
-                    sessionObj.set({ name: 'sendpo-error', value: null });
-                    msgOption = {
-                        message:
-                            '<br/>Error encountered:  ' +
-                            sessionData.error +
-                            '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
-                        title: 'Send PO Unsuccessful',
-                        type: NS_Msg.Type.ERROR
-                    };
-                }
-                if (msgOption.message) {
-                    scriptContext.form.addPageInitMessage(msgOption);
-                }
-                /////////////////////////////////
+                        if (sessionData.result) {
+                            sessionObj.set({ name: 'sendpo-success', value: null });
+                            msgOption = {
+                                message: sessionData.result,
+                                title: 'Send PO Successful',
+                                type: NS_Msg.Type.CONFIRMATION
+                            };
+                        }
+                        if (sessionData.error) {
+                            sessionObj.set({ name: 'sendpo-error', value: null });
+                            msgOption = {
+                                message:
+                                    '<br/>Error encountered:  ' +
+                                    sessionData.error +
+                                    '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
+                                title: 'Send PO Unsuccessful',
+                                type: NS_Msg.Type.ERROR
+                            };
+                        }
+                        if (msgOption.message) {
+                            scriptContext.form.addPageInitMessage(msgOption);
+                        }
+                        /////////////////////////////////
 
-                var recordData = {};
-                if (scriptContext.newRecord) {
-                    recordData.type = scriptContext.newRecord.type;
-                    recordData.id = scriptContext.newRecord.id;
-                }
-                log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
+                        var recordData = {};
+                        if (scriptContext.newRecord) {
+                            recordData.type = scriptContext.newRecord.type;
+                            recordData.id = scriptContext.newRecord.id;
+                        }
+                        log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
 
-                var lookupData = CTC_Util.flatLookup({
-                    type: recordData.type,
-                    id: recordData.id,
-                    columns: [
-                        'subsidiary',
-                        'entity',
-                        'custbody_ctc_vcsp_is_po_sent',
-                        'custbody_ctc_vcsp_timestamp'
-                    ]
-                });
-                log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
+                        var lookupData = CTC_Util.flatLookup({
+                            type: recordData.type,
+                            id: recordData.id,
+                            columns: [
+                                'subsidiary',
+                                'entity',
+                                VCSP_Global.Fields.Transaction.IS_PO_SENT,
+                                VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP
+                            ]
+                        });
+                        log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
 
-                // check for main config
-                var mainConfig = libMainConfig.getMainConfiguration();
-                log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
-                if (!mainConfig) return;
+                        // check for main config
+                        var mainConfig = libMainConfig.getMainConfiguration();
+                        log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+                        if (!mainConfig) return;
 
-                // check for valid license
-                if (!_validateLicense({ mainConfig: mainConfig })) return;
+                        // check for valid license
+                        if (!_validateLicense({ mainConfig: mainConfig })) return;
 
-                var vendorCfg = libVendorConfig.getVendorConfiguration({
-                    vendor: lookupData.entity.value,
-                    subsidiary: lookupData.subsidiary.value
-                });
-                log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
-                if (!vendorCfg) return;
+                        var vendorCfg = libVendorConfig.getVendorConfiguration({
+                            vendor: lookupData.entity.value,
+                            subsidiary: lookupData.subsidiary.value
+                        });
+                        log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
+                        if (!vendorCfg) return;
 
-                if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.MANUAL) {
-                    scriptContext.form.addButton({
-                        id: 'custpage_ctc_vcsp_sendpo',
-                        label: 'Send PO to Vendor',
-                        functionName:
-                            '(function(url){window.location.href=url;})("' +
-                            EventRouter.addActionURL('sendPO') +
-                            '")'
-                    }).isDisabled = !!lookupData.custbody_ctc_vcsp_is_po_sent;
-                } else {
-                    if (lookupData.custbody_ctc_vcsp_timestamp) {
-                        scriptContext.form.addButton({
-                            id: 'custpage_ctc_vcsp_sendpo',
-                            label: 'Manually Send PO to Vendor',
-                            functionName:
-                                '(function(url){window.location.href=url;})("' +
-                                EventRouter.addActionURL('sendPO') +
-                                '")'
-                        }).isDisabled = !!lookupData.custbody_ctc_vcsp_is_po_sent;
-                    }
+                        if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.MANUAL) {
+                            scriptContext.form.addButton({
+                                id: 'custpage_ctc_vcsp_sendpo',
+                                label: 'Send PO to Vendor',
+                                functionName:
+                                    '(function(url){window.location.href=url;})("' +
+                                    EventRouter.addActionURL('sendPO') +
+                                    '")'
+                            }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                        } else {
+                            if (lookupData[VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP]) {
+                                scriptContext.form.addButton({
+                                    id: 'custpage_ctc_vcsp_sendpo',
+                                    label: 'Manually Send PO to Vendor',
+                                    functionName:
+                                        '(function(url){window.location.href=url;})("' +
+                                        EventRouter.addActionURL('sendPO') +
+                                        '")'
+                                }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                            }
+                        }
+                        break;
+                    case (scriptContext.UserEventType.CREATE):
+                    case (scriptContext.UserEventType.COPY):
+                        var fieldIdsToBlankOut = [
+                            VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER,
+                            VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP,
+                            VCSP_Global.Fields.Transaction.VENDOR_RECEIPT
+                        ];
+                        fieldIdsToBlankOut.forEach(function(fieldId) {
+                            log.debug(logTitle, 'Emptying ' + fieldId + '...');
+                            scriptContext.newRecord.setValue({
+                                fieldId: fieldId,
+                                value: '',
+                                ignoreFieldChange: true
+                            });
+                            return true;
+                        });
+                        scriptContext.newRecord.setValue({
+                            fieldId: VCSP_Global.Fields.Transaction.IS_PO_SENT,
+                            value: false,
+                            ignoreFieldChange: true
+                        });
+                        break;
+                    default:
+                        break;
                 }
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -164,12 +193,9 @@ define([
             }
         },
         onAfterSubmit: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
+            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
-                // if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                // if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
                 var recordData = {};
                 if (scriptContext.newRecord) {
@@ -178,11 +204,26 @@ define([
                 }
                 log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
 
-                var lookupData = CTC_Util.flatLookup({
-                    type: recordData.type,
-                    id: recordData.id,
-                    columns: ['subsidiary', 'entity']
+                var createdFromRecTypeCol = {
+                    name: 'recordtype',
+                    join: 'createdFrom'
+                };
+                var searchResults = CTC_Util.searchAllPaged({
+                    type: NS_Search.Type.TRANSACTION,
+                    filterExpression: [
+                        [ 'recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER], 'AND',
+                        [ 'internalid', NS_Search.Operator.ANYOF, recordData.id ]
+                    ],
+                    columns: [
+                        createdFromRecTypeCol,
+                        'approvalstatus',
+                        'subsidiary',
+                        'entity',
+                        VCSP_Global.Fields.Transaction.IS_PO_SENT,
+                        VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP
+                    ]
                 });
+                var lookupData = searchResults[0];
                 log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
 
                 // check for main config
@@ -194,11 +235,39 @@ define([
                 if (!_validateLicense({ mainConfig: mainConfig })) return;
 
                 var vendorCfg = libVendorConfig.getVendorConfiguration({
-                    vendor: lookupData.entity.value,
-                    subsidiary: lookupData.subsidiary.value
+                    vendor: lookupData.getValue('entity'),
+                    subsidiary: lookupData.getValue('subsidiary')
                 });
                 log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                 if (!vendorCfg) return;
+
+                // TODO: please test, currently untested
+                var isPendingSendOnCreate;
+                if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE) {
+                    var createEventTypes = [scriptContext.UserEventType.CREATE, scriptContext.UserEventType.COPY];
+                    isPendingSendOnCreate = createEventTypes.indexOf(Current.eventType) >= 0;
+                }
+                if (isPendingSendOnCreate || vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE) {
+                    var isToBeSent = !lookupData.getValue(VCSP_Global.Fields.Transaction.IS_PO_SENT);
+                    var isCreatedFromSalesOrder = lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
+                    var isApproved = lookupData.getValue('approvalstatus') >= 2;
+                    log.debug(logTitle, JSON.stringify({
+                        isToBeSent: isToBeSent,
+                        isPendingSendOnCreate: isPendingSendOnCreate,
+                        isCreatedFromSalesOrder: isCreatedFromSalesOrder,
+                        isApproved: isApproved
+                    }));
+                    if (isToBeSent && isCreatedFromSalesOrder && (
+                            isPendingSendOnCreate || (isPendingSendOnCreate === undefined && isApproved))) {
+                        NS_Redirect.toRecord({
+                            type: Current.recordType,
+                            id: Current.recordId,
+                            parameters: {
+                                routeract: 'sendPO'
+                            }
+                        });
+                    }
+                }
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -230,8 +299,6 @@ define([
                     name: 'sendpo-error',
                     value: CTC_Util.extractError(error).replace('\n', '<br />')
                 });
-
-                // throw error;
             }
 
             return true;
@@ -240,11 +307,15 @@ define([
 
     var USER_EVENT = {
         beforeLoad: function (scriptContext) {
+            LogTitle = [
+                LogTitle,
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id
+            ].join('::');
             var logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
                 returnValue = null;
-
             EventRouter.initialize(scriptContext);
-
             log.audit(logTitle, EventRouter.Type);
             try {
                 EventRouter.execute(EventRouter.Type.CUSTOM);
@@ -254,7 +325,25 @@ define([
                 returnValue = false;
                 throw error;
             }
-
+            return returnValue;
+        },
+        afterSubmit: function (scriptContext) {
+            LogTitle = [
+                LogTitle,
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id
+            ].join('::');
+            var logTitle = [LogTitle || '', 'onAfterSubmit'].join('::'),
+                returnValue = null;
+            EventRouter.initialize(scriptContext);
+            try {
+                returnValue = EventRouter.execute(EventRouter.Type.AFTER_SUBMIT);
+            } catch (afterSubmitError) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(afterSubmitError));
+                returnValue = false;
+                throw afterSubmitError;
+            }
             return returnValue;
         }
     };
