@@ -18,7 +18,7 @@
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
  */
-define([
+ define([
     'N/search',
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
@@ -32,7 +32,15 @@ define([
     var CURRENT = {};
     var LibIngramAPI = {
         ValidOrderStatus: ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'],
-        ValidLineStatus: ['SHIPPED', 'PROCESSING', 'IN PROGRESS', 'ON HOLD', 'DELIVERED', 'BACKORDERED'],
+        ValidLineStatus: [
+            'SHIPPED',
+            'PROCESSING',
+            'IN PROGRESS',
+            'ON HOLD',
+            'DELIVERED',
+            'BACKORDERED',
+            'ORDER NOT PRINTED'
+        ],
         NegativeStatus: ['CANCELED'],
         ValidShippedStatus: ['SHIPPED'],
         generateToken: function (option) {
@@ -391,8 +399,10 @@ define([
                         status: (lineDetail.lineStatus || '').toUpperCase()
                     };
 
-                    if (!VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
-                        	!VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)) {
+                    if (
+                        !VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
+                        !VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)
+                    ) {
                         log.audit(
                             logTitle,
                             '.... skipping line, invalid status :  [' + lineData.status + ']'

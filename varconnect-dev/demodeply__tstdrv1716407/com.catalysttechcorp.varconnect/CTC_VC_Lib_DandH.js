@@ -19,7 +19,7 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
- define([
+define([
     'N/search',
     'N/xml',
     './CTC_VC_Constants.js',
@@ -278,15 +278,19 @@
                                 }
                             }
                         }
-                        
-                        // brianff 12/14
-                        // use the same shipdate
-                        if (xml_items.ship_date) {
-                            xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+
+                    // brianff 12/14
+                    // use the same shipdate
+                    if (xml_items.ship_date) {
+                        xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
                             // assume everything without a shipdate has NOT shipped
                             xml_items.is_shipped = true;
                         }
-                    } else if (!!invoice && invoice.length > 0 && invoice.toUpperCase() !== 'IN PROCESS') {
+                    } else if (
+                        !!invoice &&
+                        invoice.length > 0 &&
+                        invoice.toUpperCase() !== 'IN PROCESS'
+                    ) {
                         // an order with no PACKAGE node but is invoiced will contain non-inventory items
                         xml_items.is_shipped = true;
                     }

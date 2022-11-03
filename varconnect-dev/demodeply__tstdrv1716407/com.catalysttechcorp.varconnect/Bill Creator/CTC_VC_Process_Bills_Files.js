@@ -68,15 +68,43 @@ define([
                 'AND',
                 ['custrecord_ctc_vc_bill_linked_bill', 'anyof', '@NONE@'],
                 'AND',
-                [
-                    'custrecord_ctc_vc_bill_proc_status',
-                    'anyof',
-                    BILL_CREATOR.Status.PENDING,
-                    BILL_CREATOR.Status.REPROCESS,
-                    BILL_CREATOR.Status.ERROR
-                ],
+                ['custrecord_ctc_vc_bill_linked_po', 'noneof', '@NONE@'],
                 'AND',
-                ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T']
+                ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T'],
+                'AND',
+                // [
+                //     'custrecord_ctc_vc_bill_proc_status',
+                //     'anyof',
+                //     BILL_CREATOR.Status.PENDING,
+                //     BILL_CREATOR.Status.REPROCESS,
+                //     BILL_CREATOR.Status.ERROR
+                // ],
+                // 'AND',
+                [
+                    [
+                        'custrecord_ctc_vc_bill_proc_status',
+                        'anyof',
+                        BILL_CREATOR.Status.PENDING,
+                        BILL_CREATOR.Status.REPROCESS,
+                        BILL_CREATOR.Status.ERROR
+                    ],
+                    'OR',
+                    [
+                        [
+                            'custrecord_ctc_vc_bill_proc_status',
+                            'noneof',
+                            BILL_CREATOR.Status.PROCESSED,
+                            BILL_CREATOR.Status.CLOSED
+                        ],
+                        'AND',
+                        [
+                            'custrecord_ctc_vc_bill_linked_po.status',
+                            'anyof',
+                            'PurchOrd:H',   // Fully Billed
+                            'PurchOrd:G'    // Closed
+                        ]
+                    ]
+                ]
             ],
             columns: [
                 'internalid',

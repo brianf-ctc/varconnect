@@ -164,18 +164,18 @@ define(function (require) {
                                     try {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'xml'
+                                        }).value;
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
                                     } catch (parseErr) {
                                         xmlContent = JSON.stringify(outputObj);
                                         xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'JSON'
+                                        }).value;
                                         elementIdToShow = 'custpage_json__viewer';
                                         elementIdToHide = 'custpage_xml__viewer';
                                     }
@@ -193,9 +193,9 @@ define(function (require) {
                                     try {
                                         xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'JSON'
+                                        }).value;
                                         else xmlContent = '<pre>' + xmlContent + '</pre>';
 
                                         elementIdToShow = 'custpage_json__viewer';
@@ -203,9 +203,9 @@ define(function (require) {
                                     } catch (parseErr) {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                        xmlContent = hljs.highlight(xmlContent, {
+                                            language: 'xml'
+                                        }).value;
                                         else xmlContent = '<pre>' + xmlContent + '</pre>';
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
@@ -216,9 +216,9 @@ define(function (require) {
                                         try {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(xmlContent, {
-                                                    language: 'xml'
-                                                }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                             else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
@@ -226,9 +226,9 @@ define(function (require) {
                                             xmlContent = JSON.stringify(outputObj);
                                             xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(xmlContent, {
-                                                    language: 'JSON'
-                                                }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                             else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
@@ -238,19 +238,17 @@ define(function (require) {
                                         try {
                                             xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(xmlContent, {
-                                                    language: 'JSON'
-                                                }).value;
-
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
                                         } catch (parseErr) {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(xmlContent, {
-                                                    language: 'xml'
-                                                }).value;
-
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
                                         }
@@ -330,8 +328,7 @@ define(function (require) {
                 } catch (err) {
                     xmlContent = vkbeautify.xml(outputObj, 4);
                 }
-                jQuery('#vcdebugcontent').get(0).value =
-                    xmlContent;
+                jQuery('#vcdebugcontent').get(0).value = xmlContent;
 
                 return true;
             });

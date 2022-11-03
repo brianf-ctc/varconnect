@@ -18,6 +18,7 @@ define(function (require) {
         NS_Format = require('N/format'),
         NS_Record = require('N/record'),
         NS_Search = require('N/search'),
+        NS_Task = require('N/task'),
         VC2_Global = require('./CTC_VC2_Constants.js');
 
     var LogTitle = 'VC2_UTILS',
@@ -50,6 +51,10 @@ define(function (require) {
         },
         setCache: function (cacheKey, objVar) {
             vc_util.CACHE[cacheKey] = objVar;
+        },
+        getUsage: function () {
+            var REMUSAGE = NS_Runtime.getCurrentScript().getRemainingUsage();
+            return '[rem-usage:' + REMUSAGE + '] ';
         },
         uniqueArray: function (arrVar) {
             var arrNew = [];
@@ -274,7 +279,7 @@ define(function (require) {
                 param = {
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
-                    retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 0,
+                    retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
                     responseType: option.hasOwnProperty('responseType')
                         ? option.responseType
                         : 'JSON',
@@ -295,6 +300,7 @@ define(function (require) {
 
             // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
             var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
+            var startTime = new Date();
             try {
                 if (!param.noLogs) {
                     vc_util.vcLog({
@@ -308,14 +314,17 @@ define(function (require) {
                 log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
                 returnValue.REQUEST = queryOption;
 
+                /////////////////////////////////////////
                 //// SEND THE REQUEST //////
                 response = NS_Https[param.method](queryOption);
                 returnValue.RESPONSE = response;
+                /////////////////////////////////////////
 
                 log.audit(
                     logTitle,
                     '>> RESPONSE ' +
                         JSON.stringify({
+                            duration: this.roundOff((new Date() - startTime) / 1000),
                             code: response.code || '-no response-',
                             body: response.body || '-empty response-'
                         })
@@ -344,6 +353,14 @@ define(function (require) {
                 returnValue.error = error;
                 returnValue.details = parsedResponse || response;
 
+                log.audit(
+                    logTitle,
+                    '>> RESPONSE time: ' +
+                        JSON.stringify({
+                            duration: this.roundOff((new Date() - startTime) / 1000)
+                        })
+                );
+
                 vc_util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
@@ -356,6 +373,11 @@ define(function (require) {
                 });
 
                 log.error(logTitle, '## ERROR ##' + errorMsg + '\n' + JSON.stringify(error));
+                if (param.doRetry)
+                    log.audit(
+                        logTitle,
+                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
+                    );
 
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
@@ -458,7 +480,6 @@ define(function (require) {
         },
         parseDate: function (option) {
             var logTitle = [LogTitle, 'parseDate'].join('::');
-            log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
             var dateString = option.dateString || option,
                 dateFormat = vc_util.CACHE.DATE_FORMAT,
@@ -479,10 +500,8 @@ define(function (require) {
                     try {
                         dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
                     } catch (e) {}
-                    // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
                 }
                 vc_util.CACHE.DATE_FORMAT = dateFormat;
-                log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
             }
 
             if (dateString && dateString.length > 0 && dateString != 'NA') {
@@ -522,7 +541,16 @@ define(function (require) {
                 });
             }
 
-            log.audit('---datestring ' + dateString, date);
+            log.audit(
+                logTitle,
+                JSON.stringify({
+                    param: option,
+                    dateString: dateString,
+                    format: dateFormat,
+                    dateValue: date
+                })
+            );
+
             return date;
         },
         flatLookup: function (option) {
@@ -530,7 +558,6 @@ define(function (require) {
                 arrResults = null;
 
             arrResults = NS_Search.lookupFields(option);
-            // log.debug('flatLookup', 'arrResults>>' + JSON.stringify(arrResults));
 
             if (arrResults) {
                 arrData = {};
@@ -573,6 +600,145 @@ define(function (require) {
 
             return Math.round(flValue * 100) / 100;
         },
+        getTaskStatus: function (taskId) {
+            return NS_Task.checkStatus({ taskId: taskId });
+        },
+        forceDeploy: function (option) {
+            var logTitle = [LogTitle, 'forceDeploy'].join('::');
+            var returnValue = null;
+            var FN = {
+                randomStr: function (len) {
+                    len = len || 5;
+                    var str = new Date().getTime().toString();
+                    return str.substring(str.length - len, str.length);
+                },
+                deploy: function (scriptId, deployId, scriptParams, taskType) {
+                    var logTitle = [LogTitle, 'forceDeploy:deploy'].join('::');
+                    var returnValue = false;
+
+                    try {
+                        var taskInfo = {
+                            taskType: taskType,
+                            scriptId: scriptId
+                        };
+                        if (deployId) taskInfo.deploymentId = deployId;
+                        if (scriptParams) taskInfo.params = scriptParams;
+
+                        var objTask = NS_Task.create(taskInfo);
+
+                        var taskId = objTask.submit();
+                        var taskStatus = NS_Task.checkStatus({
+                            taskId: taskId
+                        });
+
+                        // check the status
+                        log.audit(
+                            logTitle,
+                            '## DEPLOY status: ' +
+                                JSON.stringify({
+                                    id: taskId,
+                                    status: taskStatus
+                                })
+                        );
+                        returnValue = taskId;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ':' + e.message);
+                    }
+
+                    return returnValue;
+                },
+                copyDeploy: function (scriptId) {
+                    var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
+                    var returnValue = false;
+                    try {
+                        var searchDeploy = NS_Search.create({
+                            type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+                            filters: [
+                                ['script.scriptid', 'is', scriptId],
+                                'AND',
+                                ['status', 'is', 'NOTSCHEDULED'],
+                                'AND',
+                                ['isdeployed', 'is', 'T']
+                            ],
+                            columns: ['scriptid']
+                        });
+                        var newDeploy = null;
+
+                        searchDeploy.run().each(function (result) {
+                            if (!result.id) return false;
+                            newDeploy = NS_Record.copy({
+                                type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+                                id: result.id
+                            });
+
+                            var newScriptId = result.getValue({ name: 'scriptid' });
+                            newScriptId = newScriptId.toUpperCase().split('CUSTOMDEPLOY')[1];
+                            newScriptId = [newScriptId.substring(0, 20), FN.randomStr()].join('_');
+
+                            newDeploy.setValue({ fieldId: 'status', value: 'NOTSCHEDULED' });
+                            newDeploy.setValue({ fieldId: 'isdeployed', value: true });
+                            newDeploy.setValue({
+                                fieldId: 'scriptid',
+                                value: newScriptId.toLowerCase().trim()
+                            });
+                        });
+
+                        return newDeploy
+                            ? newDeploy.save({
+                                  enableSourcing: false,
+                                  ignoreMandatoryFields: true
+                              })
+                            : false;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ': ' + e.message);
+                        throw e;
+                    }
+                },
+                copyAndDeploy: function (scriptId, params, taskType) {
+                    FN.copyDeploy(scriptId);
+                    FN.deploy(scriptId, null, params, taskType);
+                }
+            };
+            ////////////////////////////////////////
+            try {
+                if (!option.scriptId)
+                    throw error.create({
+                        name: 'MISSING_REQD_PARAM',
+                        message: 'missing script id',
+                        notifyOff: true
+                    });
+
+                if (!option.taskType) {
+                    option.taskType = NS_Task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = option.isMapReduce
+                        ? NS_Task.TaskType.MAP_REDUCE
+                        : option.isSchedScript
+                        ? NS_Task.TaskType.SCHEDULED_SCRIPT
+                        : option.taskType;
+                }
+
+                log.debug(logTitle, '>> params: ' + JSON.stringify(option));
+
+                returnValue =
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
+                    FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
+                    FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
+
+                log.audit(logTitle, '>> deploy: ' + JSON.stringify(returnValue));
+            } catch (e) {
+                log.error(logTitle, e.name + ': ' + e.message);
+                throw e;
+            }
+            ////////////////////////////////////////
+
+            return returnValue;
+        },
+
         _batchedVCLogs: {},
         submitVCLogBatch: function (batchTransaction) {
             var logTitle = [LogTitle, 'submitVCLogBatch'].join('::');
@@ -601,6 +767,82 @@ define(function (require) {
             // do this to preserve the source values
             return util.extend(util.extend({}, source), contrib);
         },
+
+        removeNullValues: function (option) {
+            var newObj = {};
+            if (!option || vc_util.isEmpty(option) || !util.isObject(option)) return newObj;
+
+            for (var prop in option) {
+                if (option[prop] === null) continue;
+                newObj[prop] = option[prop];
+            }
+
+            return newObj;
+        },
+
+        copyValues: function (source, contrib, option) {
+            option = option || {};
+            if (!util.isObject(source) || !util.isObject(contrib)) return false;
+
+            var onlyNullValues = option.onlyNullValues || false,
+                overwriteSource = option.overwriteSource || false;
+
+            var newSource = overwriteSource ? source : util.extend({}, source);
+
+            for (var fld in contrib) {
+                var value = contrib[fld];
+
+                if (!newSource.hasOwnProperty(fld) || newSource[fld] == null) {
+                    newSource[fld] = value;
+                }
+
+                if (onlyNullValues) continue;
+                newSource[fld] = value;
+            }
+
+            return newSource;
+        },
+
+        findMatching: function (option) {
+            var logTitle = [LogTitle, 'findMatching'].join('::'),
+                returnValue;
+
+            var dataSource = option.dataSource || option.dataSet,
+                filter = option.filter,
+                findAll = option.findAll;
+
+            if (vc_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
+
+            var arrResults = [],
+                arrIndex = [];
+            for (var i = 0, j = dataSource.length; i < j; i++) {
+                var isFound = true;
+                for (var fld in filter) {
+                    if (dataSource[i][fld] != filter[fld]) {
+                        isFound = false;
+                        break;
+                    }
+                }
+                if (isFound) {
+                    arrResults.push(dataSource[i]);
+                    arrIndex.push(i);
+                    if (!findAll) break;
+                }
+            }
+
+            returnValue = {
+                data:
+                    arrResults && arrResults.length
+                        ? findAll
+                            ? arrResults
+                            : arrResults.shift()
+                        : false,
+                index: arrIndex && arrIndex.length ? (findAll ? arrIndex : arrIndex.shift()) : false
+            };
+
+            return returnValue;
+        },
+
         findMatchingEntry: function (option) {
             var logTitle = [LogTitle, 'findMatchingEntry'].join('::'),
                 returnValue;
@@ -615,7 +857,7 @@ define(function (require) {
             for (var i = 0, j = dataSource.length; i < j; i++) {
                 var isFound = true;
                 for (var fld in filter) {
-                    if (vc_util.isEmpty(dataSource[i][fld]) || dataSource[i][fld] != filter[fld]) {
+                    if (dataSource[i][fld] != filter[fld]) {
                         isFound = false;
                         break;
                     }
@@ -632,6 +874,25 @@ define(function (require) {
                         ? arrResults
                         : arrResults.shift()
                     : false;
+
+            return returnValue;
+        },
+        extractValues: function (option) {
+            var logTitle = [LogTitle, 'extractValues'].join('::'),
+                returnValue;
+
+            var sourceObj = option.source || option.sourceObj;
+            var params = option.params || option.fields;
+
+            if (this.isEmpty(sourceObj) || this.isEmpty(params)) return false;
+            if (!util.isObject(sourceObj) && !util.isArray(params)) return false;
+
+            returnValue = {};
+
+            for (var i = 0, j = params.length; i < j; i++) {
+                if (!params[i]) continue;
+                returnValue[params[i]] = sourceObj[params[i]];
+            }
 
             return returnValue;
         },

@@ -133,16 +133,22 @@ define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, N
                 ///////////////////////////////////////////
 
                 var arrSerialsResults = VC_Helper.searchSerials(requestData);
-                var arrItemSerials = [];
+                var arrItemSerials = [],
+                    arrSerials = [];
 
                 if (!arrSerialsResults || !arrSerialsResults.length) throw 'Empty result set';
 
                 for (var i = 0, j = arrSerialsResults.length; i < j; i++) {
-                    arrItemSerials.push({
+                    var serialData = {
                         item: arrSerialsResults[i].getValue({ name: 'custrecordserialitem' }),
                         itemName: arrSerialsResults[i].getText({ name: 'custrecordserialitem' }),
                         serialno: arrSerialsResults[i].getValue({ name: 'name' })
-                    });
+                    };
+
+                    if (Helper.inArray(serialData.serialno, arrSerials)) continue;
+
+                    arrSerials.push(serialData.serialno);
+                    arrItemSerials.push(serialData);
                 }
 
                 macroData.serials = arrItemSerials;

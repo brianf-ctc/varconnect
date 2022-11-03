@@ -26,8 +26,20 @@ define([
     'N/render',
     './VC_Globals.js',
     './CTC_VC_Lib_MainConfiguration.js',
+    './CTC_VC2_Lib_Utils.js',
     './CTC_VC_Constants.js'
-], function (search, email, record, log, runtime, render, vcGlobals, libMainConfig, constants) {
+], function (
+    ns_search,
+    email,
+    record,
+    log,
+    runtime,
+    render,
+    vcGlobals,
+    libMainConfig,
+    vc_util,
+    constants
+) {
     var CURRENT = {},
         LogTitle = 'Email-IF';
 
@@ -125,14 +137,13 @@ define([
 
         log.audit(logTitle, '// get itemfulfillments from search: ' + CURRENT.searchId);
 
-        var itemfulfillmentSearchObj = search.load({ id: CURRENT.searchId });
-        var searchResultCount = itemfulfillmentSearchObj.runPaged().count;
+        var itemFFSearchObj = ns_search.load({ id: CURRENT.searchId });
+        var itemFFSearchAll = vc_util.searchAllPaged({ searchObj: itemFFSearchObj });
 
-        log.debug(logTitle, '... results count' + searchResultCount);
+        log.debug(logTitle, '... results count' + itemFFSearchAll.length);
         var resultList = [];
 
-        itemfulfillmentSearchObj.run().each(function (result) {
-            // .run().each has a limit of 4,000 results
+        itemFFSearchAll.forEach(function (result){
             var tempQty = result.getValue({ name: 'quantity' });
             if (!isEmpty(tempQty) && tempQty.indexOf('-') < 0) {
                 resultList.push(result);
@@ -140,6 +151,16 @@ define([
 
             return true;
         });
+
+        // itemFFSearchObj.run().each(function (result) {
+        //     // .run().each has a limit of 4,000 results
+        //     var tempQty = result.getValue({ name: 'quantity' });
+        //     if (!isEmpty(tempQty) && tempQty.indexOf('-') < 0) {
+        //         resultList.push(result);
+        //     }
+
+        //     return true;
+        // });
 
         return resultList;
     }

@@ -23,7 +23,7 @@ define([
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (ns_search, VC_Log, VC_Global, VC_Util, moment) {
+], function (ns_search, VC_Global, VC_Log, VC_Util, moment) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
@@ -257,6 +257,17 @@ define([
                 });
 
                 throw VC_Util.extractError(error);
+            } finally {
+                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
+
+                VC_Util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !VC_Util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                });
             }
 
             return returnValue;

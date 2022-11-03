@@ -47,7 +47,8 @@ define([
     libScanSource,
     vcLog
 ) {
-    var LogTitle = 'WebSvcLib';
+    var LogTitle = 'WebSvcLib',
+        LogPrefix = '';
 
     function _validateVendorConfig(option) {
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
@@ -77,6 +78,8 @@ define([
             country = option.country,
             countryCode = option.countryCode,
             responseXML;
+
+        LogPrefix = '[purchaseorder:' + poId + '] ';
 
         if (vendorConfig) {
             var libVendor = _getVendorLibrary({
@@ -196,8 +199,6 @@ define([
     function _handleSingleVendor(option) {
         var logTitle = [LogTitle, '_handleSingleVendor'].join('::');
 
-        log.audit(logTitle, option);
-
         var vendorConfig = option.vendorConfig,
             poNum = option.poNum,
             poId = option.poId,
@@ -205,6 +206,18 @@ define([
             startDate = vendorConfig.startDate,
             xmlVendorText = vendorConfig.xmlVendorText,
             outputArray;
+
+        LogPrefix = '[purchaseorder:' + poId + '] ';
+        log.audit(
+            logTitle,
+            LogPrefix +
+                '/// ' +
+                JSON.stringify({
+                    poNum: poNum,
+                    tranDate: tranDate,
+                    vendorConfig: vendorConfig
+                })
+        );
 
         var dateCheck = _checkDates({
             poNum: poNum,
@@ -246,7 +259,7 @@ define([
                     vendorConfig: vendorConfig
                 });
             } catch (e) {
-                log.error(logTitle, '!! ERROR !!' + vc_util.extractError(e));
+                log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
 
                 vcLog.recordLog({
                     header: 'VAR Connect ERROR',
@@ -280,6 +293,18 @@ define([
             }),
             vendorConfigs = [],
             itemArray = [];
+
+        LogPrefix = '[purchaseorder:' + poId + '] ';
+        log.audit(
+            logTitle,
+            LogPrefix +
+                '/// ' +
+                JSON.stringify({
+                    poNum: poNum,
+                    tranDate: tranDate,
+                    configs: configs
+                })
+        );
 
         for (var i = 0; i < configs.length; i++) {
             try {
@@ -320,7 +345,7 @@ define([
                     })
                 );
             } catch (e) {
-                log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+                log.error(logTitle, LogPrefix + '!! ERROR !!' + JSON.stringify(e));
 
                 vcLog.recordLog({
                     header: 'WebService',
@@ -350,6 +375,8 @@ define([
             countryCode = option.countryCode,
             outputArray = null;
 
+        LogPrefix = '[purchaseorder:' + poId + '] ';
+
         try {
             if (vendorConfig) {
                 if (
@@ -374,14 +401,14 @@ define([
                         tranDate: tranDate
                     });
                 }
-            } else log.error('No Vendor Config available for ' + vendor);
+            } else throw 'No Vendor Config available for ' + vendor;
 
             return {
                 itemArray: outputArray,
                 prefix: vendorConfig.fulfillmentPrefix
             };
         } catch (e) {
-            log.error(logTitle, '!! ERROR !!' + JSON.stringify(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + JSON.stringify(e));
 
             vcLog.recordLog({
                 header: 'WebService::process',

@@ -12,7 +12,9 @@
  * @NModuleScope Public
  */
 
-define([], function () {
+define(function (require) {
+    var ns_runtime = require('N/runtime');
+
     var VC_CONSTANTS = {
         LOG_APPLICATION: 'VAR Connect'
     };
@@ -206,7 +208,7 @@ define([], function () {
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.PENDING
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
@@ -217,6 +219,11 @@ define([], function () {
             code: 'INSUFFICIENT_QUANTITY',
             msg: 'PO Qty is insufficient for the bill.',
             status: Bill_Creator.Status.ERROR
+        },
+        FULLY_BILLED: {
+            code: 'FULLY_BILLED',
+            msg: 'PO is Fully Billed',
+            status: Bill_Creator.Status.CLOSED
         },
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',
@@ -251,5 +258,20 @@ define([], function () {
     };
 
     VC_CONSTANTS.Bill_Creator = Bill_Creator;
+
+    VC_CONSTANTS.GLOBAL = {
+        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
+        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),
+        COUNTRY: ns_runtime.country,
+        SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
+        ITEM_ID_LOOKUP_COL: 'item',
+        ITEM_FUL_ID_LOOKUP_COL: 'itemname',
+        VENDOR_SKU_LOOKUP_COL: 'item',
+        SN_FOLDER_ID: 7,
+        EMAIL_TEMPLATE_ID: 220, // Var Connect Shipping Confirmation Template
+        POHANDLING: 'Drop', // Special | Drop (default) | Both
+        EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1'
+    };
+    
     return VC_CONSTANTS;
 });
