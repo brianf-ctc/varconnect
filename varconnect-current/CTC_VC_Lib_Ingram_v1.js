@@ -38,7 +38,8 @@ define([
             'IN PROGRESS',
             'ON HOLD',
             'DELIVERED',
-            'BACKORDERED'
+            'BACKORDERED',
+            'ORDER NOT PRINTED'
         ],
         NegativeStatus: ['CANCELED'],
         ValidShippedStatus: ['SHIPPED'],

@@ -18,9 +18,8 @@ define([
     'N/currentRecord',
     '../CTC_VC_Lib_VendorConfig.js',
     '../CTC_VC_Lib_WebService.js',
-    '../CTC_VC_Constants.js',
+    '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils.js',
-    '../VC_Globals.js',
     hlFolder + '/highlight.js',
     hlFolder + '/languages/xml.min.js',
     hlFolder + '/languages/json.min.js'
@@ -31,7 +30,6 @@ define([
     vc_websvc,
     vc_constants,
     vc_util,
-    vc_global,
     hljs,
     hljsXml,
     hljsJson
@@ -45,7 +43,7 @@ define([
     var Helper = {
         getPODetails: function (poNum) {
             var columns = [ns_search.createColumn({ name: 'entity' })];
-            if (vc_global.ENABLE_SUBSIDIARIES)
+            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES)
                 columns.push(ns_search.createColumn({ name: 'subsidiary' }));
 
             var poObj = {},
@@ -63,7 +61,7 @@ define([
             var searchResultCount = purchaseorderSearchObj.runPaged().count;
             log.debug('purchaseorderSearchObj result count', searchResultCount);
             purchaseorderSearchObj.run().each(function (result) {
-                if (vc_global.ENABLE_SUBSIDIARIES)
+                if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES)
                     poObj['subsidiary'] = result.getValue('subsidiary');
                 poObj['vendor'] = result.getValue('entity');
                 poObj['id'] = result.id;
@@ -132,8 +130,8 @@ define([
                                 poId: objPO.id,
                                 country:
                                     vendorConfig.country == 'CA'
-                                        ? vc_constants.Lists.COUNTRY.CA
-                                        : vc_constants.Lists.COUNTRY.US,
+                                        ? vc_constants.LIST.COUNTRY.CA
+                                        : vc_constants.LIST.COUNTRY.US,
                                 countryCode: vendorConfig.country
                             });
                         } catch (processErr) {

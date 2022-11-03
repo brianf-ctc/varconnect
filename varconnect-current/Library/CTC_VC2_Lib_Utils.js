@@ -23,6 +23,10 @@ define(function (require) {
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
+    var vc_script = {};
+    var vc_serial = {};
+
+
     var vc_util = {
         CACHE: {},
         isEmpty: function (stValue) {

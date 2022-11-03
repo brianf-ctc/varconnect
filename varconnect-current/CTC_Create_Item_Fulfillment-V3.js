@@ -65,17 +65,13 @@ define(function (require) {
 
     var ItemFFLib = {};
 
-    var ERROR_MSG = {
-        ORDER_EXISTS: 'Order already exists',
-        TRANSFORM_ERROR: 'Transform error ' + Current.SO_ID,
-        NO_FULFILLABLES: 'No fulfillable lines'
-    };
+    ///////////////////////////////////////////////////////////////////////
+    ItemFFLib.processOrderLines = function (option) {
+        var logTitle = [LogTitle, 'processOrderLines'].join('::'),
+            returnValue;
 
-    ItemFFLib.updateItemFulfillments = function (option) {
-        var logTitle = [LogTitle, 'updateItemFulfillments'].join('::');
         Current.Script = ns_runtime.getCurrentScript();
         log.debug(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
-
         try {
             Current.Features = {
                 MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
@@ -109,20 +105,16 @@ define(function (require) {
             Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
             if (!Current.NumPrefix) throw 'Config Error: Missing Fulfillment Prefix';
 
-            // sort the line data
+            // sort the lines by order num
             var OrderLines = Helper.sortLineData(Current.OrderLines);
 
             var arrOrderNums = [],
                 arrVendorOrderNums = [],
-                responseData = [],
                 i,
                 ii,
                 iii;
 
-            ///////////////////////////////////////////////////
-            // Collect unique the Item Fulfillment orders from the response
-            Helper.log(logTitle, '*** LOOK for unique orders ***');
-
+            // cleanup and make the list unique
             OrderLines.forEach(function (orderLine) {
                 if (vc_util.inArray(orderLine.order_num, arrOrderNums)) {
                     orderLine.RESULT = 'DUPLICATE';
@@ -143,13 +135,8 @@ define(function (require) {
                     orderLine.RESULT = 'ORDER EXISTS';
                     return;
                 }
+
                 orderLine.ship_qty = parseInt(orderLine.ship_qty || '0', 10);
-
-                if (orderLine.ship_qty == 0) {
-                    orderLine.RESULT = 'NO SHIP QTY';
-                    return;
-                }
-
                 orderLine.vendorOrderNum = Current.NumPrefix + orderLine.order_num;
                 orderLine.RESULT = 'ADDED';
 
@@ -163,9 +150,8 @@ define(function (require) {
 
             //// PRE-SEARCH of existing IFS ///
             var arrExistingIFS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
-            Helper.log(logTitle, '// Existing IFs', arrExistingIFS);
+            Helper.log(logTitle, 'existing IFs', arrExistingIFS);
 
-            ///////////////////////////////////////////////////
             // Loop through each unique order num checking to see if it does not already exist as an item fulfillment
             var OrigLogPrefix = LogPrefix;
             for (i = 0; i < arrOrderNums.length; i++) {
@@ -175,6 +161,520 @@ define(function (require) {
                 LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
 
                 Helper.log(logTitle, '/// PROCESSING ORDER [' + vendorOrderNum + ']');
+
+                var LinesToFulfill = [];
+
+                try {
+                    /// check if order exists //////////////////
+                    if (vc_util.inArray(vendorOrderNum, arrExistingIFS)) throw 'ORDER_EXISTS';
+
+                    // Build an array with all XML line data with the same order num
+                    for (ii = 0; ii < OrderLines.length; ii++) {
+                        if (orderNum != OrderLines[ii].order_num) continue;
+                        LinesToFulfill.push(OrderLines[ii]);
+                    }
+
+                    if (!LinesToFulfill.length) continue;
+                    Helper.log(logTitle, '... lines to fulfill: ', LinesToFulfill);
+
+                    var defaultItemFFValues = {};
+                    if (Current.Features.MULTISHIPTO) {
+                        var defaultShipGroup = Helper.getShipGroup({
+                            recSalesOrd: Current.SO_REC,
+                            recPurchOrd: Current.PO_REC
+                        });
+                        if (defaultShipGroup) {
+                            defaultItemFFValues.shipgroup = defaultShipGroup;
+                        }
+                    }
+
+                    var fulfillData = ItemFFLib.createFulfillment({
+                        lines: LinesToFulfill,
+                        defaultValues: defaultItemFFValues
+                    });
+                } catch (order_error) {
+                    var orderErrMsg = vc_util.extractError(order_error);
+                    Helper.logMsg({
+                        title: 'Notes',
+                        message: orderNum + 'Skipped : ' + orderErrMsg
+                    });
+                    Helper.log(logTitle, 'Notes', order_error);
+                    continue;
+                }
+            }
+        } catch (error) {
+            var errorMsg = vc_util.extractError(error);
+
+            log.error(
+                logTitle,
+                vc_util.getUsage() +
+                    (LogPrefix + '## ERROR:  ') +
+                    (errorMsg + '| Details: ' + JSON.stringify(error))
+            );
+            Helper.logMsg({ title: logTitle + ':: Error', error: error });
+            returnValue = false;
+        } finally {
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############'
+            );
+        }
+
+        return returnValue;
+    };
+    ///////////////////////////////////////////////////////////////////////
+
+    var ERROR_MSG = {
+        ORDER_EXISTS: 'Order already exists',
+        TRANSFORM_ERROR: 'Transform error ' + Current.SO_ID,
+        NO_FULFILLABLES: 'No fulfillable lines'
+    };
+
+    ItemFFLib.createFulfillment = function (option) {
+        var logTitle = [LogTitle, 'createFulfillment'].join('::'),
+            returnValue;
+        Current.Script = ns_runtime.getCurrentScript();
+        log.debug(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
+
+        try {
+            var linesToFulfill = option.lines,
+                defaultValues = option.defaultValues,
+                lineItemCount,
+                recordIsChanged = false;
+
+            var record = util_record.transform({
+                fromType: ns_record.Type.SALES_ORDER,
+                fromId: Current.SO_ID,
+                toType: ns_record.Type.ITEM_FULFILLMENT,
+                isDynamic: true,
+                defaultValues: defaultValues
+            });
+            if (!record) throw 'TRANSFORM_ERROR';
+
+            lineItemCount = record.getLineCount({ sublistId: 'item' });
+
+            ///////////////////////////////////////////////////////////////////
+            /// REMOVE any items that is not in the XML  Line Data /////////////
+            var hasFulfillableLine = false,
+                fulfillableLines = [],
+                matchingLine,
+                line,
+                lineFFData;
+
+            for (line = 0; line < lineItemCount; line++) {
+                lineFFData = {
+                    line: line,
+                    item_num: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                        line: line
+                    }),
+                    skuName: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                        ? record.getSublistText({
+                              sublistId: 'item',
+                              fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                              line: line
+                          })
+                        : '',
+                    item_po: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: 'createdpo',
+                        line: line
+                    }),
+                    line_po: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: 'poline',
+                        line: line
+                    }),
+                    dandh: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                        line: line
+                    }),
+                    quantity: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: 'quantity',
+                        line: line
+                    }),
+                    CURRENTPO: Current.PO_ID
+                };
+
+                Helper.log(logTitle, '...fulfill line: ', lineFFData);
+
+                try {
+                    /// REMOVE lines from different POs
+                    if (lineFFData.item_po != Current.PO_ID) throw 'Not same PO';
+
+                    /// REMOVE lines thats not from the list
+                    matchingLine = Helper.findMatchingItem({
+                        data: lineFFData,
+                        dataSet: linesToFulfill
+                    });
+
+                    if (!matchingLine) throw 'Line not found on fulfillable items';
+
+                    Helper.addFulfillmentLine({ record: record, line: line });
+                    fulfillableLines.push(lineFFData);
+
+                    hasFulfillableLine = true;
+                    recordIsChanged = true;
+                } catch (line_err) {
+                    Helper.log(logTitle, '...removed: ' + vc_util.extractError(line_err));
+                    Helper.removeFulfillmentLine({ record: record, line: line });
+                    recordIsChanged = true;
+                }
+            }
+
+            // skip the order if no fulfillable items
+            if (!hasFulfillableLine) throw 'NO_FULFILLABLES';
+
+            ///////////////////////////////////////////////////////////////////
+            /// BUILD a list of unique items with their total quantities shipped for this shipment
+            var UniqueLineItems = [];
+            Helper.log(logTitle, '**** Collect all items to fulfill ****');
+
+            linesToFulfill.forEach(function (lineData) {
+                var currentItem = {
+                    order_num: orderNum,
+                    item_num: lineData.item_num,
+                    order_date: lineData.order_date,
+                    order_eta: lineData.order_eta,
+                    ship_date: lineData.ship_date,
+                    carrier: lineData.carrier,
+                    ship_qty: parseInt(lineData.ship_qty || '0', 10) || 0,
+                    totalShipped: parseInt(lineData.ship_qty || '0', 10) || 0,
+                    all_tracking_nums: Helper.uniqueList({ value: lineData.tracking_num }),
+                    all_serial_nums: Helper.uniqueList({ value: lineData.serial_num })
+                };
+                Helper.log(logTitle, '... current item: ', currentItem);
+
+                var matchingLine = Helper.findMatchingItem({
+                    data: lineData,
+                    dataSet: UniqueLineItems,
+                    fieldToTest: 'item_num'
+                });
+
+                if (!matchingLine) {
+                    // not yet on the unique line items
+                    UniqueLineItems.push(currentItem);
+                    return;
+                }
+
+                for (var i = 0; i < UniqueLineItems.length; i++) {
+                    var uniqItem = UniqueLineItems[i];
+                    if (uniqItem.item_num !== lineData.item_num) continue;
+
+                    // update the total shipped qty
+                    uniqItem.totalShipped += lineData.ship_qty * 1;
+
+                    // update tracking num list
+                    var tmpTrackList = Helper.uniqueList({ value: lineData.tracking_num });
+                    if (!vc_util.isEmpty(uniqItem.all_tracking_nums)) {
+                        tmpTrackList += '\n' + uniqItem.all_tracking_nums;
+                    }
+                    uniqItem.all_tracking_nums = Helper.uniqueList({
+                        value: tmpTrackList,
+                        splitStr: '\n'
+                    });
+
+                    // update the serials list
+                    var tmpSerialList = Helper.uniqueList({ value: lineData.serial_num });
+
+                    if (!vc_util.isEmpty(uniqItem.all_serial_nums)) {
+                        tmpTrackList += '\n' + uniqItem.all_serial_nums;
+                    }
+                    uniqItem.all_serial_nums = Helper.uniqueList({
+                        value: tmpSerialList,
+                        splitStr: '\n'
+                    });
+                }
+            });
+            Helper.log(logTitle, '// UniqueLineItems', UniqueLineItems);
+
+            ///////////////////////////////////////////////////////////////////
+            /// VALIDATE the fulfillment line items
+            lineItemCount = record.getLineCount({ sublistId: 'item' });
+            Helper.log(logTitle, '**** VALIDATE Fulfillment Lines ****');
+
+            for (line = 0; line < lineItemCount; line++) {
+                record.selectLine({ sublistId: 'item', line: line });
+                lineFFData = {
+                    lineNo: line,
+                    item: record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
+                    }),
+                    quantity: record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'quantity'
+                    }),
+                    isReceived: record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'itemreceive'
+                    }),
+                    vendorSKU: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                        ? record.getCurrentSublistValue({
+                              sublistId: 'item',
+                              fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                          })
+                        : '',
+                    line_po: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: 'poline',
+                        line: line
+                    }),
+                    dandh: record.getSublistText({
+                        sublistId: 'item',
+                        fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                        line: line
+                    }),
+                    isSerialized: record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'isserial'
+                    }),
+                    isInvDetailReqd: record.getCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'inventorydetailreq'
+                    })
+                };
+                lineFFData.quantity = parseInt(lineFFData.quantity || '0', 10);
+                Helper.log(logTitle, '... current line: ', lineFFData);
+
+                if (!lineFFData.isReceived) {
+                    Helper.log(logTitle, '... >> skipping: not received ');
+                    Helper.setLineValues({
+                        record: record,
+                        values: { itemreceive: false },
+                        doCommit: true
+                    });
+                    continue;
+                }
+
+                for (var ii = 0; ii < UniqueLineItems.length; ii++) {
+                    var itemToShip = UniqueLineItems[ii];
+
+                    var isMatchingLine =
+                        lineFFData.item == itemToShip.item_num ||
+                        (lineFFData.vendorSKU && lineFFData.vendorSKU == itemToShip.vendorSKU) ||
+                        (lineFFData.dandh &&
+                            Current.VendorCFG.xmlVendor == vc_constants.LIST.XML_VENDOR.DandH &&
+                            lineFFData.dandh == itemToShip.item_num);
+
+                    if (!isMatchingLine) continue;
+                    Helper.log(logTitle, '... item to ship ', itemToShip);
+
+                    ////////////////////////////////////////////
+                    /// Skip: if total Shipped is empty /////
+                    if (itemToShip.totalShipped == 0) {
+                        Helper.log(logTitle, '...... skipped: no more items left to ship. ');
+
+                        Helper.setLineValues({
+                            record: record,
+                            values: { itemreceive: false },
+                            doCommit: true
+                        });
+                        recordIsChanged = true;
+                        continue;
+                    }
+
+                    ////////////////////////////////////////////
+                    // Skip: if the available quantity is less
+                    if (lineFFData.quantity < itemToShip.ship_qty) {
+                        Helper.log(
+                            logTitle,
+                            '...... skipped: rem qty is less than required ship qty. '
+                        );
+                        Helper.setLineValues({
+                            record: record,
+                            values: { itemreceive: false },
+                            doCommit: true
+                        });
+                        recordIsChanged = true;
+                        continue;
+                    }
+
+                    ////////////////////////////////////////////
+                    // Skip: if the available quantity is less
+                    if (lineFFData.quantity < itemToShip.totalShipped) {
+                        Helper.log(logTitle, '...... skipped: available qty is less. ');
+                        Helper.setLineValues({
+                            record: record,
+                            values: { itemreceive: false },
+                            doCommit: true
+                        });
+                        recordIsChanged = true;
+                        continue;
+                    }
+
+                    var itemffValues = {
+                        quantity: itemToShip.totalShipped,
+                        custcol_ctc_xml_dist_order_num: itemToShip.order_num,
+                        custcol_ctc_xml_date_order_placed: itemToShip.order_date,
+                        custcol_ctc_xml_eta: itemToShip.order_eta,
+                        custcol_ctc_xml_ship_date: itemToShip.ship_date,
+                        custcol_ctc_xml_carrier: itemToShip.carrier,
+                        custcol_ctc_xml_tracking_num: itemToShip.all_tracking_nums,
+                        custcol_ctc_vc_eta_date: Helper.parseDate({
+                            dateString: itemToShip.order_eta
+                        }),
+                        custcol_ctc_vc_order_placed_date: Helper.parseDate({
+                            dateString: itemToShip.order_date
+                        }),
+                        custcol_ctc_vc_shipped_date: Helper.parseDate({
+                            dateString: itemToShip.ship_date
+                        })
+                    };
+
+                    ///////////////////////////////////////////////
+                    Helper.setLineValues({ record: record, values: itemffValues });
+                    ///////////////////////////////////////////////
+
+                }
+            }
+        } catch (error) {
+        } finally {
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############'
+            );
+        }
+
+        return returnValue;
+    };
+
+    //// OLD FUNCTION //////////////////
+    ItemFFLib.updateItemFulfillments = function (option) {
+        var logTitle = [LogTitle, 'updateItemFulfillments'].join('::');
+        Current.Script = ns_runtime.getCurrentScript();
+        log.debug(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
+
+        try {
+            Current.Features = {
+                MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
+                MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+            };
+
+            Current.MainCFG = option.mainConfig;
+            Current.VendorCFG = option.vendorConfig;
+            Current.PO_ID = option.poId || option.recPurchOrd.id;
+            Current.SO_ID = option.soId || option.recSalesOrd.id;
+            LogPrefix = '[purchaseorder:' + Current.PO_ID + '] ';
+            Current.Vendor = option.vendor;
+
+            log.debug(logTitle, LogPrefix + '// CURRENT: ' + JSON.stringify(Current));
+
+            Current.OrderLines = option.lineData;
+
+            log.debug(
+                logTitle,
+                LogPrefix + '/// order lines: ' + JSON.stringify(Current.OrderLines)
+            );
+
+            Current.SO_REC = option.recSalesOrd;
+            Current.PO_REC = option.recPurchOrd;
+
+            if (!Current.MainCFG) throw 'Missing main configuration';
+            if (!Current.VendorCFG) throw 'Missing vendor configuration';
+            if (!Current.PO_ID) throw 'Missing PO ID';
+            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+
+            if (!Helper.validateDate()) throw 'Invalid PO Date';
+
+            Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+            if (!Current.NumPrefix) throw 'Config Error: Missing Fulfillment Prefix';
+
+            // sort the line data
+            var OrderLines = Helper.sortLineData(Current.OrderLines);
+
+            var arrOrderNums = [],
+                arrVendorOrderNums = [],
+                i,
+                ii,
+                iii;
+
+            var responseData = [],
+                OrigLogPrefix = LogPrefix;
+
+            ///////////////////////////////////////////////////
+            // Collect unique the Item Fulfillment orders from the response
+            log.debug(
+                logTitle,
+                vc_util.getUsage() +
+                    LogPrefix +
+                    ('**** Looking for unique orders: ' + OrderLines.length)
+            );
+            for (i = 0; i < OrderLines.length; i++) {
+                LogPrefix = OrigLogPrefix + ('[' + OrderLines[i].order_num + '] ');
+
+                if (vc_util.inArray(OrderLines[i].order_num, arrOrderNums)) continue;
+
+                if (!OrderLines[i].order_num || OrderLines[i].order_num == 'NA') {
+                    log.audit(
+                        logTitle,
+                        vc_util.getUsage() + LogPrefix + '......skipped: no item order num'
+                    );
+                    continue;
+                }
+
+                if (
+                    OrderLines[i].hasOwnProperty('is_shipped') &&
+                    OrderLines[i].is_shipped === false
+                ) {
+                    log.audit(
+                        logTitle,
+                        vc_util.getUsage() + LogPrefix + '......skipped: not yet shipped'
+                    );
+
+                    continue;
+                }
+
+                if (OrderLines[i].hasOwnProperty('ns_record') && OrderLines[i].ns_record) {
+                    log.audit(
+                        logTitle,
+                        vc_util.getUsage() +
+                            (LogPrefix + '......skipped: fulfillment already exists.')
+                    );
+                    continue;
+                }
+
+                OrderLines[i].ship_qty = parseInt(OrderLines[i].ship_qty || '0', 10);
+                OrderLines[i].vendorOrderNum = Current.NumPrefix + OrderLines[i].order_num;
+
+                log.audit(logTitle, vc_util.getUsage() + LogPrefix + '......added order.');
+                arrOrderNums.push(OrderLines[i].order_num);
+                arrVendorOrderNums.push(Current.NumPrefix + OrderLines[i].order_num);
+            }
+            LogPrefix = OrigLogPrefix;
+            log.debug(
+                logTitle,
+                vc_util.getUsage() +
+                    LogPrefix +
+                    ('>> Fulfillment Order Nums: ' +
+                        JSON.stringify([arrOrderNums, arrVendorOrderNums]))
+            );
+
+            //// PRE-SEARCH of existing IFS ///
+            var arrExistingIFS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
+            log.debug(
+                logTitle,
+                vc_util.getUsage() +
+                    LogPrefix +
+                    ('>> arrExistingIFS: ' + JSON.stringify(arrExistingIFS))
+            );
+
+            ///////////////////////////////////////////////////
+            // Loop through each unique order num checking to see if it does not already exist as an item fulfillment
+            for (i = 0; i < arrOrderNums.length; i++) {
+                var orderNum = arrOrderNums[i],
+                    vendorOrderNum = Current.NumPrefix + orderNum;
+
+                LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
+
+                log.debug(
+                    logTitle,
+                    vc_util.getUsage() +
+                        (LogPrefix + '****** PROCESSING ORDER [' + vendorOrderNum + '] ******')
+                );
                 var LinesToFulfill = [];
 
                 try {
@@ -213,7 +713,10 @@ define(function (require) {
                             isDynamic: true,
                             defaultValues: defaultItemFFValues
                         });
-                        Helper.log(logTitle, '... record transform success');
+                        log.debug(
+                            logTitle,
+                            vc_util.getUsage() + LogPrefix + '// transform success.'
+                        );
                     } catch (transform_err) {
                         Helper.logMsg({
                             title: 'Transform Error on SO: ' + Current.SO_ID,
@@ -225,14 +728,13 @@ define(function (require) {
                     var recordIsChanged = false;
                     var lineItemCount = record.getLineCount({ sublistId: 'item' });
 
+                    /// REMOVE any items that is not in the XML  Line Data /////////////
                     var hasFulfillableLine = false,
                         fulfillableLines = [],
                         matchingLine,
                         line,
                         lineFFData;
 
-                    /// REMOVE any items that is not in the XML  Line Data /////////////
-                    Helper.log(logTitle, '**** Prepare fulfillment lines ****');
                     for (line = 0; line < lineItemCount; line++) {
                         // fetch line item data
 
@@ -262,7 +764,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.TRANSACTION.DH_MPN,
+                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
                                 line: line
                             }),
                             quantity: record.getSublistText({
@@ -273,41 +775,61 @@ define(function (require) {
                             CURRENTPO: Current.PO_ID
                         };
 
-                        Helper.log(logTitle, '// fulfillment line', lineFFData);
+                        log.debug(
+                            logTitle,
+                            vc_util.getUsage() +
+                                (LogPrefix + '*** fulfillment line:  ' + JSON.stringify(lineFFData))
+                        );
 
-                        try {
-                            /// REMOVE lines from different POs
-                            if (lineFFData.item_po != Current.PO_ID) throw 'Not same PO';
+                        /// REMOVE lines from different POs
+                        if (lineFFData.item_po != Current.PO_ID) {
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() + LogPrefix + '.... removed: not same PO '
+                            );
+                            Helper.removeFulfillmentLine({ record: record, line: line });
+                            recordIsChanged = true;
+                        }
 
-                            /// REMOVE lines thats not from the list
-                            matchingLine = Helper.findMatchingItem({
-                                data: lineFFData,
-                                dataSet: LinesToFulfill
-                            });
+                        /// REMOVE lines thats not from the list
+                        matchingLine = Helper.findMatchingItem({
+                            data: lineFFData,
+                            dataSet: LinesToFulfill
+                        });
 
-                            if (!matchingLine) throw 'Line not found on fulfillable items';
-
-                            Helper.log(logTitle, '...added to fulfillment ');
+                        if (!matchingLine) {
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() +
+                                    (LogPrefix + '.... removed: line item not found.')
+                            );
+                            Helper.removeFulfillmentLine({ record: record, line: line });
+                            recordIsChanged = true;
+                        } else {
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() +
+                                    (LogPrefix + '.... adding line to item fulfillment.')
+                            );
                             Helper.addFulfillmentLine({ record: record, line: line });
                             fulfillableLines.push(lineFFData);
 
                             hasFulfillableLine = true;
                             recordIsChanged = true;
-                        } catch (lineFF_err) {
-                            Helper.log(logTitle, '...removed: ' + vc_util.extractError(lineFF_err));
-                            Helper.removeFulfillmentLine({ record: record, line: line });
-                            recordIsChanged = true;
                         }
                     }
-                    //////////////////////////////////////////////////////////////////////\
+                    //////////////////////////////////////////////////////////////////////
+
                     // skip the order if no fulfillable items
                     if (!hasFulfillableLine) throw 'No fulfillable lines';
 
                     //////////////////////////////////////////////////////////////////////
                     // Build a list of unique items with their total quantities shipped for this shipment
                     var UniqueLineItems = [];
-                    Helper.log(logTitle, '**** Collect all items to fulfill ****', LinesToFulfill);
-
+                    log.debug(
+                        logTitle,
+                        vc_util.getUsage() + LogPrefix + '**** Collect all items to fulfill ****'
+                    );
                     for (ii = 0; ii < LinesToFulfill.length; ii++) {
                         var lineToFulfill = LinesToFulfill[ii];
 
@@ -327,7 +849,11 @@ define(function (require) {
                                 value: lineToFulfill.serial_num
                             })
                         };
-                        Helper.log(logTitle, '// curent item', currentItem);
+                        log.debug(
+                            logTitle,
+                            vc_util.getUsage() +
+                                (LogPrefix + '>>... currentItem: ' + JSON.stringify(currentItem))
+                        );
 
                         matchingLine = Helper.findMatchingItem({
                             data: lineToFulfill,
@@ -341,44 +867,56 @@ define(function (require) {
                         }
 
                         for (iii = 0; iii < UniqueLineItems.length; iii++) {
-                            var uniqItem = UniqueLineItems[iii];
-                            if (lineToFulfill.item_num !== uniqItem.item_num) continue;
+                            if (LinesToFulfill[ii].item_num !== UniqueLineItems[iii].item_num)
+                                continue;
 
-                            // update total shipped qty
-                            uniqItem.totalShipped += lineToFulfill.ship_qty * 1;
+                            UniqueLineItems[iii].totalShipped += LinesToFulfill[ii].ship_qty * 1;
 
-                            // update tracking num list
                             var tmpTrackList = Helper.uniqueList({
-                                value: lineToFulfill.tracking_num
+                                value: LinesToFulfill[ii].tracking_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_tracking_nums)) {
-                                tmpTrackList += '\n' + uniqItem.all_tracking_nums;
+                            if (!vc_util.isEmpty(UniqueLineItems[iii].all_tracking_nums)) {
+                                tmpTrackList += '\n' + UniqueLineItems[iii].all_tracking_nums;
                             }
-                            uniqItem.all_tracking_nums = Helper.uniqueList({
+                            UniqueLineItems[iii].all_tracking_nums = Helper.uniqueList({
                                 value: tmpTrackList,
                                 splitStr: '\n'
                             });
 
-                            // update serials list
                             var tmpSerialList = Helper.uniqueList({
-                                value: lineToFulfill.serial_num
+                                value: LinesToFulfill[ii].serial_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_serial_nums)) {
-                                tmpTrackList += '\n' + uniqItem.all_serial_nums;
+                            if (!vc_util.isEmpty(UniqueLineItems[iii].all_serial_nums)) {
+                                tmpTrackList += '\n' + UniqueLineItems[iii].all_serial_nums;
                             }
-                            uniqItem.all_serial_nums = Helper.uniqueList({
+                            UniqueLineItems[iii].all_serial_nums = Helper.uniqueList({
                                 value: tmpSerialList,
                                 splitStr: '\n'
                             });
+
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() +
+                                    (LogPrefix +
+                                        ' ... updated unique item data - ' +
+                                        JSON.stringify([
+                                            UniqueLineItems.length,
+                                            UniqueLineItems[iii]
+                                        ]))
+                            );
+                            // break;
                         }
                     }
-                    Helper.log(logTitle, '// UniqueLineItems', UniqueLineItems);
 
-                    ///////////////////////////////////////////////////////////////////
-                    /// VALIDATE the fulfillment line items
                     var lineItemFFCount = record.getLineCount({ sublistId: 'item' });
                     var recordLines = [];
-                    Helper.log(logTitle, '**** START fulfillment lines validation ****');
+                    log.debug(
+                        logTitle,
+                        vc_util.getUsage() +
+                            (LogPrefix + '**** START ITEM FULFILLMENT LINES VALIDATION ****')
+                    );
+
+                    // loop through all items in item fulfillment
                     for (line = 0; line < lineItemFFCount; line++) {
                         record.selectLine({ sublistId: 'item', line: line });
 
@@ -409,7 +947,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.TRANSACTION.DH_MPN,
+                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
                                 line: line
                             }),
                             isSerialized: record.getCurrentSublistValue({
@@ -422,10 +960,17 @@ define(function (require) {
                             })
                         };
                         lineFFData.quantity = parseInt(lineFFData.quantity || '0', 10);
-                        Helper.log(logTitle, '// current line', lineFFData);
+                        log.debug(
+                            logTitle,
+                            vc_util.getUsage() +
+                                (LogPrefix + '>> current line: ' + JSON.stringify(lineFFData))
+                        );
 
                         if (!lineFFData.isReceived) {
-                            Helper.log(logTitle, '... skipped: not yet received');
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() + (LogPrefix + '....skipping: not received.')
+                            );
                             Helper.setLineValues({
                                 record: record,
                                 values: { itemreceive: false },
@@ -436,159 +981,185 @@ define(function (require) {
 
                         for (ii = 0; ii < UniqueLineItems.length; ii++) {
                             var itemToShip = UniqueLineItems[ii];
-                            Helper.log(logTitle, '// item to Ship', itemToShip);
 
-                            var isMatchingLine =
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() +
+                                    (LogPrefix + '>> item to ship ? ' + JSON.stringify(itemToShip))
+                            );
+
+                            if (
                                 lineFFData.item == itemToShip.item_num ||
                                 (lineFFData.vendorSKU &&
                                     lineFFData.vendorSKU == itemToShip.vendorSKU) ||
                                 (lineFFData.dandh &&
                                     Current.VendorCFG.xmlVendor ==
                                         vc_constants.LIST.XML_VENDOR.DandH &&
-                                    lineFFData.dandh == itemToShip.item_num);
-
-                            if (!isMatchingLine) {
-                                Helper.log(logTitle, '... skipped');
-                                continue;
-                            }
-
-                            var itemffValues = {
-                                quantity: itemToShip.totalShipped,
-                                custcol_ctc_xml_dist_order_num: itemToShip.order_num,
-                                custcol_ctc_xml_date_order_placed: itemToShip.order_date,
-                                custcol_ctc_xml_eta: itemToShip.order_eta,
-                                custcol_ctc_xml_ship_date: itemToShip.ship_date,
-                                custcol_ctc_xml_carrier: itemToShip.carrier,
-                                custcol_ctc_xml_tracking_num: itemToShip.all_tracking_nums,
-                                custcol_ctc_vc_eta_date: Helper.parseDate({
-                                    dateString: itemToShip.order_eta
-                                }),
-                                custcol_ctc_vc_order_placed_date: Helper.parseDate({
-                                    dateString: itemToShip.order_date
-                                }),
-                                custcol_ctc_vc_shipped_date: Helper.parseDate({
-                                    dateString: itemToShip.ship_date
-                                })
-                            };
-
-                            ////////////////////////////////////////////
-                            /// if total Shipped is empty /////
-                            if (itemToShip.totalShipped == 0) {
-                                Helper.log(logTitle, '...skipped: no more items left to ship.');
-                                Helper.setLineValues({
-                                    record: record,
-                                    values: { itemreceive: false },
-                                    doCommit: true
-                                });
-                                recordIsChanged = true;
-                                continue;
-                            }
-
-                            ////////////////////////////////////////////
-                            // don't allow fulfillment if the available quantity is less
-                            if (lineFFData.quantity < itemToShip.ship_qty) {
-                                Helper.log(
+                                    lineFFData.dandh == itemToShip.item_num)
+                            ) {
+                                log.debug(
                                     logTitle,
-                                    '... skipped: rem qty is less than required ship qty. '
+                                    vc_util.getUsage() + (LogPrefix + '....selected')
                                 );
 
-                                Helper.setLineValues({
-                                    record: record,
-                                    values: { itemreceive: false },
-                                    doCommit: true
-                                });
-                                recordIsChanged = true;
-                                continue;
-                            }
+                                var itemffValues = {
+                                    quantity: itemToShip.totalShipped,
+                                    custcol_ctc_xml_dist_order_num: itemToShip.order_num,
+                                    custcol_ctc_xml_date_order_placed: itemToShip.order_date,
+                                    custcol_ctc_xml_eta: itemToShip.order_eta,
+                                    custcol_ctc_xml_ship_date: itemToShip.ship_date,
+                                    custcol_ctc_xml_carrier: itemToShip.carrier,
+                                    custcol_ctc_xml_tracking_num: itemToShip.all_tracking_nums,
+                                    custcol_ctc_vc_eta_date: Helper.parseDate({
+                                        dateString: itemToShip.order_eta
+                                    }),
+                                    custcol_ctc_vc_order_placed_date: Helper.parseDate({
+                                        dateString: itemToShip.order_date
+                                    }),
+                                    custcol_ctc_vc_shipped_date: Helper.parseDate({
+                                        dateString: itemToShip.ship_date
+                                    })
+                                };
 
-                            ////////////////////////////////////////////
-                            // don't allow fulfillment if the available quantity is less
-                            if (lineFFData.quantity < itemToShip.totalShipped) {
-                                itemffValues.quantity = lineFFData.quantity;
-
-                                Helper.setLineValues({
-                                    record: record,
-                                    values: { itemreceive: false },
-                                    doCommit: true
-                                });
-                                recordIsChanged = true;
-                                continue;
-                            }
-
-                            ///////////////////////////////////////////////
-                            Helper.setLineValues({ record: record, values: itemffValues });
-                            ///////////////////////////////////////////////
-
-                            //// SERIALS DETECTION ////////////////
-                            var arrSerials = itemToShip.all_serial_nums
-                                ? itemToShip.all_serial_nums.split(/\n/)
-                                : [];
-
-                            Helper.log(logTitle, '... serials', arrSerials);
-
-                            record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: 'custcol_ctc_xml_serial_num',
-                                value: arrSerials.join('\n').substr(0, _TEXT_AREA_MAX_LENGTH)
-                            });
-
-                            UniqueLineItems[ii].totalShipped -= lineFFData.quantity;
-                            recordLines.push({
-                                item_num: lineFFData.item,
-                                totalShipped: lineFFData.quantity,
-                                order_num: itemToShip.order_num,
-                                order_date: itemToShip.order_date,
-                                order_eta: itemToShip.order_eta,
-                                ship_date: itemToShip.ship_date,
-                                carrier: itemToShip.carrier,
-                                all_serial_nums: arrSerials.join('\n')
-                            });
-
-                            if (
-                                lineFFData.isSerialized === 'T' &&
-                                arrSerials.length &&
-                                Helper.validateSerials({ serials: arrSerials })
-                            ) {
-                                var currentLocation = record.getCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'location'
-                                });
-
-                                if (!currentLocation)
-                                    Helper.setLineLocation({
+                                ////////////////////////////////////////////
+                                /// if total Shipped is empty /////
+                                if (itemToShip.totalShipped == 0) {
+                                    log.debug(
+                                        logTitle,
+                                        vc_util.getUsage() +
+                                            (LogPrefix + '>> skipped: no more items left to ship.')
+                                    );
+                                    Helper.setLineValues({
                                         record: record,
-                                        recSO: Current.SO_REC
+                                        values: { itemreceive: false },
+                                        doCommit: true
                                     });
+                                    recordIsChanged = true;
+                                    continue;
+                                }
 
-                                var resultSerials = Helper.addNativeSerials({
-                                    record: record,
-                                    serials: arrSerials
+                                ////////////////////////////////////////////
+                                // don't allow fulfillment if the available quantity is less
+                                if (lineFFData.quantity < itemToShip.ship_qty) {
+                                    log.debug(
+                                        logTitle,
+                                        vc_util.getUsage() +
+                                            LogPrefix +
+                                            '>> skipped: remaining quantity is less than required ship quantity. ' +
+                                            JSON.stringify({
+                                                qty: lineFFData.quantity,
+                                                ship_qty: itemToShip.ship_qty
+                                            })
+                                    );
+
+                                    Helper.setLineValues({
+                                        record: record,
+                                        values: { itemreceive: false },
+                                        doCommit: true
+                                    });
+                                    recordIsChanged = true;
+                                    continue;
+                                }
+
+                                ////////////////////////////////////////////
+                                // don't allow fulfillment if the available quantity is less
+                                if (lineFFData.quantity < itemToShip.totalShipped) {
+                                    itemffValues.quantity = lineFFData.quantity;
+
+                                    Helper.setLineValues({
+                                        record: record,
+                                        values: { itemreceive: false },
+                                        doCommit: true
+                                    });
+                                    recordIsChanged = true;
+                                    continue;
+                                }
+
+                                ///////////////////////////////////////////////
+                                Helper.setLineValues({ record: record, values: itemffValues });
+                                ///////////////////////////////////////////////
+
+                                //// SERIALS DETECTION ////////////////
+                                var arrSerials = itemToShip.all_serial_nums
+                                    ? itemToShip.all_serial_nums.split(/\n/)
+                                    : [];
+
+                                log.debug(
+                                    logTitle,
+                                    vc_util.getUsage() +
+                                        (LogPrefix + '... serials: ' + JSON.stringify(arrSerials))
+                                );
+
+                                record.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: 'custcol_ctc_xml_serial_num',
+                                    value: arrSerials.join('\n').substr(0, _TEXT_AREA_MAX_LENGTH)
                                 });
 
-                                if (!resultSerials) {
-                                    // do not clear location as some fulfillments fail when there is more than one loc
-                                    // blanks are counted as another location
+                                UniqueLineItems[ii].totalShipped -= lineFFData.quantity;
+                                recordLines.push({
+                                    item_num: lineFFData.item,
+                                    totalShipped: lineFFData.quantity,
+                                    order_num: itemToShip.order_num,
+                                    order_date: itemToShip.order_date,
+                                    order_eta: itemToShip.order_eta,
+                                    ship_date: itemToShip.ship_date,
+                                    carrier: itemToShip.carrier,
+                                    all_serial_nums: arrSerials.join('\n')
+                                });
 
-                                    // only prevent inventory detail from being required after location changes
-                                    record.setCurrentSublistValue({
+                                if (
+                                    lineFFData.isSerialized === 'T' &&
+                                    arrSerials.length &&
+                                    Helper.validateSerials({ serials: arrSerials })
+                                ) {
+                                    var currentLocation = record.getCurrentSublistValue({
                                         sublistId: 'item',
-                                        fieldId: 'inventorydetailreq',
-                                        value: lineFFData.isInvDetailReqd
+                                        fieldId: 'location'
                                     });
+
+                                    if (!currentLocation)
+                                        Helper.setLineLocation({
+                                            record: record,
+                                            recSO: Current.SO_REC
+                                        });
+
+                                    var resultSerials = Helper.addNativeSerials({
+                                        record: record,
+                                        serials: arrSerials
+                                    });
+
+                                    if (!resultSerials) {
+                                        // do not clear location as some fulfillments fail when there is more than one loc
+                                        // blanks are counted as another location
+
+                                        // only prevent inventory detail from being required after location changes
+                                        record.setCurrentSublistValue({
+                                            sublistId: 'item',
+                                            fieldId: 'inventorydetailreq',
+                                            value: lineFFData.isInvDetailReqd
+                                        });
+                                    }
                                 }
-                            }
+                            } else
+                                log.audit(logTitle, vc_util.getUsage() + LogPrefix + '...skipped.');
                         }
                         record.commitLine({ sublistId: 'item' });
                         recordIsChanged = true;
                     }
 
-                    Helper.log(logTitle, '>> record lines', recordLines);
+                    log.debug(
+                        logTitle,
+                        vc_util.getUsage() +
+                            (LogPrefix + '>> recordLines: ' + JSON.stringify(recordLines))
+                    );
 
                     if (vc_util.isEmpty(recordLines)) {
                         Helper.logMsg({
                             title: 'Fulfillment Lines',
                             message: '>> No Matching Lines To Fulfill:  ' + vendorOrderNum
                         });
+
                         continue;
                     }
 
@@ -609,7 +1180,13 @@ define(function (require) {
                                     arrAllTrackingNumbers.concat(arrTrackingNums);
                             }
                         }
-                        Helper.log(logTitle, '/// tracking numbers', arrAllTrackingNumbers);
+                        log.debug(
+                            logTitle,
+                            vc_util.getUsage() +
+                                (LogPrefix +
+                                    '/// arrAllTrackingNumbers: ' +
+                                    JSON.stringify(arrAllTrackingNumbers))
+                        );
 
                         if (!vc_util.isEmpty(arrAllTrackingNumbers)) {
                             record = Helper.addNativePackages({
@@ -618,13 +1195,23 @@ define(function (require) {
                             });
                         }
 
-                        Helper.log(
+                        log.debug(
                             logTitle,
-                            '/// Package line count',
-                            record.getLineCount({ sublistId: 'package' })
+                            vc_util.getUsage() +
+                                (LogPrefix +
+                                    '/// Package line count = ' +
+                                    record.getLineCount({ sublistId: 'package' }))
                         );
                     } catch (package_error) {
-                        Helper.log(logTitle, '/// PACKAGE error', package_error, 'error');
+                        log.error(
+                            logTitle,
+                            vc_util.getUsage() +
+                                (LogPrefix +
+                                    '/// PACKAGE ERROR: ' +
+                                    vc_util.extractError(package_error) +
+                                    ('|  Details: ' + JSON.stringify(package_error)))
+                        );
+
                         Helper.logMsg({
                             error: package_error,
                             title: 'Set Package Error'
@@ -651,7 +1238,13 @@ define(function (require) {
                                 ignoreFieldChange: true
                             });
 
-                            Helper.log(logTitle, '/// ITEM FULFILLMENT Creation', recordLines);
+                            log.debug(
+                                logTitle,
+                                vc_util.getUsage() +
+                                    (LogPrefix +
+                                        '**** ITEM FULFILLMENT CREATION ****' +
+                                        JSON.stringify(recordLines))
+                            );
 
                             objId = record.save({
                                 enableSourcing: true,
@@ -664,9 +1257,11 @@ define(function (require) {
                             responseData.push({ id: objId, orderNum: orderNum });
                         }
 
-                        Helper.log(
+                        log.debug(
                             logTitle,
-                            '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
+                            vc_util.getUsage() +
+                                LogPrefix +
+                                ('## Created Item Fulfillment: [itemfulfillment:' + objId + ']')
                         );
 
                         Helper.logMsg({
@@ -676,9 +1271,18 @@ define(function (require) {
                         });
                     } catch (itemff_err) {
                         var errMsg = vc_util.extractError(itemff_err);
-                        Helper.log(logTitle, '/// FULFILLMENT Create error', itemff_err, 'error');
+                        log.error(
+                            logTitle,
+                            vc_util.getUsage() +
+                                LogPrefix +
+                                ('## Fulfillment Creation Error:  ' + errMsg) +
+                                ('|  Details: ' + JSON.stringify(itemff_err))
+                        );
 
-                        Helper.logMsg({ error: itemff_err, title: 'Create Fulfillment Error' });
+                        Helper.logMsg({
+                            error: itemff_err,
+                            title: 'Create Fulfillment Error'
+                        });
                         throw errMsg;
                     }
                 } catch (line_err) {
@@ -1441,13 +2045,13 @@ define(function (require) {
                 orderNumFilter.pop('OR');
                 searchOption.filters.push(orderNumFilter);
 
-                // log.audit(
-                //     logTitle,
-                //     vc_util.getUsage() +
-                //         LogPrefix +
-                //         '>> searchOption: ' +
-                //         JSON.stringify(searchOption)
-                // );
+                log.audit(
+                    logTitle,
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        '>> searchOption: ' +
+                        JSON.stringify(searchOption)
+                );
 
                 var arrResults = [];
                 var searchResults = vc_util.searchAllPaged({

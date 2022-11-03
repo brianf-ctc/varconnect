@@ -497,7 +497,8 @@ define([
                         el.order_eta = receiptLines[itemCnt].order_eta;
                         el.ship_date = receiptLines[itemCnt].ship_date;
 
-                        var tempTrackingNums = receiptLines[itemCnt].tracking_num && receiptLines[itemCnt].tracking_num.length ? receiptLines[itemCnt].tracking_num.split(',') : [];
+                        var tempTrackingNums = Array();
+                        tempTrackingNums = receiptLines[itemCnt].tracking_num.split(',');
                         for (var tnIndex = 0; tnIndex < tempTrackingNums.length; tnIndex++) {
                             if (el.all_tracking_nums.indexOf(tempTrackingNums[tnIndex]) < 0) {
                                 el.all_tracking_nums += tempTrackingNums[tnIndex] + '\n';
@@ -507,7 +508,8 @@ define([
                         el.carrier = receiptLines[itemCnt].carrier;
 
                         if (mainConfig.linkSerialIF) {
-                            var tempSerials = receiptLines[itemCnt].serial_num && receiptLines[itemCnt].serial_num.length ? receiptLines[itemCnt].serial_num.split(',') : [];
+                            var tempSerials = Array();
+                            tempSerials = receiptLines[itemCnt].serial_num.split(',');
                             for (var snIndex = 0; snIndex < tempSerials.length; snIndex++) {
                                 if (el.all_serial_nums.indexOf(tempSerials[snIndex]) < 0) {
                                     el.all_serial_nums += tempSerials[snIndex] + '\n';
@@ -525,7 +527,8 @@ define([
                                     receiptLines[itemCnt].ship_qty
                                 );
 
-                                var tempTrackingNums = receiptLines[itemCnt].tracking_num && receiptLines[itemCnt].tracking_num.length ? receiptLines[itemCnt].tracking_num.split(',') : [];
+                                var tempTrackingNums = Array();
+                                tempTrackingNums = receiptLines[itemCnt].tracking_num.split(',');
                                 for (
                                     var tnIndex = 0;
                                     tnIndex < tempTrackingNums.length;
@@ -542,7 +545,8 @@ define([
                                 }
 
                                 if (mainConfig.linkSerialIF) {
-                                    var tempSerials = receiptLines[itemCnt].serial_num && receiptLines[itemCnt].serial_num.length ? receiptLines[itemCnt].serial_num.split(',') : [];
+                                    var tempSerials = Array();
+                                    tempSerials = receiptLines[itemCnt].serial_num.split(',');
                                     for (var snIndex = 0; snIndex < tempSerials.length; snIndex++) {
                                         if (
                                             uniqueItems[uniqueIndex].all_serial_nums.indexOf(

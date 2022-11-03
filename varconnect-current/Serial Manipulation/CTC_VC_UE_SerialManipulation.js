@@ -234,6 +234,8 @@ define([
         if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
         var mainConfig = _loadMainConfig();
 
+        return;
+
         LogPrefix = [
             scriptContext.type,
             scriptContext.newRecord.type,
@@ -251,8 +253,9 @@ define([
         // );
 
         //If Serial Scan and Update feature is disabled, hide the corresponding columns
+        var form;
         if (!mainConfig.serialScanUpdate || !_validateLicense({ mainConfig: mainConfig })) {
-            var form = scriptContext.form,
+            form = scriptContext.form,
                 sublist = form.getSublist({ id: 'item' });
 
             if (sublist) {
@@ -280,7 +283,7 @@ define([
         }
 
         if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
-            var form = scriptContext.form;
+            form = scriptContext.form;
 
             var vendorConfig = Helper.searchVendorConfig({
                 salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
@@ -317,7 +320,7 @@ define([
         LogPrefix = '[' + LogPrefix + '] ';
 
         if (
-            vc_util.inArray(scriptContext.type, [
+            !vc_util.inArray(scriptContext.type, [
                 scriptContext.UserEventType.CREATE,
                 scriptContext.UserEventType.EDIT,
                 scriptContext.UserEventType.XEDIT
@@ -392,12 +395,13 @@ define([
         );
 
         //Also check if the corresponding features have been enabled before processing
+        var vendorConfig;    
         if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
-            var vendorConfig = Helper.searchVendorConfig({
+            vendorConfig = Helper.searchVendorConfig({
                 salesOrder: record.getValue({ fieldId: 'createdfrom' })
             });
 
-            if (vendorConfig) {
+            // if (vendorConfig) {
                 vc_util.waitRandom(10000);
 
                 taskOption = {
@@ -408,7 +412,7 @@ define([
                 taskOption.scriptParams['custscript_vc_all_type'] = record.type;
                 taskOption.scriptParams['custscript_vc_all_id'] = record.id;
                 taskOption.deployId = vc_util.forceDeploy(taskOption);
-            }
+            // }
         }
 
         if (hasSerials && mainConfig.serialScanUpdate) {

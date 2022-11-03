@@ -22,6 +22,7 @@
  *
  * Version	Date            Author		    		Remarks
  * 1.00		Jan 1, 2020	    paolodl@nscatalyst.com	Initial Build
+ * 1.01		Oct 25, 2022	christian@nscatalyst.com	Support non-inventory type
  */
 define([
     'N/search',
@@ -35,17 +36,37 @@ define([
     '../CTC_VC_Lib_LicenseValidator',
     '../CTC_VC_Constants'
 ], function (
-    search,
-    record,
-    runtime,
-    https,
-    xml,
-    util,
+    ns_search,
+    ns_record,
+    ns_runtime,
+    ns_https,
+    ns_xml,
+    vc_util,
     libMainConfig,
     libVendorConfig,
     libLicenseValidator,
     constants
 ) {
+    var LogTitle = 'VC|D&H Item Request';
+
+    var Helper = {
+        flatLookup: function (option) {
+            var arrData = null,
+                arrResults = null;
+
+            arrResults = ns_search.lookupFields(option);
+
+            if (arrResults) {
+                arrData = {};
+                for (var fld in arrResults) {
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
+                }
+            }
+            return arrData;
+        }
+    };
     /**
      * Marks the beginning of the Map/Reduce process and generates input data.
      *
@@ -57,27 +78,28 @@ define([
      * @since 2015.1
      */
     function getInputData() {
-        log.audit('getInputData');
+        var logTitle = [LogTitle, 'getInputData'].join(':');
         var mainConfig = _loadMainConfig();
 
         _validateLicense({ mainConfig: mainConfig });
 
         if (_checkDandHVendorConfig()) {
-            var srchId = runtime
+            var srchId = ns_runtime
                 .getCurrentScript()
                 .getParameter('custscript_ctc_vc_dh_itemrequest_srch');
             if (!srchId) srchId = 'customsearch_ctc_vc_dh_itemrequest';
 
-            log.debug('srchId', srchId);
-            var srch = search.load({ id: srchId });
+            log.debug(logTitle, 'Search id=' + srchId);
+            var srch = ns_search.load({ id: srchId });
 
             var count = srch.runPaged().count;
-            log.debug('count', count);
+            log.audit(logTitle, count + ' item(s) to process.');
 
             return srch;
         }
     }
 
+    var _cachedResponses = {};
     /**
      * Executes when the map entry point is triggered and applies to each key/value pair.
      *
@@ -85,65 +107,99 @@ define([
      * @since 2015.1
      */
     function map(context) {
-        log.audit('item request: Map key: ' + context.key, context.value);
+        var logTitle = [LogTitle, 'map'].join(':');
+        log.audit(logTitle, 'item request: Map key: ' + context.key + '=' + context.value);
 
         var searchResult = JSON.parse(context.value);
         var subsidiary = searchResult.values.subsidiary.value;
         var tranId = searchResult.values.tranid;
         var item = searchResult.values.item.value;
         var itemName = searchResult.values.item.text;
+        logTitle = [logTitle, itemName].join(':');
         var mpn = searchResult.values[constants.Columns.DH_MPN];
         var vendor = searchResult.values['internalid.vendor'].value;
         var itemType = searchResult.values['type.item'].value;
+        var isSerialItem = searchResult.values['isserialitem.item'];
+        var itemRecordType;
+
+        // Compare item type to its record type counterpart
+        // switch (itemType) {
+        //     case 'NonInvtPart':
+        //         itemRecordType = ns_record.Type.NON_INVENTORY_ITEM;
+        //         break;
+        //     case 'InvtPart':
+        //         if (isSerialItem) {
+        //             itemRecordType = ns_record.Type.SERIALIZED_INVENTORY_ITEM;
+        //         } else {
+        //             itemRecordType = ns_record.Type.INVENTORY_ITEM;
+        //         }
+        //         break;
+        //     default:
+        //         itemRecordType = null;
+        //         log.error(
+        //             logTitle,
+        //             'UNSUPPORTED_ITEM_TYPE: Not expecting D&H to fulfill this item type: ' +
+        //                 itemType
+        //         );
+        //         break;
+        // }
+        // log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
+
+        // try to lookup instead
+        var itemData = Helper.flatLookup({ type: 'item', id: item, columns: ['recordtype'] });
+        log.audit(logTitle, '>> item info: ' + JSON.stringify(itemData));
+        itemRecordType = itemData.recordtype;
+        
+        log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
+
+        if (!itemRecordType) return;
 
         var vendorConfig = _loadVendorConfig({
             vendor: vendor,
             subsidiary: subsidiary
         });
 
-        if (vendorConfig) {
-            var itemNumbers = _getItemValues({
-                vendorConfig: vendorConfig,
-                itemName: itemName
-            });
+        if (!vendorConfig) return;
+        var itemNumbers = _getItemValues({
+            vendorConfig: vendorConfig,
+            itemName: itemName
+        });
 
-            if (itemNumbers && (itemNumbers.itemNum || itemNumbers.partNum)) {
-                log.debug('itemname / itemNumbers', JSON.stringify([itemNumbers, itemName]));
-                var valToSave;
+        if (itemNumbers && (itemNumbers.itemNum || itemNumbers.partNum)) {
+            log.debug(logTitle, 'itemNumbers=' + JSON.stringify(itemNumbers));
+            var valToSave;
 
-                if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
-                    valToSave = itemNumbers.partNum;
-                else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
-                    valToSave = itemNumbers.itemNum;
+            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.partNum;
+            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.itemNum;
 
-                values = {};
-                values[constants.Fields.Item.DH_MPN] = valToSave;
+            values = {};
+            values[constants.Fields.Item.DH_MPN] = valToSave;
 
-                log.debug('values to update:', JSON.stringify([valToSave, values]));
+            log.debug(logTitle, 'values to update:' + JSON.stringify(values));
 
-                if (valToSave) {
-                    try {
-                        record.submitFields({
-                            type: record.Type.INVENTORY_ITEM,
-                            id: item,
-                            values: values
-                        });
-                        log.debug('update :', '>> updated INVENTORY_ITEM: ' + item);
-                    } catch (e) {
-                        //If error, try another item type
-                        record.submitFields({
-                            type: record.Type.SERIALIZED_INVENTORY_ITEM,
-                            id: item,
-                            values: values
-                        });
-                        log.debug('update :', '>> updated SERIALIZED_INVENTORY_ITEM: ' + item);
-                    }
+            if (valToSave) {
+                try {
+                    ns_record.submitFields({
+                        type: itemRecordType,
+                        id: item,
+                        values: values
+                    });
+                    log.debug(
+                        logTitle,
+                        '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item
+                    );
+                } catch (error) {
+                    log.error(logTitle, '## ERROR: ' + JSON.stringify(error));
+                    throw error;
                 }
             }
         }
     }
 
     function _getItemValues(options) {
+        var logTitle = [LogTitle, '_getItemValues'].join(':');
         var vendorConfig = options.vendorConfig,
             itemName = options.itemName,
             itemNumbers;
@@ -154,7 +210,7 @@ define([
             lookupType: 'DH'
         });
 
-        log.debug('first response', responseXML);
+        log.debug(logTitle, '1st response=' + responseXML);
         if (responseXML && responseXML.indexOf('Invalid') < 0)
             itemNumbers = _processItemInquiryResponse({
                 responseXML: responseXML
@@ -167,7 +223,20 @@ define([
                 lookupType: 'MFR'
             });
 
-            log.debug('second response', responseXML);
+            log.debug(logTitle, '2nd response=' + responseXML);
+            if (!responseXML || responseXML.indexOf('Invalid') >= 0) {
+                var cachedResponseXml =
+                    getCachedResponse({
+                        itemNum: itemName,
+                        lookupType: 'DH'
+                    }) ||
+                    getCachedResponse({
+                        itemNum: itemName,
+                        lookupType: 'MFR'
+                    });
+                log.debug(logTitle, 'Cached response=' + cachedResponseXml);
+                responseXML = cachedResponseXml || responseXML;
+            }
             if (responseXML)
                 itemNumbers = _processItemInquiryResponse({
                     responseXML: responseXML
@@ -184,9 +253,9 @@ define([
      * @since 2015.1
      */
     function summarize(summary) {
-        log.audit('summarize');
+        var logTitle = [LogTitle, 'summarize'].join(':');
         summary.mapSummary.errors.iterator().each(function (key, error) {
-            log.error('Map Error for key: ' + key, error);
+            log.error(logTitle, 'Map Error for key: ' + key + '=' + error);
             return true;
         });
         var mapKeys = [];
@@ -194,19 +263,21 @@ define([
             mapKeys.push(key);
             return true;
         });
-        log.audit('MAP keys processed', mapKeys);
+        log.audit(logTitle, 'MAP keys processed=' + mapKeys);
     }
 
     function _loadMainConfig() {
+        var logTitle = [LogTitle, '_loadMainConfig'].join(':');
         var mainConfig = libMainConfig.getMainConfiguration();
 
         if (!mainConfig) {
-            log.error('No Coniguration available');
+            log.error(logTitle, 'No Configuration available');
             throw new Error('No Coniguration available');
         } else return mainConfig;
     }
 
     function _loadVendorConfig(options) {
+        var logTitle = [LogTitle, '_loadVendorConfig'].join(':');
         var vendor = options.vendor,
             subsidiary = options.subsidiary,
             vendorConfig = libVendorConfig.getVendorConfiguration({
@@ -216,6 +287,7 @@ define([
 
         if (!vendorConfig) {
             log.debug(
+                logTitle,
                 'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
         } else return vendorConfig;
@@ -247,25 +319,26 @@ define([
     }
 
     function _checkDandHVendorConfig(options) {
+        var logTitle = [LogTitle, '_checkDandHVendorConfig'].join(':');
         var filters = [];
         filters.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: constants.Fields.VendorConfig.XML_VENDOR,
-                operator: search.Operator.ANYOF,
+                operator: ns_search.Operator.ANYOF,
                 values: constants.Lists.XML_VENDOR.DandH
             })
         );
         filters.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: 'isinactive',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: false
             })
         );
 
         var columns = ['internalid'];
 
-        var vendorConfigSearch = search.create({
+        var vendorConfigSearch = ns_search.create({
             type: constants.Records.VENDOR_CONFIG,
             filters: filters,
             columns: columns
@@ -277,25 +350,26 @@ define([
                 end: 1
             });
         } catch (e) {
-            log.debug('error', JSON.stringify(e));
+            log.debug(logTitle, 'ERROR=' + JSON.stringify(e));
         }
 
         if (result && result[0]) {
             return true;
         } else {
-            log.debug('No D&H', 'No D&H vendor configuration set up');
+            log.debug(logTitle, 'No D&H vendor configuration set up');
             return false;
         }
     }
 
     function _processItemInquiryRequest(options) {
+        var logTitle = [LogTitle, '_processItemInquiryRequest'].join(':');
         var vendorConfig = options.vendorConfig,
             itemNum = options.itemNum,
             lookupType = options.lookupType,
             requestURL = vendorConfig.endPoint,
             userName = vendorConfig.user,
             password = vendorConfig.password;
-        log.debug('item inquiry d and h');
+        log.debug(logTitle, 'Sending item inquiry to D&H ...');
 
         var xmlItemInquiry;
         var xmlInvoiceByPOStatus;
@@ -333,20 +407,24 @@ define([
              * change endpoint
              * add to vendor config
              */
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlItemInquiry,
                 headers: headers
             });
             responseXML = response.body;
             log.debug({
-                title: 'D and H Scheduled - Item Inquiry',
-                details: 'DandH response length ' + responseXML.length
+                title: logTitle,
+                details: 'D&H response length = ' + responseXML.length
             });
+            // save latest response
+            if (responseXML && responseXML.indexOf('Invalid') < 0) {
+                _cachedResponses[[itemNum, lookupType].join('_')] = responseXML;
+            }
         } catch (err) {
             log.debug({
-                title: 'D and H Scheduled - Item Inquiry',
-                details: 'DandH scheduled error = ' + err.message
+                title: logTitle,
+                details: 'D&H request error = ' + err.message
             });
             responseXML = null;
         }
@@ -354,27 +432,34 @@ define([
         return responseXML;
     }
 
+    function getCachedResponse(options) {
+        var itemNum = options.itemNum,
+            lookupType = options.lookupType;
+        return _cachedResponses[[itemNum, lookupType].join('_')];
+    }
+
     function _processItemInquiryResponse(options) {
+        var logTitle = [LogTitle, '_processItemInquiryResponse'].join(':');
         var xmlString = options.responseXML;
         log.debug({
-            title: 'D and H Scheduled - Item Inquiry Response',
-            details: 'ParseDandH'
+            title: logTitle,
+            details: 'Parsing D&H response ...'
         });
 
         // Create XML object from XML text returned from vendor, using Netsuite XML parser
         var itemNum, partNum;
-        var xmlDoc = xml.Parser.fromString({
+        var xmlDoc = ns_xml.Parser.fromString({
             text: xmlString
         });
 
         if (xmlDoc != null) {
-            var itemNode = xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
+            var itemNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
             if (itemNode != null && itemNode.length > 0) {
-                itemNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
+                itemNum = vc_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
                 );
-                partNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
+                partNum = vc_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
                 );
             }
         }

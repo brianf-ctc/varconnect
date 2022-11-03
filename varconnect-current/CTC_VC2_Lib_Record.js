@@ -300,7 +300,9 @@ define(function (require) {
                 });
             }
             return returnValue;
-        }
+        }, 
+        isMatchingLine: function (option) {}, 
+        findMatchingLines: function (option) {}
     };
 
     return VC_RecordLib;

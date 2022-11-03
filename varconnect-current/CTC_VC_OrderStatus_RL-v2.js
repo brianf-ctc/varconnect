@@ -157,6 +157,54 @@ define(function (request) {
     };
 
     var Helper = {
+        validateLicense: function (option) {
+            var logTitle = [LogTitle, 'validateLicense'].join('::');
+            // log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+            // return true;
+
+            var mainConfig = option.mainConfig,
+                license = mainConfig.license,
+                response = vc_license.callValidationSuitelet({
+                    license: license,
+                    external: true
+                });
+
+            if (response == 'invalid')
+                throw new Error(
+                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
+                );
+        },
+        loadMainConfig: function () {
+            var logTitle = [LogTitle, 'loadMainConfig'].join('::');
+
+            var mainConfig = vc_maincfg.getMainConfiguration();
+            if (!mainConfig) {
+                log.error(logTitle, 'No Configuration available');
+                throw new Error('No Configuration available');
+            } else return mainConfig;
+        },
+        loadVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
+            // log.debug(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+
+            var vendor = option.vendor,
+                vendorName = option.vendorName,
+                subsidiary = option.subsidiary,
+                vendorConfig = vc_vendorcfg.getVendorConfiguration({
+                    vendor: vendor,
+                    subsidiary: subsidiary
+                });
+
+            if (!vendorConfig) {
+                log.audit(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
+            }
+
+            log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
+            return vendorConfig;
+        },
         getSubsidiary: function (poId) {
             var logTitle = [LogTitle, 'getSubsidiary'].join('::');
             log.debug(logTitle, LogPrefix + '>> poId: ' + JSON.stringify(poId));
@@ -173,6 +221,106 @@ define(function (request) {
             }
 
             return subsidiary;
+        },
+        processDropshipsAndSpecialOrders: function (option) {
+            var logTitle = [LogTitle, 'processDropshipsAndSpecialOrders'].join('::');
+            // log.debug(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+
+            var mainConfig = option.mainConfig,
+                vendorConfig = option.vendorConfig,
+                isDropPO = option.isDropPO,
+                docid = option.docid,
+                so_rec = option.so_rec,
+                po_rec = option.po_rec,
+                itemArray = option.itemArray,
+                vendor = option.vendor,
+                fulfillmentData = false;
+
+            try {
+                log.audit(logTitle, LogPrefix + '>>>>  Is Drop PO? ' + JSON.stringify(isDropPO));
+                if (isDropPO) {
+                    // lets require the SO record here
+                    if (!so_rec) throw 'Unable to fulfill without a valid SO record';
+
+                    //// FULFILLMENT CREATION  /////////////////
+                    log.audit(
+                        logTitle,
+                        LogPrefix +
+                            '>> Fulfillment Creation Settings << ' +
+                            JSON.stringify({
+                                'mainConfig.processDropships': mainConfig.processDropships,
+                                'vendorConfig.processDropships': vendorConfig.processDropships,
+                                'mainConfig.createIF': mainConfig.createIF
+                            })
+                    );
+
+                    if (
+                        mainConfig.processDropships &&
+                        vendorConfig.processDropships &&
+                        mainConfig.createIF
+                    ) {
+                        fulfillmentData = vc_itemfflib.updateItemFulfillments({
+                            mainConfig: mainConfig,
+                            vendorConfig: vendorConfig,
+                            poId: docid,
+                            recSalesOrd: so_rec,
+                            recPurchOrd: po_rec,
+                            lineData: itemArray,
+                            vendor: vendor
+                        });
+                    } else {
+                        log.audit(logTitle, LogPrefix + '*** Fulfillment Creation not allowed ***');
+                    }
+                    /////////////////////////////////////////////
+                } else {
+                    //// ITEM RECEIPT CREATION  /////////////////
+                    log.audit(
+                        logTitle,
+                        LogPrefix +
+                            '>> Item Receipt Creation Settings << ' +
+                            JSON.stringify({
+                                'mainConfig.processSpecialOrders': mainConfig.processSpecialOrders,
+                                'vendorConfig.processSpecialOrders':
+                                    vendorConfig.processSpecialOrders,
+                                'mainConfig.createIR': mainConfig.createIR
+                            })
+                    );
+
+                    if (
+                        mainConfig.processSpecialOrders &&
+                        vendorConfig.processSpecialOrders &&
+                        mainConfig.createIR
+                    ) {
+                        fulfillmentData = vc_itemrcpt.updateIR({
+                            mainConfig: mainConfig,
+                            vendorConfig: vendorConfig,
+                            poId: docid,
+                            lineData: itemArray,
+                            vendor: vendor
+                        });
+                    } else {
+                        log.audit(
+                            logTitle,
+                            LogPrefix + '*** Item Receipt Creation not allowed ***'
+                        );
+                    }
+                    /////////////////////////////////////////////
+                }
+            } catch (e) {
+                log.error(
+                    logTitle,
+                    LogPrefix + 'Error creating fulfillment/receipt : ' + JSON.stringify(e)
+                );
+
+                vc_log.recordLog({
+                    header: 'Fulfillment/Receipt Creation | Error',
+                    body: vc_util.extractError(e),
+                    transaction: docid,
+                    status: vc_constants.Lists.VC_LOG_STATUS.ERROR
+                });
+            }
+
+            return fulfillmentData;
         }
     };
 

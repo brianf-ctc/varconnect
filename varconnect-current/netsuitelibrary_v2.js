@@ -106,7 +106,10 @@ define([
             var isDropPO = po_record.getValue({ fieldId: 'custbody_isdropshippo' });
 
             checkForDuplicateItems(po_record);
-            log.audit(logTitle, LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
+            log.audit(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> lineData = ' + JSON.stringify(lineData)
+            );
 
             //4.01
             if (!dateFormat) {
@@ -114,7 +117,10 @@ define([
                     type: ns_config.Type.COMPANY_PREFERENCES
                 });
                 dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
+                log.audit(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat)
+                );
             }
 
             if (lineData.header_info) {
@@ -156,7 +162,10 @@ define([
 
                     log.audit(
                         logTitle,
-                        LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
+                        vc_util.getUsage() +
+                            LogPrefix +
+                            '>> lineData: ' +
+                            JSON.stringify([line_num, lineData[i]])
                     );
 
                     if (line_num == null) {
@@ -243,7 +252,10 @@ define([
                 } catch (line_error) {
                     log.error(
                         logTitle,
-                        LogPrefix + '## LINE ERROR ## ' + JSON.stringify(line_error)
+                        vc_util.getUsage() +
+                            LogPrefix +
+                            '## LINE ERROR ## ' +
+                            JSON.stringify(line_error)
                     );
                     vc_util.vcLog({
                         title: 'Update Record Line',
@@ -265,7 +277,10 @@ define([
             }
             return returnValue;
         } catch (err) {
-            log.error(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
+            log.error(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(err)
+            );
 
             vc_util.vcLog({
                 title: 'Update Record',
@@ -293,7 +308,8 @@ define([
      */
     function validateLineNumber(option) {
         //po_record, itemNum, vendorSKU, hashSpace, xmlVendor
-        var logTitle = [LogTitle, 'validateLineNumber'].join('::');
+        var logTitle = [LogTitle, 'validateLineNumber'].join('::'),
+            returnValue = null;
 
         var po_record = option.po_record,
             lineData = option.lineData,
@@ -305,63 +321,41 @@ define([
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
         log.audit(
             logTitle,
-            LogPrefix +
-                '>> params: ' +
-                JSON.stringify(
-                    vc_util.extractValues({
-                        source: option,
-                        params: ['lineData', 'hashSpace', 'xmlVendor']
-                    })
-                )
+            vc_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData)
         );
         var vendorList = vc_constants.Lists.XML_VENDOR;
 
-        if (itemNum == null || itemNum.length == 0 || itemNum == 'NA') {
-            log.error(logTitle, LogPrefix + 'Could not find line number for item ' + itemNum);
-            return null;
-        }
+        try {
+            if (itemNum == null || itemNum.length == 0 || itemNum == 'NA')
+                throw 'Item number is missing';
 
-        var lineItemCount = po_record.getLineCount({
-            sublistId: 'item'
-        });
-        if (lineItemCount > 0) {
-            for (var i = 0; i < lineItemCount; i++) {
+            var lineItemCount = po_record.getLineCount({ sublistId: 'item' });
+            if (lineItemCount <= 0) throw 'No line items found';
+
+            var lineNotFound = false,
+                line;
+            for (line = 0; line < lineItemCount; line++) {
+                lineNotFound = false;
+
                 var tempItemNum = po_record.getSublistText({
                     sublistId: 'item',
                     fieldId: vc_global.ITEM_ID_LOOKUP_COL,
-                    line: i
+                    line: line
                 });
-                //					log.debug('CTC Update PO line ' + i, tempItemNum + '=' + itemNum + ' | ' + tempVendorSKU + '=' + vendorSKU);
 
-                if (vc_global.VENDOR_SKU_LOOKUP_COL != null && vendorSKU != '') {
-                    var tempVendorSKU = po_record.getSublistText({
-                        sublistId: 'item',
-                        fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
-                        line: i
-                    });
+                var tempVendorSKU = vc_global.VENDOR_SKU_LOOKUP_COL
+                    ? po_record.getSublistText({
+                          sublistId: 'item',
+                          fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                          line: line
+                      })
+                    : null;
 
-                    if (tempVendorSKU == vendorSKU) {
-                        log.audit(logTitle, LogPrefix + '>>> matched vendor sku for line :' + i);
-                        return i;
-                    }
+                // check for itemNum
+                if (tempItemNum == itemNum) break;
 
-                    //Ingram Hash replacement
-                    if (
-                        hashSpace &&
-                        (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                            xmlVendor == vendorList.INGRAM_MICRO)
-                    ) {
-                        if (vendorSKU.replace('#', ' ') == tempVendorSKU) {
-                            log.audit(
-                                logTitle,
-                                LogPrefix + '>>> matched vendor sku for line :' + i
-                            );
-                            return i;
-                        }
-                    }
-                }
-
-                if (tempItemNum == itemNum) return i;
+                // check for vendorSKU
+                if (vendorSKU && tempVendorSKU && tempVendorSKU == vendorSKU) break;
 
                 //Ingram Hash replacement
                 if (
@@ -369,20 +363,41 @@ define([
                     (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
                         xmlVendor == vendorList.INGRAM_MICRO)
                 ) {
-                    if (itemNum.replace('#', ' ') == tempItemNum) return i;
+                    // check for itemNum
+                    if (itemNum.replace('#', ' ') == tempItemNum) break;
+
+                    // check vendor SKUI
+                    if (vendorSKU && tempVendorSKU && vendorSKU.replace('#', ' ') == tempVendorSKU)
+                        break;
                 }
 
-                //D&H Item replacement
-                var dAndhItem = po_record.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: vc_constants.Columns.DH_MPN,
-                    line: i
-                });
+                if (xmlVendor == vendorList.DandH) {
+                    //D&H Item replacement
+                    var dAndhItem = po_record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: vc_constants.Columns.DH_MPN,
+                        line: line
+                    });
 
-                if (dAndhItem == itemNum && xmlVendor == vendorList.DandH) return i;
+                    if (dAndhItem == itemNum) break;
+                }
+
+                // we reached this, line not yet found
+                lineNotFound = true;
             }
-            return null;
-        } else return null;
+
+            returnValue = lineNotFound ? null : line;
+        } catch (error) {
+            log.error(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(error)
+            );
+            returnValue = null;
+        } finally {
+            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '// Line Number: ' + returnValue);
+        }
+
+        return returnValue;
     }
 
     /**
@@ -413,7 +428,6 @@ define([
             if (
                 ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0 ||
                 (currentFieldValue.indexOf(xmlVal) < 0 &&
-                    currentFieldValue.length < maxFieldLength &&
                     xmlVal != 'NA')
             ) {
                 var newFieldValue = null;
@@ -421,9 +435,18 @@ define([
                 if (
                     ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0
                 ) {
+                    // some fields should just be overwritten
                     newFieldValue = xmlVal;
+                } else if (
+                    // some field values should stack instead of appending
+                    ['custcol_ctc_xml_eta'].indexOf(fieldID) >= 0
+                ) {
+                    newFieldValue = xmlVal + '\n' + currentFieldValue;
                 } else {
                     newFieldValue = currentFieldValue + '\n' + xmlVal;
+                }
+                if (newFieldValue && newFieldValue.length > 300) {
+                    newFieldValue = newFieldValue.substr(0, maxFieldLength);
                 }
 
                 if (newFieldValue != currentFieldValue) {
@@ -626,7 +649,10 @@ define([
                     }
                 }
             } catch (err) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err));
+                log.error(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err)
+                );
             }
         }
     }
@@ -732,7 +758,10 @@ define([
                     }
                 }
             } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e));
+                log.error(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e)
+                );
             }
         }
 
@@ -809,6 +838,7 @@ define([
     return {
         updatepo: updatePOItemData,
         validateline: validateLineNumber,
+        validateLineNumber: validateLineNumber,
         getOrderLineNumbers: getOrderLineNumbers
     };
 });
