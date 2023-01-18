@@ -19,89 +19,90 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './VC_Globals', './CTC_VC_Constants.js', './CTC_VC2_Lib_Utils'], function (
-    search,
-    globals,
-    constants,
+define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
+    ns_search,
+    vc2_constant,
     vc2_util
 ) {
+    var MainCFG = vc2_constant.RECORD.MAIN_CONFIG;
+
     var mainConfigFields = [
-        constants.Fields.MainConfig.ID, //0
-        constants.Fields.MainConfig.SCHEDULED_FULFILLMENT_TEMPLATE, //1
-        constants.Fields.MainConfig.SCHEDULED_FULFILLMENT_SENDER, //2
-        constants.Fields.MainConfig.SERIAL_NO_FOLDER_ID, //3
-        constants.Fields.MainConfig.PROCESS_DROPSHIPS, //4
-        constants.Fields.MainConfig.PROCESS_SPECIAL_ORDERS, //5
-        constants.Fields.MainConfig.CREATE_ITEM_FULFILLMENTS, //6
-        constants.Fields.MainConfig.CREATE_ITEM_RECEIPTS, //7
-        constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
-        constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
-        constants.Fields.MainConfig.CREATE_SERIAL_DROPSHIPS, //10
-        constants.Fields.MainConfig.CREATE_SERIAL_SPECIAL_ORDERS, //11
-        constants.Fields.MainConfig.USE_INB_TRACKING_SPECIAL_ORDERS, //12
-        constants.Fields.MainConfig.LICENSE, //13
-        constants.Fields.MainConfig.COPY_SERIALS_INV, //14
-        constants.Fields.MainConfig.SERIAL_SCAN_UPDATE, //15
-        constants.Fields.MainConfig.INV_PRINT_SERIALS, //16
-        constants.Fields.MainConfig.PRINT_SERIALS_TEMPLATE, //17
-        constants.Fields.MainConfig.MULTIPLE_INGRAM, //18
-        constants.Fields.MainConfig.INGRAM_HASH_TO_SPACE, //19
-        constants.Fields.MainConfig.FULFILMENT_SEARCH, //20,
-        constants.Fields.MainConfig.DEFAULT_BILL_FORM, //21
-        constants.Fields.MainConfig.DEFAULT_VENDOR_BILL_STATUS, //22
-        constants.Fields.MainConfig.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
-        constants.Fields.MainConfig.VARIANCE_ON_TAX, //24
-        constants.Fields.MainConfig.DEFAULT_TAX_ITEM, //25
-        constants.Fields.MainConfig.DEFAULT_TAX_ITEM2, //25
-        constants.Fields.MainConfig.VARIANCE_ON_SHIPPING, //26
-        constants.Fields.MainConfig.DEFAULT_SHIPPING_ITEM, //27
-        constants.Fields.MainConfig.VARIANCE_ON_OTHER, //29
-        constants.Fields.MainConfig.DEFAULT_OTHER_ITEM, //30
-        constants.Fields.MainConfig.DISABLE_VENDOR_BILL_CREATION //31
+        MainCFG.FIELD.ID, //0
+        MainCFG.FIELD.SCHEDULED_FULFILLMENT_TEMPLATE, //1
+        MainCFG.FIELD.SCHEDULED_FULFILLMENT_SENDER, //2
+        MainCFG.FIELD.SERIAL_NO_FOLDER_ID, //3
+        MainCFG.FIELD.PROCESS_DROPSHIPS, //4
+        MainCFG.FIELD.PROCESS_SPECIAL_ORDERS, //5
+        MainCFG.FIELD.CREATE_ITEM_FULFILLMENTS, //6
+        MainCFG.FIELD.CREATE_ITEM_RECEIPTS, //7
+        MainCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
+        MainCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
+        MainCFG.FIELD.CREATE_SERIAL_DROPSHIPS, //10
+        MainCFG.FIELD.CREATE_SERIAL_SPECIAL_ORDERS, //11
+        MainCFG.FIELD.USE_INB_TRACKING_SPECIAL_ORDERS, //12
+        MainCFG.FIELD.LICENSE, //13
+        MainCFG.FIELD.COPY_SERIALS_INV, //14
+        MainCFG.FIELD.SERIAL_SCAN_UPDATE, //15
+        MainCFG.FIELD.INV_PRINT_SERIALS, //16
+        MainCFG.FIELD.PRINT_SERIALS_TEMPLATE, //17
+        MainCFG.FIELD.MULTIPLE_INGRAM, //18
+        MainCFG.FIELD.INGRAM_HASH_TO_SPACE, //19
+        MainCFG.FIELD.FULFILMENT_SEARCH, //20,
+        MainCFG.FIELD.DEFAULT_BILL_FORM, //21
+        MainCFG.FIELD.DEFAULT_VENDOR_BILL_STATUS, //22
+        MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
+        MainCFG.FIELD.VARIANCE_ON_TAX, //24
+        MainCFG.FIELD.DEFAULT_TAX_ITEM, //25
+        MainCFG.FIELD.DEFAULT_TAX_ITEM2, //25
+        MainCFG.FIELD.VARIANCE_ON_SHIPPING, //26
+        MainCFG.FIELD.DEFAULT_SHIPPING_ITEM, //27
+        MainCFG.FIELD.VARIANCE_ON_OTHER, //29
+        MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
+        MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31,
+        MainCFG.FIELD.OVERRIDE_PO_NUM
     ];
 
     var mainConfigMap = {
-        id: constants.Fields.MainConfig.ID, //0
-        emailTemplate: constants.Fields.MainConfig.SCHEDULED_FULFILLMENT_TEMPLATE, //1
-        emailSender: constants.Fields.MainConfig.SCHEDULED_FULFILLMENT_SENDER, //2
-        serialNoFolder: constants.Fields.MainConfig.SERIAL_NO_FOLDER_ID, //3
-        processDropships: constants.Fields.MainConfig.PROCESS_DROPSHIPS, //4
-        processSpecialOrders: constants.Fields.MainConfig.PROCESS_SPECIAL_ORDERS, //5
-        createIF: constants.Fields.MainConfig.CREATE_ITEM_FULFILLMENTS, //6
-        createIR: constants.Fields.MainConfig.CREATE_ITEM_RECEIPTS, //7
-        ignoreDirectShipDropship: constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
-        ignoreDirectShipSpecialOrder:
-            constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
-        createSerialDropship: constants.Fields.MainConfig.CREATE_SERIAL_DROPSHIPS, //10
-        createSerialSpecialOrder: constants.Fields.MainConfig.CREATE_SERIAL_SPECIAL_ORDERS, //11
-        useInboundTrackingNumbers: constants.Fields.MainConfig.USE_INB_TRACKING_SPECIAL_ORDERS, //12
-        license: constants.Fields.MainConfig.LICENSE, //13
-        copySerialsInv: constants.Fields.MainConfig.COPY_SERIALS_INV, //14
-        serialScanUpdate: constants.Fields.MainConfig.SERIAL_SCAN_UPDATE, //15
-        invPrintSerials: constants.Fields.MainConfig.INV_PRINT_SERIALS, //16
-        printSerialsTemplate: constants.Fields.MainConfig.PRINT_SERIALS_TEMPLATE, //17
-        multipleIngram: constants.Fields.MainConfig.MULTIPLE_INGRAM, //18
-        ingramHashSpace: constants.Fields.MainConfig.INGRAM_HASH_TO_SPACE, //19
-        fulfillmentSearch: constants.Fields.MainConfig.FULFILMENT_SEARCH, //20,
-        defaultBillForm: constants.Fields.MainConfig.DEFAULT_BILL_FORM, //21
-        defaultVendorBillStatus: constants.Fields.MainConfig.DEFAULT_VENDOR_BILL_STATUS, //22
-        allowedVarianceAmountThreshold:
-            constants.Fields.MainConfig.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
-        isVarianceOnTax: constants.Fields.MainConfig.VARIANCE_ON_TAX, //24
-        defaultTaxItem: constants.Fields.MainConfig.DEFAULT_TAX_ITEM, //25
-        defaultTaxItem2: constants.Fields.MainConfig.DEFAULT_TAX_ITEM2, //25
-        isVarianceOnShipping: constants.Fields.MainConfig.VARIANCE_ON_SHIPPING, //26
-        defaultShipItem: constants.Fields.MainConfig.DEFAULT_SHIPPING_ITEM, //27
-        isVarianceOnOther: constants.Fields.MainConfig.VARIANCE_ON_OTHER, //29
-        defaultOtherItem: constants.Fields.MainConfig.DEFAULT_OTHER_ITEM, //30
-        isBillCreationDisabled: constants.Fields.MainConfig.DISABLE_VENDOR_BILL_CREATION //31
+        id: MainCFG.FIELD.ID, //0
+        emailTemplate: MainCFG.FIELD.SCHEDULED_FULFILLMENT_TEMPLATE, //1
+        emailSender: MainCFG.FIELD.SCHEDULED_FULFILLMENT_SENDER, //2
+        serialNoFolder: MainCFG.FIELD.SERIAL_NO_FOLDER_ID, //3
+        processDropships: MainCFG.FIELD.PROCESS_DROPSHIPS, //4
+        processSpecialOrders: MainCFG.FIELD.PROCESS_SPECIAL_ORDERS, //5
+        createIF: MainCFG.FIELD.CREATE_ITEM_FULFILLMENTS, //6
+        createIR: MainCFG.FIELD.CREATE_ITEM_RECEIPTS, //7
+        ignoreDirectShipDropship: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
+        ignoreDirectShipSpecialOrder: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
+        createSerialDropship: MainCFG.FIELD.CREATE_SERIAL_DROPSHIPS, //10
+        createSerialSpecialOrder: MainCFG.FIELD.CREATE_SERIAL_SPECIAL_ORDERS, //11
+        useInboundTrackingNumbers: MainCFG.FIELD.USE_INB_TRACKING_SPECIAL_ORDERS, //12
+        license: MainCFG.FIELD.LICENSE, //13
+        copySerialsInv: MainCFG.FIELD.COPY_SERIALS_INV, //14
+        serialScanUpdate: MainCFG.FIELD.SERIAL_SCAN_UPDATE, //15
+        invPrintSerials: MainCFG.FIELD.INV_PRINT_SERIALS, //16
+        printSerialsTemplate: MainCFG.FIELD.PRINT_SERIALS_TEMPLATE, //17
+        multipleIngram: MainCFG.FIELD.MULTIPLE_INGRAM, //18
+        ingramHashSpace: MainCFG.FIELD.INGRAM_HASH_TO_SPACE, //19
+        fulfillmentSearch: MainCFG.FIELD.FULFILMENT_SEARCH, //20,
+        defaultBillForm: MainCFG.FIELD.DEFAULT_BILL_FORM, //21
+        defaultVendorBillStatus: MainCFG.FIELD.DEFAULT_VENDOR_BILL_STATUS, //22
+        allowedVarianceAmountThreshold: MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
+        isVarianceOnTax: MainCFG.FIELD.VARIANCE_ON_TAX, //24
+        defaultTaxItem: MainCFG.FIELD.DEFAULT_TAX_ITEM, //25
+        defaultTaxItem2: MainCFG.FIELD.DEFAULT_TAX_ITEM2, //25
+        isVarianceOnShipping: MainCFG.FIELD.VARIANCE_ON_SHIPPING, //26
+        defaultShipItem: MainCFG.FIELD.DEFAULT_SHIPPING_ITEM, //27
+        isVarianceOnOther: MainCFG.FIELD.VARIANCE_ON_OTHER, //29
+        defaultOtherItem: MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
+        isBillCreationDisabled: MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31
+        overridePONum: MainCFG.FIELD.OVERRIDE_PO_NUM
     };
 
     function _generateMainConfig(recLookup) {
         var mainConfig = {};
 
         for (var fld in mainConfigMap) {
-            var configValue = recLookup[ mainConfigMap[fld] ];
+            var configValue = recLookup[mainConfigMap[fld]];
             mainConfig[fld] = configValue ? configValue.value || configValue : null;
         }
 
@@ -154,7 +155,7 @@ define(['N/search', './VC_Globals', './CTC_VC_Constants.js', './CTC_VC2_Lib_Util
         }
 
         var recLookup = vc2_util.flatLookup({
-            type: constants.Records.MAIN_CONFIG,
+            type: MainCFG.ID,
             id: 1,
             columns: fldsMainConfig
         });

@@ -378,7 +378,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
 
-            var VALID_RESP_CODE = [200, 207];
+            var VALID_RESP_CODE = [200, 207, 201]; // Added 201 for INGRAM
 
             var _DEFAULT = {
                 validMethods: ['post', 'get'],

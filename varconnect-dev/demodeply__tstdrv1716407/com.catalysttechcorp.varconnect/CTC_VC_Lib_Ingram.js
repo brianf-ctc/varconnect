@@ -26,10 +26,9 @@ define([
     'N/record',
     'N/xml',
     'N/https',
-    './VC_Globals.js',
-    './CTC_VC_Constants.js',
+    './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils.js'
-], function (search, runtime, r, xml, https, vcGlobals, constants, util) {
+], function (ns_search, ns_runtime, ns_record, ns_xml, ns_https, vc2_constant, vc2_util) {
     var LogTitle = 'WS:Ingram';
 
     function processRequest(options) {
@@ -56,8 +55,8 @@ define([
 
         var countryCode = 'MD';
         if (country) {
-            if (country == constants.Lists.COUNTRY.CANADA) countryCode = 'FT';
-        } else if (vcGlobals.COUNTRY == 'CA') countryCode = 'FT';
+            if (country == vc2_constant.LIST.COUNTRY.CANADA) countryCode = 'FT';
+        } else if (ns_runtime.country == 'CA') countryCode = 'FT';
 
         log.debug({
             title: 'Ingram Micro Scheduled',
@@ -86,18 +85,18 @@ define([
             '</OrderHeaderInfo>' +
             '</OrderStatusRequest>';
         try {
-            var orderNumberResponse = https.post({
+            var orderNumberResponse = ns_https.post({
                 url: requestURL,
                 body: xmlorderStatus,
                 headers: headers
             });
-            var orderNumberXML = xml.Parser.fromString({
+            var orderNumberXML = ns_xml.Parser.fromString({
                 text: orderNumberResponse.body
             });
             log.debug('orderNumberResponse', orderNumberResponse);
             log.debug('orderNumberXML', orderNumberXML);
 
-            branchOrderNumber = xml.XPath.select({
+            branchOrderNumber = ns_xml.XPath.select({
                 node: orderNumberXML,
                 xpath: '//BranchOrderNumber'
             })[0].textContent;
@@ -170,14 +169,14 @@ define([
             var responseXML;
             var trackingXML;
             try {
-                var response = https.post({
+                var response = ns_https.post({
                     url: requestURL,
                     body: xmlorderDetailStatus,
                     headers: headers
                 });
                 responseXML = response.body;
 
-                trackingXML = https.post({
+                trackingXML = ns_https.post({
                     url: requestURL,
                     body: orderTrackingRequest,
                     headers: headers
@@ -220,10 +219,10 @@ define([
         var trackingXMLIN = xmlString.trackxml;
 
         // Create XML object from XML text returned from vendor, using Netsuite XML parser
-        var xmlDoc = xml.Parser.fromString({
+        var xmlDoc = ns_xml.Parser.fromString({
             text: xmlTextIN
         });
-        var trackingXML = xml.Parser.fromString({
+        var trackingXML = ns_xml.Parser.fromString({
             text: trackingXMLIN
         });
 
@@ -232,11 +231,11 @@ define([
 
         //from this point down, make sure things that are being used as nodes are actually nodes
         if (trackingXML != null) {
-            var skuNodes = xml.XPath.select({ node: trackingXML, xpath: '//SKU' });
+            var skuNodes = ns_xml.XPath.select({ node: trackingXML, xpath: '//SKU' });
             for (var j = 0; j < skuNodes.length; j++) {
                 var trackingInfo = { sku_num: 'NA', tracking_num: 'NA', order_num: 'NA' };
 
-                var skuNum = util.getNodeTextContent(skuNodes[j]);
+                var skuNum = vc2_util.getNodeTextContent(skuNodes[j]);
                 trackingInfo.sku_num = skuNum;
 
                 var packageNode = skuNodes[j].parentNode.parentNode.parentNode;
@@ -248,12 +247,12 @@ define([
             }
         }
         if (xmlDoc != null) {
-            var itemNodes = xml.XPath.select({ node: xmlDoc, xpath: '//ProductLine' });
-            var orderDateTime = util.getNodeTextContent(
-                xml.XPath.select({ node: xmlDoc, xpath: '//OrderEntryDate' })[0]
+            var itemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ProductLine' });
+            var orderDateTime = vc2_util.getNodeTextContent(
+                ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderEntryDate' })[0]
             );
-            var orderNum = util.getNodeTextContent(
-                xml.XPath.select({ node: xmlDoc, xpath: '//BranchOrderNumber' })[0]
+            var orderNum = vc2_util.getNodeTextContent(
+                ns_xml.XPath.select({ node: xmlDoc, xpath: '//BranchOrderNumber' })[0]
             );
 
             for (var i = 0; i < itemNodes.length; i++) {
@@ -286,56 +285,56 @@ define([
                 }
 
                 // Ingram Micro line nums start at 000?  Ingram Micro not returning PO Line Numnbers
-                var itemNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemLineNode, xpath: 'ManufacturerPartNumber' })[0]
+                var itemNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemLineNode, xpath: 'ManufacturerPartNumber' })[0]
                 );
                 if (itemNum != null && itemNum.length > 0) {
                     xml_items.item_num = itemNum;
                 }
 
-                var vendorSKU = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemLineNode, xpath: 'SKU' })[0]
+                var vendorSKU = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemLineNode, xpath: 'SKU' })[0]
                 );
                 if (vendorSKU != null && vendorSKU.length > 0) {
                     xml_items.vendorSKU = vendorSKU;
                 }
 
-                var shipQty = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemLineNode, xpath: 'ShipQuantity' })[0]
+                var shipQty = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemLineNode, xpath: 'ShipQuantity' })[0]
                 );
                 if (shipQty != null && shipQty.length > 0) {
                     xml_items.ship_qty = shipQty;
                 }
 
                 //                log.debug('xml_items.ship_qty', xml_items.ship_qty);
-                var orderStatus = util.getNodeTextContent(
-                    xml.XPath.select({ node: orderSuffixNode, xpath: 'OrderStatus' })[0]
+                var orderStatus = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: orderSuffixNode, xpath: 'OrderStatus' })[0]
                 );
                 if (orderStatus != null && orderStatus.length > 0) {
                     xml_items.order_status = orderStatus;
                 }
                 log.debug('xml_items.order_status', xml_items.order_status);
 
-                var carrier = util.getNodeTextContent(
-                    xml.XPath.select({ node: orderSuffixNode, xpath: 'Carrier' })[0]
+                var carrier = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: orderSuffixNode, xpath: 'Carrier' })[0]
                 );
                 if (carrier != null && carrier.length > 0) {
                     xml_items.carrier = carrier;
                 }
 
-                var shipDate = util.getNodeTextContent(
-                    xml.XPath.select({ node: orderSuffixNode, xpath: 'OrderShipDate' })[0]
+                var shipDate = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: orderSuffixNode, xpath: 'OrderShipDate' })[0]
                 );
                 if (shipDate != null && shipDate.length > 0) {
                     xml_items.ship_date = shipDate;
                 }
 
-                var serialNumberNodes = xml.XPath.select({
+                var serialNumberNodes = ns_xml.XPath.select({
                     node: itemLineNode,
                     xpath: 'SkuSerialNumber'
                 });
                 if (serialNumberNodes != null && serialNumberNodes.length > 0) {
-                    var serialChildrenNodes = xml.XPath.select({
+                    var serialChildrenNodes = ns_xml.XPath.select({
                         node: serialNumberNodes[0],
                         xpath: 'SerialNumber'
                     });
@@ -354,8 +353,8 @@ define([
                     }
                 }
 
-                var currentSKUNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemLineNode, xpath: 'SKU' })[0]
+                var currentSKUNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemLineNode, xpath: 'SKU' })[0]
                 );
 
                 if (currentSKUNum != null && currentSKUNum.length > 0) {

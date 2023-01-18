@@ -28,15 +28,14 @@
  * 2.10     Feb 20, 2019    jcorrea     Updated isEmpty to use === when testing for empty string
  * 2.11     Aug 12, 2022    christian   Clearing a value from PO will also clear the value on SO
  */
-define([
-    'N/record',
-    'N/runtime',
-    'N/error',
-    'N/search',
-    'N/config',
-    'N/format',
-    './VC_Globals.js'
-], function (record, ns_runtime, error, search, config, format, vcGlobals) {
+define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'], function (
+    ns_record,
+    ns_runtime,
+    ns_error,
+    ns_search,
+    ns_config,
+    ns_format
+) {
     var LogTitle = 'UE_SerialUpdate',
         LogPrefix = '';
 
@@ -54,7 +53,8 @@ define([
         'custcol_ctc_xml_tracking_num', //7
         'custcol_ctc_vc_order_placed_date', //8
         'custcol_ctc_vc_eta_date', //9
-        'custcol_ctc_vc_shipped_date' //10
+        'custcol_ctc_vc_shipped_date', //10
+        'custcol_ctc_xml_inb_tracking_num' //11
     ];
 
     var xmlFieldsDef = {
@@ -66,7 +66,8 @@ define([
             'custcol_ctc_xml_serial_num',
             'custcol_ctc_xml_ship_date',
             'custcol_ctc_xml_ship_method',
-            'custcol_ctc_xml_tracking_num'
+            'custcol_ctc_xml_tracking_num',
+            'custcol_ctc_xml_inb_tracking_num'
         ],
         DATE: [
             'custcol_ctc_vc_order_placed_date',
@@ -100,8 +101,8 @@ define([
             });
             var createdFromType;
             if (createdFromSO)
-                createdFromType = search.lookupFields({
-                    type: search.Type.TRANSACTION,
+                createdFromType = ns_search.lookupFields({
+                    type: ns_search.Type.TRANSACTION,
                     id: createdFromSO,
                     columns: 'recordtype'
                 });
@@ -120,8 +121,8 @@ define([
             if (
                 createdFromSO != null &&
                 createdFromSO != '' &&
-                (createdFromType === record.Type.SALES_ORDER ||
-                    createdFromType.recordtype === record.Type.SALES_ORDER)
+                (createdFromType === ns_record.Type.SALES_ORDER ||
+                    createdFromType.recordtype === ns_record.Type.SALES_ORDER)
             ) {
                 updateSO_v2(createdFromSO, currentID, current_rec);
             }
@@ -138,8 +139,8 @@ define([
             details: 'recType = ' + recType
         });
 
-        var soRec = record.load({
-            type: record.Type.SALES_ORDER,
+        var soRec = ns_record.load({
+            type: ns_record.Type.SALES_ORDER,
             id: createdFromSO,
             isDynamic: true
         });
@@ -153,12 +154,12 @@ define([
             });
 
             //** Run a search on the current PO/Cash Sale, returning line items and their line numbers for the PO and parent SO
-            var filters = search.createFilter({
+            var filters = ns_search.createFilter({
                 name: 'internalid',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: transID
             });
-            var mySearch = search.load({
+            var mySearch = ns_search.load({
                 id: SEARCH_PO_TO_SO
             });
             mySearch.filters.push(filters);
@@ -247,11 +248,13 @@ define([
                                 });
                                 log.debug({
                                     title: 'Update SO V2',
-                                    details: 'Clearing field: ' + JSON.stringify({
-                                        field: xmlFields[xmlField],
-                                        type: fieldType,
-                                        value: ''
-                                    })
+                                    details:
+                                        'Clearing field: ' +
+                                        JSON.stringify({
+                                            field: xmlFields[xmlField],
+                                            type: fieldType,
+                                            value: ''
+                                        })
                                 });
                             }
                         }
@@ -312,12 +315,12 @@ define([
         });
 
         // Run a search that will return a list of invoices created from soID(SO internal id)
-        var filters = search.createFilter({
+        var filters = ns_search.createFilter({
             name: 'createdfrom',
-            operator: search.Operator.IS,
+            operator: ns_search.Operator.IS,
             values: soID
         });
-        var myInvoiceSearch = search.load({
+        var myInvoiceSearch = ns_search.load({
             id: SEARCH_INVOICE_MATCH_SO
         });
         myInvoiceSearch.filters.push(filters);
@@ -330,8 +333,8 @@ define([
             });
 
             var invUpdated = false;
-            var invRec = record.load({
-                type: record.Type.INVOICE,
+            var invRec = ns_record.load({
+                type: ns_record.Type.INVOICE,
                 id: result.getValue('internalid'),
                 isDynamic: true
             });
@@ -341,12 +344,12 @@ define([
                     details: 'Loaded invoice num = ' + result.getValue('internalid')
                 });
 
-                var inv_filters = search.createFilter({
+                var inv_filters = ns_search.createFilter({
                     name: 'internalid',
-                    operator: search.Operator.IS,
+                    operator: ns_search.Operator.IS,
                     values: result.getValue('internalid')
                 });
-                var myInvoiceLineSearch = search.load({
+                var myInvoiceLineSearch = ns_search.load({
                     id: SEARCH_INVOICE_TO_SO
                 });
                 myInvoiceLineSearch.filters.push(inv_filters);
@@ -466,8 +469,8 @@ define([
 
         // //4.01
         if (!dateFormat) {
-            var generalPref = config.load({
-                type: config.Type.COMPANY_PREFERENCES
+            var generalPref = ns_config.load({
+                type: ns_config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
             log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
@@ -506,9 +509,9 @@ define([
                 date.setFullYear(year);
             }
 
-            date = format.format({
+            date = ns_format.format({
                 value: date,
-                type: dateFormat ? dateFormat : format.Type.DATE
+                type: dateFormat ? dateFormat : ns_format.Type.DATE
             });
         }
 

@@ -12,12 +12,12 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function (
-    xml,
-    nsSearch,
-    https,
-    r,
-    vcGlobals
+define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], function (
+    ns_xml,
+    ns_search,
+    ns_https,
+    ns_record,
+    vc2_constant
 ) {
     function showVendorName() {
         var vendor = document.getElementById('inpt_vendors1').value;
@@ -144,7 +144,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
         };
 
         try {
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlorderStatus,
                 headers: headers
@@ -231,7 +231,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
             log.debug('obj ', request);
             log.debug('obj string ', JSON.stringify(request));
 
-            var response = https.post(request);
+            var response = ns_https.post(request);
             var responseXML = response.body;
         } catch (err) {
             /**				log.error({
@@ -297,7 +297,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
         };
 
         try {
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlorderStatus,
                 headers: headers
@@ -364,7 +364,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
         };
 
         try {
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlInvoiceByPOStatus,
                 headers: headers
@@ -435,16 +435,16 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
             '</OrderHeaderInfo>' +
             '</OrderStatusRequest>';
         try {
-            var orderNumberResponse = https.post({
+            var orderNumberResponse = ns_https.post({
                 url: requestURL,
                 body: xmlorderStatus,
                 headers: headers
             });
-            var orderNumberXML = xml.Parser.fromString({
+            var orderNumberXML = ns_xml.Parser.fromString({
                 text: orderNumberResponse.body
             });
 
-            branchOrderNumber = xml.XPath.select({
+            branchOrderNumber = ns_xml.XPath.select({
                 node: orderNumberXML,
                 xpath: '//BranchOrderNumber'
             })[0].textContent;
@@ -508,14 +508,14 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
             '<ShowDetail>2</ShowDetail>' +
             '</OrderTrackingRequest>';
         try {
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlorderDetailStatus,
                 headers: headers
             });
             var responseXML = response.body;
 
-            var trackingXML = https.post({
+            var trackingXML = ns_https.post({
                 url: requestURL,
                 body: orderTrackingRequest,
                 headers: headers
@@ -550,13 +550,13 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
 
     function decodeCredentials(company, poNum) {
         var cred;
-        var enableSubsidiaries = vcGlobals.ENABLE_SUBSIDIARIES;
+        var enableSubsidiaries = vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES;
         var loginCreds = { userName: '', password: '', customerNum: '' };
 
         log.debug('decodeCredentials', poNum);
         if (enableSubsidiaries) {
             var subsidiary = '';
-            var purchaseorderSearchObj = nsSearch.create({
+            var purchaseorderSearchObj = ns_search.create({
                 type: 'purchaseorder',
                 filters: [
                     ['type', 'anyof', 'PurchOrd'],
@@ -565,7 +565,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
                     'AND',
                     ['mainline', 'is', true]
                 ],
-                columns: [nsSearch.createColumn({ name: 'subsidiary' })]
+                columns: [ns_search.createColumn({ name: 'subsidiary' })]
             });
             var searchResultCount = purchaseorderSearchObj.runPaged().count;
             log.debug('purchaseorderSearchObj result count', searchResultCount);
@@ -580,13 +580,13 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
 
             var myFilters2 = [];
             myFilters2.push(
-                nsSearch.createFilter({
+                ns_search.createFilter({
                     name: 'custrecord_vc_subsidiary',
-                    operator: nsSearch.Operator.IS,
+                    operator: ns_search.Operator.IS,
                     values: subsidiary
                 })
             );
-            var results2 = nsSearch
+            var results2 = ns_search
                 .create({
                     type: 'customrecord_vc_config',
                     filters: myFilters2
@@ -598,7 +598,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
                 });
             log.debug('decodeCredentials:results2', results2);
             if (results2) {
-                cred = r.load({
+                cred = ns_record.load({
                     type: 'customrecord_vc_config',
                     id: results2[0].id
                 });
@@ -606,7 +606,7 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', './VC_Globals.js'], function
                 return null;
             }
         } else {
-            cred = r.load({
+            cred = ns_record.load({
                 type: 'customrecord_vc_config',
                 id: 1
             });

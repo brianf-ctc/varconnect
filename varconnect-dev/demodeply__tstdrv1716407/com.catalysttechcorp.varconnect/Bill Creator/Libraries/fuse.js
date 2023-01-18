@@ -5,6 +5,9 @@
  * All Rights Reserved. Apache Software License 2.0
  *
  * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * 
+ * @NModuleScope Public
  */
 
 (function (global, factory) {

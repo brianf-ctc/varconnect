@@ -22,11 +22,10 @@
 define([
     'N/search',
     'N/xml',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_search, ns_xml, VC_Global, VC_Log, VC_Util, moment) {
+    './CTC_VC2_Constants.js'
+], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
     // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
@@ -38,7 +37,7 @@ define([
             option = option || {};
 
             try {
-                var reqOrderStatus = VC_Util.sendRequest({
+                var reqOrderStatus = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' : '),
                     recordId: CURRENT.recordId,
                     method: 'post',
@@ -51,18 +50,18 @@ define([
                             'Content-Length': 'length'
                         },
                         body:
-            '<XMLFORMPOST>' +
-            '<REQUEST>orderStatus</REQUEST>' +
-            '<LOGIN>' +
+                            '<XMLFORMPOST>' +
+                            '<REQUEST>orderStatus</REQUEST>' +
+                            '<LOGIN>' +
                             ('<USERID>' + CURRENT.vendorConfig.user + '</USERID>') +
                             ('<PASSWORD>' + CURRENT.vendorConfig.password + '</PASSWORD>') +
-            '</LOGIN>' +
-            '<STATUSREQUEST>' +
+                            '</LOGIN>' +
+                            '<STATUSREQUEST>' +
                             ('<PONUM>' + CURRENT.recordNum + '</PONUM>') +
-            '</STATUSREQUEST>' +
+                            '</STATUSREQUEST>' +
                             '</XMLFORMPOST>'
                     }
-        });
+                });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
@@ -70,14 +69,14 @@ define([
 
                 returnValue = respOrderStatus;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc2_util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
 
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Orders Status : Error', errorMsg].join(' - '),
                     error: error,
                     recordId: CURRENT.recordId
-            });
+                });
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
@@ -102,20 +101,19 @@ define([
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibDnH.getOrderStatus(option);
-
             } catch (error) {
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
-    }
+                throw vc2_util.extractError(error);
+            }
 
             return returnValue;
         },
         processResponse: function (option) {
-        var logTitle = [LogTitle, 'processResponse'].join('::'),
+            var logTitle = [LogTitle, 'processResponse'].join('::'),
                 returnValue = [];
             option = option || {};
 
@@ -150,7 +148,7 @@ define([
                         is_shipped: false
                     };
 
-                    var itemNum = VC_Util.getNodeTextContent(
+                    var itemNum = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ITEMNO' })[0]
                     );
                     if (itemNum != null && itemNum.length > 0) {
@@ -159,14 +157,14 @@ define([
 
                     //D&H does not support a separate vendorSKU as of Jan 9 2019
 
-                    var shipQty = VC_Util.getNodeTextContent(
+                    var shipQty = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'QUANTITY' })[0]
                     );
                     if (shipQty != null && shipQty.length > 0) {
                         xml_items.ship_qty = shipQty;
                     }
 
-                    var etaDate = VC_Util.getNodeTextContent(
+                    var etaDate = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ETA' })[0]
                     );
                     if (etaDate != null && etaDate.length > 0) {
@@ -175,21 +173,21 @@ define([
 
                     var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
 
-                    var orderNum = VC_Util.getNodeTextContent(
+                    var orderNum = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'ORDERNUM' })[0]
                     );
                     if (orderNum != null && orderNum.length > 0) {
                         xml_items.order_num = orderNum;
                     }
 
-                    var invoice = VC_Util.getNodeTextContent(
+                    var invoice = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'INVOICE' })[0]
                     );
-                    var orderStatusMessage = VC_Util.getNodeTextContent(
+                    var orderStatusMessage = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'MESSAGE' })[0]
                     );
 
-                    var orderDateTime = VC_Util.getNodeTextContent(
+                    var orderDateTime = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
                     );
                     if (orderDateTime != null && orderDateTime.length > 0) {
@@ -216,7 +214,7 @@ define([
                                         })[0].textContent == itemNum
                                     ) {
                                         itemInPackage = true;
-                                        var serialNum = VC_Util.getNodeTextContent(
+                                        var serialNum = vc2_util.getNodeTextContent(
                                             ns_xml.XPath.select({
                                                 node: shipItemNodes[iii],
                                                 xpath: 'SERIALNO'
@@ -236,7 +234,7 @@ define([
                                     xpath: 'CARRIER'
                                 })[0].textContent;
                                 if (carrier != null && carrier.length > 0) {
-                                    var carrierService = VC_Util.getNodeTextContent(
+                                    var carrierService = vc2_util.getNodeTextContent(
                                         ns_xml.XPath.select({
                                             node: packageNodes[ii],
                                             xpath: 'SERVICE'
@@ -253,7 +251,7 @@ define([
                                         else xml_items.carrier += ',' + carrier;
                                     }
                                 }
-                                var trackingNum = VC_Util.getNodeTextContent(
+                                var trackingNum = vc2_util.getNodeTextContent(
                                     ns_xml.XPath.select({
                                         node: packageNodes[ii],
                                         xpath: 'TRACKNUM'
@@ -265,7 +263,7 @@ define([
                                     else xml_items.tracking_num += ',' + trackingNum;
                                 }
 
-                                var dateShipped = VC_Util.getNodeTextContent(
+                                var dateShipped = vc2_util.getNodeTextContent(
                                     ns_xml.XPath.select({
                                         node: packageNodes[ii],
                                         xpath: 'DATESHIPPED'
@@ -279,20 +277,24 @@ define([
                             }
                         }
 
-                    // brianff 12/14
-                    // use the same shipdate
-                    if (xml_items.ship_date) {
-                        xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+                        // brianff 12/14
+                        // use the same shipdate
+                        if (xml_items.ship_date) {
+                            xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
                             // assume everything without a shipdate has NOT shipped
                             xml_items.is_shipped = true;
                         }
+                        // else, an order with no PACKAGE node but is invoiced will contain non-inventory items
                     } else if (
                         !!invoice &&
                         invoice.length > 0 &&
                         invoice.toUpperCase() !== 'IN PROCESS'
                     ) {
-                        // an order with no PACKAGE node but is invoiced will contain non-inventory items
                         xml_items.is_shipped = true;
+                    }
+                    // if order status message is "IN PROCESS", then package/ship info is being waited on
+                    if (orderStatusMessage && orderStatusMessage.toUpperCase() !== 'IN PROCESS') {
+                        xml_items.is_shipped = false;
                     }
 
                     itemArray.push(xml_items);
@@ -300,19 +302,19 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Response Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc2_util.extractError(error);
                 returnValue = errorMsg;
-    }
+            }
 
             return returnValue;
         },
         process: function (option) {
-        var logTitle = [LogTitle, 'process'].join('::'),
+            var logTitle = [LogTitle, 'process'].join('::'),
                 returnValue = [];
             option = option || {};
 
@@ -327,24 +329,24 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
-            });
-                throw VC_Util.extractError(error);
+                });
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC_Util.isEmpty(returnValue)
+                    body: !vc2_util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
-    }
+            }
 
             return returnValue;
         }

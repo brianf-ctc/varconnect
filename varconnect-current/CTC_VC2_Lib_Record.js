@@ -113,12 +113,6 @@ define(function (require) {
                 if (!record || !columns) return false;
                 if (line == null || line < 0) return false;
 
-                // log.audit(
-                //     logTitle,
-                //     '// EXTRACT LINE VALUES: ' +
-                //         JSON.stringify({ columns: option.columns, line: option.line })
-                // );
-
                 var lineData = {};
                 for (var i = 0, j = columns.length; i < j; i++) {
                     var lineOption = {
@@ -179,6 +173,7 @@ define(function (require) {
                     });
                     lineData.line = line;
 
+                    // log.audit(logTitle, lineData);
                     if (!option.filter) {
                         arrRecordLines.push(lineData);
                         continue;
@@ -238,7 +233,7 @@ define(function (require) {
 
                 var lineOption = { sublistId: sublistId, line: lineData.line };
 
-                // log.audit(logTitle, '// UPDATE LINE: ' + JSON.stringify(lineData));
+                log.audit(logTitle, '// UPDATE LINE: ' + JSON.stringify(lineData));
 
                 record.selectLine(lineOption);
                 for (var fieldId in lineData) {
@@ -300,9 +295,7 @@ define(function (require) {
                 });
             }
             return returnValue;
-        }, 
-        isMatchingLine: function (option) {}, 
-        findMatchingLines: function (option) {}
+        }
     };
 
     return VC_RecordLib;

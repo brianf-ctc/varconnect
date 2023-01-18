@@ -104,7 +104,6 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         // TODO: look for the dashboard file, if not present, copy the sample and move it to SuiteScripts folder
 
-
         context.response.write(Mustache.render(html, data));
     }
 

@@ -11,13 +11,19 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, format, constants) {
+define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (
+    ns_record,
+    ns_format,
+    vc2_constant
+) {
+    var REC_VCLOG = vc2_constant.RECORD.VC_LOG;
+
     function _getCurrentTime() {
         var /*companyConfig = config.load(config.Type.COMPANY_INFORMATION),
 			timezone = companyConfig.getValue({ fieldId: 'timezone' }),*/
-            date = format.format({
+            date = ns_format.format({
                 value: new Date(),
-                type: format.Type.DATETIME
+                type: ns_format.Type.DATETIME
             });
 
         return new Date();
@@ -29,19 +35,18 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             transaction = options.transaction,
             transactionLineKey = options.transactionLineKey,
             status = options.status,
-            logFields = constants.Fields.VarConnectLog,
+            logFields = REC_VCLOG.FIELD,
             isDebugMode = options.isDebugMode;
-
 
         if (isDebugMode) return;
 
-        var recLog = record.create({
-            type: constants.Records.VC_LOG
+        var recLog = ns_record.create({
+            type: REC_VCLOG.ID
         });
 
         recLog.setValue({
             fieldId: logFields.APPLICATION,
-            value: options.logApp || constants.LOG_APPLICATION
+            value: options.logApp || vc2_constant.LOG_APPLICATION
         });
         recLog.setValue({
             fieldId: logFields.HEADER,
@@ -63,7 +68,7 @@ define(['N/record', 'N/format', './CTC_VC_Constants.js'], function (record, form
             });
         recLog.setValue({
             fieldId: logFields.STATUS,
-            value: status || constants.Lists.VC_LOG_STATUS.INFO
+            value: status || vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
         recLog.setValue({
             fieldId: logFields.DATE,

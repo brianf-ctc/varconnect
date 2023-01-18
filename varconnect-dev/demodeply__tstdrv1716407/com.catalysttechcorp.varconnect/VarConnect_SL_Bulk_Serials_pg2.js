@@ -19,32 +19,28 @@
 
 define([
     'N/ui/serverWidget',
-    'N/log',
     'N/search',
     'N/record',
     'N/file',
     'N/task',
     'N/http',
     'N/config',
-    './CTC_VC_Lib_MainConfiguration.js',
-    './VC_Globals.js',
-    './CTC_VC_Lib_Utilities.js',
-    './CTC_VC_Constants.js'
+    './CTC_VC2_Lib_Utils',
+    './CTC_VC2_Constants.js',
+    './CTC_VC_Lib_MainConfiguration.js'
 ], function (
-    ui,
-    log,
-    search,
-    rec,
-    file,
-    task,
-    http,
-    config,
-    libMainConfig,
-    vcGlobals,
-    util,
-    constants
+    ns_ui,
+    ns_search,
+    ns_record,
+    ns_file,
+    ns_task,
+    ns_https,
+    ns_config,
+    vc2_util,
+    vc2_constant,
+    lib_maincfg
 ) {
-    const PO_SERIAL_NUMBER_FOLDER = vcGlobals.SN_FOLDER_ID;
+    const PO_SERIAL_NUMBER_FOLDER = vc2_constant.GLOBAL.SN_FOLDER_ID;
 
     function onRequest(context) {
         log.debug('Enter serial Pg2', 'main Entry');
@@ -63,7 +59,7 @@ define([
         log.debug('Enter serial Pg2', 'poNum = ' + poNum);
         if (isEmpty(poNum)) {
             log.debug({ title: 'In Get code', details: 'PO Num EMPTY' });
-            var form = ui.createForm({
+            var form = ns_ui.createForm({
                 title: 'Error - PO Number empty/not found. Please try again'
             });
             context.response.writePage(form);
@@ -72,7 +68,7 @@ define([
         var itemList = getItems(poNum);
 
         if (!isEmpty(itemList)) {
-            var form = ui.createForm({
+            var form = ns_ui.createForm({
                 title: 'PO Manual Add Serial Numbers'
             });
             form.clientScriptModulePath = './VarConnect_Bulk_Serials_Library.js';
@@ -95,32 +91,32 @@ define([
                  */
             var labelfield = form.addField({
                 id: 'custpage_label1',
-                type: ui.FieldType.LABEL,
+                type: ns_ui.FieldType.LABEL,
                 label: 'Purchase Order # : ' + poNum,
                 container: 'itemgroup'
             });
 
             var poNumField = form.addField({
                 id: 'custpage_ponumfld',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Po Num:',
                 container: 'itemgroup'
             });
             poNumField.defaultValue = poNum;
-            poNumField.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
+            poNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
 
             var itemsField = form.addField({
                 id: 'custpage_itemsfld',
-                type: ui.FieldType.LONGTEXT,
+                type: ns_ui.FieldType.LONGTEXT,
                 label: 'Items:',
                 container: 'itemgroup'
             });
             itemsField.defaultValue = JSON.stringify(itemList);
-            itemsField.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
+            itemsField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
 
             var itemselect = form.addField({
                 id: 'itemselectfield',
-                type: ui.FieldType.SELECT,
+                type: ns_ui.FieldType.SELECT,
                 label: 'Items',
                 container: 'itemgroup'
             });
@@ -143,36 +139,36 @@ define([
 
                 var labelcountfield = form.addField({
                     id: 'custpage_label_sncount_' + itemId,
-                    type: ui.FieldType.LABEL,
+                    type: ns_ui.FieldType.LABEL,
                     label: 'Count of Existing Serial Numbers : ' + snCount,
                     container: 'itemgroup'
                 });
 
                 var currentField = form.addField({
                     id: 'custpage_currentsn_' + itemId,
-                    type: ui.FieldType.LONGTEXT,
+                    type: ns_ui.FieldType.LONGTEXT,
                     label: 'Existing Serial Numbers:',
                     container: 'itemgroup'
                 });
                 currentField.defaultValue = currentSNList;
                 currentField.updateDisplayType({
-                    displayType: ui.FieldDisplayType.READONLY
+                    displayType: ns_ui.FieldDisplayType.READONLY
                 });
 
                 var newField = form.addField({
                     id: 'custpage_newsn_' + itemId,
-                    type: ui.FieldType.LONGTEXT,
+                    type: ns_ui.FieldType.LONGTEXT,
                     label: 'New Serial Numbers:',
                     container: 'itemgroup'
                 });
 
                 var lineKeyID = form.addField({
                     id: 'custpage_linekey_' + itemId,
-                    type: ui.FieldType.TEXT,
+                    type: ns_ui.FieldType.TEXT,
                     label: 'Line Unique Key:'
                 });
                 lineKeyID.defaultValue = itemId;
-                lineKeyID.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
+                lineKeyID.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
             }
 
             // Creates and populates the invoice sublist
@@ -181,7 +177,7 @@ define([
             context.response.writePage(form);
         } else {
             log.debug({ title: 'In GET code', details: 'Item List EMPTY' });
-            var form = ui.createForm({
+            var form = ns_ui.createForm({
                 title: 'Error - No items found. Please try again'
             });
             context.response.writePage(form);
@@ -241,8 +237,8 @@ define([
             var fileID = createAndSaveFile(outputObj, poField);
             log.debug({ title: 'In POST code', details: 'PO File Created, ID = ' + fileID });
 
-            var mrTask = task.create({
-                taskType: task.TaskType.MAP_REDUCE,
+            var mrTask = ns_task.create({
+                taskType: ns_task.TaskType.MAP_REDUCE,
                 scriptId: 'customscript_add_serials_mr',
                 deploymentId: 'customdeploy_add_serials_mr',
                 params: { custscript_serialsfileid: fileID }
@@ -253,7 +249,7 @@ define([
                 var mrTaskID = mrTask.submit();
                 // Redirect back to page 1
                 context.response.sendRedirect({
-                    type: http.RedirectType.SUITELET,
+                    type: ns_https.RedirectType.SUITELET,
                     identifier: 'customscript_vc_bulk_serial_numbers',
                     id: 'customdeploy_vc_bulk_serial_numbers',
                     editMode: false
@@ -263,14 +259,14 @@ define([
                     title: 'In POST code',
                     details: 'Could not Create/Submit the Map/Reduce Task '
                 });
-                var form = ui.createForm({
+                var form = ns_ui.createForm({
                     title: 'Could not process serial numbers, please try again. (Error = Task-Create)'
                 });
                 context.response.writePage(form);
             }
         } else {
             log.debug({ title: 'In POST code', details: 'PO Num EMPTY' });
-            var form = ui.createForm({
+            var form = ns_ui.createForm({
                 title: 'Error - PO Number empty/not found. Please try again'
             });
             context.response.writePage(form);
@@ -278,7 +274,7 @@ define([
     }
 
     function _loadMainConfig() {
-        var mainConfig = libMainConfig.getMainConfiguration();
+        var mainConfig = lib_maincfg.getMainConfiguration();
 
         if (!mainConfig) {
             log.error('No Coniguration available');
@@ -288,9 +284,9 @@ define([
 
     function createAndSaveFile(outputObj, poField) {
         var mainConfig = _loadMainConfig(),
-            fileObj = file.create({
+            fileObj = ns_file.create({
                 name: poField + 'Serials.txt',
-                fileType: file.Type.PLAINTEXT,
+                fileType: ns_file.Type.PLAINTEXT,
                 contents: JSON.stringify(outputObj)
             });
         //            fileObj.folder = PO_SERIAL_NUMBER_FOLDER;
@@ -305,7 +301,7 @@ define([
         var items = [];
         var itemIDs = [];
 
-        var purchaseorderSearchObj = search.create({
+        var purchaseorderSearchObj = ns_search.create({
             type: 'purchaseorder',
             filters: [
                 ['type', 'anyof', 'PurchOrd'],
@@ -319,10 +315,10 @@ define([
                 ['numbertext', 'is', poNum]
             ],
             columns: [
-                search.createColumn({ name: 'tranid', label: 'Document Number' }),
-                search.createColumn({ name: 'item', label: 'Item' }),
-                search.createColumn({ name: 'createdfrom', label: 'Created From' }),
-                search.createColumn({ name: 'lineuniquekey', label: 'Line Unique Key' })
+                ns_search.createColumn({ name: 'tranid', label: 'Document Number' }),
+                ns_search.createColumn({ name: 'item', label: 'Item' }),
+                ns_search.createColumn({ name: 'createdfrom', label: 'Created From' }),
+                ns_search.createColumn({ name: 'lineuniquekey', label: 'Line Unique Key' })
             ]
         });
 
@@ -349,7 +345,7 @@ define([
     function getCurrentSNList(poNum, itemID) {
         var snList = '';
 
-        var customrecordserialnumSearchObj = search.create({
+        var customrecordserialnumSearchObj = ns_search.create({
             type: 'customrecordserialnum',
             filters: [
                 ['custrecordserialpurchase.numbertext', 'is', poNum],
@@ -357,13 +353,13 @@ define([
                 ['custrecordserialitem.internalid', 'anyof', itemID]
             ],
             columns: [
-                search.createColumn({
+                ns_search.createColumn({
                     name: 'name',
-                    sort: search.Sort.ASC,
+                    sort: ns_search.Sort.ASC,
                     label: 'Name'
                 }),
-                search.createColumn({ name: 'scriptid', label: 'Script ID' }),
-                search.createColumn({ name: 'custrecordserialitem', label: 'ItemNum' })
+                ns_search.createColumn({ name: 'scriptid', label: 'Script ID' }),
+                ns_search.createColumn({ name: 'custrecordserialitem', label: 'ItemNum' })
             ]
         });
         var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
@@ -410,15 +406,15 @@ define([
     }
 
     function setSNLineLink(poID) {
-        var poRec = rec.load({
-            type: rec.Type.PURCHASE_ORDER,
+        var poRec = ns_record.load({
+            type: ns_record.Type.PURCHASE_ORDER,
             id: poID,
             isDynamic: false
         });
         var poNum = encodeURIComponent(poRec.getText('tranid'));
         var soNum = encodeURIComponent(poRec.getText('createdfrom'));
-        var companyObj = config.load({
-            type: config.Type.COMPANY_INFORMATION
+        var companyObj = ns_config.load({
+            type: ns_config.Type.COMPANY_INFORMATION
         });
         var accountId = companyObj.getValue('companyid');
 
@@ -436,7 +432,7 @@ define([
                 fieldId: 'item',
                 line: i
             });
-            var lineLinkUrl = util.generateSerialLink({
+            var lineLinkUrl = vc2_util.generateSerialLink({
                 sonum: soNum,
                 ponum: poNum,
                 itemid: itemId,
@@ -444,7 +440,7 @@ define([
             });
             poRec.setSublistValue({
                 sublistId: 'item',
-                fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
+                fieldId: vc2_constant.GLOBAL.SN_LINE_FIELD_LINK_ID,
                 line: i,
                 value: lineLinkUrl
             });

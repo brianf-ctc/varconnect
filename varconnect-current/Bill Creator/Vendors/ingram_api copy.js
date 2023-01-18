@@ -538,7 +538,7 @@ define([
             option = option || {};
 
             try {
-                var tokenReq = VC_Util.sendRequest({
+                var tokenReq = vc_util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
@@ -546,7 +546,7 @@ define([
                     maxRetry: 3,
                     query: {
                         url: CURRENT.vendorConfig.url + '/oauth/oauth20/token',
-                        body: VC_Util.convertToQuery({
+                        body: vc_util.convertToQuery({
                             client_id: CURRENT.vendorConfig.apiKey,
                             client_secret: CURRENT.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -558,7 +558,7 @@ define([
                 });
 
                 if (tokenReq.isError) throw tokenReq.errorMsg;
-                var tokenResp = VC_Util.safeParse(tokenReq.RESPONSE);
+                var tokenResp = vc_util.safeParse(tokenReq.RESPONSE);
                 if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
@@ -598,7 +598,7 @@ define([
                     searchUrl = CURRENT.vendorConfig.url + searchUrl;
                     log.audit(logTitle, LogPrefix + '>> searchUrl: ' + searchUrl);
 
-                    var reqValidOrders = VC_Util.sendRequest({
+                    var reqValidOrders = vc_util.sendRequest({
                         header: [LogTitle, 'Orders Search'].join(' : '),
                         query: {
                             url:
@@ -637,7 +637,7 @@ define([
                         var ingramOrder = respIngramOrders.orders[i];
 
                         if (!ingramOrder.orderStatus) continue;
-                        if (VC_Util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
+                        if (vc_util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
 
                         for (var ii = 0, jj = ingramOrder.subOrders.length; ii < jj; ii++) {
                             var subOrderInfo = ingramOrder.subOrders[ii];
@@ -681,10 +681,10 @@ define([
                     orders: arrOrderNums
                 };
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc_util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
 
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ' Orders Search : Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -704,7 +704,7 @@ define([
                 var ingramOrder = option.ingramOrder || option.orderNum;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                var reqOrderDetails = VC_Util.sendRequest({
+                var reqOrderDetails = vc_util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
                     recordId: CURRENT.recordId,
                     query: {
@@ -746,9 +746,9 @@ define([
 
                 returnValue = objMischCharges;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc_util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ' Order Details:  Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -766,7 +766,7 @@ define([
 
             try {
                 var respOrderDetail = option.orderDetails;
-                if (VC_Util.isEmpty(respOrderDetail)) throw 'Missing order details';
+                if (vc_util.isEmpty(respOrderDetail)) throw 'Missing order details';
 
                 var arrLineItems = [];
 
@@ -796,7 +796,7 @@ define([
 
                 log.audit(logTitle, LogPrefix + '>> arrLineItems: ' + JSON.stringify(arrLineItems));
 
-                var reqItemAvail = VC_Util.sendRequest({
+                var reqItemAvail = vc_util.sendRequest({
                     header: [LogTitle, 'Item Availability'].join(' : '),
                     method: 'post',
                     query: {
@@ -825,13 +825,13 @@ define([
                     recordId: CURRENT.recordId
                 });
                 if (reqItemAvail.isError) throw reqItemAvail.errorMsg;
-                var respItemAvail = VC_Util.safeParse(reqItemAvail.RESPONSE);
+                var respItemAvail = vc_util.safeParse(reqItemAvail.RESPONSE);
                 if (!respItemAvail) throw 'Unable to retrieve the item availability';
 
                 returnValue = respItemAvail;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
-                VC_Util.vcLog({
+                var errorMsg = vc_util.extractError(error);
+                vc_util.vcLog({
                     title: LogTitle + ' Item Availability:  Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -888,7 +888,7 @@ define([
                 LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd)
             );
 
-            if (VC_Util.isEmpty(arrDateBackOrderd)) return;
+            if (vc_util.isEmpty(arrDateBackOrderd)) return;
 
             var nearestDate = arrDateBackOrderd.sort(function (a, b) {
                 return a.dateObj - b.dateObj;
@@ -901,7 +901,7 @@ define([
             var logTitle = [LogTitle, 'extractOrderShipmentDetails'].join('::');
 
             var shipmentDetails = option.shipmentDetails;
-            if (VC_Util.isEmpty(shipmentDetails)) return false;
+            if (vc_util.isEmpty(shipmentDetails)) return false;
 
             var shipData = {
                 quantity: 0,
@@ -947,8 +947,8 @@ define([
                 }
             }
 
-            shipData.serials = VC_Util.uniqueArray(shipData.serials);
-            shipData.trackingNumbers = VC_Util.uniqueArray(shipData.trackingNumbers);
+            shipData.serials = vc_util.uniqueArray(shipData.serials);
+            shipData.trackingNumbers = vc_util.uniqueArray(shipData.trackingNumbers);
 
             log.audit(logTitle, LogPrefix + '>> Ship Data: ' + JSON.stringify(shipData));
             return shipData;
@@ -974,7 +974,7 @@ define([
                         status: (lineDetail.lineStatus || '').toUpperCase()
                     };
 
-                    if (!VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
+                    if (!vc_util.inArray(lineData.status, LibIngramAPI.ValidLineStatus)) {
                         log.audit(
                             logTitle,
                             '.... skipping line, invalid status :  [' + lineData.status + ']'
@@ -996,7 +996,7 @@ define([
                 log.audit(
                     logTitle,
                     LogPrefix +
-                        ('## ERROR ## ' + VC_Util.extractError(error)) +
+                        ('## ERROR ## ' + vc_util.extractError(error)) +
                         ('\n' + JSON.stringify(error))
                 );
                 returnValue = false;
@@ -1032,7 +1032,8 @@ define([
             // log.audit(logTitle, LogPrefix + '>> searchOPtion: ' + JSON.stringify(searchOption));
 
             var nsItemFF;
-            NS_Search.create(searchOption)
+            ns_search
+                .create(searchOption)
                 .run()
                 .each(function (row) {
                     nsItemFF = row.id;

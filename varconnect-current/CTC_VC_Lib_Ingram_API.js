@@ -20,10 +20,10 @@
  */
 define([
     './CTC_VC_Lib_Log.js',
-    './CTC_VC_Constants.js',
     './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
     './Bill Creator/Libraries/moment'
-], function (vcLog, VC_Global, VC2_Utils, moment) {
+], function (vcLog, vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:IngramAPI';
 
@@ -36,7 +36,7 @@ define([
                 returnValue;
 
             try {
-                var tokenReq = VC2_Utils.sendRequest({
+                var tokenReq = vc2_util.sendRequest({
                     header: [LogTitle, 'GenerateToken'].join(' '),
                     method: 'post',
                     recordId: option.recordId,
@@ -44,7 +44,7 @@ define([
                     maxRetry: 3,
                     query: {
                         url: option.vendorConfig.accessEndPoint,
-                        body: VC2_Utils.convertToQuery({
+                        body: vc2_util.convertToQuery({
                             client_id: option.vendorConfig.apiKey,
                             client_secret: option.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -56,7 +56,7 @@ define([
                 });
 
                 if (tokenReq.isError) throw tokenReq.errorMsg;
-                var tokenResp = VC2_Utils.safeParse(tokenReq.RESPONSE);
+                var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
 
                 // todo: add error response from ingram
                 if (!tokenResp || !tokenResp.access_token)
@@ -80,10 +80,10 @@ define([
             if (!LibIngramAPI.ACCESS_TOKEN) LibIngramAPI.generateToken(option);
 
             var cacheKey = [LogTitle, 'OrderStatus', option.tranId].join('-');
-            var response = VC2_Utils.getCache(cacheKey);
+            var response = vc2_util.getCache(cacheKey);
 
             if (response == null) {
-                var orderStatusReq = VC2_Utils.sendRequest({
+                var orderStatusReq = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' : '),
                     recordId: option.recordId,
                     query: {
@@ -103,18 +103,18 @@ define([
                     }
                 });
                 if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
-                response = VC2_Utils.safeParse(orderStatusReq.RESPONSE);
-                VC2_Utils.setCache(cacheKey, response);
+                response = vc2_util.safeParse(orderStatusReq.RESPONSE);
+                vc2_util.setCache(cacheKey, response);
             }
 
             var arrValidOrders = [],
                 ingramOrders = response.orders;
 
-            if (VC2_Utils.isEmpty(ingramOrders)) throw 'Unable to receive orders';
+            if (vc2_util.isEmpty(ingramOrders)) throw 'Unable to receive orders';
 
             for (var i = 0, j = ingramOrders.length; i < j; i++) {
                 var ingramOrder = ingramOrders[i];
-                if (VC2_Utils.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue; //skip this
+                if (vc2_util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue; //skip this
 
                 arrValidOrders.push(ingramOrder);
             }
@@ -131,10 +131,10 @@ define([
 
             try {
                 var cacheKey = [LogTitle, 'OrderDetails', option.orderNum].join('-');
-                var orderDetails = VC2_Utils.getCache(cacheKey);
+                var orderDetails = vc2_util.getCache(cacheKey);
 
                 if (orderDetails == null) {
-                    var orderDetailReq = VC2_Utils.sendRequest({
+                    var orderDetailReq = vc2_util.sendRequest({
                         header: [LogTitle, 'OrderDetails'].join(' '),
                         recordId: recordId,
                         query: {
@@ -151,13 +151,13 @@ define([
                     });
 
                     if (orderDetailReq.isError) throw orderDetailReq.errorMsg;
-                    orderDetails = VC2_Utils.safeParse(orderDetailReq.RESPONSE);
+                    orderDetails = vc2_util.safeParse(orderDetailReq.RESPONSE);
                     if (!orderDetailse) throw 'Unable to fetch order details';
 
-                    VC2_Utils.setCache(cacheKey, orderDetails);
+                    vc2_util.setCache(cacheKey, orderDetails);
                 }
 
-                if (VC2_Utils.isEmpty(orderDetails.lines)) throw 'Order has no lines';
+                if (vc2_util.isEmpty(orderDetails.lines)) throw 'Order has no lines';
 
                 var ingramOrderDate = orderDetails.ingramOrderDate;
                 var defaultETA = {
@@ -171,7 +171,6 @@ define([
                     log.audit(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
 
                     // get item availability call
-                    
                 }
             } catch (error) {
             } finally {
@@ -205,7 +204,7 @@ define([
 
                 // get valid orders
                 var validOrders = LibIngramAPI.getOrderStatus(option);
-                if (!VC2_Utils.isEmpty(validOrders)) throw 'Unable to find valid orders.';
+                if (!vc2_util.isEmpty(validOrders)) throw 'Unable to find valid orders.';
 
                 for (var i = 0, j = validOrders.length; i < j; i++) {
                     var validOrder = validOrders[i];
@@ -216,14 +215,14 @@ define([
                         vendorConfig: option.vendorConfig,
                         orderNum: validOrder.ingramOrderNumber
                     });
-                    if (VC2_Utils.isEmpty(orderLines)) continue;
+                    if (vc2_util.isEmpty(orderLines)) continue;
 
                     arrayLines = arrayLines.concat(orderLines);
                 }
 
                 // fetch the order status
             } catch (error) {
-                var errorMessage = VC2_Utils.extractError(error);
+                var errorMessage = vc2_util.extractError(error);
                 throw error;
             } finally {
                 vcLog.recordLog({
@@ -235,7 +234,7 @@ define([
                         JSON.stringify(arrayLines)
                     ].join(' -- '),
                     transaction: option.poId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO,
                     isDebugMode: option.fromDebug
                 });
             }

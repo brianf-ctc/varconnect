@@ -41,6 +41,78 @@ define([
 ) {
     var LogTitle = 'VC:SENDPO';
 
+    var Helper = {
+        hideFields: function (form, arrFields) {
+            if (!arrFields || !arrFields.length) return;
+            arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
+
+            log.audit('displayAsInlineTextarea', arrFields);
+
+            arrFields.forEach(function (fieldId) {
+                var fldObj = form.getField({ id: fieldId });
+                fldObj.updateDisplayType({ displayType: 'hidden' });
+            });
+        },
+        displayAsInlineTextarea: function (form, arrFields) {
+            if (!arrFields || !arrFields.length) return;
+            arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
+
+            log.audit('displayAsInlineTextarea', arrFields);
+
+            arrFields.forEach(function (fieldId) {
+                log.audit('displayAsInlineTextarea', fieldId);
+                if (!fieldId) return true;
+
+                try {
+                    var fldOrig = form.getField({ id: fieldId });
+                    log.audit('displayAsInlineTextarea:orig', fldOrig);
+
+                    if (!fldOrig || !fldOrig.defaultValue)
+                        return true;
+
+                    var fldNew = form.addField({
+                        id: ['custpage', fieldId].join('_'),
+                        label: fldOrig.label,
+                        type: 'inlinehtml'
+                    });
+                    log.audit('displayAsInlineTextarea:new', fldNew);
+
+                    var strValue = fldOrig.defaultValue;
+
+                    //test for JSON
+                    try {
+                        var jsonObj = JSON.parse(strValue);
+                        strValue = JSON.stringify(jsonObj, null, '    ');
+                    } catch (err) {
+                        log.audit('json log test', CTC_Util.extractError(err));
+                    }
+
+                    fldNew.defaultValue = [
+                        '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea">',
+                        '<span class="smallgraytextnolink uir-label">',
+                        '<span class="smallgraytextnolink">',
+                        '<a class="smallgraytextnolink">',
+                        fldOrig.label,
+                        '</a>',
+                        '</span></span>',
+                        '<textarea cols="60" rows="10" disabled="true" ',
+                        'style="padding: 5px 10px; margin: 5px; border:1px solid #CCC !important; color: #363636 !important;">',
+                        strValue,
+                        '</textarea>',
+                        '</div>'
+                    ].join('');
+
+                    form.insertField({ field: fldNew, nextfield: fldOrig.id });
+                    fldOrig.updateDisplayType({ displayType: 'hidden' });
+                } catch (error) {
+                    log.audit('displayAsInlineTextarea', error);
+                    throw error;
+                }
+                return true;
+            }); // end: arrFields.forEach
+        }
+    };
+
     //Checks if catalyst license is valid
     function _validateLicense(options) {
         var logTitle = [LogTitle, '_validateLicense'].join('::');
@@ -72,7 +144,7 @@ define([
                 if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
                 switch (Current.eventType) {
-                    case (scriptContext.UserEventType.VIEW):
+                    case scriptContext.UserEventType.VIEW:
                         /////////////////////////////////
                         var sessionObj = NS_Runtime.getCurrentSession();
                         var sessionData = {
@@ -94,7 +166,7 @@ define([
                             sessionObj.set({ name: 'sendpo-error', value: null });
                             msgOption = {
                                 message:
-                                    '<br/>Error encountered:  ' +
+                                    // '<br/>Error encountered:  ' +
                                     sessionData.error +
                                     '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
                                 title: 'Send PO Unsuccessful',
@@ -158,18 +230,19 @@ define([
                                         '(function(url){window.location.href=url;})("' +
                                         EventRouter.addActionURL('sendPO') +
                                         '")'
-                                }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                }).isDisabled =
+                                    !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
                             }
                         }
                         break;
-                    case (scriptContext.UserEventType.CREATE):
-                    case (scriptContext.UserEventType.COPY):
+                    case scriptContext.UserEventType.CREATE:
+                    case scriptContext.UserEventType.COPY:
                         var fieldIdsToBlankOut = [
                             VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER,
                             VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP,
                             VCSP_Global.Fields.Transaction.VENDOR_RECEIPT
                         ];
-                        fieldIdsToBlankOut.forEach(function(fieldId) {
+                        fieldIdsToBlankOut.forEach(function (fieldId) {
                             log.debug(logTitle, 'Emptying ' + fieldId + '...');
                             scriptContext.newRecord.setValue({
                                 fieldId: fieldId,
@@ -187,6 +260,14 @@ define([
                     default:
                         break;
                 }
+
+                if (Current.eventType == scriptContext.UserEventType.VIEW) {
+                    Helper.displayAsInlineTextarea(scriptContext.form, [
+                        'custbody_ctc_vcsp_vendor_rcpt'
+                    ]);
+                }
+
+
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -211,8 +292,9 @@ define([
                 var searchResults = CTC_Util.searchAllPaged({
                     type: NS_Search.Type.TRANSACTION,
                     filterExpression: [
-                        [ 'recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER], 'AND',
-                        [ 'internalid', NS_Search.Operator.ANYOF, recordData.id ]
+                        ['recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER],
+                        'AND',
+                        ['internalid', NS_Search.Operator.ANYOF, recordData.id]
                     ],
                     columns: [
                         createdFromRecTypeCol,
@@ -244,21 +326,37 @@ define([
                 // TODO: please test, currently untested
                 var isPendingSendOnCreate;
                 if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE) {
-                    var createEventTypes = [scriptContext.UserEventType.CREATE, scriptContext.UserEventType.COPY];
+                    var createEventTypes = [
+                        scriptContext.UserEventType.CREATE,
+                        scriptContext.UserEventType.COPY
+                    ];
                     isPendingSendOnCreate = createEventTypes.indexOf(Current.eventType) >= 0;
                 }
-                if (isPendingSendOnCreate || vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE) {
-                    var isToBeSent = !lookupData.getValue(VCSP_Global.Fields.Transaction.IS_PO_SENT);
-                    var isCreatedFromSalesOrder = lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
+                if (
+                    isPendingSendOnCreate ||
+                    vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE
+                ) {
+                    var isToBeSent = !lookupData.getValue(
+                        VCSP_Global.Fields.Transaction.IS_PO_SENT
+                    );
+                    var isCreatedFromSalesOrder =
+                        lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
                     var isApproved = lookupData.getValue('approvalstatus') >= 2;
-                    log.debug(logTitle, JSON.stringify({
-                        isToBeSent: isToBeSent,
-                        isPendingSendOnCreate: isPendingSendOnCreate,
-                        isCreatedFromSalesOrder: isCreatedFromSalesOrder,
-                        isApproved: isApproved
-                    }));
-                    if (isToBeSent && isCreatedFromSalesOrder && (
-                            isPendingSendOnCreate || (isPendingSendOnCreate === undefined && isApproved))) {
+                    log.debug(
+                        logTitle,
+                        JSON.stringify({
+                            isToBeSent: isToBeSent,
+                            isPendingSendOnCreate: isPendingSendOnCreate,
+                            isCreatedFromSalesOrder: isCreatedFromSalesOrder,
+                            isApproved: isApproved
+                        })
+                    );
+                    if (
+                        isToBeSent &&
+                        isCreatedFromSalesOrder &&
+                        (isPendingSendOnCreate ||
+                            (isPendingSendOnCreate === undefined && isApproved))
+                    ) {
                         NS_Redirect.toRecord({
                             type: Current.recordType,
                             id: Current.recordId,
@@ -302,6 +400,25 @@ define([
             }
 
             return true;
+        }
+    };
+    EventRouter.Action[VCSP_Global.Records.VENDOR_CONFIG] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+            try {
+                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+
+                Helper.displayAsInlineTextarea(scriptContext.form, [
+                    'custrecord_ctc_vcsp_fieldmapping'
+                ]);
+
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
         }
     };
 

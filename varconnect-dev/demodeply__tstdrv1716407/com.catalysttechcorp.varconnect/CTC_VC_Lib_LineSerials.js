@@ -20,8 +20,12 @@
  * Build
  *
  */
-define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, search, constants) {
-    var FIELDS = constants.Fields.Serials;
+define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
+    ns_record,
+    ns_search,
+    vc2_constant
+) {
+    var SERIALFLD = vc2_constant.RECORD.SERIALS.FIELD;
 
     function processSerials(options) {
         var serialsToCreate = options.serialsToCreate,
@@ -124,8 +128,8 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
                 }
                 log.debug('Updating serial id ' + serialId + ' - info', values);
                 if (values && values.length > 0)
-                    record.submitFields({
-                        type: constants.Records.SERIALS,
+                    ns_record.submitFields({
+                        type: vc2_constant.RECORD.SERIALS.ID,
                         id: serialId,
                         values: values
                     });
@@ -162,16 +166,16 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
                     var logInfo = '';
 
                     //Create serial record placeholder
-                    var recSerial = record.create({
-                        type: constants.Records.SERIALS
+                    var recSerial = ns_record.create({
+                        type: vc2_constant.RECORD.SERIALS.ID
                     });
 
                     recSerial.setValue({
-                        fieldId: FIELDS.NAME,
+                        fieldId: SERIALFLD.NAME,
                         value: serial
                     });
                     recSerial.setValue({
-                        fieldId: FIELDS.ITEM,
+                        fieldId: SERIALFLD.ITEM,
                         value: item
                     });
 
@@ -298,11 +302,11 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
             var serial = serials[i];
 
             if (i > 0) filters.push('or');
-            filters.push([FIELDS.NAME, 'is', serial]);
+            filters.push([SERIALFLD.NAME, 'is', serial]);
         }
 
-        var srch = search.create({
-            type: constants.Records.SERIALS,
+        var srch = ns_search.create({
+            type: vc2_constant.RECORD.SERIALS.ID,
             filters: filters,
             columns: columns
         });
@@ -322,7 +326,7 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
             lineIds = {};
         lineIds.idList = [];
 
-        var txn = record.load({
+        var txn = ns_record.load({
             type: txnType,
             id: txnId
         });
@@ -393,35 +397,35 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
             columns = [];
 
         filters.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: fields.txnField,
                 operator: 'anyof',
                 values: txnId
             })
         );
         filters.push(
-            search.createFilter({
-                name: FIELDS.ITEM,
+            ns_search.createFilter({
+                name: SERIALFLD.ITEM,
                 operator: 'anyof',
                 values: item
             })
         );
 
         columns.push(
-            search.createColumn({
+            ns_search.createColumn({
                 name: fields.txnLineField,
                 summary: 'group'
             })
         );
         columns.push(
-            search.createColumn({
-                name: FIELDS.ID,
+            ns_search.createColumn({
+                name: SERIALFLD.ID,
                 summary: 'count'
             })
         );
 
-        var srch = search.create({
-            type: constants.Records.SERIALS,
+        var srch = ns_search.create({
+            type: vc2_constant.RECORD.SERIALS.ID,
             filters: filters,
             columns: columns
         });
@@ -445,21 +449,21 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
             txnField,
             txnLineField;
 
-        if (txnType == record.Type.SALES_ORDER) {
-            txnField = FIELDS.SALES_ORDER;
-            txnLineField = FIELDS.SO_LINE;
-        } else if (txnType == record.Type.PURCHASE_ORDER) {
-            txnField = FIELDS.PURCHASE_ORDER;
-            txnLineField = FIELDS.PO_LINE;
-        } else if (txnType == record.Type.ITEM_FULFILLMENT) {
-            txnField = FIELDS.ITEM_FULFILLMENT;
-            txnLineField = FIELDS.IF_LINE;
-        } else if (txnType == record.Type.ITEM_RECEIPT) {
-            txnField = FIELDS.ITEM_RECEIPT;
-            txnLineField = FIELDS.IR_LINE;
-        } else if (txnType == record.Type.INVOICE) {
-            txnField = FIELDS.INVOICE;
-            txnLineField = FIELDS.INV_LINE;
+        if (txnType == ns_record.Type.SALES_ORDER) {
+            txnField = SERIALFLD.SALES_ORDER;
+            txnLineField = SERIALFLD.SO_LINE;
+        } else if (txnType == ns_record.Type.PURCHASE_ORDER) {
+            txnField = SERIALFLD.PURCHASE_ORDER;
+            txnLineField = SERIALFLD.PO_LINE;
+        } else if (txnType == ns_record.Type.ITEM_FULFILLMENT) {
+            txnField = SERIALFLD.ITEM_FULFILLMENT;
+            txnLineField = SERIALFLD.IF_LINE;
+        } else if (txnType == ns_record.Type.ITEM_RECEIPT) {
+            txnField = SERIALFLD.ITEM_RECEIPT;
+            txnLineField = SERIALFLD.IR_LINE;
+        } else if (txnType == ns_record.Type.INVOICE) {
+            txnField = SERIALFLD.INVOICE;
+            txnLineField = SERIALFLD.INV_LINE;
         }
 
         return {
@@ -475,11 +479,11 @@ define(['N/record', 'N/search', './CTC_VC_Constants.js'], function (record, sear
 
         objReturn.lineId = result.getValue({
             name: txnLineField,
-            summary: search.Summary.GROUP
+            summary: ns_search.Summary.GROUP
         });
         objReturn.count = result.getValue({
-            name: FIELDS.ID,
-            summary: search.Summary.COUNT
+            name: SERIALFLD.ID,
+            summary: ns_search.Summary.COUNT
         });
 
         return objReturn;

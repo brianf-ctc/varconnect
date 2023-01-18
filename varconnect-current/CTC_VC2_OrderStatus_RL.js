@@ -135,11 +135,6 @@ define(function (request) {
                 Current.soData = Current.recordSO
                     ? util_record.extractValues({ record: Current.recordSO, fields: ['entity'] })
                     : null;
-
-                
-
-
-
             } catch (error) {
                 util.extend(returnObj, {
                     msg: error.msg || vc_util.extractError(error),

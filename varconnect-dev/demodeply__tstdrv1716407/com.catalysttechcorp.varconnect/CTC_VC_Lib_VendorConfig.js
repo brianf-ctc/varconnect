@@ -18,32 +18,33 @@
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  */
-define([
-    'N/search',
-    './VC_Globals.js',
-    './CTC_VC_Constants.js',
-    './CTC_VC2_Lib_Utils'
-], function (search, vcGlobals, constants, vc_util) {
+define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
+    ns_search,
+    vc2_constant,
+    vc2_util
+) {
     var LogTitle = 'VendorCFG',
         LogPrefix = LogPrefix || '';
 
+    var VendorCFG = vc2_constant.RECORD.VENDOR_CONFIG;
+
     var vendorConfigFields = [
-        constants.Fields.VendorConfig.ID, //0
-        constants.Fields.VendorConfig.SUBSIDIARY, //1
-        constants.Fields.VendorConfig.XML_VENDOR, //2
-        constants.Fields.VendorConfig.VENDOR, //3
-        constants.Fields.VendorConfig.WEBSERVICE_ENDPOINT, //4
-        constants.Fields.VendorConfig.START_DATE, //5
-        constants.Fields.VendorConfig.USERNAME, //6
-        constants.Fields.VendorConfig.PASSWORD, //7
-        constants.Fields.VendorConfig.CUSTOMER_NO, //8
-        constants.Fields.VendorConfig.PROCESS_DROPSHIPS, //9
-        constants.Fields.VendorConfig.PROCESS_SPECIAL_ORDERS, //10
-        constants.Fields.VendorConfig.FULFILLMENT_PREFIX, //11
-        constants.Fields.VendorConfig.ACCESS_ENDPOINT, //12
-        constants.Fields.VendorConfig.API_KEY, //13
-        constants.Fields.VendorConfig.API_SECRET, //14
-        constants.Fields.VendorConfig.OATH_SCOPE //15
+        VendorCFG.FIELD.ID, //0
+        VendorCFG.FIELD.SUBSIDIARY, //1
+        VendorCFG.FIELD.XML_VENDOR, //2
+        VendorCFG.FIELD.VENDOR, //3
+        VendorCFG.FIELD.WEBSERVICE_ENDPOINT, //4
+        VendorCFG.FIELD.START_DATE, //5
+        VendorCFG.FIELD.USERNAME, //6
+        VendorCFG.FIELD.PASSWORD, //7
+        VendorCFG.FIELD.CUSTOMER_NO, //8
+        VendorCFG.FIELD.PROCESS_DROPSHIPS, //9
+        VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS, //10
+        VendorCFG.FIELD.FULFILLMENT_PREFIX, //11
+        VendorCFG.FIELD.ACCESS_ENDPOINT, //12
+        VendorCFG.FIELD.API_KEY, //13
+        VendorCFG.FIELD.API_SECRET, //14
+        VendorCFG.FIELD.OATH_SCOPE //15
     ];
 
     function _generateVendorConfig(result) {
@@ -85,25 +86,25 @@ define([
 
         var filter = [];
         filter.push(
-            search.createFilter({
-                name: constants.Fields.VendorConfig.VENDOR,
-                operator: search.Operator.ANYOF,
+            ns_search.createFilter({
+                name: VendorCFG.FIELD.VENDOR,
+                operator: ns_search.Operator.ANYOF,
                 values: vendor
             })
         );
         filter.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: 'isinactive',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: false
             })
         );
 
-        if (vcGlobals.ENABLE_SUBSIDIARIES && subsidiary)
+        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsidiary)
             filter.push(
-                search.createFilter({
-                    name: constants.Fields.VendorConfig.SUBSIDIARY,
-                    operator: search.Operator.ANYOF,
+                ns_search.createFilter({
+                    name: VendorCFG.FIELD.SUBSIDIARY,
+                    operator: ns_search.Operator.ANYOF,
                     values: subsidiary
                 })
             );
@@ -112,21 +113,21 @@ define([
         //     logTitle,
         //     '>> search option: ' +
         //         JSON.stringify({
-        //             type: constants.Records.VENDOR_CONFIG,
+        //             type: VendorCFG.ID,
         //             filters: filter,
         //             columns: vendorConfigFields
         //         })
         // );
 
         vendorConfigFields.push(
-            search.createColumn({
+            ns_search.createColumn({
                 name: 'country',
                 join: 'custrecord_ctc_vc_vendor_subsidiary'
             })
         );
 
-        var vendorSearch = search.create({
-            type: constants.Records.VENDOR_CONFIG,
+        var vendorSearch = ns_search.create({
+            type: VendorCFG.ID,
             filters: filter,
             columns: vendorConfigFields
         });
@@ -137,7 +138,7 @@ define([
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -159,31 +160,31 @@ define([
 
         var filter = [];
         filter.push(
-            search.createFilter({
-                name: constants.Fields.VendorConfig.VENDOR,
-                operator: search.Operator.ANYOF,
+            ns_search.createFilter({
+                name: VendorCFG.FIELD.VENDOR,
+                operator: ns_search.Operator.ANYOF,
                 values: vendor
             })
         );
         filter.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: 'isinactive',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: false
             })
         );
 
-        if (vcGlobals.ENABLE_SUBSIDIARIES)
+        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
             filter.push(
-                search.createFilter({
-                    name: constants.Fields.VendorConfig.SUBSIDIARY,
-                    operator: search.Operator.ANYOF,
+                ns_search.createFilter({
+                    name: VendorCFG.FIELD.SUBSIDIARY,
+                    operator: ns_search.Operator.ANYOF,
                     values: subsidiary
                 })
             );
 
-        var vendorSearch = search.create({
-            type: constants.Records.VENDOR_CONFIG,
+        var vendorSearch = ns_search.create({
+            type: VendorCFG.ID,
             filters: filter,
             columns: vendorConfigFields
         });
@@ -194,7 +195,7 @@ define([
                 end: 5
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -220,25 +221,25 @@ define([
 
         var filter = [];
         filter.push(
-            search.createFilter({
-                name: constants.Fields.VendorConfig.XML_VENDOR,
-                operator: search.Operator.ANYOF,
+            ns_search.createFilter({
+                name: VendorCFG.FIELD.XML_VENDOR,
+                operator: ns_search.Operator.ANYOF,
                 values: vendor
             })
         );
         filter.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: 'isinactive',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: false
             })
         );
 
-        if (vcGlobals.ENABLE_SUBSIDIARIES && subsidiary)
+        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsidiary)
             filter.push(
-                search.createFilter({
-                    name: constants.Fields.VendorConfig.SUBSIDIARY,
-                    operator: search.Operator.ANYOF,
+                ns_search.createFilter({
+                    name: VendorCFG.FIELD.SUBSIDIARY,
+                    operator: ns_search.Operator.ANYOF,
                     values: subsidiary
                 })
             );
@@ -247,21 +248,21 @@ define([
             logTitle,
             '>> search option: ' +
                 JSON.stringify({
-                    type: constants.Records.VENDOR_CONFIG,
+                    type: VendorCFG.ID,
                     filters: filter,
                     columns: vendorConfigFields
                 })
         );
 
         vendorConfigFields.push(
-            search.createColumn({
+            ns_search.createColumn({
                 name: 'country',
                 join: 'custrecord_ctc_vc_vendor_subsidiary'
             })
         );
 
-        var vendorSearch = search.create({
-            type: constants.Records.VENDOR_CONFIG,
+        var vendorSearch = ns_search.create({
+            type: VendorCFG.ID,
             filters: filter,
             columns: vendorConfigFields
         });
@@ -272,7 +273,7 @@ define([
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {

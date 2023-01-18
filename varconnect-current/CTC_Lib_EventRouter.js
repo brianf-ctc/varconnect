@@ -12,10 +12,10 @@
  * @NModuleScope Public
  */
 define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
-    NS_Record,
-    NS_Runtime,
-    NS_Url,
-    NS_Redir
+    ns_record,
+    ns_runtime,
+    ns_url,
+    ns_redir
 ) {
     var Helper = {
         isEmpty: function (stValue) {
@@ -54,12 +54,12 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
         initialize: function (scriptContext) {
             var Current = {
                 eventType: scriptContext.type,
-                execType: NS_Runtime.executionContext,
+                execType: ns_runtime.executionContext,
                 recordType: scriptContext.newRecord.type,
                 recordId: scriptContext.newRecord.id
             };
             if (Current.recordId) {
-                Current.recordUrl = NS_Url.resolveRecord({
+                Current.recordUrl = ns_url.resolveRecord({
                     recordType: Current.recordType,
                     recordId: Current.recordId
                 });
@@ -76,7 +76,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
             var Current = this.Current,
                 scriptContext = this.scriptContext,
                 UserEventType = scriptContext.UserEventType,
-                ContextType = NS_Runtime.ContextType,
+                ContextType = ns_runtime.ContextType,
                 RouterEventFn,
                 result;
 
@@ -95,22 +95,22 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                 result = RouterEventFn.call(EventRouter, scriptContext, Current);
 
                 if (result) {
-                    NS_Redir.toRecord({
+                    ns_redir.toRecord({
                         type: Current.recordType,
                         id: Current.recordId
                     });
                 }
-            } else if (this.Action[Current.recordType] ) {
+            } else if (this.Action[Current.recordType]) {
                 RouterEventFn = this.Action[Current.recordType][eventType];
                 if (!util.isFunction(RouterEventFn)) return;
-                
+
                 result = RouterEventFn.call(EventRouter, scriptContext, Current);
                 return result;
             }
-        }, 
+        },
         addActionURL: function (name) {
             return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join('');
-        }    
+        }
     };
 
     return EventRouter;

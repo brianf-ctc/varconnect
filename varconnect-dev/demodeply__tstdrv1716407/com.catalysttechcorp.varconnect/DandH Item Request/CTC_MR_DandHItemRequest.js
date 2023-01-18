@@ -20,34 +20,53 @@
  *
  * CHANGELOGS
  *
- * Version	Date			Author						Remarks
- * 1.00		Jan 1, 2020		paolodl@nscatalyst.com		Initial Build
+ * Version	Date            Author		    		Remarks
+ * 1.00		Jan 1, 2020	    paolodl@nscatalyst.com	Initial Build
  * 1.01		Oct 25, 2022	christian@nscatalyst.com	Support non-inventory type
  */
- define([
+define([
     'N/search',
     'N/record',
     'N/runtime',
     'N/https',
     'N/xml',
-    '../CTC_VC2_Lib_Utils.js',
     '../CTC_VC_Lib_MainConfiguration',
     '../CTC_VC_Lib_VendorConfig',
     '../CTC_VC_Lib_LicenseValidator',
-    '../CTC_VC_Constants'
+    '../CTC_VC2_Lib_Utils.js',
+    '../CTC_VC2_Constants.js'
 ], function (
-    search,
-    record,
-    runtime,
-    https,
-    xml,
-    util,
-    libMainConfig,
-    libVendorConfig,
-    libLicenseValidator,
-    constants
+    ns_search,
+    ns_record,
+    ns_runtime,
+    ns_https,
+    ns_xml,
+    vc_maincfg,
+    vc_vendorcfg,
+    vc_license,
+    vc2_util,
+    vc2_constant
 ) {
     var LogTitle = 'VC|D&H Item Request';
+
+    var Helper = {
+        flatLookup: function (option) {
+            var arrData = null,
+                arrResults = null;
+
+            arrResults = ns_search.lookupFields(option);
+
+            if (arrResults) {
+                arrData = {};
+                for (var fld in arrResults) {
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
+                }
+            }
+            return arrData;
+        }
+    };
     /**
      * Marks the beginning of the Map/Reduce process and generates input data.
      *
@@ -65,13 +84,13 @@
         _validateLicense({ mainConfig: mainConfig });
 
         if (_checkDandHVendorConfig()) {
-            var srchId = runtime
+            var srchId = ns_runtime
                 .getCurrentScript()
                 .getParameter('custscript_ctc_vc_dh_itemrequest_srch');
             if (!srchId) srchId = 'customsearch_ctc_vc_dh_itemrequest';
 
             log.debug(logTitle, 'Search id=' + srchId);
-            var srch = search.load({ id: srchId });
+            var srch = ns_search.load({ id: srchId });
 
             var count = srch.runPaged().count;
             log.audit(logTitle, count + ' item(s) to process.');
@@ -97,62 +116,83 @@
         var item = searchResult.values.item.value;
         var itemName = searchResult.values.item.text;
         logTitle = [logTitle, itemName].join(':');
-        var mpn = searchResult.values[constants.Columns.DH_MPN];
+        var mpn = searchResult.values[vc2_constant.FIELD.TRANSACTION.DH_MPN];
         var vendor = searchResult.values['internalid.vendor'].value;
         var itemType = searchResult.values['type.item'].value;
         var isSerialItem = searchResult.values['isserialitem.item'];
         var itemRecordType;
-        switch (itemType) {   // Compare item type to its record type counterpart
-            case 'NonInvtPart':
-                itemRecordType = record.Type.NON_INVENTORY_ITEM;
-                break;
-            case 'InvtPart':
-                if (isSerialItem) {
-                    itemRecordType = record.Type.SERIALIZED_INVENTORY_ITEM;
-                } else {
-                    itemRecordType = record.Type.INVENTORY_ITEM;
-                }
-                break;
-            default:
-                itemRecordType = null;
-                log.error(logTitle, 'UNSUPPORTED_ITEM_TYPE: Not expecting D&H to fulfill this item type: ' + itemType);
-                break;
-        }
 
-        if (itemRecordType) {
-            var vendorConfig = _loadVendorConfig({
-                vendor: vendor,
-                subsidiary: subsidiary
-            });
+        // Compare item type to its record type counterpart
+        // switch (itemType) {
+        //     case 'NonInvtPart':
+        //         itemRecordType = ns_record.Type.NON_INVENTORY_ITEM;
+        //         break;
+        //     case 'InvtPart':
+        //         if (isSerialItem) {
+        //             itemRecordType = ns_record.Type.SERIALIZED_INVENTORY_ITEM;
+        //         } else {
+        //             itemRecordType = ns_record.Type.INVENTORY_ITEM;
+        //         }
+        //         break;
+        //     default:
+        //         itemRecordType = null;
+        //         log.error(
+        //             logTitle,
+        //             'UNSUPPORTED_ITEM_TYPE: Not expecting D&H to fulfill this item type: ' +
+        //                 itemType
+        //         );
+        //         break;
+        // }
+        // log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
 
-            if (vendorConfig) {
-                var itemNumbers = _getItemValues({
-                    vendorConfig: vendorConfig,
-                    itemName: itemName
-                });
+        // try to lookup instead
+        var itemData = Helper.flatLookup({ type: 'item', id: item, columns: ['recordtype'] });
+        log.audit(logTitle, '>> item info: ' + JSON.stringify(itemData));
+        itemRecordType = itemData.recordtype;
 
-                if (itemNumbers && (itemNumbers.itemNum || itemNumbers.partNum)) {
-                    log.debug(logTitle, 'itemNumbers=' + JSON.stringify(itemNumbers));
-                    var valToSave;
+        log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
 
-                    if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
-                        valToSave = itemNumbers.partNum;
-                    else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
-                        valToSave = itemNumbers.itemNum;
+        if (!itemRecordType) return;
 
-                    values = {};
-                    values[constants.Fields.Item.DH_MPN] = valToSave;
+        var vendorConfig = _loadVendorConfig({
+            vendor: vendor,
+            subsidiary: subsidiary
+        });
 
-                    log.debug(logTitle, 'values to update:' + JSON.stringify(values));
+        if (!vendorConfig) return;
+        var itemNumbers = _getItemValues({
+            vendorConfig: vendorConfig,
+            itemName: itemName
+        });
 
-                    if (valToSave) {
-                        record.submitFields({
-                            type: itemRecordType,
-                            id: item,
-                            values: values
-                        });
-                        log.debug(logTitle, '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item);
-                    }
+        if (itemNumbers && (itemNumbers.itemNum || itemNumbers.partNum)) {
+            log.debug(logTitle, 'itemNumbers=' + JSON.stringify(itemNumbers));
+            var valToSave;
+
+            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.partNum;
+            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.itemNum;
+
+            values = {};
+            values[vc2_constant.FIELD.ITEM.DH_MPN] = valToSave;
+
+            log.debug(logTitle, 'values to update:' + JSON.stringify(values));
+
+            if (valToSave) {
+                try {
+                    ns_record.submitFields({
+                        type: itemRecordType,
+                        id: item,
+                        values: values
+                    });
+                    log.debug(
+                        logTitle,
+                        '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item
+                    );
+                } catch (error) {
+                    log.error(logTitle, '## ERROR: ' + JSON.stringify(error));
+                    throw error;
                 }
             }
         }
@@ -185,13 +225,15 @@
 
             log.debug(logTitle, '2nd response=' + responseXML);
             if (!responseXML || responseXML.indexOf('Invalid') >= 0) {
-                var cachedResponseXml = getCachedResponse({
-                    itemNum: itemName,
-                    lookupType: 'DH'
-                }) || getCachedResponse({
-                    itemNum: itemName,
-                    lookupType: 'MFR'
-                });
+                var cachedResponseXml =
+                    getCachedResponse({
+                        itemNum: itemName,
+                        lookupType: 'DH'
+                    }) ||
+                    getCachedResponse({
+                        itemNum: itemName,
+                        lookupType: 'MFR'
+                    });
                 log.debug(logTitle, 'Cached response=' + cachedResponseXml);
                 responseXML = cachedResponseXml || responseXML;
             }
@@ -226,7 +268,7 @@
 
     function _loadMainConfig() {
         var logTitle = [LogTitle, '_loadMainConfig'].join(':');
-        var mainConfig = libMainConfig.getMainConfiguration();
+        var mainConfig = vc_maincfg.getMainConfiguration();
 
         if (!mainConfig) {
             log.error(logTitle, 'No Configuration available');
@@ -238,7 +280,7 @@
         var logTitle = [LogTitle, '_loadVendorConfig'].join(':');
         var vendor = options.vendor,
             subsidiary = options.subsidiary,
-            vendorConfig = libVendorConfig.getVendorConfiguration({
+            vendorConfig = vc_vendorcfg.getVendorConfiguration({
                 vendor: vendor,
                 subsidiary: subsidiary
             });
@@ -254,7 +296,7 @@
     function _validateLicense(options) {
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
-            response = libLicenseValidator.callValidationSuitelet({
+            response = vc_license.callValidationSuitelet({
                 license: license,
                 external: true
             });
@@ -280,24 +322,24 @@
         var logTitle = [LogTitle, '_checkDandHVendorConfig'].join(':');
         var filters = [];
         filters.push(
-            search.createFilter({
-                name: constants.Fields.VendorConfig.XML_VENDOR,
-                operator: search.Operator.ANYOF,
-                values: constants.Lists.XML_VENDOR.DandH
+            ns_search.createFilter({
+                name: vc2_constant.RECORD.VENDOR_CONFIG.FIELD.XML_VENDOR,
+                operator: ns_search.Operator.ANYOF,
+                values: vc2_constant.LIST.XML_VENDOR.DandH
             })
         );
         filters.push(
-            search.createFilter({
+            ns_search.createFilter({
                 name: 'isinactive',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: false
             })
         );
 
         var columns = ['internalid'];
 
-        var vendorConfigSearch = search.create({
-            type: constants.Records.VENDOR_CONFIG,
+        var vendorConfigSearch = ns_search.create({
+            type: vc2_constant.RECORD.VENDOR_CONFIG.ID,
             filters: filters,
             columns: columns
         });
@@ -358,14 +400,14 @@
             'Content-Type': 'text/xml; charset=utf-8',
             'Content-Length': 'length'
         };
-        
+
         var responseXML;
         try {
             /**
              * change endpoint
              * add to vendor config
              */
-            var response = https.post({
+            var response = ns_https.post({
                 url: requestURL,
                 body: xmlItemInquiry,
                 headers: headers
@@ -406,18 +448,18 @@
 
         // Create XML object from XML text returned from vendor, using Netsuite XML parser
         var itemNum, partNum;
-        var xmlDoc = xml.Parser.fromString({
+        var xmlDoc = ns_xml.Parser.fromString({
             text: xmlString
         });
 
         if (xmlDoc != null) {
-            var itemNode = xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
+            var itemNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
             if (itemNode != null && itemNode.length > 0) {
-                itemNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
+                itemNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
                 );
-                partNum = util.getNodeTextContent(
-                    xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
+                partNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
                 );
             }
         }

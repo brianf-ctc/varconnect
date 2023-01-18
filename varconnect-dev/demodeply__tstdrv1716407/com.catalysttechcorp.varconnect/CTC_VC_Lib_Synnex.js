@@ -22,11 +22,10 @@
 
 define([
     'N/xml',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_xml, VC_Global, VC_Log, VC_Util, moment) {
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js'
+], function (ns_xml, vc_log, vc2_constant, vc_util) {
     var LogTitle = 'WS:Synnex';
 
     var CURRENT = {};
@@ -37,11 +36,11 @@ define([
             option = option || {};
 
             try {
-                var reqOrderStatus = VC_Util.sendRequest({
+                var reqOrderStatus = vc_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     method: 'post',
                     isXML: true,
-                    doRetry: true, 
+                    doRetry: true,
                     query: {
                         url: CURRENT.vendorConfig.endPoint,
                         body:
@@ -98,22 +97,22 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC_Util.isEmpty(returnValue)
+                    body: !vc_util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
             }
 
@@ -134,12 +133,12 @@ define([
 
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
             }
 
             return returnValue;
@@ -247,12 +246,12 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Response Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
                 returnValue = errorMsg;
             }
 

@@ -20,8 +20,8 @@
  * 1.00		July 25, 2019	paolodl		Enables and disables fields depending on current selection
  *
  */
-define(['./CTC_VC_Constants', './CTC_VC_Lib_LicenseValidator'], function (
-    constants,
+define(['./CTC_VC2_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
+    vc2_constant,
     libLicenseValidator
 ) {
     /**
@@ -39,7 +39,7 @@ define(['./CTC_VC_Constants', './CTC_VC_Lib_LicenseValidator'], function (
      * @since 2015.2
      */
     function validateField(scriptContext) {
-        if (scriptContext.fieldId == constants.Fields.MainConfig.LICENSE) {
+        if (scriptContext.fieldId == vc2_constant.RECORD.MAIN_CONFIG.FIELD.LICENSE) {
             var currentRecord = scriptContext.currentRecord,
                 license = currentRecord.getValue({ fieldId: scriptContext.fieldId });
 

@@ -17,7 +17,7 @@
  * Script Name: CTC | PDF Macro Serials (SL)
  * Author: brianf@nscatalyst.com
  */
-define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, NS_Record) {
+define(['N/search', 'N/runtime', 'N/record'], function (ns_search, ns_runtime, ns_record) {
     'use strict';
     var LogTitle = 'TPLMacro-Serials';
 
@@ -74,7 +74,7 @@ define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, N
             var filters = [
                     {
                         name:
-                            recType == NS_Record.Type.INVOICE
+                            recType == ns_record.Type.INVOICE
                                 ? 'custrecordserialinvoice'
                                 : 'custrecorditemfulfillment',
                         operator: 'anyof',
@@ -85,10 +85,10 @@ define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, N
                     { name: 'name' },
                     { name: 'custrecordserialsales' },
                     { name: 'custrecorditemfulfillment' },
-                    { name: 'custrecordserialitem', sort: NS_Search.Sort.ASC }
+                    { name: 'custrecordserialitem', sort: ns_search.Sort.ASC }
                 ];
 
-            var searchObj = NS_Search.create({
+            var searchObj = ns_search.create({
                 type: 'customrecordserialnum',
                 filters: filters,
                 columns: columns
@@ -107,7 +107,7 @@ define(['N/search', 'N/runtime', 'N/record'], function (NS_Search, NS_Runtime, N
                 mkey: context.request.parameters.mkey,
                 recid: context.request.parameters.recid,
                 rectype: context.request.parameters.rectype,
-                macroKeyParam: NS_Runtime.getCurrentScript().getParameter({
+                macroKeyParam: ns_runtime.getCurrentScript().getParameter({
                     name: 'custscript_ctc_vc_pdfmacro_name'
                 })
             };

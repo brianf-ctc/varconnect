@@ -17,13 +17,7 @@
  * Version	Date            Author		Remarks
  * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
  */
-define([
-    'N/record',
-    './CTC_VCSP_Lib_Preferences.js',
-    './CTC_VCSP_Lib_WebService.js',
-    '../VO/CTC_VCSP_PO.js',
-    '../Library/CTC_VCSP_Constants.js'
-], function (record, pref, libWebService, PO, constants) {
+define(['N/record', '../Library/CTC_VCSP_Lib_WebService.js', '../Library/CTC_VCSP_Constants.js'], function (record, libWebService, constants) {
     var LogTitle = 'VCSendPO';
     function _updateNativePO(options) {
         var logTitle = [LogTitle, '_updateNativePO'].join('::');

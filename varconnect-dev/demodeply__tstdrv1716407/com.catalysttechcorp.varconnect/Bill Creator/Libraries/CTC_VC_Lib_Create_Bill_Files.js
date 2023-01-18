@@ -12,16 +12,19 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], function (
-    ns_search,
-    ns_record,
-    ns_format,
-    ns_config,
-    moment,
-    Fuse
-) {
+define([
+    'N/search',
+    'N/record',
+    'N/format',
+    'N/config',
+    './../../CTC_VC2_Constants',
+    './../../CTC_VC_Lib_MainConfiguration',
+    './moment',
+    './fuse'
+], function (ns_search, ns_record, ns_format, ns_config, vc_constants, vc_mainCfg, moment, Fuse) {
     var LogTitle = 'LIB::BillFiles',
         LogPrefix;
+    var MainConfig = null;
 
     var Helper = {
         inArray: function (stValue, arrValue) {
@@ -96,7 +99,13 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             var searchObj = ns_search.create({
                 type: 'purchaseorder',
                 filters: [
+                    MainConfig.overridePONum
+                        ? [
                     ['numbertext', 'is', poName],
+                              'OR',
+                              ['custbody_ctc_vc_override_ponum', 'is', poName]
+                          ]
+                        : ['numbertext', 'is', poName],
                     'AND',
                     ['mainline', 'is', 'T'],
                     'AND',
@@ -106,6 +115,7 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                     'trandate',
                     'postingperiod',
                     'type',
+                    MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
                     'tranid',
                     'entity',
                     'amount',
@@ -183,6 +193,50 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             returnValue = arrSKUs;
 
             return returnValue;
+        },
+        loadVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
+                returnValue;
+            var entityId = option.entity;
+            var BILLCREATE_CFG = vc_constants.RECORD.BILLCREATE_CONFIG;
+
+            try {
+                var searchOption = {
+                    type: 'vendor',
+                    filters: [['internalid', 'anyof', entityId]],
+                    columns: []
+                };
+
+                for (var field in BILLCREATE_CFG.FIELD) {
+                    searchOption.columns.push(
+                        ns_search.createColumn({
+                            name: BILLCREATE_CFG.FIELD[field],
+                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                        })
+                    );
+                }
+
+                var searchObj = ns_search.create(searchOption);
+                if (!searchObj.runPaged().count) throw 'No config available';
+
+                returnValue = {};
+                searchObj.run().each(function (row) {
+                    for (var field in BILLCREATE_CFG.FIELD) {
+                        returnValue[field] = row.getValue({
+                            name: BILLCREATE_CFG.FIELD[field],
+                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                        });
+                    }
+                    return true;
+                });
+
+                log.audit(logTitle, LogPrefix + '// config: ' + JSON.stringify(returnValue));
+            } catch (error) {
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+            }
+
+            return returnValue;
         }
     };
 
@@ -226,6 +280,13 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
         log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
         log.audit(logTitle, '>> myArr: ' + JSON.stringify(myArr));
         log.audit(logTitle, '>> name: ' + JSON.stringify(name));
+
+        if (!MainConfig) {
+            MainConfig = vc_mainCfg.getMainConfiguration();
+            if (!MainConfig) {
+                log.error(logTitle, 'No Configuration available');
+            }
+        }
 
         // //4.01
         if (!dateFormat) {
@@ -274,6 +335,9 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             if (!poData) {
                 billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
             } else {
+                // load the vendor config
+                var vendorCfg = Helper.loadVendorConfig({ entity: poData.entityId });
+
                 billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
                 billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
 
@@ -282,6 +346,9 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                 if (Helper.inArray(poData.entityId, ['75', '203', '216', '371', '496'])) {
                     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
                 }
+
+                // if (vendorCfg.ENABLE_FULFILLLMENT)
+                //     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
                 ///////////////////////////////////
 
                 var vendorTerms = 0;
@@ -338,24 +405,26 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
                         logPrefix + '.. exact match: ' + JSON.stringify(matchedSku)
                     );
 
-                    if (!matchedSku) {
-                        // do the fuzzy search
-                        const options = {
-                            includeScore: true,
-                            threshold: 0.4,
-                            keys: ['text']
-                        };
-                        var fuse = new Fuse(availableSkus, options);
-                        var fuseOutput = fuse.search(itemNo);
-                        if (fuseOutput.length > 0) {
-                            matchedSku = fuseOutput[0].item.value;
-                        }
+                    // if (!matchedSku) {
+                    //     try {
+                    //         // do the fuzzy search
+                    //         const options = {
+                    //             includeScore: true,
+                    //             threshold: 0.4,
+                    //             keys: ['text']
+                    //         };
+                    //         var fuse = new Fuse(availableSkus, options);
+                    //         var fuseOutput = fuse.search(itemNo);
+                    //         if (fuseOutput.length > 0) {
+                    //             matchedSku = fuseOutput[0].item.value;
+                    //         }
 
-                        log.audit(
-                            logTitle,
-                            logPrefix + '.. fuzzy match: ' + JSON.stringify(matchedSku)
-                        );
-                    }
+                    //         log.audit(
+                    //             logTitle,
+                    //             logPrefix + '.. fuzzy match: ' + JSON.stringify(matchedSku)
+                    //         );
+                    //     } catch (fuzzy_err) {}
+                    // }
 
                     if (!matchedSku) {
                         billFileNotes.push('Not matched SKU: ' + itemNo);
@@ -414,9 +483,6 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             notes = option.note || option.notes || option.content,
             allNotes = option.all || option.allNotes || option.current || '';
 
-        // if (!billFileId) return false;
-        // if (!notes) return false;
-
         // //4.01
         if (!dateFormat) {
             var generalPref = ns_config.load({
@@ -436,91 +502,17 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
             });
             allNotes = recData.custrecord_ctc_vc_bill_log;
         }
-        if (notes) allNotes = moment().format(dateFormat) + ' - ' + notes + '\r\n' + allNotes;
-
-        ////////////////////////////////////////
-        var noteHelper = {
-            splitByDate: function (allNotesStr) {
-                var arr = allNotesStr
-                    .split(/(\d{1,2}\/\d{1,2}\/\d{4})\s-\s/gm)
-                    .filter(function (str) {
-                        return !!str;
-                    });
-                var arrNotes = [];
-                while (arr.length) {
-                    var dateStr = arr.shift();
-                    if (!new Date(dateStr)) continue;
-
-                    var note = {
-                        date: dateStr,
-                        dateVal: new Date(dateStr),
-                        msg: arr.shift()
-                    };
-                    if (note.msg) note.msg = note.msg.replace(/\r\n/gm, '');
-                    arrNotes.push(note);
-                }
-                log.audit('noteHelper::splitByDate', '>> arrNotes: ' + JSON.stringify(arrNotes));
-                return arrNotes.sort(function (a, b) {
-                    return b.dateVal - a.dateVal;
-                });
-            },
-            removeDuplicates: function (notesList) {
-                var arrNotes = [];
-                notesList.map(function (noteOut) {
-                    var isFound = false;
-                    arrNotes.forEach(function (noteIn) {
-                        if (isFound) return false;
-                        if (noteOut.date == noteIn.date && noteOut.msg == noteIn.msg) {
-                            isFound = true;
-                            return false;
-                        }
-                        return true;
-                    });
-                    if (!isFound) arrNotes.push(noteOut);
-                });
-                return arrNotes;
-            },
-            removeSameSucceedingLogs: function (notesList) {
-                var arrNotes = [];
-                notesList.map(function (note) {
-                    var isSameNote = false;
-                    if (arrNotes.length && arrNotes[arrNotes.length - 1]) {
-                        var lastEntry = arrNotes[arrNotes.length - 1];
-                        isSameNote = lastEntry.msg == note.msg;
-                    }
-                    if (!isSameNote) {
-                        arrNotes.push(note);
-                    }
-                });
-                return arrNotes;
-            },
-            flatten: function (notesList) {
-                return notesList.map(function (note) {
-                    return [note.date, note.msg].join(' - ');
-                });
-            }
-        };
-        ////////////////////////////////////////
+        if (notes) allNotes = allNotes + '\r\n' + moment().format(dateFormat) + ' - ' + notes;
 
         // lets simplify ///
         // first, split up the notes by date, and make each an object
-        var newNoteStr = allNotes;
-        try {
-            var arrNotes = noteHelper.splitByDate(allNotes);
-            log.audit(logTitle, '>> arrNotes [splitByDate]: ' + JSON.stringify(arrNotes));
-            arrNotes = noteHelper.removeDuplicates(arrNotes);
-            log.audit(logTitle, '>> arrNotes [removeDuplicates]: ' + JSON.stringify(arrNotes));
-            arrNotes = noteHelper.removeSameSucceedingLogs(arrNotes);
-            log.audit(
-                logTitle,
-                '>> arrNotes [removeSameSucceedingLogs]: ' + JSON.stringify(arrNotes)
-            );
-            arrNotes = noteHelper.flatten(arrNotes);
-            log.audit(logTitle, '>> arrNotes [flatten]: ' + JSON.stringify(arrNotes));
-
-            newNoteStr = arrNotes.join('\r\n\r\n');
-        } catch (e) {}
-        log.audit(logTitle, '>> newNoteStr: ' + JSON.stringify(newNoteStr));
+                var arrNotes = [];
+        allNotes.split(/\r\n/).map(function (line) {
+            if (arrNotes.indexOf(line) < 0) arrNotes.push(line);
+                        return true;
+                    });
+        log.audit(logTitle, '>> arrNotes: ' + JSON.stringify(arrNotes));
+        var newNoteStr = arrNotes.join('\r\n');
 
         if (billFileId) {
             // update
@@ -541,6 +533,7 @@ define(['N/search', 'N/record', 'N/format', 'N/config', './moment', './fuse'], f
 
     // Add the return statement that identifies the entry point function.
     return {
+        mainConfig: MainConfig,
         process: process,
         addNote: addNote
     };

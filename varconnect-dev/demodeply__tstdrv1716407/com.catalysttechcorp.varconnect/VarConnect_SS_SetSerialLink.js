@@ -20,21 +20,30 @@ define([
     'N/search',
     'N/email',
     'N/record',
-    'N/log',
     'N/runtime',
     'N/render',
     'N/url',
-    './VC_Globals.js',
-    './CTC_VC_Lib_Utilities.js',
-    './CTC_VC_Constants.js'
-], function (search, email, record, log, runtime, render, url, vcGlobals, util, constants) {
+    './CTC_VC2_Lib_Utils',
+    './CTC_VC2_Constants.js'
+], function (
+    ns_search,
+    ns_email,
+    ns_record,
+    ns_runtime,
+    ns_render,
+    ns_url,
+    vc2_util,
+    vc2_constant
+) {
     function execute() {
         log.audit({ title: 'Scheduled set serial Script', details: 'STARTING' });
 
-        var currentID = runtime.getCurrentScript().getParameter('custscript_ss_seriallink_id');
-        var currentType = runtime.getCurrentScript().getParameter('custscript_ss_seriallink_type');
+        var currentID = ns_runtime.getCurrentScript().getParameter('custscript_ss_seriallink_id');
+        var currentType = ns_runtime
+            .getCurrentScript()
+            .getParameter('custscript_ss_seriallink_type');
 
-        var current_rec = record.load({
+        var current_rec = ns_record.load({
             type: currentType,
             id: currentID,
             isDynamic: false
@@ -56,8 +65,8 @@ define([
                 line: i
             });
 
-            var fieldLookUp = search.lookupFields({
-                type: search.Type.ITEM,
+            var fieldLookUp = ns_search.lookupFields({
+                type: ns_search.Type.ITEM,
                 id: itemId,
                 columns: ['itemid']
             });
@@ -65,7 +74,7 @@ define([
 
             // + '&compid='+accountId
             //            var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-            var lineLinkUrl = util.generateSerialLink({
+            var lineLinkUrl = vc2_util.generateSerialLink({
                 transType: currentType,
                 transId: currentID,
                 itemId: itemId,
@@ -78,7 +87,7 @@ define([
             });
             current_rec.setSublistValue({
                 sublistId: 'item',
-                fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
+                fieldId: vc2_constant.GLOBAL.SN_LINE_FIELD_LINK_ID,
                 line: i,
                 value: lineLinkUrl
             });

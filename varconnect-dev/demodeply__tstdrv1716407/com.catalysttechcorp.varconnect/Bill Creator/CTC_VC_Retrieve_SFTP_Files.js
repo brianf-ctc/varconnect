@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.1
+ * @NApiVersion 2.x
  * @NModuleScope Public
  * @NScriptType MapReduceScript
  */
@@ -17,12 +17,11 @@ define([
     'N/search',
     'N/runtime',
     'N/error',
-    'N/log',
     'N/sftp',
     './Libraries/moment',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map'
-], function (search, runtime, error, log, sftp, moment, vp, vm) {
+], function (ns_search, ns_runtime, ns_error, ns_sftp, moment, lib_billfile, lib_vendormap) {
     var LogTitle = 'MR_BillFiles-SFTP';
 
     function getInputData() {
@@ -38,11 +37,11 @@ define([
             validVendorCfg = [],
             validVendorCfgName = [];
 
-        var paramConfigID = runtime.getCurrentScript().getParameter({
+        var paramConfigID = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_vendor_sftp'
         });
 
-        var vendorConfigSearch = search.create({
+        var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
             filters: [
                 ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.SFTP],
@@ -75,14 +74,14 @@ define([
     function map(context) {
         var logTitle = [LogTitle, 'map'].join(':');
 
-        var paramBillFileName = runtime.getCurrentScript().getParameter({
+        var paramBillFileName = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_vendor_filename'
         });
 
         //get the vendor config details
         log.audit(logTitle, '>> context.value: ' + JSON.stringify(context.value));
 
-        var vendorConfig = search.lookupFields({
+        var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
             id: context.value,
             columns: [
@@ -116,7 +115,7 @@ define([
         var connection;
 
         try {
-            connection = sftp.createConnection({
+            connection = ns_sftp.createConnection({
                 username: configObj.user_id,
                 passwordGuid: configObj.user_pass,
                 url: configObj.url,
@@ -130,7 +129,7 @@ define([
         if (!connection) throw 'SFTP Connection error!!';
 
         var list = connection.list({
-            sort: sftp.Sort.DATE_DESC
+            sort: ns_sftp.Sort.DATE_DESC
         });
         log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));
 
@@ -138,7 +137,7 @@ define([
         // if we already know about the file we'll ignore it in
         // the next step
 
-        var s = search.create({
+        var s = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_integration', 'anyof', context.value],
@@ -148,7 +147,7 @@ define([
                 ['formulanumeric: FLOOR({now}-{created})', 'lessthanorequalto', '90']
             ],
             columns: [
-                search.createColumn({ name: 'name', summary: 'GROUP', sort: search.Sort.ASC })
+                ns_search.createColumn({ name: 'name', summary: 'GROUP', sort: ns_search.Sort.ASC })
             ]
         });
 
@@ -262,20 +261,20 @@ define([
 
             switch (entryFunction) {
                 case 'dh_sftp':
-                    myArr = vm.dh_sftp(context.key, configObj);
+                    myArr = lib_vendormap.dh_sftp(context.key, configObj);
                     break;
                 case 'wellsfargo_sftp':
-                    myArr = vm.wellsfargo_sftp(context.key, configObj);
+                    myArr = lib_vendormap.wellsfargo_sftp(context.key, configObj);
                     break;
                 case 'synnex_sftp':
-                    myArr = vm.synnex_sftp(context.key, configObj);
+                    myArr = lib_vendormap.synnex_sftp(context.key, configObj);
                     break;
             }
 
             //log.debug(context.key, myArr);
             log.audit(logTitle, '>> ## myArr: ' + JSON.stringify(myArr));
 
-            vp.process(configObj, myArr, context.key);
+            lib_billfile.process(configObj, myArr, context.key);
         } catch (e) {
             log.error(context.key + ': ' + 'Error encountered in reduce', e);
         }
@@ -291,7 +290,7 @@ define([
         var mapSummary = summary.mapSummary;
         var reduceSummary = summary.reduceSummary;
         if (inputSummary.error) {
-            var e = error.create({
+            var e = ns_error.create({
                 name: 'INPUT_STAGE_FAILED',
                 message: inputSummary.error
             });
@@ -311,7 +310,7 @@ define([
     function createSummaryRecord(summary) {
         try {
             var summaryJson = {
-                script: runtime.getCurrentScript().id,
+                script: ns_runtime.getCurrentScript().id,
                 seconds: summary.seconds,
                 usage: summary.usage,
                 yields: summary.yields

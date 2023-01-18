@@ -18,10 +18,10 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Vendor Configuration
  *
  */
-define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'], function (
+define(['N/search', './CTC_VCSP_Constants.js', 'N/runtime'], function (
     search,
-    pref,
-    constants
+    constants,
+    runtime
 ) {
     var LogTitle = 'VC:SENDPO';
     var vendorConfigFields = [
@@ -101,6 +101,9 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
     }
 
     function getVendorConfiguration(options) {
+        var pref = {
+            ENABLE_SUBSIDIARIES: runtime.isFeatureInEffect({ feature: 'subsidiaries' })
+        };
         var logTitle = [LogTitle, 'getVendorConfig'].join(':'),
             config = null,
             vendor = options.vendor,

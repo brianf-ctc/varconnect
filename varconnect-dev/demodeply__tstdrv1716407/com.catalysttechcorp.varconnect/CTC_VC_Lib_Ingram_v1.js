@@ -18,13 +18,13 @@
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
  */
- define([
+define([
     'N/search',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
     './Bill Creator/Libraries/moment'
-], function (NS_Search, VC_Global, VC_Log, VC_Util, moment) {
+], function (ns_search, vc_log, vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -49,7 +49,7 @@
             option = option || {};
 
             try {
-                var tokenReq = VC_Util.sendRequest({
+                var tokenReq = vc2_util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
@@ -57,7 +57,7 @@
                     maxRetry: 3,
                     query: {
                         url: CURRENT.vendorConfig.accessEndPoint,
-                        body: VC_Util.convertToQuery({
+                        body: vc2_util.convertToQuery({
                             client_id: CURRENT.vendorConfig.apiKey,
                             client_secret: CURRENT.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -69,7 +69,7 @@
                 });
 
                 if (tokenReq.isError) throw tokenReq.errorMsg;
-                var tokenResp = VC_Util.safeParse(tokenReq.RESPONSE);
+                var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
                 if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
@@ -87,7 +87,7 @@
             var logTitle = [LogTitle, 'getValidOrders'].join('::'),
                 returnValue;
             try {
-                var reqValidOrders = VC_Util.sendRequest({
+                var reqValidOrders = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     query: {
                         url:
@@ -108,7 +108,7 @@
                 });
 
                 if (reqValidOrders.isError) throw reqValidOrders.errorMsg;
-                var respIngramOrders = VC_Util.safeParse(reqValidOrders.RESPONSE);
+                var respIngramOrders = vc2_util.safeParse(reqValidOrders.RESPONSE);
                 if (!respIngramOrders) throw 'Unable to fetch server response';
 
                 var arrOrderDetails = [];
@@ -118,17 +118,17 @@
                     var ingramOrder = respIngramOrders.orders[i];
 
                     if (!ingramOrder.orderStatus) continue;
-                    if (VC_Util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
+                    if (vc2_util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue;
 
                     arrOrderDetails.push(ingramOrder);
                 }
 
                 returnValue = arrOrderDetails;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc2_util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
 
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ' Orders Search : Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -149,7 +149,7 @@
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                var reqOrderDetails = VC_Util.sendRequest({
+                var reqOrderDetails = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
                     recordId: CURRENT.recordId,
                     query: {
@@ -166,14 +166,14 @@
                 });
 
                 if (reqOrderDetails.isError) throw reqOrderDetails.errorMsg;
-                var respOrderDetail = VC_Util.safeParse(reqOrderDetails.RESPONSE);
+                var respOrderDetail = vc2_util.safeParse(reqOrderDetails.RESPONSE);
                 if (!respOrderDetail) throw 'Unable to fetch server response';
 
                 returnValue = respOrderDetail;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
+                var errorMsg = vc2_util.extractError(error);
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ' Order Details:  Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -191,7 +191,7 @@
 
             try {
                 var respOrderDetail = option.orderDetails;
-                if (VC_Util.isEmpty(respOrderDetail)) throw 'Missing order details';
+                if (vc2_util.isEmpty(respOrderDetail)) throw 'Missing order details';
 
                 var arrLineItems = [];
 
@@ -221,7 +221,7 @@
 
                 log.audit(logTitle, LogPrefix + '>> arrLineItems: ' + JSON.stringify(arrLineItems));
 
-                var reqItemAvail = VC_Util.sendRequest({
+                var reqItemAvail = vc2_util.sendRequest({
                     header: [LogTitle, 'Item Availability'].join(' : '),
                     method: 'post',
                     query: {
@@ -250,13 +250,13 @@
                     recordId: CURRENT.recordId
                 });
                 if (reqItemAvail.isError) throw reqItemAvail.errorMsg;
-                var respItemAvail = VC_Util.safeParse(reqItemAvail.RESPONSE);
+                var respItemAvail = vc2_util.safeParse(reqItemAvail.RESPONSE);
                 if (!respItemAvail) throw 'Unable to retrieve the item availability';
 
                 returnValue = respItemAvail;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
-                VC_Util.vcLog({
+                var errorMsg = vc2_util.extractError(error);
+                vc2_util.vcLog({
                     title: LogTitle + ' Item Availability:  Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -313,7 +313,7 @@
                 LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd)
             );
 
-            if (VC_Util.isEmpty(arrDateBackOrderd)) return;
+            if (vc2_util.isEmpty(arrDateBackOrderd)) return;
 
             var nearestDate = arrDateBackOrderd.sort(function (a, b) {
                 return a.dateObj - b.dateObj;
@@ -326,7 +326,7 @@
             var logTitle = [LogTitle, 'extractOrderShipmentDetails'].join('::');
 
             var shipmentDetails = option.shipmentDetails;
-            if (VC_Util.isEmpty(shipmentDetails)) return false;
+            if (vc2_util.isEmpty(shipmentDetails)) return false;
 
             var shipData = {
                 quantity: 0,
@@ -372,8 +372,8 @@
                 }
             }
 
-            shipData.serials = VC_Util.uniqueArray(shipData.serials);
-            shipData.trackingNumbers = VC_Util.uniqueArray(shipData.trackingNumbers);
+            shipData.serials = vc2_util.uniqueArray(shipData.serials);
+            shipData.trackingNumbers = vc2_util.uniqueArray(shipData.trackingNumbers);
 
             log.audit(logTitle, LogPrefix + '>> Ship Data: ' + JSON.stringify(shipData));
             return shipData;
@@ -400,8 +400,8 @@
                     };
 
                     if (
-                        !VC_Util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
-                        !VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)
+                        !vc2_util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
+                        !vc2_util.inArray(lineData.status, LibIngramAPI.NegativeStatus)
                     ) {
                         log.audit(
                             logTitle,
@@ -416,7 +416,7 @@
                         });
                     }
 
-                    if (VC_Util.inArray(lineData.status, LibIngramAPI.NegativeStatus)) {
+                    if (vc2_util.inArray(lineData.status, LibIngramAPI.NegativeStatus)) {
                         // only update status
                         lineData = {
                             detail: {
@@ -437,7 +437,7 @@
                 log.audit(
                     logTitle,
                     LogPrefix +
-                        ('## ERROR ## ' + VC_Util.extractError(error)) +
+                        ('## ERROR ## ' + vc2_util.extractError(error)) +
                         ('\n' + JSON.stringify(error))
                 );
                 returnValue = false;
@@ -473,7 +473,8 @@
             // log.audit(logTitle, LogPrefix + '>> searchOPtion: ' + JSON.stringify(searchOption));
 
             var nsItemFF;
-            NS_Search.create(searchOption)
+            ns_search
+                .create(searchOption)
                 .run()
                 .each(function (row) {
                     nsItemFF = row.id;
@@ -537,8 +538,8 @@
                 }
                 returnValue = arrResponse;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
-                VC_Util.vcLog({
+                var errorMsg = vc2_util.extractError(error);
+                vc2_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -595,7 +596,7 @@
                             line_num: itemDetail.customerLineNumber,
                             item_num: itemDetail.vendorPartNumber,
                             item_num_alt: itemDetail.ingramPartNumber,
-                            is_shipped: VC_Util.inArray(
+                            is_shipped: vc2_util.inArray(
                                 lineStatus,
                                 LibIngramAPI.ValidShippedStatus
                             ),
@@ -603,9 +604,9 @@
                             order_num: itemDetail.subOrderNumber
                         };
 
-                        if (!VC_Util.isEmpty(shipment)) {
+                        if (!vc2_util.isEmpty(shipment)) {
                             outputLineData.ship_qty = shipment.quantity;
-                            if (!VC_Util.isEmpty(shipment.detail)) {
+                            if (!vc2_util.isEmpty(shipment.detail)) {
                                 outputLineData.order_date = shipment.detail.invoiceDate;
                                 outputLineData.ship_date = shipment.detail.shippedDate;
                                 outputLineData.order_eta =
@@ -620,9 +621,9 @@
                         if (!allSerials[outputLineData.item_num])
                             allSerials[outputLineData.item_num] = [];
 
-                        if (!VC_Util.isEmpty(shipment) && !VC_Util.isEmpty(shipment.serials)) {
+                        if (!vc2_util.isEmpty(shipment) && !vc2_util.isEmpty(shipment.serials)) {
                             // add the shipment serials
-                            allSerials[outputLineData.item_num] = VC_Util.uniqueArray(
+                            allSerials[outputLineData.item_num] = vc2_util.uniqueArray(
                                 allSerials[outputLineData.item_num].concat(shipment.serials)
                             );
 
@@ -634,8 +635,8 @@
                         }
 
                         if (
-                            !VC_Util.isEmpty(shipment) &&
-                            !VC_Util.isEmpty(shipment.trackingNumbers)
+                            !vc2_util.isEmpty(shipment) &&
+                            !vc2_util.isEmpty(shipment.trackingNumbers)
                         ) {
                             outputLineData.tracking_num = shipment.trackingNumbers.join(',');
                         } else {
@@ -663,8 +664,8 @@
 
                 returnValue = arrLineOutput;
             } catch (error) {
-                var errorMsg = VC_Util.extractError(error);
-                VC_Util.vcLog({
+                var errorMsg = vc2_util.extractError(error);
+                vc2_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
@@ -673,13 +674,13 @@
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC_Util.isEmpty(returnValue)
+                    body: !vc2_util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
             }
 

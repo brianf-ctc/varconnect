@@ -23,11 +23,10 @@
 define([
     'N/https',
     'N/runtime',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_https, ns_runtime, vcGlobal, vcLog, vc2Utils, libMoment) {
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js'
+], function (ns_https, ns_runtime, vc_log, vc2_constant, vc2_util) {
     'use strict';
     var LogTitle = 'WS:Dellv2',
         Config = {
@@ -35,7 +34,7 @@ define([
             NumRetries: 3,
             WaitMS: 500
         },
-        LogPrefix;
+        LogPrefix = '';
 
     var Helper = {
         generateToken: function (option) {
@@ -90,7 +89,7 @@ define([
 
                 option.retryCount = retryCount + 1;
 
-                vc2Utils.waitMs(Config.WaitMS);
+                vc2_util.waitMs(Config.WaitMS);
                 returnValue = Helper.generateToken(option);
             }
 
@@ -137,20 +136,20 @@ define([
 
                 log.audit(logTitle, '>> orderLines: ' + JSON.stringify(orderLines));
 
-                if (!orderLines || vc2Utils.isEmpty(orderLines)) throw 'No lines to processed';
+                if (!orderLines || vc2_util.isEmpty(orderLines)) throw 'No lines to processed';
                 returnValue = orderLines;
             } catch (error) {
-                var errorMsg = vc2Utils.extactError(error);
+                var errorMsg = vc2_util.extactError(error);
                 log.error(
                     logTitle,
                     '## ERROR ## ' + errorMsg + '\n>> Details:' + JSON.stringify(error)
                 );
 
-                vcLog.recordLog({
+                vc_log.recordLog({
                     header: LogTitle + ' Error | ' + errorMsg,
                     body: JSON.stringify(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
                     isDebugMode: option.fromDebug
                 });
                 returnValue = null;

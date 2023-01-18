@@ -213,6 +213,10 @@ define(function (require) {
                             isDynamic: true,
                             defaultValues: defaultItemFFValues
                         });
+                        if (vc_constants.GLOBAL.PICK_PACK_SHIP) {
+                            record.setValue({ fieldId: 'shipstatus', value: 'C' });
+                        }
+
                         Helper.log(logTitle, '... record transform success');
                     } catch (transform_err) {
                         Helper.logMsg({
@@ -641,10 +645,6 @@ define(function (require) {
                         var objId;
 
                         if (recordIsChanged) {
-                            if (vc_constants.GLOBAL.PICK_PACK_SHIP) {
-                                record.setValue({ fieldId: 'shipstatus', value: 'C' });
-                            }
-
                             record.setValue({
                                 fieldId: 'custbody_ctc_if_vendor_order_match',
                                 value: vendorOrderNum,

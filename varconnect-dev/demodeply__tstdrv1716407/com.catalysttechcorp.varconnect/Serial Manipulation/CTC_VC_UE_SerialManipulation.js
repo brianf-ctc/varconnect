@@ -31,9 +31,9 @@ define([
     'N/runtime',
     'N/record',
     'N/search',
-    '../CTC_VC_Constants.js',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator',
+    '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils'
 ], function (
     ns_task,
@@ -41,43 +41,247 @@ define([
     ns_runtime,
     ns_record,
     ns_search,
-    constants,
     vc_mainconfig,
     vc_licenselib,
+    vc2_constant,
     vc_util
 ) {
-    var LogTitle = 'UE_SerialManip',
+    var LogTitle = 'UE|Serials',
         LogPrefix;
 
-    function _validateLicense(options) {
-        var mainConfig = options.mainConfig,
-            license = mainConfig.license,
-            response = vc_licenselib.callValidationSuitelet({
-                license: license,
-                external: true
-            }),
-            result = true;
+    var USER_EVENT = {
+        beforeLoad: function (scriptContext) {
+            var logTitle = [LogTitle, 'beforeLoad'].join('::');
+            if (ns_runtime.executionContext !== ns_runtime.ContextType.USER_INTERFACE) return;
+            if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
 
-        if (response == 'invalid') {
-            log.error(
-                'License expired',
-                'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
+            var mainConfig = Helper.loadMainConfig(),
+                validLicense = Helper.validateLicense({ mainConfig: mainConfig });
+
+            LogPrefix = [
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id || '_NEW_'
+            ].join(':');
+            LogPrefix = '[' + LogPrefix + '] ';
+
+            log.debug(
+                logTitle,
+                LogPrefix +
+                    '*** SCRIPT START ****' +
+                    JSON.stringify({
+                        eventType: scriptContext.type,
+                        contextType: ns_runtime.executionContext,
+                        mainConfig: mainConfig
+                    })
             );
-            result = false;
+
+            //If Serial Scan and Update feature is disabled, hide the corresponding columns
+            var form = scriptContext.form,
+                chkSerialSync;
+
+            if (!mainConfig.serialScanUpdate || !validLicense) {
+                var sublist = form.getSublist({ id: 'item' });
+
+                if (sublist) {
+                    var fldSerialUpdate = sublist.getField({
+                        id: vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_UPDATE
+                    });
+
+                    //force check if field exists
+                    if (fldSerialUpdate)
+                        fldSerialUpdate.updateDisplayType({
+                            displayType: ns_ui.FieldDisplayType.HIDDEN
+                        });
+
+                    var fldSerialScan = sublist.getField({
+                        id: vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
+                    });
+
+                    //force check if field exists
+                    if (fldSerialScan)
+                        fldSerialScan.updateDisplayType({
+                            displayType: ns_ui.FieldDisplayType.HIDDEN
+                        });
+                }
+
+                // serial sync checkbox
+                chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
+                if (chkSerialSync)
+                    chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
+            }
+
+            // if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
+            var vendorConfig = Helper.searchVendorConfig({
+                salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
+            });
+
+            if (!vendorConfig) {
+                // serial sync checkbox
+                chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
+
+                if (chkSerialSync)
+                    chkSerialSync.updateDisplayType({
+                        displayType: ns_ui.FieldDisplayType.HIDDEN
+                    });
+            }
+
+            return true;
+            // }
+        },
+
+        afterSubmit: function (scriptContext) {
+            var logTitle = [LogTitle, 'afterSubmit'].join('::');
+            LogPrefix = [
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id || '_NEW_'
+            ].join(':');
+            LogPrefix = '[' + LogPrefix + '] ';
+
+            var mainConfig = Helper.loadMainConfig();
+            if (!mainConfig) return;
+
+            if (
+                !vc_util.inArray(scriptContext.type, [
+                    scriptContext.UserEventType.CREATE,
+                    scriptContext.UserEventType.EDIT,
+                    scriptContext.UserEventType.XEDIT
+                ]) ||
+                ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
+            )
+                return;
+
+            log.debug(
+                logTitle,
+                LogPrefix +
+                    '****** START SCRIPT *****' +
+                    JSON.stringify({
+                        eventType: scriptContext.type,
+                        contextType: ns_runtime.executionContext
+                    })
+            );
+
+            var cols = vc2_constant.FIELD.TRANSACTION,
+                hasSerials = false,
+                hasNoSerials = false,
+                record = scriptContext.newRecord,
+                lineCount = record.getLineCount({ sublistId: 'item' });
+
+            for (var line = 0; line < lineCount; line++) {
+                var serialString = record.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: cols.SERIAL_NUMBER_SCAN,
+                    line: line
+                });
+
+                var serialStringUpdate = record.getSublistValue({
+                    sublistId: 'item',
+                    fieldId: cols.SERIAL_NUMBER_UPDATE,
+                    line: line
+                });
+
+                if (
+                    (serialString && serialString.trim()) ||
+                    (serialStringUpdate && serialStringUpdate.trim())
+                ) {
+                    hasSerials = true;
+                } else if (
+                    (record.type == ns_record.Type.ITEM_FULFILLMENT ||
+                        record.type == ns_record.Type.INVOICE) &&
+                    scriptContext.type == scriptContext.UserEventType.CREATE &&
+                    (!serialStringUpdate || serialStringUpdate.trim().length == 0)
+                ) {
+                    hasNoSerials = true;
+                }
+
+                if (hasSerials && hasNoSerials) break;
+            }
+
+            var tranId = record.getValue({ fieldId: 'tranid' }),
+                taskOption = {};
+            log.debug(
+                logTitle,
+                LogPrefix +
+                    '>> settings: ' +
+                    JSON.stringify({
+                        tranId: tranId,
+                        hasSerials: hasSerials,
+                        hasNoSerials: hasNoSerials,
+                        'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
+                        'mainConfig.copySerialsInv': mainConfig.copySerialsInv
+                    })
+            );
+
+            //Also check if the corresponding features have been enabled before processing
+            var vendorConfig;
+            if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
+                vendorConfig = Helper.searchVendorConfig({
+                    salesOrder: record.getValue({ fieldId: 'createdfrom' })
+                });
+
+                // if (vendorConfig) {
+                vc_util.waitRandom(10000);
+
+                taskOption = {
+                    isMapReduce: true,
+                    scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR,
+                    scriptParams: {}
+                };
+                taskOption.scriptParams['custscript_vc_all_type'] = record.type;
+                taskOption.scriptParams['custscript_vc_all_id'] = record.id;
+                taskOption.deployId = Helper.forceDeploy(taskOption);
+                // }
+            }
+
+            if (hasSerials && mainConfig.serialScanUpdate) {
+                vc_util.waitRandom(10000);
+
+                taskOption = {
+                    isMapReduce: true,
+                    scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_MR,
+                    scriptParams: {}
+                };
+                taskOption.scriptParams['custscript_vc_type'] = record.type;
+                taskOption.scriptParams['custscript_vc_id'] = record.id;
+                taskOption.scriptParams['custscript_vc_sender'] = ns_runtime.getCurrentUser().id;
+                taskOption.deployId = Helper.forceDeploy(taskOption);
+            }
+
+            log.audit(logTitle, LogPrefix + '>> Task option:  ' + JSON.stringify(taskOption));
+            log.audit(logTitle, LogPrefix + '***** END SCRIPT *****');
         }
-
-        return result;
-    }
-
-    function _loadMainConfig() {
-        var mainConfig = vc_mainconfig.getMainConfiguration();
-
-        if (!mainConfig) {
-            log.error('No VAR Connect Main Coniguration available');
-        } else return mainConfig;
-    }
+    };
 
     var Helper = {
+        validateLicense: function (options) {
+            var mainConfig = options.mainConfig,
+                license = mainConfig.license,
+                response = vc_licenselib.callValidationSuitelet({
+                    license: license,
+                    external: true
+                }),
+                result = true;
+
+            if (response == 'invalid') {
+                log.error(
+                    'License expired',
+                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
+                );
+                result = false;
+            }
+
+            return result;
+        },
+
+        loadMainConfig: function () {
+            var mainConfig = vc_mainconfig.getMainConfiguration();
+
+            if (!mainConfig) {
+                log.error('No VAR Connect Main Coniguration available');
+            } else return mainConfig;
+        },
+
         searchSerials: function (option) {
             var logTitle = [LogTitle, 'searchSerials'].join('::');
             var searchOption = {
@@ -216,225 +420,148 @@ define([
             log.audit(logTitle, LogPrefix + JSON.stringify(param));
 
             return param.vendor;
-        }
-    };
+        },
 
-    /**
-     * Function definition to be triggered before record is loaded.
-     *
-     * @param {Object} scriptContext
-     * @param {Record} scriptContext.newRecord - New record
-     * @param {string} scriptContext.type - Trigger type
-     * @param {Form} scriptContext.form - Current form
-     * @Since 2015.2
-     */
-    function beforeLoad(scriptContext) {
-        var logTitle = [LogTitle, 'beforeLoad'].join('::');
+        getTaskStatus: function (taskId) {
+            return ns_task.checkStatus({ taskId: taskId });
+        },
+        forceDeploy: function (option) {
+            var logTitle = [LogTitle, 'forceDeploy'].join('::');
+            var returnValue = null;
 
-        if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
-        var mainConfig = _loadMainConfig();
+            var FN = {
+                randomStr: function (len) {
+                    len = len || 5;
+                    var str = new Date().getTime().toString();
+                    return str.substring(str.length - len, str.length);
+                },
+                deploy: function (scriptId, deployId, scriptParams, taskType) {
+                    var logTitle = [LogTitle, 'forceDeploy:deploy'].join('::');
+                    var returnValue = false;
 
-        return;
+                    try {
+                        var taskInfo = {
+                            taskType: taskType,
+                            scriptId: scriptId
+                        };
+                        if (deployId) taskInfo.deploymentId = deployId;
+                        if (scriptParams) taskInfo.params = scriptParams;
 
-        LogPrefix = [
-            scriptContext.type,
-            scriptContext.newRecord.type,
-            scriptContext.newRecord.id || '_NEW_'
-        ].join(':');
-        LogPrefix = '[' + LogPrefix + '] ';
+                        var objTask = ns_task.create(taskInfo);
 
-        // log.debug(
-        //     logTitle,
-        //     JSON.stringify({
-        //         eventType: scriptContext.type,
-        //         contextType: ns_runtime.executionContext,
-        //         mainConfig: mainConfig
-        //     })
-        // );
+                        var taskId = objTask.submit();
+                        var taskStatus = ns_task.checkStatus({
+                            taskId: taskId
+                        });
 
-        //If Serial Scan and Update feature is disabled, hide the corresponding columns
-        var form;
-        if (!mainConfig.serialScanUpdate || !_validateLicense({ mainConfig: mainConfig })) {
-            form = scriptContext.form,
-                sublist = form.getSublist({ id: 'item' });
+                        // check the status
+                        log.audit(
+                            logTitle,
+                            '## DEPLOY status: ' +
+                                JSON.stringify({
+                                    id: taskId,
+                                    status: taskStatus
+                                })
+                        );
+                        returnValue = taskId;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ':' + e.message);
+                    }
 
-            if (sublist) {
-                var field = sublist.getField({
-                    id: constants.Columns.SERIAL_NUMBER_UPDATE
-                });
+                    return returnValue;
+                },
+                copyDeploy: function (scriptId) {
+                    var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
+                    var returnValue = false;
+                    try {
+                        var searchDeploy = ns_search.create({
+                            type: ns_search.Type.SCRIPT_DEPLOYMENT,
+                            filters: [
+                                ['script.scriptid', 'is', scriptId],
+                                'AND',
+                                ['status', 'is', 'NOTSCHEDULED'],
+                                'AND',
+                                ['isdeployed', 'is', 'T']
+                            ],
+                            columns: ['scriptid']
+                        });
+                        var newDeploy = null;
 
-                //force check if field exists
-                if (field && JSON.stringify(field) != '{}')
-                    field.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
+                        searchDeploy.run().each(function (result) {
+                            if (!result.id) return false;
+                            newDeploy = ns_record.copy({
+                                type: ns_record.Type.SCRIPT_DEPLOYMENT,
+                                id: result.id
+                            });
 
-                field = sublist.getField({
-                    id: constants.Columns.SERIAL_NUMBER_SCAN
-                });
+                            var newScriptId = result.getValue({ name: 'scriptid' });
+                            newScriptId = newScriptId.toUpperCase().split('CUSTOMDEPLOY')[1];
+                            newScriptId = [newScriptId.substring(0, 20), FN.randomStr()].join('_');
 
-                //force check if field exists
-                if (field && JSON.stringify(field) != '{}')
-                    field.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
-            }
+                            newDeploy.setValue({ fieldId: 'status', value: 'NOTSCHEDULED' });
+                            newDeploy.setValue({ fieldId: 'isdeployed', value: true });
+                            newDeploy.setValue({
+                                fieldId: 'scriptid',
+                                value: newScriptId.toLowerCase().trim()
+                            });
+                        });
 
-            // serial sync checkbox
-            var chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
-            if (chkSerialSync)
-                chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
-        }
-
-        if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
-            form = scriptContext.form;
-
-            var vendorConfig = Helper.searchVendorConfig({
-                salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
-            });
-
-            if (!vendorConfig) {
-                // serial sync checkbox
-                var chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
-
-                if (chkSerialSync)
-                    chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Function definition to be triggered before record is loaded.
-     *
-     * @param {Object} scriptContext
-     * @param {Record} scriptContext.newRecord - New record
-     * @param {Record} scriptContext.oldRecord - Old record
-     * @param {string} scriptContext.type - Trigger type
-     * @Since 2015.2
-     */
-    function afterSubmit(scriptContext) {
-        var logTitle = [LogTitle, 'afterSubmit'].join('::');
-        LogPrefix = [
-            scriptContext.type,
-            scriptContext.newRecord.type,
-            scriptContext.newRecord.id || '_NEW_'
-        ].join(':');
-        LogPrefix = '[' + LogPrefix + '] ';
-
-        if (
-            !vc_util.inArray(scriptContext.type, [
-                scriptContext.UserEventType.CREATE,
-                scriptContext.UserEventType.EDIT,
-                scriptContext.UserEventType.XEDIT
-            ]) ||
-            ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
-        )
-            return;
-
-        var mainConfig = _loadMainConfig();
-        if (!mainConfig) return;
-
-        log.debug(
-            logTitle,
-            LogPrefix +
-                '****** START SCRIPT *****' +
-                JSON.stringify({
-                    eventType: scriptContext.type,
-                    contextType: ns_runtime.executionContext
-                })
-        );
-
-        var cols = constants.Columns,
-            scripts = constants.Scripts.Script,
-            hasSerials = false,
-            hasNoSerials = false,
-            record = scriptContext.newRecord,
-            lineCount = record.getLineCount({ sublistId: 'item' });
-
-        for (var line = 0; line < lineCount; line++) {
-            var serialString = record.getSublistValue({
-                sublistId: 'item',
-                fieldId: cols.SERIAL_NUMBER_SCAN,
-                line: line
-            });
-
-            var serialStringUpdate = record.getSublistValue({
-                sublistId: 'item',
-                fieldId: cols.SERIAL_NUMBER_UPDATE,
-                line: line
-            });
-
-            if (
-                (serialString && serialString.trim()) ||
-                (serialStringUpdate && serialStringUpdate.trim())
-            ) {
-                hasSerials = true;
-            } else if (
-                (record.type == ns_record.Type.ITEM_FULFILLMENT ||
-                    record.type == ns_record.Type.INVOICE) &&
-                scriptContext.type == scriptContext.UserEventType.CREATE &&
-                (!serialStringUpdate || serialStringUpdate.trim().length == 0)
-            ) {
-                hasNoSerials = true;
-            }
-
-            if (hasSerials && hasNoSerials) break;
-        }
-
-        var tranId = record.getValue({ fieldId: 'tranid' }),
-            taskOption = {};
-        log.debug(
-            logTitle,
-            LogPrefix +
-                '>> settings: ' +
-                JSON.stringify({
-                    tranId: tranId,
-                    hasSerials: hasSerials,
-                    hasNoSerials: hasNoSerials,
-                    'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
-                    'mainConfig.copySerialsInv': mainConfig.copySerialsInv
-                })
-        );
-
-        //Also check if the corresponding features have been enabled before processing
-        var vendorConfig;    
-        if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
-            vendorConfig = Helper.searchVendorConfig({
-                salesOrder: record.getValue({ fieldId: 'createdfrom' })
-            });
-
-            // if (vendorConfig) {
-                vc_util.waitRandom(10000);
-
-                taskOption = {
-                    isMapReduce: true,
-                    scriptId: scripts.SERIAL_UPDATE_ALL_MR,
-                    scriptParams: {}
-                };
-                taskOption.scriptParams['custscript_vc_all_type'] = record.type;
-                taskOption.scriptParams['custscript_vc_all_id'] = record.id;
-                taskOption.deployId = vc_util.forceDeploy(taskOption);
-            // }
-        }
-
-        if (hasSerials && mainConfig.serialScanUpdate) {
-            vc_util.waitRandom(10000);
-
-            taskOption = {
-                isMapReduce: true,
-                scriptId: scripts.SERIAL_UPDATE_MR,
-                scriptParams: {}
+                        return newDeploy
+                            ? newDeploy.save({
+                                  enableSourcing: false,
+                                  ignoreMandatoryFields: true
+                              })
+                            : false;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ': ' + e.message);
+                        throw e;
+                    }
+                },
+                copyAndDeploy: function (scriptId, params, taskType) {
+                    FN.copyDeploy(scriptId);
+                    FN.deploy(scriptId, null, params, taskType);
+                }
             };
-            taskOption.scriptParams['custscript_vc_type'] = record.type;
-            taskOption.scriptParams['custscript_vc_id'] = record.id;
-            taskOption.scriptParams['custscript_vc_sender'] = ns_runtime.getCurrentUser().id;
-            taskOption.deployId = vc_util.forceDeploy(taskOption);
+            ////////////////////////////////////////
+            try {
+                if (!option.scriptId)
+                    throw error.create({
+                        name: 'MISSING_REQD_PARAM',
+                        message: 'missing script id',
+                        notifyOff: true
+                    });
+
+                if (!option.taskType) {
+                    option.taskType = ns_task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = option.isMapReduce
+                        ? ns_task.TaskType.MAP_REDUCE
+                        : option.isSchedScript
+                        ? ns_task.TaskType.SCHEDULED_SCRIPT
+                        : option.taskType;
+                }
+
+                log.debug(logTitle, '>> params: ' + JSON.stringify(option));
+
+                returnValue =
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
+                    FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
+                    FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
+
+                log.audit(logTitle, '>> deploy: ' + JSON.stringify(returnValue));
+            } catch (e) {
+                log.error(logTitle, e.name + ': ' + e.message);
+                throw e;
+            }
+            ////////////////////////////////////////
+
+            return returnValue;
         }
-
-        log.audit(logTitle, LogPrefix + '>> Task Data:  ' + JSON.stringify(taskOption));
-        log.audit(logTitle, LogPrefix + '***** END SCRIPT *****');
-    }
-
-    return {
-        beforeLoad: beforeLoad,
-        afterSubmit: afterSubmit
     };
+
+    return USER_EVENT;
 });

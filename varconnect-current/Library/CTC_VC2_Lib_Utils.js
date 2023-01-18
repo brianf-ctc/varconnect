@@ -14,18 +14,14 @@
 
 define(function (require) {
     // load modules https://requirejs.org/docs/api.html#modulenotes
-    var NS_Runtime = require('N/runtime'),
-        NS_Format = require('N/format'),
-        NS_Record = require('N/record'),
-        NS_Search = require('N/search'),
-        VC2_Global = require('./CTC_VC2_Constants.js');
+    var ns_runtime = require('N/runtime'),
+        ns_format = require('N/format'),
+        ns_record = require('N/record'),
+        ns_search = require('N/search'),
+        vc2_global = require('./CTC_VC2_Constants.js');
 
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
-
-    var vc_script = {};
-    var vc_serial = {};
-
 
     var vc_util = {
         CACHE: {},
@@ -56,7 +52,7 @@ define(function (require) {
             vc_util.CACHE[cacheKey] = objVar;
         },
         getUsage: function () {
-            var REMUSAGE = NS_Runtime.getCurrentScript().getRemainingUsage();
+            var REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
             return '[rem-usage:' + REMUSAGE + '] ';
         },
         uniqueArray: function (arrVar) {
@@ -113,13 +109,13 @@ define(function (require) {
             else return null;
         },
         generateSerialLink: function (params) {
-            var NS_Url = vc_util.loadModule('N/url');
+            var ns_url = vc_util.loadModule('N/url');
 
             var protocol = 'https://';
-            var domain = NS_Url.resolveDomain({
-                hostType: NS_Url.HostType.APPLICATION
+            var domain = ns_url.resolveDomain({
+                hostType: ns_url.HostType.APPLICATION
             });
-            var linkUrl = NS_Url.resolveScript({
+            var linkUrl = ns_url.resolveScript({
                 scriptId: constants.Scripts.Script.VIEW_SERIALS_SL,
                 deploymentId: constants.Scripts.Deployment.VIEW_SERIALS_SL,
                 params: params
@@ -159,14 +155,14 @@ define(function (require) {
             var logTitle = [LogTitle, 'vcLog'].join('::');
             // log.audit(logTitle, option);
 
-            var VC_LOG = VC2_Global.RECORD.VC_LOG,
-                LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
+            var VC_LOG = vc2_global.RECORD.VC_LOG,
+                LOG_STATUS = vc2_global.LIST.VC_LOG_STATUS;
 
             try {
                 var logOption = {},
                     batchTransaction = option.batch,
                     isBatched = batchTransaction != null;
-                logOption.APPLICATION = option.appName || VC2_Global.LOG_APPLICATION;
+                logOption.APPLICATION = option.appName || vc2_global.LOG_APPLICATION;
                 logOption.HEADER = option.title || logOption.APPLICATION;
                 logOption.BODY =
                     option.body ||
@@ -201,14 +197,14 @@ define(function (require) {
                 // log.audit(logTitle, logOption);
 
                 if (isBatched) {
-                    var VC_LOG_BATCH = VC2_Global.RECORD.VC_LOG_BATCH;
+                    var VC_LOG_BATCH = vc2_global.RECORD.VC_LOG_BATCH;
                     var batchOption = {
                         TRANSACTION: batchTransaction
                     };
                     // create the log as an inline item
                     var recBatch =
                         this._batchedVCLogs[batchTransaction] ||
-                        NS_Record.create({ type: VC_LOG_BATCH.ID });
+                        ns_record.create({ type: VC_LOG_BATCH.ID });
                     for (var field in VC_LOG_BATCH.FIELD) {
                         var fieldName = VC_LOG_BATCH.FIELD[field];
                         recBatch.setValue({
@@ -233,7 +229,7 @@ define(function (require) {
                     log.audit(logOption.HEADER, logOption.BODY);
                 } else {
                     // create the log
-                    var recLog = NS_Record.create({ type: VC_LOG.ID });
+                    var recLog = ns_record.create({ type: VC_LOG.ID });
                     for (var field in VC_LOG.FIELD) {
                         var fieldName = VC_LOG.FIELD[field];
                         // log.audit(
@@ -270,7 +266,7 @@ define(function (require) {
                 maxRetries: 3,
                 maxWaitMs: 3000
             };
-            var NS_Https = require('N/https');
+            var ns_https = require('N/https');
 
             var queryOption = option.query || option.queryOption;
             if (!queryOption || vc_util.isEmpty(queryOption)) throw 'Missing query option';
@@ -302,7 +298,7 @@ define(function (require) {
             if (option.isXML) param.isJSON = false;
 
             // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
-            var LOG_STATUS = VC2_Global.LIST.VC_LOG_STATUS;
+            var LOG_STATUS = vc2_global.LIST.VC_LOG_STATUS;
             var startTime = new Date();
             try {
                 if (!param.noLogs) {
@@ -319,7 +315,7 @@ define(function (require) {
 
                 /////////////////////////////////////////
                 //// SEND THE REQUEST //////
-                response = NS_Https[param.method](queryOption);
+                response = ns_https[param.method](queryOption);
                 returnValue.RESPONSE = response;
                 /////////////////////////////////////////
 
@@ -420,7 +416,7 @@ define(function (require) {
         searchAllPaged: function (option) {
             var objSearch,
                 arrResults = [],
-                logTitle = 'CTC_Utils:searchAllPaged';
+                logTitle = [LogTitle, 'searchAllPaged'].join('::');
             option = option || {};
 
             try {
@@ -430,11 +426,11 @@ define(function (require) {
                 objSearch = option.searchObj
                     ? option.searchObj
                     : searchId
-                    ? NS_Search.load({
+                    ? ns_search.load({
                           id: searchId
                       })
                     : searchType
-                    ? NS_Search.create({
+                    ? ns_search.create({
                           type: searchType
                       })
                     : null;
@@ -538,9 +534,9 @@ define(function (require) {
                     date.setFullYear(year);
                 }
 
-                date = NS_Format.format({
+                date = ns_format.format({
                     value: date,
-                    type: dateFormat ? dateFormat : NS_Format.Type.DATE
+                    type: dateFormat ? dateFormat : ns_format.Type.DATE
                 });
             }
 
@@ -560,7 +556,7 @@ define(function (require) {
             var arrData = null,
                 arrResults = null;
 
-            arrResults = NS_Search.lookupFields(option);
+            arrResults = ns_search.lookupFields(option);
 
             if (arrResults) {
                 arrData = {};
@@ -604,13 +600,13 @@ define(function (require) {
             return Math.round(flValue * 100) / 100;
         },
         getTaskStatus: function (taskId) {
-            var NS_Task = require('N/task');
-            return NS_Task.checkStatus({ taskId: taskId });
+            var ns_task = require('N/task');
+            return ns_task.checkStatus({ taskId: taskId });
         },
         forceDeploy: function (option) {
             var logTitle = [LogTitle, 'forceDeploy'].join('::');
             var returnValue = null;
-            var NS_Task = require('N/task');
+            var ns_task = require('N/task');
 
             var FN = {
                 randomStr: function (len) {
@@ -630,10 +626,10 @@ define(function (require) {
                         if (deployId) taskInfo.deploymentId = deployId;
                         if (scriptParams) taskInfo.params = scriptParams;
 
-                        var objTask = NS_Task.create(taskInfo);
+                        var objTask = ns_task.create(taskInfo);
 
                         var taskId = objTask.submit();
-                        var taskStatus = NS_Task.checkStatus({
+                        var taskStatus = ns_task.checkStatus({
                             taskId: taskId
                         });
 
@@ -657,8 +653,8 @@ define(function (require) {
                     var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
                     var returnValue = false;
                     try {
-                        var searchDeploy = NS_Search.create({
-                            type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+                        var searchDeploy = ns_search.create({
+                            type: ns_search.Type.SCRIPT_DEPLOYMENT,
                             filters: [
                                 ['script.scriptid', 'is', scriptId],
                                 'AND',
@@ -672,8 +668,8 @@ define(function (require) {
 
                         searchDeploy.run().each(function (result) {
                             if (!result.id) return false;
-                            newDeploy = NS_Record.copy({
-                                type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+                            newDeploy = ns_record.copy({
+                                type: ns_record.Type.SCRIPT_DEPLOYMENT,
                                 id: result.id
                             });
 
@@ -715,11 +711,11 @@ define(function (require) {
                     });
 
                 if (!option.taskType) {
-                    option.taskType = NS_Task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = ns_task.TaskType.SCHEDULED_SCRIPT;
                     option.taskType = option.isMapReduce
-                        ? NS_Task.TaskType.MAP_REDUCE
+                        ? ns_task.TaskType.MAP_REDUCE
                         : option.isSchedScript
-                        ? NS_Task.TaskType.SCHEDULED_SCRIPT
+                        ? ns_task.TaskType.SCHEDULED_SCRIPT
                         : option.taskType;
                 }
 
@@ -750,7 +746,7 @@ define(function (require) {
             var logTitle = [LogTitle, 'submitVCLogBatch'].join('::');
             var recBatch = this._batchedVCLogs[batchTransaction];
             if (recBatch) {
-                var VC_LOG = VC2_Global.RECORD.VC_LOG,
+                var VC_LOG = vc2_global.RECORD.VC_LOG,
                     sublistId = ['recmach', VC_LOG.FIELD.BATCH].join('');
                 var lineCount = recBatch.getLineCount({
                     sublistId: sublistId
@@ -767,7 +763,7 @@ define(function (require) {
             }
         },
         isOneWorld: function () {
-            return NS_Runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
+            return ns_runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
         },
         extend: function (source, contrib) {
             // do this to preserve the source values
@@ -922,7 +918,7 @@ define(function (require) {
                     }
                     if (!scriptId) return false;
 
-                    var objSearch = NS_Search.create({
+                    var objSearch = ns_search.create({
                         type: 'script',
                         filters: [['scriptid', 'is', scriptId]],
                         columns: ['scriptfile', 'name']
@@ -934,8 +930,8 @@ define(function (require) {
                         return true;
                     });
 
-                    var NS_File = this.loadModule('N/file');
-                    var fileObj = NS_File.load({
+                    var ns_file = this.loadModule('N/file');
+                    var fileObj = ns_file.load({
                         id: fileId
                     });
 
@@ -993,7 +989,7 @@ define(function (require) {
             var fileInfo = this.CACHE[cacheKey];
 
             if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                var objSearch = NS_Search.create(searchOption);
+                var objSearch = ns_search.create(searchOption);
                 fileInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
                     var fInfo = {};
@@ -1040,8 +1036,8 @@ define(function (require) {
                 }
 
                 // load the file
-                var NS_File = this.loadModule('N/file');
-                var fileObj = NS_File.load({
+                var ns_file = this.loadModule('N/file');
+                var fileObj = ns_file.load({
                     id: fileId
                 });
 

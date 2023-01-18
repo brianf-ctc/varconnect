@@ -20,13 +20,12 @@
  */
 define([
     'N/ui/serverWidget',
-    'N/log',
     'N/search',
     'N/record',
     'N/url',
-    './VC_Globals',
+    './CTC_VC2_Constants.js',
     './VC_SN_Library'
-], function (ui, log, search, rec, url, vcGlobals, vcsnLib) {
+], function (ns_ui, ns_search, ns_record, ns_url, vc_constant, vc_serial) {
     const SUBLIST_ID = 'custpage_orders';
 
     function onRequest(context) {
@@ -55,7 +54,7 @@ define([
 
         if (params.transType) {
             if (!isEmpty(params.transId)) {
-                var lookup = search.lookupFields({
+                var lookup = ns_search.lookupFields({
                     type: 'transaction',
                     id: params.transId,
                     columns: ['tranid', 'createdfrom']
@@ -64,7 +63,7 @@ define([
                 //                        type: params.transType,
                 //                        id: params.transId
                 //                    })
-                var lookup = search.lookupFields({
+                var lookup = ns_search.lookupFields({
                     type: 'transaction',
                     id: params.transId,
                     columns: ['tranid', 'createdfrom']
@@ -72,7 +71,7 @@ define([
                 itemName = decodeURIComponent(params.itemName);
                 itemNum = params.itemId;
 
-                if (params.transType == rec.Type.PURCHASE_ORDER) {
+                if (params.transType == ns_record.Type.PURCHASE_ORDER) {
                     //                        poNum = transObj.getText('tranid');
                     //                        soNum = transObj.getText('createdfrom');
                     poNum = lookup.tranid;
@@ -80,13 +79,13 @@ define([
                     tType = 'Purchase Order';
                     transId = poNum;
                 }
-                if (params.transType == rec.Type.SALES_ORDER) {
+                if (params.transType == ns_record.Type.SALES_ORDER) {
                     //                        soNum = transObj.getText('tranid');
                     soNum = lookup.tranid;
                     tType = 'Sales Order';
                     transId = soNum;
                 }
-                if (params.transType == rec.Type.ITEM_FULFILLMENT) {
+                if (params.transType == ns_record.Type.ITEM_FULFILLMENT) {
                     //                        fulNum = transObj.getText('tranid');
                     //                        soNum = transObj.getText('createdfrom');
                     fulNum = lookup.tranid;
@@ -94,7 +93,7 @@ define([
                     tType = 'Item Fulfillment';
                     transId = fulNum;
                 }
-                if (params.transType == rec.Type.INVOICE) {
+                if (params.transType == ns_record.Type.INVOICE) {
                     //                        invNum = transObj.getText('tranid');
                     //                        soNum = transObj.getText('createdfrom');
                     invNum = lookup.tranid;
@@ -102,13 +101,13 @@ define([
                     tType = 'Invoice';
                     transId = invNum;
                 }
-                if (params.transType == rec.Type.RETURN_AUTHORIZATION) {
+                if (params.transType == ns_record.Type.RETURN_AUTHORIZATION) {
                     //                        custRMANum = transObj.getText('tranid');
                     custRMANum = lookup.tranid;
                     tType = 'Customer RMA';
                     transId = custRMANum;
                 }
-                if (params.transType == rec.Type.VENDOR_RETURN_AUTHORIZATION) {
+                if (params.transType == ns_record.Type.VENDOR_RETURN_AUTHORIZATION) {
                     //                        vendorRMANum = transObj.getText('tranid');
                     vendorRMANum = lookup.tranid;
                     tType = 'Vendor RMA';
@@ -127,7 +126,7 @@ define([
             tType = 'Purchase Order';
         }
 
-        var form = ui.createForm({
+        var form = ns_ui.createForm({
             title: 'View Serial Numbers'
         });
         var maingroup = form.addFieldGroup({
@@ -146,105 +145,105 @@ define([
 
         var itemNameField = form.addField({
             id: 'custpage_itemname',
-            type: ui.FieldType.TEXT,
+            type: ns_ui.FieldType.TEXT,
             label: 'Item:',
             container: 'maingroup'
         });
         itemNameField.defaultValue = itemName;
-        itemNameField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+        itemNameField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
 
         if (poNum && poNum != 'N/A') {
             var poNumField = form.addField({
                 id: 'custpage_ponum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'PO Number:',
                 container: 'maingroup'
             });
             poNumField.defaultValue = poNum;
-            poNumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            poNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         if (soNum && soNum != 'N/A') {
             var soNumField = form.addField({
                 id: 'custpage_sonum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'SO Number:',
                 container: 'maingroup'
             });
             soNumField.defaultValue = soNum;
-            soNumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            soNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         if (fulNum && fulNum != 'N/A') {
             var fulNumField = form.addField({
                 id: 'custpage_fulnum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Fulfillment Number:',
                 container: 'maingroup'
             });
             fulNumField.defaultValue = fulNum;
-            fulNumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            fulNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         if (invNum && invNum != 'N/A') {
             var invNumField = form.addField({
                 id: 'custpage_invnum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Invoice  Number:',
                 container: 'maingroup'
             });
             invNumField.defaultValue = invNum;
-            invNumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            invNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         if (custRMANum && custRMANum != 'N/A') {
             var custRMANumField = form.addField({
                 id: 'custpage_rmanum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Customer RMA Number:',
                 container: 'maingroup'
             });
             custRMANumField.defaultValue = custRMANum;
-            custRMANumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            custRMANumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         if (vendorRMANum && vendorRMANum != 'N/A') {
             var vendorRMANumField = form.addField({
                 id: 'custpage_vrmanum',
-                type: ui.FieldType.TEXT,
+                type: ns_ui.FieldType.TEXT,
                 label: 'Vendor RMA Number:',
                 container: 'maingroup'
             });
             vendorRMANumField.defaultValue = vendorRMANum;
-            vendorRMANumField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+            vendorRMANumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
         }
 
         var typeField = form.addField({
             id: 'custpage_transtype',
-            type: ui.FieldType.TEXT,
+            type: ns_ui.FieldType.TEXT,
             label: 'Type:',
             container: 'maingroup'
         });
         typeField.defaultValue = tType;
-        typeField.updateDisplayType({ displayType: ui.FieldDisplayType.INLINE });
+        typeField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
 
         // don't search for SN's if there was an error
         var snList = null;
         log.debug('View SNs', 'tType = ' + tType);
         if (tType.indexOf('ERROR') < 0) {
             //                snList = vcsnLib.getItemSNList(transId, itemNum, tType).split(",");
-            snList = vcsnLib.getItemSNList(transId, itemNum, tType);
+            snList = vc_serial.getItemSNList(transId, itemNum, tType);
         }
         log.debug('View SNs', 'snList = ' + JSON.stringify(snList));
 
         var itemSublist = form.addSublist({
             id: 'custpage_itemsublist',
-            type: ui.SublistType.LIST,
+            type: ns_ui.SublistType.LIST,
             label: 'Items'
         });
         var snField = itemSublist.addField({
             id: 'custpage_serialtext',
-            type: ui.FieldType.TEXT,
+            type: ns_ui.FieldType.TEXT,
             label: 'Serial'
         });
 
@@ -272,10 +271,10 @@ define([
         var recId = options.recId;
         var snNum = options.snNum;
         var protocol = 'https://';
-        var domain = url.resolveDomain({
-            hostType: url.HostType.APPLICATION
+        var domain = ns_url.resolveDomain({
+            hostType: ns_url.HostType.APPLICATION
         });
-        var linkUrl = url.resolveRecord({
+        var linkUrl = ns_url.resolveRecord({
             recordType: 'customrecordserialnum',
             recordId: recId,
             isEditMode: false

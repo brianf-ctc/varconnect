@@ -23,11 +23,10 @@
 define([
     'N/search',
     'N/xml',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_search, ns_xml, VC_Global, VC_Log, VC_Util, moment) {
+    './CTC_VC2_Constants.js'
+], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
     var LogTitle = 'WS:TechData';
     var Helper = {
         getNodeValue: function (node, xpath) {
@@ -35,7 +34,7 @@ define([
                 returnValue;
 
             try {
-                var nodeValue = VC_Util.getNodeTextContent(
+                var nodeValue = vc2_util.getNodeTextContent(
                     ns_xml.XPath.select({
                         node: node,
                         xpath: xpath
@@ -59,32 +58,32 @@ define([
             var logTitle = [LogTitle, 'getInvoiceDetail'].join('::'),
                 returnValue = [];
             option = option || {};
-        try {
-                var reqInvoiceDetail = VC_Util.sendRequest({
+            try {
+                var reqInvoiceDetail = vc2_util.sendRequest({
                     header: [LogTitle, 'Invoice Detail'].join(' : '),
                     recordId: CURRENT.recordId,
-                method: 'post',
+                    method: 'post',
                     isXML: true,
-                query: {
+                    query: {
                         url: CURRENT.vendorConfig.endPoint,
-                    headers: {
-                        'Content-Type': 'text/xml; charset=utf-8',
-                        'Content-Length': 'length'
-                    },
-                    body:
-                        '<XML_InvoiceDetailByPO_Submit>' +
-                        '<Header>' +
+                        headers: {
+                            'Content-Type': 'text/xml; charset=utf-8',
+                            'Content-Length': 'length'
+                        },
+                        body:
+                            '<XML_InvoiceDetailByPO_Submit>' +
+                            '<Header>' +
                             ('<UserName>' + CURRENT.vendorConfig.user + '</UserName>') +
                             ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
-                        '</Header>' +
-                        '<Detail>' +
-                        '<POInfo>' +
+                            '</Header>' +
+                            '<Detail>' +
+                            '<POInfo>' +
                             ('<PONbr>' + CURRENT.recordNum + '</PONbr>') +
-                        '</POInfo>' +
-                        '</Detail>' +
-                        '</XML_InvoiceDetailByPO_Submit>'
+                            '</POInfo>' +
+                            '</Detail>' +
+                            '</XML_InvoiceDetailByPO_Submit>'
                     }
-            });
+                });
 
                 if (reqInvoiceDetail.isError) throw reqInvoiceDetail.errorMsg;
                 var responseXML = reqInvoiceDetail.RESPONSE.body;
@@ -94,20 +93,20 @@ define([
                 responseXML = responseXML.substring(responseXML.indexOf('\n') + 1);
 
                 returnValue = responseXML;
-        } catch (error) {
-                VC_Util.vcLog({
+            } catch (error) {
+                vc2_util.vcLog({
                     title: LogTitle + ' Orders Status : Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                returnValue = VC_Util.extractError(error);
+                returnValue = vc2_util.extractError(error);
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
-        }
+            }
 
-        return returnValue;
-    }
+            return returnValue;
+        }
     };
 
     return {
@@ -116,35 +115,35 @@ define([
                 returnValue = [];
             option = option || {};
 
-        try {
+            try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ':Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC_Util.isEmpty(returnValue)
+                    body: !vc2_util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
-        });
-        }
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                });
+            }
 
             return returnValue;
         },
@@ -155,7 +154,8 @@ define([
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
@@ -163,12 +163,12 @@ define([
 
                 returnValue = LibTechDataXML.getInvoiceDetail(option);
             } catch (error) {
-                VC_Util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ':Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -209,46 +209,46 @@ define([
                         serial_num: 'NA'
                     };
 
-            var serialNumberInfoNode = ns_xml.XPath.select({
+                    var serialNumberInfoNode = ns_xml.XPath.select({
                         node: arrItemNodes[i],
-                xpath: 'SerialNbrInfo'
-            });
-            if (serialNumberInfoNode != null && serialNumberInfoNode.length > 0) {
-                var serialNumberNodes = ns_xml.XPath.select({
-                    node: serialNumberInfoNode[0],
-                    xpath: 'SerialNbr'
-                });
+                        xpath: 'SerialNbrInfo'
+                    });
+                    if (serialNumberInfoNode != null && serialNumberInfoNode.length > 0) {
+                        var serialNumberNodes = ns_xml.XPath.select({
+                            node: serialNumberInfoNode[0],
+                            xpath: 'SerialNbr'
+                        });
 
                         var arrSerialNum = [];
                         for (var ii = 0; ii < serialNumberNodes.length; ii++) {
                             var serialNumber = serialNumberNodes[ii].textContent;
 
-                    if (serialNumber != null && serialNumber.substring(8).length > 0) {
+                            if (serialNumber != null && serialNumber.substring(8).length > 0) {
                                 arrSerialNum.push(serialNumber);
-                }
-            }
+                            }
+                        }
 
-                        if (!VC_Util.isEmpty(arrSerialNum)) {
+                        if (!vc2_util.isEmpty(arrSerialNum)) {
                             xml_items.serial_num = arrSerialNum.join(',');
-        }
-    }
+                        }
+                    }
 
                     log.audit(logTitle, LogPrefix + '... xml item: ' + JSON.stringify(xml_items));
 
                     itemArray.push(xml_items);
-    }
+                }
 
                 returnValue = itemArray;
-        } catch (error) {
-                VC_Util.vcLog({
+            } catch (error) {
+                vc2_util.vcLog({
                     title: LogTitle + ': Response Error',
                     error: error,
                     recordId: CURRENT.recordId
-            });
-                throw VC_Util.extractError(error);
-        }
+                });
+                throw vc2_util.extractError(error);
+            }
 
-        return returnValue;
-    }
+            return returnValue;
+        }
     };
 });

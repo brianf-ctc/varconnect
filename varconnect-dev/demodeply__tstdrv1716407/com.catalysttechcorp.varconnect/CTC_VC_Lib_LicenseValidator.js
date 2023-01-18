@@ -12,18 +12,18 @@
  * @NModuleScope Public
  */
 
-define(['N/url', 'N/https', './CTC_VC_Constants.js'], function (url, https, constants) {
+define(['N/url', 'N/https', './CTC_VC2_Constants.js'], function (ns_url, ns_https, vc2_constant) {
     function callValidationSuitelet(options) {
         var license = options.license,
             external = options.external ? true : null,
             params = { custparam_license: license },
             protocol = 'https://',
-            domain = url.resolveDomain({
-                hostType: url.HostType.APPLICATION
+            domain = ns_url.resolveDomain({
+                hostType: ns_url.HostType.APPLICATION
             }),
-            linkUrl = url.resolveScript({
-                scriptId: constants.Scripts.Script.LICENSE_VALIDATOR_SL,
-                deploymentId: constants.Scripts.Deployment.LICENSE_VALIDATOR_SL,
+            linkUrl = ns_url.resolveScript({
+                scriptId: vc2_constant.SCRIPT.LICENSE_VALIDATOR_SL,
+                deploymentId: vc2_constant.DEPLOYMENT.LICENSE_VALIDATOR_SL,
                 params: params,
                 returnExternalUrl: external
             }),
@@ -31,7 +31,7 @@ define(['N/url', 'N/https', './CTC_VC_Constants.js'], function (url, https, cons
 
         if (external) link = linkUrl;
 
-        var res = https.get({
+        var res = ns_https.get({
             url: link
         });
 

@@ -29,8 +29,8 @@ define([
     'N/ui/serverWidget',
     'N/format',
     './CTC_VC2_Lib_Utils',
-    './CTC_VC_Constants.js'
-], function (record, runtime, search, url, serverWidget, format, vc_util, constants) {
+    './CTC_VC2_Constants.js'
+], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc_util, vc2_constant) {
     var LogTitle = 'VC UE Set Status';
 
     var EventActionsHelper = {},
@@ -44,23 +44,23 @@ define([
                 EVENT_TYPE = context.UserEventType,
                 FORM = context.form,
                 recordId = context.newRecord.id,
-                logFields = constants.Fields.VarConnectLog,
+                logFields = vc2_constant.RECORD.VC_LOG.FIELD,
                 returnValue = true;
             // search logs related to PO
             var maxLogDate = null;
             var filters = [[logFields.TRANSACTION, 'anyof', [recordId]]];
             var columns = [
-                search.createColumn({
+                ns_search.createColumn({
                     name: logFields.DATE,
-                    summary: search.Summary.MAX
+                    summary: ns_search.Summary.MAX
                 })
             ];
             var searchOptions = {
-                type: constants.Records.VC_LOG,
+                type: vc2_constant.RECORD.VC_LOG.ID,
                 filters: filters,
                 columns: columns
             };
-            var logDateSearch = search.create(searchOptions);
+            var logDateSearch = ns_search.create(searchOptions);
             log.debug(
                 logTitle,
                 'Search date for latest log entries. ' + JSON.stringify(searchOptions)
@@ -68,9 +68,9 @@ define([
             var maxLogDateResults = logDateSearch.run().getRange(0, 1);
             if (maxLogDateResults && maxLogDateResults.length) {
                 try {
-                    maxLogDate = format.parse({
+                    maxLogDate = ns_format.parse({
                         value: maxLogDateResults[0].getValue(columns[0]),
-                        type: format.Type.DATETIME
+                        type: ns_format.Type.DATETIME
                     });
                 } catch (parseErr) {
                     // results did not return a valid date
@@ -85,27 +85,27 @@ define([
                     [
                         logFields.DATE,
                         'on',
-                        format.format({
+                        ns_format.format({
                             value: maxLogDate,
-                            type: format.Type.DATE
+                            type: ns_format.Type.DATE
                         })
                     ]
                 ];
                 columns = [
-                    search.createColumn({
+                    ns_search.createColumn({
                         name: 'internalid'
                     }),
-                    search.createColumn({
+                    ns_search.createColumn({
                         name: logFields.TRANSACTION_LINEKEY,
-                        sort: search.Sort.ASC
+                        sort: ns_search.Sort.ASC
                     }),
-                    search.createColumn({
+                    ns_search.createColumn({
                         name: logFields.BODY
                     })
                 ];
                 searchOptions.filters = filters;
                 searchOptions.columns = columns;
-                var pagedLogSearch = search.create(searchOptions);
+                var pagedLogSearch = ns_search.create(searchOptions);
                 log.debug(logTitle, 'Search latest log entries. ' + JSON.stringify(searchOptions));
                 var pagedLogResults = pagedLogSearch.runPaged({
                     pageSize: 1000
@@ -138,7 +138,7 @@ define([
                     FORM.addField({
                         id: 'custpage_ctc_vc_log_message',
                         label: 'VC Notes',
-                        type: serverWidget.FieldType.LONGTEXT, 
+                        type: ns_ui.FieldType.LONGTEXT,
                         container: 'custom186' // var connect tab
                     });
                     var itemSublist = FORM.getSublist({
@@ -147,7 +147,7 @@ define([
                     itemSublist.addField({
                         id: 'custpage_ctc_vc_log_col_message',
                         label: 'VC Notes',
-                        type: serverWidget.FieldType.TEXTAREA
+                        type: ns_ui.FieldType.TEXTAREA
                     });
                     log.debug(logTitle, 'Added custom fields.');
                     var mapLineKeyToLine = {};
@@ -183,7 +183,7 @@ define([
     };
 
     //////////////////
-    EventRouter[record.Type.PURCHASE_ORDER] = {
+    EventRouter[ns_record.Type.PURCHASE_ORDER] = {
         beforeLoad: function (ContextData, context) {
             var logTitle = LogTitle,
                 EVENT_TYPE = context.UserEventType,
@@ -202,14 +202,14 @@ define([
         initialize: function (context) {
             ContextData = {
                 eventType: context.type,
-                execType: runtime.executionContext,
+                execType: ns_runtime.executionContext,
                 recordType: context.newRecord.type,
                 recordId: context.newRecord.id,
                 form: context.form
             };
 
             if (ContextData.recordId) {
-                ContextData.recordUrl = url.resolveRecord({
+                ContextData.recordUrl = ns_url.resolveRecord({
                     recordType: ContextData.recordType,
                     recordId: ContextData.recordId
                 });
@@ -220,7 +220,7 @@ define([
         executeSudo: function (context) {
             var EVENT_TYPE = context.UserEventType,
                 FORM = context.form,
-                CONTEXT_TYPE = runtime.ContextType;
+                CONTEXT_TYPE = ns_runtime.ContextType;
 
             /// SUDO ACTIONS /////////////////////////////////////////
             if (

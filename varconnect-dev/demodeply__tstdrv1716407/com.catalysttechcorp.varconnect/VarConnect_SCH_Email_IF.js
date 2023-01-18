@@ -21,24 +21,20 @@ define([
     'N/search',
     'N/email',
     'N/record',
-    'N/log',
     'N/runtime',
     'N/render',
-    './VC_Globals.js',
     './CTC_VC_Lib_MainConfiguration.js',
     './CTC_VC2_Lib_Utils.js',
-    './CTC_VC_Constants.js'
+    './CTC_VC2_Constants.js'
 ], function (
     ns_search,
-    email,
-    record,
-    log,
-    runtime,
-    render,
-    vcGlobals,
-    libMainConfig,
-    vc_util,
-    constants
+    ns_email,
+    ns_record,
+    ns_runtime,
+    ns_render,
+    lib_mainconfig,
+    vc2_util,
+    vc2_constant
 ) {
     var CURRENT = {},
         LogTitle = 'Email-IF';
@@ -49,7 +45,7 @@ define([
         var startTime = new Date();
 
         try {
-            CURRENT.mainConfig = libMainConfig.getMainConfiguration();
+            CURRENT.mainConfig = lib_mainconfig.getMainConfiguration();
             CURRENT.senderId = CURRENT.mainConfig.emailSender;
             CURRENT.emailTemplate = CURRENT.mainConfig.emailTemplate;
             CURRENT.searchId = CURRENT.mainConfig.fulfillmentSearch;
@@ -68,7 +64,8 @@ define([
             // build unique list of emails addresses
             for (i = 0; i < myResults.length; i++) {
                 var sendTo = myResults[i].getValue({
-                    name: constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
+                    name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
+                    // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
                     join: 'createdFrom'
                 });
                 if (!sendTo) continue;
@@ -89,7 +86,8 @@ define([
                 // build list of entries for that email from the search results
                 for (ii = 0; ii < myResults.length; ii++) {
                     var sendTo2 = myResults[ii].getValue({
-                        name: constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
+                        name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
+                        // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
                         join: 'createdFrom'
                     });
                     if (sendTo2.indexOf(newSendTo) >= 0) {
@@ -106,7 +104,7 @@ define([
                 var myHTML = buildEmail(CURRENT.emailTemplate, itemTableHTML);
 
                 try {
-                    email.send({
+                    ns_email.send({
                         author: CURRENT.senderId,
                         recipients: newSendTo,
                         subject: 'Order Shipping Update - Item Fulfillments',
@@ -138,12 +136,12 @@ define([
         log.audit(logTitle, '// get itemfulfillments from search: ' + CURRENT.searchId);
 
         var itemFFSearchObj = ns_search.load({ id: CURRENT.searchId });
-        var itemFFSearchAll = vc_util.searchAllPaged({ searchObj: itemFFSearchObj });
+        var itemFFSearchAll = vc2_util.searchAllPaged({ searchObj: itemFFSearchObj });
 
         log.debug(logTitle, '... results count' + itemFFSearchAll.length);
         var resultList = [];
 
-        itemFFSearchAll.forEach(function (result){
+        itemFFSearchAll.forEach(function (result) {
             var tempQty = result.getValue({ name: 'quantity' });
             if (!isEmpty(tempQty) && tempQty.indexOf('-') < 0) {
                 resultList.push(result);
@@ -217,8 +215,8 @@ define([
         //var relatedRecordJson = { 'transactionId': tranRec.id };
 
         // Load email template
-        var emailTemplate = record.load({
-            type: record.Type.EMAIL_TEMPLATE,
+        var emailTemplate = ns_record.load({
+            type: ns_record.Type.EMAIL_TEMPLATE,
             id: templateId,
             isDynamic: false
         });
@@ -226,7 +224,7 @@ define([
         var emailBody = emailTemplate.getValue({ fieldId: 'content' });
 
         // Create a template rendere so we can render (fill in template field tags)
-        var renderer = render.create();
+        var renderer = ns_render.create();
 
         // render the subject line
         // renderer.templateContent = emailSubj;

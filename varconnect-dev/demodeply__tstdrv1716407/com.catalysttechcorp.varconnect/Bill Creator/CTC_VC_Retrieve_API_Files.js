@@ -21,7 +21,7 @@ define([
     '../CTC_VC2_Lib_Utils',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map'
-], function (ns_search, ns_runtime, ns_error, moment, VC2_Utils, VCLib_BillFile, VCLib_VendorMap) {
+], function (ns_search, ns_runtime, ns_error, moment, vc2_util, VCLib_BillFile, VCLib_VendorMap) {
     var LogTitle = 'MR_BillFiles-API',
         LogPrefix = '';
 
@@ -100,6 +100,7 @@ define([
             columns: [
                 'internalid',
                 'tranid',
+                'custbody_ctc_vc_override_ponum',
                 // ns_search.createColumn({
                 //     name: 'country',
                 //     join: 'subsidiary'
@@ -115,7 +116,7 @@ define([
             searchOption.filters.push(['internalid', 'anyof', paramOrderId]);
         }
 
-        if (VC2_Utils.isOneWorld()) {
+        if (vc2_util.isOneWorld()) {
             searchOption.columns.push(
                 ns_search.createColumn({
                     name: 'country',
@@ -136,7 +137,7 @@ define([
     MAP_REDUCE.reduce = function (context) {
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
         
-        var searchValues = VC2_Utils.safeParse(context.values.shift());
+        var searchValues = vc2_util.safeParse(context.values.shift());
 
         log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
         log.audit(
@@ -177,7 +178,7 @@ define([
             ack_path: vendorConfig.custrecord_vc_bc_ack_path
         };
 
-        if (VC2_Utils.isOneWorld()) {
+        if (vc2_util.isOneWorld()) {
             configObj.country = searchValues.values['country.subsidiary'].value;
         } else {
             // get it from ns runtime
@@ -197,6 +198,9 @@ define([
                     break;
                 case 'techdata_api':
                     myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
+                    break;
+                case 'wefi_api':
+                    myArr = VCLib_VendorMap.wefi(context.key, configObj);
                     break;
             }
 

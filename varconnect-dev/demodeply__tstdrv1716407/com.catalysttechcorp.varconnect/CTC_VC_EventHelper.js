@@ -19,11 +19,34 @@ define([
     'N/ui/message',
     './CTC_Lib_EventRouter',
     './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants'
-], function (NS_Runtime, NS_Search, NS_Record, NS_Msg, EventRouter, VC2_Util, VC2_Global) {
+    './CTC_VC2_Constants',
+    './CTC_VC_Lib_MainConfiguration',
+    './CTC_VC_Lib_VendorConfig'
+], function (
+    ns_runtime,
+    ns_search,
+    ns_record,
+    ns_msg,
+    EventRouter,
+    vc2_util,
+    vc2_global,
+    vc_maincfg,
+    vc_vendorcfg
+) {
     var LogTitle = 'VC:BILLFILE';
 
     var Helper = {
+        hideFields: function (form, arrFields) {
+            if (!arrFields || !arrFields.length) return;
+            arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
+
+            log.audit('displayAsInlineTextarea', arrFields);
+
+            arrFields.forEach(function (fieldId) {
+                var fldObj = form.getField({ id: fieldId });
+                fldObj.updateDisplayType({ displayType: 'hidden' });
+            });
+        },
         displayAsInlineTextarea: function (form, arrFields) {
             if (!arrFields || !arrFields.length) return;
             arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
@@ -55,7 +78,7 @@ define([
                         var jsonObj = JSON.parse(strValue);
                         strValue = JSON.stringify(jsonObj, null, '    ');
                     } catch (err) {
-                        log.audit('json log test', VC2_Util.extractError(err));
+                        log.audit('json log test', vc2_util.extractError(err));
                     }
 
                     fldNew.defaultValue = [
@@ -91,7 +114,7 @@ define([
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, [
                     'custrecord_ctc_vc_bill_src',
@@ -126,7 +149,7 @@ define([
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_vc_bc_host_key']);
             } catch (error) {
@@ -136,7 +159,7 @@ define([
         }
     };
 
-    EventRouter.Action[VC2_Global.RECORD.VC_LOG.ID] = {
+    EventRouter.Action[vc2_global.RECORD.VC_LOG.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
@@ -144,7 +167,7 @@ define([
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, [
                     'custrecord_ctc_vcsp_log_body'
@@ -156,76 +179,45 @@ define([
         }
     };
 
-    // EventRouter.Action[NS_Record.Type.PURCHASE_ORDER] = {
-    //     onBeforeLoad: function (scriptContext, Current) {
-    //         var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+    EventRouter.Action[ns_record.Type.PURCHASE_ORDER] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
-    //         try {
-    //             log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+            try {
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.VIEW,
+                        scriptContext.UserEventType.EDIT
+                    ])
+                )
+                    return;
 
-    //             if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-    //             if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
-    //             var actionOrderStatus = EventRouter.addActionURL('triggerOrderStatus');
-    //             log.audit(logTitle, '>> actionOrderStatus: ' + JSON.stringify(actionOrderStatus));
+                var mainCfg = vc_maincfg.getMainConfiguration();
+                log.audit(logTitle, '// Main Confg: ' + JSON.stringify(mainCfg));
+                if (!mainCfg) return;
 
-    //             var fldBtn = scriptContext.form.addField({
-    //                 id: 'custpage_lnkbtn_orderstatus',
-    //                 label: 'Order Status',
-    //                 type: 'inlinehtml',
-    //                 // container: 'custtab_ctc_varconnect'
-    //             });
-    //             fldBtn.defaultValue =' <span> this is a test </a>';
+                var currentRecord = scriptContext.newRecord;
 
-    //             // var sublistVCLog,
-    //             //     arrSublists = scriptContext.newRecord.getSublists();
-    //             // var validSublists = [
-    //             //     'item',
-    //             //     'taxdetails',
-    //             //     'item',
-    //             //     'expense',
-    //             //     'contacts',
-    //             //     'output',
-    //             //     'activities',
-    //             //     'mediaitem',
-    //             //     'usernotes',
-    //             //     'links',
-    //             //     'approvals',
-    //             //     'cases',
-    //             //     'systemnotes',
-    //             //     'activeworkflows',
-    //             //     'workflowhistory',
-    //             //     'messages',
-    //             //     'calls',
-    //             //     'tasks'
-    //             // ];
-    //             // for (var i = 0, j = arrSublists.length; i < j; i++) {
-    //             //     if (VC2_Util.inArray(arrSublists[i], validSublists)) continue;
+                var vendorCfg = vc_vendorcfg.getVendorConfiguration({
+                    vendor: currentRecord.getValue({ fieldId: 'entity' }),
+                    subsidiary: currentRecord.getValue({ fieldId: 'subsidiary' })
+                });
+                log.audit(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
 
-    //             //     var sublistInfo = scriptContext.form.getSublist({ id: arrSublists[i] });
-    //             //     if (sublistInfo.label.match(/VAR Connect Logs/i)) {
-    //             //         sublistVCLog = sublistInfo;
-    //             //         break;
-    //             //     }
-    //             // }
+                if (!mainCfg.overridePONum || !vendorCfg) {
+                    Helper.hideFields(scriptContext.form, ['custbody_ctc_vc_override_ponum']);
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
 
-    //             // log.audit(logTitle, '>> sublist: ' + JSON.stringify(sublistVCLog));
-
-    //             // if (!sublistVCLog) return;
-    //             // sublistVCLog.addButton({
-    //             //     id: 'custpage_btn_orderstatus',
-    //             //     label: 'Check Order Status',
-    //             //     functionName: "(function () {alert(123);})():"
-    //             //     // functionName: "(function (url) {alert(url);})('" + actionOrderStatus + "'):"
-    //             // });
-    //         } catch (error) {
-    //             log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-    //             return;
-    //         }
-
-    //         return true;
-    //     }
-    // };
+            return true;
+        }
+    };
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         triggerOrderStatus: function (scriptContext, Current) {

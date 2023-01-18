@@ -24,10 +24,13 @@
 define([
     'N/runtime',
     'N/ui/serverWidget',
-    './CTC_VC_Constants.js',
+    './CTC_VC2_Constants.js',
     './CTC_VC_Lib_LicenseValidator'
-], function (ns_runtime, serverWidget, constants, libLicenseValidator) {
+], function (ns_runtime, ns_ui, vc2_constant, vc_license) {
     var LogTitle = 'MainCFG';
+
+    var MAINCFG = vc2_constant.RECORD.MAIN_CONFIG;
+
     //Disables and clears the fields
     function _disableAndClearFields(options) {
         var logTitle = [LogTitle, 'disableAndClearFields'].join('::');
@@ -38,7 +41,7 @@ define([
 
         for (var field in fields) {
             var formField = form.getField({ id: fields[field] });
-            formField.updateDisplayType({ displayType: serverWidget.FieldDisplayType.DISABLED });
+            formField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.DISABLED });
             formField.defaultValue = '';
         }
     }
@@ -48,15 +51,15 @@ define([
         var logTitle = [LogTitle, 'validateLicense'].join('::');
 
         var newRecord = options.newRecord,
-            license = newRecord.getValue({ fieldId: constants.Fields.MainConfig.LICENSE }),
-            response = libLicenseValidator.callValidationSuitelet({
+            license = newRecord.getValue({ fieldId: MAINCFG.FIELD.LICENSE }),
+            response = vc_license.callValidationSuitelet({
                 license: license,
                 external: true
             }),
             licenseText;
 
         log.debug(logTitle, '>> response: ' + JSON.stringify(response));
-        
+
         if (response == 'valid') {
             licenseText =
                 "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>";
@@ -66,7 +69,7 @@ define([
         }
 
         newRecord.setValue({
-            fieldId: constants.Fields.MainConfig.LICENSE_TEXT,
+            fieldId: MAINCFG.FIELD.LICENSE_TEXT,
             value: licenseText
         });
     }
@@ -98,10 +101,10 @@ define([
         ) {
             var newRecord = scriptContext.newRecord,
                 isProcessDropship = newRecord.getValue({
-                    fieldId: constants.Fields.MainConfig.PROCESS_DROPSHIPS
+                    fieldId: MAINCFG.FIELD.PROCESS_DROPSHIPS
                 }),
                 isProcessSpecialOrder = newRecord.getValue({
-                    fieldId: constants.Fields.MainConfig.PROCESS_SPECIAL_ORDERS
+                    fieldId: MAINCFG.FIELD.PROCESS_SPECIAL_ORDERS
                 });
 
             log.debug(logTitle, '>> isProcessDropship: ' + JSON.stringify(isProcessDropship));
@@ -114,16 +117,16 @@ define([
                 _disableAndClearFields({
                     form: scriptContext.form,
                     fields: [
-                        constants.Fields.MainConfig.CREATE_ITEM_FULFILLMENTS,
-                        constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_DROPSHIPS
+                        MAINCFG.FIELD.CREATE_ITEM_FULFILLMENTS,
+                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS
                     ]
                 });
             if (!isProcessSpecialOrder)
                 _disableAndClearFields({
                     form: scriptContext.form,
                     fields: [
-                        constants.Fields.MainConfig.CREATE_ITEM_RECEIPTS,
-                        constants.Fields.MainConfig.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS
+                        MAINCFG.FIELD.CREATE_ITEM_RECEIPTS,
+                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS
                     ]
                 });
         }

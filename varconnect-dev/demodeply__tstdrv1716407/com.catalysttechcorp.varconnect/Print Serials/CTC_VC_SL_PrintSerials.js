@@ -30,10 +30,9 @@ define([
     'N/runtime',
     'N/search',
     'N/xml',
-    '../CTC_VC_Constants.js',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (render, record, runtime, search, xml, constants, libMainConfig, libLicenseValidator) {
+], function (ns_render, ns_record, ns_runtime, ns_search, ns_xml, vc_maincfg, vc_license) {
     var PARAMS = {
             RECORD_TYPE: 'custscript_ctc_vc_serials_rectype',
             RECORD_ID: 'custscript_ctc_vc_serials_recid'
@@ -46,7 +45,7 @@ define([
     function _validateLicense(options) {
         var mainConfig = options.mainConfig,
             license = mainConfig.license,
-            response = libLicenseValidator.callValidationSuitelet({
+            response = vc_license.callValidationSuitelet({
                 license: license,
                 external: true
             }),
@@ -64,7 +63,7 @@ define([
     }
 
     function _loadMainConfig() {
-        var mainConfig = libMainConfig.getMainConfiguration();
+        var mainConfig = vc_maincfg.getMainConfiguration();
 
         if (!mainConfig) {
             log.error('No VAR Connect Main Coniguration available');
@@ -73,7 +72,7 @@ define([
 
     function _searchSerials(recType, recId) {
         var name =
-                recType == record.Type.INVOICE
+                recType == ns_record.Type.INVOICE
                     ? 'custrecordserialinvoice'
                     : 'custrecorditemfulfillment',
             filters = [
@@ -87,10 +86,10 @@ define([
                 { name: 'name' },
                 { name: 'custrecordserialsales' },
                 { name: 'custrecorditemfulfillment' },
-                { name: 'custrecordserialitem', sort: search.Sort.ASC }
+                { name: 'custrecordserialitem', sort: ns_search.Sort.ASC }
             ];
 
-        var searchObj = search.create({
+        var searchObj = ns_search.create({
             type: 'customrecordserialnum',
             filters: filters,
             columns: columns
@@ -104,8 +103,8 @@ define([
             recId = options.recId,
             renderer = options.renderer;
 
-        if (recType == record.Type.ITEM_FULFILLMENT) {
-            var lookup = search.lookupFields({
+        if (recType == ns_record.Type.ITEM_FULFILLMENT) {
+            var lookup = ns_search.lookupFields({
                 type: recType,
                 id: recId,
                 columns: ['createdfrom']
@@ -115,12 +114,12 @@ define([
 
             var salesOrder;
             if (lookup && lookup.createdfrom[0] && lookup.createdfrom[0].value)
-                salesOrder = record.load({
-                    type: record.Type.SALES_ORDER,
+                salesOrder = ns_record.load({
+                    type: ns_record.Type.SALES_ORDER,
                     id: lookup.createdfrom[0].value
                 });
             else
-                salesOrder = record.load({
+                salesOrder = ns_record.load({
                     type: recType,
                     id: recId
                 });
@@ -154,19 +153,19 @@ define([
             _validateLicense({ mainConfig: mainConfig });
 
             if (mainConfig.invPrintSerials) {
-                var rec = record.load({
+                var rec = ns_record.load({
                         type: recType,
                         id: recId
                     }),
                     scriptId =
-                        recType == record.Type.INVOICE
+                        recType == ns_record.Type.INVOICE
                             ? mainConfig.printSerialsTemplate
                             : TEMPLATES.PACKING,
                     sublistId =
-                        recType == record.Type.INVOICE
+                        recType == ns_record.Type.INVOICE
                             ? 'recmachcustrecordserialinvoice'
                             : 'recmachcustrecorditemfulfillment';
-                var renderer = render.create();
+                var renderer = ns_render.create();
 
                 if (scriptId && scriptId[0].value) {
                     renderer.setTemplateById(scriptId[0].value);
@@ -214,7 +213,7 @@ define([
                 renderer.addCustomDataSource({
                     alias: 'fromSuitelet',
                     data: { fromSuitelet: true },
-                    format: render.DataSource.OBJECT
+                    format: ns_render.DataSource.OBJECT
                 });
 
                 context.response.setHeader({

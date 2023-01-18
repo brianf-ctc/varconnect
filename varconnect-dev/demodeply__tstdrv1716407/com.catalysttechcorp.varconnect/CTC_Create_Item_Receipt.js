@@ -19,179 +19,732 @@
  * Version	Date            Author		Remarks
  * 1.00		Apr 13, 2019	ocorrea		Creates Item Receipt after receiving XML data for special order POs
  * 1.01		Apr 22, 2022	christian	Limit text serial numbers to 4000 chars
+ * 2.00     Nov 01, 2022    christian   Refactored code base using item_fulfillment lib as reference
  *
  */
 
- define([
-    'N/search',
-    'N/record',
-    'N/runtime',
-    './VC_Globals.js',
-    './CTC_VC_Constants.js',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (search, record, runtime, vcGlobals, constants, vcLog, vc2Utils) {
-    var LogTitle = 'Create-ItemRcpt',
+ define(function (require) {
+    var ns_record = require('N/record'),
+        ns_search = require('N/search'),
+        ns_runtime = require('N/runtime'),
+        ns_format = require('N/format'),
+        ns_config = require('N/config');
+
+    var vc_constants = require('./CTC_VC2_Constants.js'),
+        vc_log = require('./CTC_VC_Lib_Log.js'),
+        vc_util = require('./CTC_VC2_Lib_Utils.js'),
+        util_record = require('./CTC_VC2_Lib_Record.js');
+    
+    var LogTitle = 'ItemRRLib',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
 
-    var PO_ID;
+    var Current = {
+        DateFormat: null,
+        PO_ID: null,
+        SO_ID: null,
+        OrderLines: null,
+        MainCFG: null,
+        VendorCFG: null,
+        Vendor: null
+    };
 
-    var Helper = {
-        validatePODate: function (po_ID, PO_Valid_Date) {
-            var logTitle = [LogTitle, 'validatePODate'].join('::');
-            log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify([po_ID, PO_Valid_Date]));
+    var ItemRRLib = {};
 
-            var isValid = false;
+    var ERROR_MSG = {
+        ORDER_EXISTS: 'Order already exists',
+        TRANSFORM_ERROR: 'Transform error ' + Current.SO_ID,
+        NO_RECEIVABLES: 'No receivable lines'
+    };
 
-            if (!Helper.isEmpty(po_ID)) {
-                var d1 = Date.parse(PO_Valid_Date);
-                var searchId = runtime.getCurrentScript().getParameter('custscript_searchid2');
 
-                var filters = search.createFilter({
-                    name: 'internalid',
-                    operator: search.Operator.IS,
-                    values: po_ID
-                });
-                var mySearch = search.load({ id: searchId });
-                mySearch.filters.push(filters);
-                mySearch.run().each(function (result) {
-                    var docStatus = result.getText({
-                        name: 'statusref'
-                    });
-                    if (docStatus.indexOf('Partially') < 0) {
-                        isValid = true;
-                    } else {
-                        var docDate = result.getValue({
-                            name: 'trandate'
+    //***********************************************************************
+    //** Update PO Fields with parsed XML data
+    //***********************************************************************
+    ItemRRLib.updateIR = function(option) {
+        var logTitle = [LogTitle, 'updateItemReceipts'].join('::');
+        Current.Script = ns_runtime.getCurrentScript();
+        log.debug(logTitle, '############ ITEM RECEIPT CREATION: START ############');
+        try {
+            Current.MainCFG = option.mainConfig;
+            Current.VendorCFG = option.vendorConfig;
+            Current.PO_ID = option.poId || option.recPurchOrd.id;
+            Current.Vendor = option.vendor;
+
+            LogPrefix = '[purchaseorder:' + Current.PO_ID + '] ';
+
+            Helper.log(logTitle, '// CURRENT: ', Current);
+
+            Current.OrderLines = option.lineData;
+            Current.PO_REC = option.recPurchOrd;
+
+            Helper.log(logTitle, '// OrderLines: ', Current.OrderLines);
+
+            //////////////////////
+            if (!Current.MainCFG) throw 'Missing main configuration';
+            if (!Current.VendorCFG) throw 'Missing vendor configuration';
+            if (!Current.PO_ID) throw 'Missing PO ID';
+            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+
+            if (!Helper.validatePODate()) throw 'Invalid PO Date';
+
+
+            Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+            if (!Current.NumPrefix) throw 'Config Error: Missing Fulfillment Prefix';
+            
+            var OrderLines = Helper.sortLineData(Current.OrderLines);
+
+            var arrOrderNums = [],
+                arrVendorOrderNums = [],
+                responseData = [],
+                i,
+                ii,
+                iii;
+
+            ///////////////////////////////////////////////////
+            // Collect unique the Item Receipt orders from the response
+            Helper.log(logTitle, '*** LOOK for unique orders ***');
+
+            OrderLines.forEach(function (orderLine) {
+                if (vc_util.inArray(orderLine.order_num, arrOrderNums)) {
+                    orderLine.RESULT = 'DUPLICATE';
+                    return;
+                }
+            
+                if (!orderLine.order_num || orderLine.order_num == 'NA') {
+                    orderLine.RESULT = 'MISSING ORDERNUM';
+                    return;
+                }
+
+                if (orderLine.hasOwnProperty('is_shipped') && orderLine.is_shipped === false) {
+                    orderLine.RESULT = 'NOT SHIPPED';
+                    return;
+                }
+
+                if (orderLine.hasOwnProperty('ns_record') && orderLine.ns_record) {
+                    orderLine.RESULT = 'ORDER EXISTS';
+                    return;
+                }
+                orderLine.ship_qty = parseInt(orderLine.ship_qty || '0', 10);
+
+                if (orderLine.ship_qty == 0) {
+                    orderLine.RESULT = 'NO SHIP QTY';
+                    return;
+                }
+
+                orderLine.vendorOrderNum = Current.NumPrefix + orderLine.order_num;
+                orderLine.RESULT = 'ADDED';
+
+                arrOrderNums.push(orderLine.order_num);
+                arrVendorOrderNums.push(Current.NumPrefix + orderLine.order_num);
+
+                return true;
+            });
+            Helper.log(logTitle, 'OrderLines', OrderLines);
+            Helper.log(logTitle, 'Unique Receipt Orders', [arrOrderNums, arrVendorOrderNums]);
+
+            //// PRE-SEARCH of existing IRS ///
+            var arrExistingIRS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
+            Helper.log(logTitle, '// Existing IRs', arrExistingIRS);
+            
+
+            ///////////////////////////////////////////////////
+            // Loop through each unique order num checking to see if it does not already exist as an item receipt
+            var OrigLogPrefix = LogPrefix;
+            for (i = 0; i < arrOrderNums.length; i++) {
+                var orderNum = arrOrderNums[i],
+                    vendorOrderNum = Current.NumPrefix + orderNum;
+
+                LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
+
+                Helper.log(logTitle, '/// PROCESSING ORDER [' + vendorOrderNum + ']');
+                var LinesToReceive = [];
+
+                try {
+                    // skip any existing orders
+                    if (vc_util.inArray(vendorOrderNum, arrExistingIRS))
+                        throw 'Order already exists';
+
+                    // Build an array with all XML line data with the same order num
+                    for (ii = 0; ii < OrderLines.length; ii++) {
+                        if (orderNum != OrderLines[ii].order_num) continue;
+                        LinesToReceive.push(OrderLines[ii]);
+                    }
+
+                    if (!LinesToReceive.length) throw 'No items to receive';
+
+                    ///////////////////////////////////////////////
+                    var record;
+
+                    try {
+                        // create item receipt from purchase order
+                        record = ns_record.transform({
+                            fromType: ns_record.Type.PURCHASE_ORDER,
+                            fromId: Current.PO_ID,
+                            toType: ns_record.Type.ITEM_RECEIPT,
+                            isDynamic: true
                         });
-                        if (!Helper.isEmpty(docDate)) {
-                            var d2 = Date.parse(docDate);
-                            if (d1 < d2) {
-                                isValid = true;
-                            }
+                        Helper.log(logTitle, '... record transform success');
+                    } catch (transform_err) {
+                        Helper.logMsg({
+                            title: 'Transform Error on PO: ' + Current.PO_ID,
+                            error: transform_err
+                        });
+                        throw 'Transform error on PO: ' + vc_util.extractError(transform_err);
+                    }
+
+                    var recordIsChanged = false;
+                    var lineItemCount = record.getLineCount({ sublistId: 'item' });
+
+                    var hasReceivableLine = false,
+                        receivablesLines = [],
+                        matchingLine,
+                        line,
+                        lineRRData;
+
+                    /// REMOVE any items that is not in the XML  Line Data /////////////
+                    Helper.log(logTitle, '**** Prepare item receipt lines ****');
+                    for (line = 0; line < lineItemCount; line++) {
+                        // fetch line item data
+
+                        lineRRData = {
+                            line: line,
+                            item_num: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                line: line
+                            }),
+                            skuName: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                                ? record.getSublistText({
+                                      sublistId: 'item',
+                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                      line: line
+                                  })
+                                : '',
+                            item_po: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: 'createdpo',
+                                line: line
+                            }),
+                            line_po: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: 'poline',
+                                line: line
+                            }),
+                            dandh: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                                line: line
+                            }),
+                            quantity: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: 'quantity',
+                                line: line
+                            }),
+                            CURRENTPO: Current.PO_ID
+                        };
+
+                        Helper.log(logTitle, '// receipt line', lineRRData);
+
+                        try {
+                            /// REMOVE lines thats not from the list
+                            matchingLine = Helper.findMatchingItem({
+                                data: lineRRData,
+                                dataSet: LinesToReceive
+                            });
+
+                            if (!matchingLine) throw 'Line not found on receivable items';
+
+                            Helper.log(logTitle, '...added to item receipt ');
+                            Helper.addIRLine({ record: record, line: line });
+                            receivablesLines.push(lineRRData);
+
+                            hasReceivableLine = true;
+                            recordIsChanged = true;
+                        } catch (lineRR_err) {
+                            Helper.log(logTitle, '...removed: ' + vc_util.extractError(lineRR_err));
+                            Helper.removeIRLine({ record: record, line: line });
+                            recordIsChanged = true;
                         }
                     }
-                });
-            }
-            log.audit(
-                logTitle,
-                LogPrefix + 'is Valid PO Date ? ' + JSON.stringify([po_ID, isValid])
-            );
+                    //////////////////////////////////////////////////////////////////////\
+                    // skip the order if no receivable items
+                    if (!hasReceivableLine) throw ERROR_MSG.NO_RECEIVABLES;
+                
+                    // Build a list of unique items with their total quantities shipped for this shipment
+                    var UniqueLineItems = [];
+                    Helper.log(logTitle, '**** Collect all items to receive ****', LinesToReceive);
 
-            return isValid;
-        },
+                    for (ii = 0; ii < LinesToReceive.length; ii++) {
+                        var lineToReceive = LinesToReceive[ii];
 
-        orderExists: function (transID) {
-            var logTitle = [LogTitle, 'orderExists'].join('::');
-            // log.audit(logTitle, '>> ..order exists transid: ' + JSON.stringify(transID));
+                        var currentItem = {
+                            order_num: orderNum,
+                            item_num: lineToReceive.item_num,
+                            order_date: lineToReceive.order_date,
+                            order_eta: lineToReceive.order_eta,
+                            ship_date: lineToReceive.ship_date,
+                            carrier: lineToReceive.carrier,
+                            ship_qty: parseInt(lineToReceive.ship_qty || '0', 10) || 0,
+                            totalShipped: parseInt(lineToReceive.ship_qty || '0', 10) || 0,
+                            all_tracking_nums: Helper.uniqueList({
+                                value: lineToReceive.tracking_num
+                            }),
+                            all_serial_nums: Helper.uniqueList({
+                                value: lineToReceive.serial_num
+                            })
+                        };
+                        Helper.log(logTitle, '// curent item', currentItem);
 
-            var filters = search.createFilter({
-                name: 'custbody_ctc_if_vendor_order_match',
-                operator: search.Operator.IS,
-                values: transID
-            });
-            var mySearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
-            mySearch.filters.push(filters);
+                        matchingLine = Helper.findMatchingItem({
+                            data: lineToReceive,
+                            dataSet: UniqueLineItems,
+                            fieldToTest: 'item_num'
+                        });
 
-            // If order num already exists do nothing
-            var found = false,
-                foundId;
-            mySearch.run().each(function (result) {
-                found = true;
-                foundId = result.id;
-            });
+                        if (!matchingLine) {
+                            UniqueLineItems.push(currentItem);
+                            continue;
+                        }
+                        
+                        for (iii = 0; iii < UniqueLineItems.length; iii++) {
+                            var uniqItem = UniqueLineItems[iii];
+                            if (lineToReceive.item_num !== uniqItem.item_num) continue;
 
-            log.audit(
-                logTitle,
-                LogPrefix + '.... is Order Exists ? ' + JSON.stringify([transID, foundId, found])
-            );
+                            // update total shipped qty
+                            uniqItem.totalShipped += lineToReceive.ship_qty * 1;
 
-            return found;
-        },
+                            // update tracking num list
+                            var tmpTrackList = Helper.uniqueList({
+                                value: lineToReceive.tracking_num
+                            });
+                            if (!vc_util.isEmpty(uniqItem.all_tracking_nums)) {
+                                tmpTrackList += '\n' + uniqItem.all_tracking_nums;
+                            }
+                            uniqItem.all_tracking_nums = Helper.uniqueList({
+                                value: tmpTrackList,
+                                splitStr: '\n'
+                            });
 
-        itemInLineData: function (tempItemNum, lineData, tempVendorSKU) {
-            var logTitle = [LogTitle, 'itemInLineData'].join('::');
-            log.audit(
-                logTitle,
-                LogPrefix +
-                    '>> params: ' +
-                    JSON.stringify({
-                        tempItemNum: tempItemNum,
-                        tempVendorSKU: tempVendorSKU
-                    })
-            );
-
-            var isInData = false;
-            for (var i = 0; i < lineData.length; i++) {
-                if (tempVendorSKU) {
-                    if (tempVendorSKU == lineData[i].vendorSKU) {
-                        //log.debug('matched vendor sku for line '+i)
-                        isInData = true;
-                        break;
+                            // update serials list
+                            var tmpSerialList = Helper.uniqueList({
+                                value: lineToReceive.serial_num
+                            });
+                            if (!vc_util.isEmpty(uniqItem.all_serial_nums)) {
+                                tmpTrackList += '\n' + uniqItem.all_serial_nums;
+                            }
+                            uniqItem.all_serial_nums = Helper.uniqueList({
+                                value: tmpSerialList,
+                                splitStr: '\n'
+                            });
+                        }
                     }
+                    Helper.log(logTitle, '// UniqueLineItems', UniqueLineItems);
+
+                    ///////////////////////////////////////////////////////////////////
+                    /// VALIDATE the receipt line items
+                    var lineItemRRCount = record.getLineCount({ sublistId: 'item' });
+                    var recordLines = [];
+                    Helper.log(logTitle, '**** START item receipt lines validation ****');
+                    for (line = 0; line < lineItemRRCount; line++) {
+                        record.selectLine({ sublistId: 'item', line: line });
+                        lineRRData = {
+                            lineNo: line,
+                            item: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
+                            }),
+                            quantity: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'quantity'
+                            }),
+                            isReceived: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'itemreceive'
+                            }),
+                            vendorSKU: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                                ? record.getCurrentSublistValue({
+                                      sublistId: 'item',
+                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                                  })
+                                : '',
+                            line_po: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: 'poline',
+                                line: line
+                            }),
+                            dandh: record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                                line: line
+                            }),
+                            isSerialized: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'isserial'
+                            }),
+                            isInvDetailReqd: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'inventorydetailreq'
+                            })
+                        };
+                        lineRRData.quantity = parseInt(lineRRData.quantity || '0', 10);
+                        Helper.log(logTitle, '// current line', lineRRData);
+
+                        if (!lineRRData.isReceived) {
+                            Helper.log(logTitle, '... skipped: not yet received');
+                            Helper.setLineValues({
+                                record: record,
+                                values: { itemreceive: false },
+                                doCommit: true
+                            });
+                            continue;
+                        }
+
+                        for (ii = 0; ii < UniqueLineItems.length; ii++) {
+                            var itemToShip = UniqueLineItems[ii];
+                            Helper.log(logTitle, '// item to Ship', itemToShip);
+
+                            var isMatchingLine =
+                                lineRRData.item == itemToShip.item_num ||
+                                (lineRRData.vendorSKU &&
+                                    lineRRData.vendorSKU == itemToShip.vendorSKU) ||
+                                (lineRRData.dandh &&
+                                    Current.VendorCFG.xmlVendor ==
+                                        vc_constants.LIST.XML_VENDOR.DandH &&
+                                    lineRRData.dandh == itemToShip.item_num);
+
+                            if (!isMatchingLine) {
+                                Helper.log(logTitle, '... skipped');
+                                continue;
+                            }
+
+                            var itemrrValues = {
+                                quantity: itemToShip.totalShipped,
+                                custcol_ctc_xml_dist_order_num: itemToShip.order_num,
+                                custcol_ctc_xml_date_order_placed: itemToShip.order_date,
+                                custcol_ctc_xml_eta: itemToShip.order_eta,
+                                custcol_ctc_xml_ship_date: itemToShip.ship_date,
+                                custcol_ctc_xml_carrier: itemToShip.carrier,
+                                custcol_ctc_xml_tracking_num: itemToShip.all_tracking_nums,
+                                custcol_ctc_vc_eta_date: Helper.parseDate({
+                                    dateString: itemToShip.order_eta
+                                }),
+                                custcol_ctc_vc_order_placed_date: Helper.parseDate({
+                                    dateString: itemToShip.order_date
+                                }),
+                                custcol_ctc_vc_shipped_date: Helper.parseDate({
+                                    dateString: itemToShip.ship_date
+                                })
+                            };
+
+                            ////////////////////////////////////////////
+                            /// if total Shipped is empty /////
+                            if (itemToShip.totalShipped == 0) {
+                                Helper.log(logTitle, '...skipped: no more items left to ship.');
+                                Helper.setLineValues({
+                                    record: record,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                recordIsChanged = true;
+                                continue;
+                            }
+
+                            ////////////////////////////////////////////
+                            // don't allow receipt if the available quantity is less
+                            if (lineRRData.quantity < itemToShip.ship_qty) {
+                                Helper.log(
+                                    logTitle,
+                                    '... skipped: rem qty is less than required ship qty. '
+                                );
+
+                                Helper.setLineValues({
+                                    record: record,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                recordIsChanged = true;
+                                continue;
+                            }
+
+                            ////////////////////////////////////////////
+                            // don't allow receipt if the available quantity is less
+                            if (lineRRData.quantity < itemToShip.totalShipped) {
+                                itemrrValues.quantity = lineRRData.quantity;
+
+                                Helper.setLineValues({
+                                    record: record,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                recordIsChanged = true;
+                                continue;
+                            }
+
+                            ///////////////////////////////////////////////
+                            Helper.setLineValues({ record: record, values: itemrrValues });
+                            ///////////////////////////////////////////////
+
+                            //// SERIALS DETECTION ////////////////
+                            var arrSerials = itemToShip.all_serial_nums
+                                ? itemToShip.all_serial_nums.split(/\n/)
+                                : [];
+
+                            Helper.log(logTitle, '... serials', arrSerials);
+
+                            record.setCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'custcol_ctc_xml_serial_num',
+                                value: arrSerials.join('\n').substr(0, _TEXT_AREA_MAX_LENGTH)
+                            });
+
+                            //// TRACKING NUMBERS DETECTION ////////////////
+                            var arrTrackingNums = itemToShip.all_tracking_nums
+                                ? itemToShip.all_tracking_nums.split(/\n/)
+                                : [];
+
+                            Helper.log(logTitle, '... tracking', arrTrackingNums);
+
+                            var trackingField = Current.MainCFG.useInboundTrackingNumbers
+                                ? vc_constants.FIELD.TRANSACTION.INBOUND_TRACKING_NUM
+                                : 'custcol_ctc_xml_tracking_num';
+                            record.setCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: trackingField,
+                                value: arrTrackingNums.join('\n').substr(0, _TEXT_AREA_MAX_LENGTH)
+                            });
+
+                            UniqueLineItems[ii].totalShipped -= lineRRData.quantity;
+                            recordLines.push({
+                                item_num: lineRRData.item,
+                                totalShipped: lineRRData.quantity,
+                                order_num: itemToShip.order_num,
+                                order_date: itemToShip.order_date,
+                                order_eta: itemToShip.order_eta,
+                                ship_date: itemToShip.ship_date,
+                                carrier: itemToShip.carrier,
+                                all_serial_nums: arrSerials.join('\n'),
+                                all_tracking_nums: arrTrackingNums.join('\n')
+                            });
+
+                            if (
+                                lineRRData.isSerialized === 'T' &&
+                                arrSerials.length &&
+                                Helper.validateSerials({ serials: arrSerials })
+                            ) {
+                                var currentLocation = record.getCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: 'location'
+                                });
+
+                                var resultSerials = Helper.addNativeSerials({
+                                    record: record,
+                                    serials: arrSerials
+                                });
+
+                                if (!resultSerials) {
+                                    // do not clear location as some receipt fail when there is more than one loc
+                                    // blanks are counted as another location
+
+                                    // only prevent inventory detail from being required after location changes
+                                    // to stay true to native behavior
+                                    record.setCurrentSublistValue({
+                                        sublistId: 'item',
+                                        fieldId: 'inventorydetailreq',
+                                        value: lineRRData.isInvDetailReqd
+                                    });
+                                }
+                            }
+                        }
+                        record.commitLine({ sublistId: 'item' });
+                        recordIsChanged = true;
+                    }
+
+                    Helper.log(logTitle, '>> record lines', recordLines);
+
+                    if (vc_util.isEmpty(recordLines)) {
+                        Helper.logMsg({
+                            title: 'Item Receipt Lines',
+                            message: '>> No Matching Lines To Receive:  ' + vendorOrderNum
+                        });
+                        continue;
+                    }
+
+                    Helper.logMsg({
+                        title: 'Item Receipt Lines',
+                        message: Helper.printerFriendlyLines({ recordLines: recordLines })
+                    });
+
+
+                    try {
+                        var objId;
+
+                        if (recordIsChanged) {
+                            record.setValue({
+                                fieldId: 'custbody_ctc_if_vendor_order_match',
+                                value: vendorOrderNum,
+                                ignoreFieldChange: true
+                            });
+
+                            Helper.log(logTitle, '/// ITEM RECEIPT Creation', recordLines);
+
+                            objId = record.save({
+                                enableSourcing: true,
+                                ignoreMandatoryFields: true
+                            });
+
+                            responseData.push({ id: objId, orderNum: orderNum });
+                        } else {
+                            objId = record.id;
+                            responseData.push({ id: objId, orderNum: orderNum });
+                        }
+
+                        Helper.log(
+                            logTitle,
+                            '## Created Item Receipt: [itemreceipt:' + objId + ']'
+                        );
+
+                        Helper.logMsg({
+                            title: 'Create Item Receipt',
+                            isSucces: true,
+                            message: '## Created Item Receipt: [itemreceipt:' + objId + ']'
+                        });
+                    } catch (itemrr_err) {
+                        var errMsg = vc_util.extractError(itemrr_err);
+                        Helper.log(logTitle, '/// ITEM RECEIPT Create error', itemrr_err, 'error');
+
+                        Helper.logMsg({ error: itemrr_err, title: 'Create Item Receipt Error' });
+                        throw errMsg;
+                    }
+                } catch (line_err) {
+                    log.audit(
+                        logTitle,
+                        vc_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err)
+                    );
+                    continue;
                 }
-                if (tempItemNum == lineData[i].item_num) {
-                    isInData = true;
+            }
+            return responseData;
+        } catch (error) {
+            var errorMsg = vc_util.extractError(error);
+            log.error(
+                logTitle,
+                vc_util.getUsage() +
+                    (LogPrefix + '## ERROR:  ') +
+                    (errorMsg + '| Details: ' + JSON.stringify(error))
+            );
+            Helper.logMsg({ title: logTitle + ':: Error', error: error });
+            return false;
+        } finally {
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + '############ ITEM RECEIPT CREATION: END ############'
+            );
+        }
+    };
+    ////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////
+    var dateFormat;
+    var Helper = {
+        uniqueList: function (option) {
+            var strList = option.listString || option.value,
+                splitStr = option.splitStr || ',',
+                joinStr = option.joinStr || '\n';
+
+            var arrList = [];
+            if (strList && util.isString(strList)) {
+                arrList = strList.split(splitStr);
+            }
+            arrList = vc_util.uniqueArray(arrList);
+
+            return arrList.join(joinStr);
+        },
+        _lookupMonthNo: function (monthName) {
+            var monthFullnames = [
+                'JANUARY',
+                'FEBRUARY',
+                'MARCH',
+                'APRIL',
+                'MAY',
+                'JUNE',
+                'JULY',
+                'AUGUST',
+                'SEPTEMBER',
+                'OCTOBER',
+                'NOVEMBER',
+                'DECEMBER'
+            ];
+            var upperCasedMonthName = monthName.toUpperCase();
+            var monthNo = null;
+            for (var i = 0, len = monthFullnames.length; i < len; i += 1) {
+                if (monthFullnames[i].indexOf(upperCasedMonthName) == 0) {
+                    monthNo = i + 1;
                     break;
                 }
             }
-
-            log.audit(logTitle, LogPrefix + 'is itemInLineData? ' + JSON.stringify(isInData));
-
-            return isInData;
+            return monthNo;
         },
-
-        updateXMLField: function (objRecord, fieldVal, fieldID) {
-            var logTitle = [LogTitle, 'updateXMLField'].join('::');
-            // log.audit(logTitle, '>>> : ' + JSON.stringify([fieldVal, fieldID]));
-
-            if (!Helper.isEmpty(fieldVal)) {
-                objRecord.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID,
-                    value: fieldVal
+        parseDate: function (option) {
+            // use only with date strings retrieved from NetSuite date fields
+            var dateTimeString = option.dateString,
+                dateFormat = dateFormat || option.dateFormat,
+                date;
+            if (!dateFormat) {
+                var generalPref = ns_config.load({
+                    type: ns_config.Type.COMPANY_PREFERENCES
                 });
-                objRecord.commitLine({ sublistId: 'item' });
+                dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
             }
+            if (dateTimeString && dateTimeString.length > 0 && dateTimeString != 'NA') {
+                try {
+                    var tempString = dateTimeString.replace(/[-. ]/g, '/').replace(/,/g, '');
+                    var dateTimeComponents = tempString.split('T'); //handle timestamps with T
+                    var dateStr = dateTimeComponents[0];
+                    var dateComponents = dateStr.split('/');
+                    switch (dateFormat) {
+                        case 'DD MONTH, YYYY':
+                        case 'D MONTH, YYYY':
+                        case 'DD-MONTH-YYYY':
+                        case 'D-MONTH-YYYY':
+                        case 'DD-Mon-YYYY':
+                        case 'D-Mon-YYYY':
+                            var convertedMonth = Helper._lookupMonthNo(dateComponents[1]);
+                        case 'DD/MM/YYYY':
+                        case 'DD.MM.YYYY':
+                        case 'D/M/YYYY':
+                        case 'D.M.YYYY':
+                            dateStr = [
+                                convertedMonth || dateComponents[1],
+                                dateComponents[0],
+                                dateComponents[2]
+                            ].join('/');
+                            break;
+                        default:
+                            break;
+                    }
+                    date =
+                        new Date(Date.parse(dateStr)) ||
+                        ns_format.parse({
+                            value: dateTimeString,
+                            type: ns_format.Type.DATE
+                        });
+                } catch (e) {
+                    log.error('Error parsing date ' + dateTimeString, e);
+                }
+            }
+            return date;
         },
-
-        removeIRLine: function (objRecord, lineNum) {
-            var logTitle = [LogTitle, 'removeIRLine'].join('::');
-            log.audit(logTitle, LogPrefix + '>>> remove line: ' + JSON.stringify(lineNum));
-
-            objRecord.selectLine({
-                sublistId: 'item',
-                line: lineNum
-            });
-            objRecord.setCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: 'itemreceive',
-                value: false
-            });
-            objRecord.commitLine({ sublistId: 'item' });
-        },
-
-        addIRLine: function (objRecord, lineNum) {
-            var logTitle = [LogTitle, 'addIRLine'].join('::');
-            log.audit(logTitle, LogPrefix + '>>> add line: ' + JSON.stringify(lineNum));
-
-            objRecord.selectLine({
-                sublistId: 'item',
-                line: lineNum
-            });
-            objRecord.setCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: 'itemreceive',
-                value: true
-            });
-            objRecord.commitLine({ sublistId: 'item' });
-        },
-        printerFriendlyLines: function (options) {
+        printerFriendlyLines: function (option) {
             var logTitle = [LogTitle, 'printerFriendlyLines'].join('::');
-            log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(options));
+            log.audit(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option)
+            );
 
-            var recordLines = options.recordLines,
+            var recordLines = option.recordLines,
                 outputString = '',
                 orderDetails = '';
 
@@ -247,617 +800,481 @@
 
             return lineData;
         },
-
-        isEmpty: function (stValue) {
-            if (stValue === '' || stValue == null || stValue == undefined) {
-                return true;
-            } else {
-                if (typeof stValue == 'string') {
-                    if (stValue == '') {
-                        return true;
-                    }
-                } else if (typeof stValue == 'object') {
-                    if (stValue.length == 0 || stValue.length == 'undefined') {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
+        log: function (title, content, objVar, logtype) {
+            logtype = logtype || 'audit';
+            if (objVar && objVar !== null) content += ' -- ' + JSON.stringify(objVar);
+            return log[logtype](title, vc_util.getUsage() + LogPrefix + content);
         },
-
-        extractError: function (option) {
-            option = option || {};
-            var errorMessage = util.isString(option)
-                ? option
-                : option.message || option.error || JSON.stringify(option);
-
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
-
-            return errorMessage;
-        },
-
         logMsg: function (option) {
             option = option || {};
 
+            var LOG_STATUS = vc_constants.LIST.VC_LOG_STATUS;
+
             var logOption = {
-                transaction: PO_ID,
-                header: ['Create Receipt', option.title ? '::' + option.title : null].join(''),
+                transaction: Current.PO_ID,
+                header: ['ItemReceipt', option.title ? '::' + option.title : null].join(''),
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? Helper.extractError(option.error) : option.errorMsg),
+                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
 
                 status:
                     option.status ||
                     (option.error
-                        ? constants.Lists.VC_LOG_STATUS.ERROR
-                        : option.isSucces
-                        ? constants.Lists.VC_LOG_STATUS.SUCCESS
-                        : constants.Lists.VC_LOG_STATUS.INFO)
+                        ? LOG_STATUS.ERROR
+                        : option.isSuccess
+                        ? LOG_STATUS.SUCCESS
+                        : LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
-            vcLog.recordLog(logOption);
+            vc_log.recordLog(logOption);
             return true;
-        }
-    };
+        },
+        validateSerials: function (option) {
+            var logTitle = [LogTitle, 'validateSerials'].join('::');
 
-    //***********************************************************************
-    //** Update PO Fields with parsed XML data
-    //***********************************************************************
-    function updateItemReceipts(options) {
-        var logTitle = [LogTitle, 'updateItemReceipts'].join('::');
-        log.audit(logTitle, '>> option: ' + JSON.stringify(options));
+            var serialList = option.serials || [],
+                validSerialList = [];
 
-        //			po_ID, lineData, vendor
-        var mainConfig = options.mainConfig,
-            vendorConfig = options.vendorConfig,
-            po_ID = options.poId,
-            lineData = options.lineData,
-            vendor = options.vendor;
+            serialList.forEach(function (serial) {
+                if (serial && serial !== 'NA') validSerialList.push(serial);
+                return true;
+            });
 
-        PO_ID = po_ID;
+            log.audit(
+                logTitle,
+                vc_util.getUsage() +
+                    LogPrefix +
+                    '>> Valid Serials: ' +
+                    JSON.stringify([validSerialList.length, validSerialList])
+            );
 
-        LogPrefix = '[purchaseorder:' + po_ID + ']';
+            return validSerialList.length ? validSerialList : false;
+        },
+        // Added by Clemen - 04/28/2022
+        addNativeSerials: function (option) {
+            var logTitle = [LogTitle, 'addNativeSerials'].join('::'),
+                logPrefix = LogPrefix + '// Set Inventory Details: ';
 
-        /******
-			 lineData definition {	line_num:"NA",
-									item_num = "NA',1
-									order_num:"NA",
-									order_date:"NA",
-									order_eta:"NA",
-									ship_qty:"NA",
-									ship_date:"NA",
-									tracking_num:"NA",
-									carrier:"NA",
-									serial_num:"NA"};
-			 ***/
+            var ifRec = option.record;
+            var validSerialList = this.validateSerials(option);
+            if (!validSerialList) return;
 
-        /*** CONSTANTS - Custom IDs ***/
-        //			var PO_Valid_Date = '4/13/2019';
+            var inventoryDetailRecord = ifRec.getCurrentSublistSubrecord({
+                sublistId: 'item',
+                fieldId: 'inventorydetail'
+            });
 
-        try {
-            var PO_Valid_Date = vendorConfig.startDate;
+            log.audit(logTitle, logPrefix + ' //setting up serials...');
 
-            if (!Helper.validatePODate(po_ID, PO_Valid_Date)) {
-                throw 'Invalid PO Date : ' + PO_Valid_Date;
-            }
-
-            if (lineData == null || !lineData.length) {
-                throw 'Empty Line Data';
-            }
-
-            var numPrefix = vendorConfig.fulfillmentPrefix;
-            if (!numPrefix) {
-                throw 'Config Error: Missing Fulfillment Prefix';
-            }
-
-            lineData = Helper.sortLineData(lineData);
-
-            var receiptOrders = [];
-            // Build a non-repeating array of order nums
-            for (var i = 0; i < lineData.length; i++) {
-                if (receiptOrders.indexOf(lineData[i].order_num) < 0)
-                    receiptOrders.push(lineData[i].order_num);
-            }
-
-            log.audit(logTitle, LogPrefix + '>> receiptOrders = ' + JSON.stringify(receiptOrders));
-
-            var responseData = [];
-
-            // Loop through each unique order num checking to see if it does not already exist as an item receipt
-            for (var j = 0; j < receiptOrders.length; j++) {
-                // skip any existing orders
-                if (Helper.orderExists(numPrefix + receiptOrders[j])) {
-                    log.audit(logTitle, LogPrefix + '...order already exists');
-                    continue;
-                }
-
-                var receiptLines = [];
-                // Build an array with all XML line data with the same order num
-                for (var x = 0; x < lineData.length; x++) {
-                    if (receiptOrders[j] !== lineData[x].order_num) continue;
-
-                    log.audit(logTitle, '... verifying line data: ' + JSON.stringify(lineData[x]));
-                    if (
-                        lineData[x].hasOwnProperty('is_shipped') &&
-                        lineData[x].is_shipped === false
-                    ) {
-                        log.audit(logTitle, '......skipping line: not yet shipped');
-                        continue;
-                    }
-
-                    log.audit(logTitle, '... adding to receipt lines');
-                    receiptLines.push(lineData[x]);
-                }
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> receiptLines = ' + JSON.stringify(receiptLines)
-                );
-                if (!receiptLines.length) {
-                    log.audit(logTitle, LogPrefix + '** No items to receive ** ');
-                    continue;
-                }
-
-                var objRecord;
-
-                log.audit(logTitle, LogPrefix + '****  Transform to Item Receipt ****');
+            var addedSerials = [];
+            for (var i = 0; i < validSerialList.length; i++) {
+                if (!validSerialList[i] || validSerialList[i] == 'NA') continue;
 
                 try {
-                    // create item receipt from sales order
-                    objRecord = record.transform({
-                        fromType: record.Type.PURCHASE_ORDER,
-                        fromId: po_ID,
-                        toType: record.Type.ITEM_RECEIPT,
-                        isDynamic: true
+                    inventoryDetailRecord.selectLine({
+                        sublistId: 'inventoryassignment',
+                        line: i
                     });
 
-                    log.audit(logTitle, LogPrefix + '... success');
-                } catch (err) {
-                    Helper.logMsg({
-                        title: 'Transform Error on PO: ' + po_ID,
-                        error: err
+                    inventoryDetailRecord.setCurrentSublistValue({
+                        sublistId: 'inventoryassignment',
+                        fieldId: 'receiptinventorynumber',
+                        value: validSerialList[i]
                     });
-
-                    continue;
-                }
-
-                var rec_Changed = false;
-                var lineItemCount = objRecord.getLineCount({
-                    sublistId: 'item'
-                });
-                log.audit(logTitle, LogPrefix + '>> line count: ' + lineItemCount);
-                // remove IF line if not in XML line date
-                for (var cnt = 0; cnt < lineItemCount; cnt++) {
-                    var tempItemNum = objRecord.getSublistText({
-                        sublistId: 'item',
-                        fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
-                        line: cnt
+                    inventoryDetailRecord.commitLine({
+                        sublistId: 'inventoryassignment'
                     });
-                    var tempVendorSKU = '';
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null) {
-                        tempVendorSKU = objRecord.getSublistText({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                            line: cnt
-                        });
-                    }
+                    // log.audit(logTitle, logPrefix + '...added serial no: ' + validSerialList[i]);
 
-                    if (!Helper.itemInLineData(tempItemNum, receiptLines, tempVendorSKU)) {
-                        // remove line from item receipt not in current receiptLines
-                        log.audit(
-                            logTitle,
-                            LogPrefix +
-                                '>> item not in receipt line, removing line from item receipt ' +
-                                JSON.stringify({
-                                    tempItemNum: tempItemNum,
-                                    lineNum: cnt
-                                })
-                        );
-
-                        Helper.removeIRLine(objRecord, cnt);
-                        rec_Changed = true;
-                    } else {
-                        log.audit(
-                            logTitle,
-                            LogPrefix +
-                                '>> adding line to item receipt : ' +
-                                JSON.stringify({
-                                    objRecordId: objRecord.id,
-                                    lineNum: cnt
-                                })
-                        );
-
-                        Helper.addIRLine(objRecord, cnt);
-                        rec_Changed = true;
-                    }
-                }
-                // Build a list of unique items with their total quantities shipped for this shipment
-                var uniqueItems = [];
-                for (var itemCnt = 0; itemCnt < receiptLines.length; itemCnt++) {
-                    var el = {
-                        item_num: '',
-                        totalShipped: '0',
-                        order_num: '',
-                        order_date: '',
-                        order_eta: '',
-                        ship_date: '',
-                        all_tracking_nums: '',
-                        carrier: '',
-                        all_serial_nums: ''
-                    };
-
-                    if (!Helper.itemInLineData(receiptLines[itemCnt].item_num, uniqueItems, '')) {
-                        el.item_num = receiptLines[itemCnt].item_num;
-                        el.totalShipped = parseInt(receiptLines[itemCnt].ship_qty);
-                        el.order_num = receiptOrders[j];
-                        el.order_date = receiptLines[itemCnt].order_date;
-                        el.order_eta = receiptLines[itemCnt].order_eta;
-                        el.ship_date = receiptLines[itemCnt].ship_date;
-
-                        var tempTrackingNums = receiptLines[itemCnt].tracking_num && receiptLines[itemCnt].tracking_num.length ? receiptLines[itemCnt].tracking_num.split(',') : [];
-                        for (var tnIndex = 0; tnIndex < tempTrackingNums.length; tnIndex++) {
-                            if (el.all_tracking_nums.indexOf(tempTrackingNums[tnIndex]) < 0) {
-                                el.all_tracking_nums += tempTrackingNums[tnIndex] + '\n';
-                            }
-                        }
-
-                        el.carrier = receiptLines[itemCnt].carrier;
-
-                        if (mainConfig.linkSerialIF) {
-                            var tempSerials = receiptLines[itemCnt].serial_num && receiptLines[itemCnt].serial_num.length ? receiptLines[itemCnt].serial_num.split(',') : [];
-                            for (var snIndex = 0; snIndex < tempSerials.length; snIndex++) {
-                                if (el.all_serial_nums.indexOf(tempSerials[snIndex]) < 0) {
-                                    el.all_serial_nums += tempSerials[snIndex] + '\n';
-                                }
-                            }
-                        }
-
-                        uniqueItems.push(el);
-                    } else {
-                        for (var uniqueIndex = 0; uniqueIndex < uniqueItems.length; uniqueIndex++) {
-                            if (
-                                receiptLines[itemCnt].item_num == uniqueItems[uniqueIndex].item_num
-                            ) {
-                                uniqueItems[uniqueIndex].totalShipped += parseInt(
-                                    receiptLines[itemCnt].ship_qty
-                                );
-
-                                var tempTrackingNums = receiptLines[itemCnt].tracking_num && receiptLines[itemCnt].tracking_num.length ? receiptLines[itemCnt].tracking_num.split(',') : [];
-                                for (
-                                    var tnIndex = 0;
-                                    tnIndex < tempTrackingNums.length;
-                                    tnIndex++
-                                ) {
-                                    if (
-                                        uniqueItems[uniqueIndex].all_tracking_nums.indexOf(
-                                            tempTrackingNums[tnIndex]
-                                        ) < 0
-                                    ) {
-                                        uniqueItems[uniqueIndex].all_tracking_nums +=
-                                            tempTrackingNums[tnIndex] + '\n';
-                                    }
-                                }
-
-                                if (mainConfig.linkSerialIF) {
-                                    var tempSerials = receiptLines[itemCnt].serial_num && receiptLines[itemCnt].serial_num.length ? receiptLines[itemCnt].serial_num.split(',') : [];
-                                    for (var snIndex = 0; snIndex < tempSerials.length; snIndex++) {
-                                        if (
-                                            uniqueItems[uniqueIndex].all_serial_nums.indexOf(
-                                                tempSerials[snIndex]
-                                            ) < 0
-                                        ) {
-                                            uniqueItems[uniqueIndex].all_serial_nums +=
-                                                tempSerials[snIndex] + '\n';
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                var lineItemCount2 = objRecord.getLineCount({
-                    sublistId: 'item'
-                });
-
-                // loop through all items in item receipt
-                for (var cnt2 = 0; cnt2 < lineItemCount2; cnt2++) {
-                    objRecord.selectLine({
-                        sublistId: 'item',
-                        line: cnt2
-                    });
-                    var received2 = objRecord.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'itemreceive'
-                    });
-                    // if item has not been removed (item receive flag set to false)
-                    if (received2) {
-                        var currItemNum = objRecord.getCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL
-                        });
-                        var currItemQty = parseInt(
-                            objRecord.getCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: 'quantity'
-                            })
-                        );
-
-                        var currVendorSKU = '';
-                        if (vcGlobals.VENDOR_SKU_LOOKUP_COL) {
-                            currVendorSKU = objRecord.getCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL
-                            });
-                        }
-
-                        for (var tmp2 = 0; tmp2 < uniqueItems.length; tmp2++) {
-                            if (
-                                currItemNum == uniqueItems[tmp2].item_num ||
-                                (currVendorSKU != '' &&
-                                    currVendorSKU == uniqueItems[tmp2].vendorSKU)
-                            ) {
-                                if (currItemQty < parseInt(uniqueItems[tmp2].totalShipped)) {
-                                    uniqueItems[tmp2].totalShipped -= parseInt(currItemQty);
-
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_num,
-                                        'custcol_ctc_xml_dist_order_num'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_date,
-                                        'custcol_ctc_xml_date_order_placed'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_eta,
-                                        'custcol_ctc_xml_eta'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].ship_date,
-                                        'custcol_ctc_xml_ship_date'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].carrier,
-                                        'custcol_ctc_xml_carrier'
-                                    );
-                                    rec_Changed = true;
-
-                                    if (mainConfig.linkSerialIF) {
-                                        if (uniqueItems[tmp2].all_serial_nums.length > 0) {
-                                            var tempSerials = '';
-                                            var tempSerials2 = '';
-                                            var snSplit =
-                                                uniqueItems[tmp2].all_serial_nums.split('\n');
-                                            for (
-                                                var tempCount = 0;
-                                                tempCount < snSplit.length;
-                                                tempCount++
-                                            ) {
-                                                if (tempCount < parseInt(currItemQty))
-                                                    tempSerials += snSplit.shift() + '\n';
-                                                else break;
-                                            }
-                                            // reset Unique serial nums to whatever is left after processing current line
-                                            for (var i2 = 0; i2 < snSplit.length; i2++) {
-                                                if (snSplit[i2].length > 0)
-                                                    tempSerials2 += snSplit[i2] + '\n';
-                                            }
-                                            uniqueItems[tmp2].all_serial_nums = tempSerials2;
-
-                                            objRecord.setCurrentSublistValue({
-                                                sublistId: 'item',
-                                                fieldId: 'custcol_ctc_xml_serial_num',
-                                                value: tempSerials.substr(0, _TEXT_AREA_MAX_LENGTH)
-                                            });
-                                            objRecord.commitLine({
-                                                sublistId: 'item'
-                                            });
-                                        }
-                                    }
-                                } else if (parseInt(uniqueItems[tmp2].totalShipped) == 0) {
-                                    objRecord.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'itemreceive',
-                                        value: false
-                                    });
-                                    objRecord.commitLine({ sublistId: 'item' });
-                                    rec_Changed = true;
-                                } else {
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_num,
-                                        'custcol_ctc_xml_dist_order_num'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_date,
-                                        'custcol_ctc_xml_date_order_placed'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].order_eta,
-                                        'custcol_ctc_xml_eta'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].ship_date,
-                                        'custcol_ctc_xml_ship_date'
-                                    );
-                                    Helper.updateXMLField(
-                                        objRecord,
-                                        uniqueItems[tmp2].carrier,
-                                        'custcol_ctc_xml_carrier'
-                                    );
-
-                                    objRecord.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'quantity',
-                                        value: parseInt(uniqueItems[tmp2].totalShipped)
-                                    });
-                                    if (mainConfig.linkSerialIF) {
-                                        objRecord.setCurrentSublistValue({
-                                            sublistId: 'item',
-                                            fieldId: 'custcol_ctc_xml_serial_num',
-                                            value: uniqueItems[tmp2].all_serial_nums.substr(
-                                                0,
-                                                _TEXT_AREA_MAX_LENGTH
-                                            )
-                                        });
-                                    }
-                                    uniqueItems[tmp2].totalShipped = 0;
-                                    if (mainConfig.linkSerialIF) {
-                                        uniqueItems[tmp2].all_serial_nums = '';
-                                    }
-                                    objRecord.commitLine({ sublistId: 'item' });
-                                    rec_Changed = true;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                var lineItemCountX = objRecord.getLineCount({
-                    sublistId: 'item'
-                });
-
-                log.audit(
-                    logTitle,
-                    LogPrefix + ' >> Before Item receipt save: lineItemCountX' + lineItemCountX
-                );
-
-                for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
-                    var found = false;
-                    var trackingField = mainConfig.useInboundTrackingNumbers
-                        ? constants.Columns.INBOUND_TRACKING_NUM
-                        : 'custcol_ctc_xml_tracking_num';
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
-                        var index = objRecord.findSublistLineWithValue({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
-                            value: uniqueItems[tmp3].vendorSKU
-                        });
-
-                        if (index >= 0) {
-                            found = true;
-                            objRecord.selectLine({
-                                sublistId: 'item',
-                                line: index
-                            });
-                            objRecord.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: trackingField,
-                                value: uniqueItems[tmp3].all_tracking_nums
-                            });
-                            objRecord.commitLine({ sublistId: 'item' });
-                            rec_Changed = true;
-                        }
-                    }
-                    if (!found) {
-                        var index = objRecord.findSublistLineWithValue({
-                            sublistId: 'item',
-                            fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
-                            value: uniqueItems[tmp3].item_num
-                        });
-
-                        if (index >= 0) {
-                            objRecord.selectLine({
-                                sublistId: 'item',
-                                line: index
-                            });
-                            objRecord.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: trackingField,
-                                value: uniqueItems[tmp3].all_tracking_nums
-                            });
-                            objRecord.commitLine({ sublistId: 'item' });
-                            rec_Changed = true;
-                        }
-                    }
-                }
-
-                try {
-                    var objId;
-
-                    if (rec_Changed) {
-                        objRecord.setValue({
-                            fieldId: 'custbody_ctc_if_vendor_order_match',
-                            value: numPrefix + receiptOrders[j],
-                            ignoreFieldChange: true
-                        });
-
-                        var lineItemCountX = objRecord.getLineCount({
-                            sublistId: 'item'
-                        });
-
-                        log.audit(
-                            logTitle,
-                            LogPrefix +
-                                'Before Item receipt save : ' +
-                                ('Item line count = ' + lineItemCountX)
-                        );
-
-                        objId = objRecord.save({
-                            enableSourcing: false,
-                            ignoreMandatoryFields: true
-                        });
-                        responseData.push({
-                            id: objId,
-                            orderNum: receiptOrders[j]
-                        });
-                    } else {
-                        objId = objRecord.id;
-                        responseData.push({
-                            id: objId,
-                            orderNum: receiptOrders[j]
-                        });
-                    }
-
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '## Created Item Receipt: [itemreceipt:' + objId + ']'
-                    );
-
-                    Helper.logMsg({
-                        title: 'Create Item Receipt',
-                        isSucces: true,
-                        message: '## Created Item Receipt: [itemfulfillment:' + objId + ']'
-                    });
-                } catch (err) {
-                    var errMsg = Helper.extractError(err);
+                    addedSerials.push(validSerialList[i]);
+                } catch (serial_error) {
                     log.error(
                         logTitle,
-                        LogPrefix +
-                            ('## Item Receipt Error:  ' + errMsg) +
-                            ('|  Details: ' + JSON.stringify(err))
+                        vc_util.getUsage() +
+                            LogPrefix +
+                            '## ERROR ## ' +
+                            JSON.stringify(serial_error)
                     );
-                    Helper.logMsg({
-                        error: err,
-                        title: 'Create Item Receipt Error'
-                    });
                 }
             }
-            return responseData;
-        } catch (error) {
-            var errorMsg = Helper.extractError(error);
-            log.error(
-                logTitle,
-                LogPrefix + '## ERROR:  ' + errorMsg + '| Details: ' + JSON.stringify(error)
-            );
-            Helper.logMsg({ title: logTitle + ':: Error', error: error });
-            return false;
-        }
-    }
 
-    return {
-        updateIR: updateItemReceipts
+            log.audit(
+                logTitle,
+                LogPrefix +
+                    ' >> done <<' +
+                    JSON.stringify({
+                        length: addedSerials.length,
+                        serials: addedSerials
+                    })
+            );
+
+            return true;
+        },       
+        validatePODate: function (option) {
+            var logTitle = [LogTitle, 'validateDate'].join('::'),
+                logPrefix = LogPrefix + ' validateDate || ',
+                returnValue;
+            option = option || {};
+
+            try {
+                if (!Current.PO_ID) throw 'Missing PO ID';
+                if (!Current.VendorCFG) throw 'Missing Vendor Config';
+
+                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchObj = ns_search.load({ id: searchId });
+
+                searchObj.filters.push(
+                    ns_search.createFilter({
+                        name: 'internalid',
+                        operator: ns_search.Operator.IS,
+                        values: Current.PO_ID
+                    })
+                );
+                searchObj.filters.push(
+                    ns_search.createFilter({
+                        name: 'trandate',
+                        operator: ns_search.Operator.ONORAFTER,
+                        values: Current.VendorCFG.startDate
+                    })
+                );
+
+                returnValue = !!searchObj.runPaged().count;
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw vc_util.extractError(error);
+            } finally {
+                log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+        isMatchingLine: function (option) {
+            var logTitle = [LogTitle, 'isMatchingLine'].join('::'),
+                returnValue;
+            option = option || {};
+            try {
+                var dataToFind = option.lineData || option.dataToFind,
+                    dataToTest = option.apiData || option.dataToTest || {},
+                    fieldToTest = option.testField;
+
+                var hashSpace = Current.MainCFG.ingramHashSpace,
+                    xmlVendor = Current.VendorCFG.xmlVendor,
+                    vendorList = vc_constants.LIST.XML_VENDOR;
+
+                var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
+                var hasMatch = false;
+
+                // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + ' // isMatchingLine: ' + JSON.stringify(option));
+
+                var LineItemCheck = {
+                    ingramCheck: function (itemType) {
+                        var _logPrefix = logPrefix + ' // ingramCheck:[' + itemType + ']: ',
+                            returnValue = false;
+
+                        try {
+                            if (!dataToFind[itemType] || !dataToTest[itemType])
+                                throw '[' + itemType + '] not present';
+
+                            if (
+                                !hashSpace &&
+                                !vc_util.inArray(xmlVendor, [
+                                    vendorList.INGRAM_MICRO_V_ONE,
+                                    vendorList.INGRAM_MICRO
+                                ])
+                            )
+                                throw 'non ingram vendor';
+
+                            if (dataToFind[itemType].replace('#', '') != dataToTest[itemType])
+                                throw 'value not matched.';
+
+                            returnValue = true;
+                            log.audit(logTitle, _logPrefix + ' >> matched. <<');
+                        } catch (check_error) {
+                            // log.audit(
+                            //     logTitle,
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
+                            // );
+                        }
+                        return returnValue;
+                    },
+                    itemCheck: function (itemType) {
+                        var _logPrefix = logPrefix + ' // itemCheck:[' + itemType + ']',
+                            returnValue = false;
+
+                        try {
+                            if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
+
+                            if (
+                                !vc_util.inArray(dataToFind[itemType], [
+                                    dataToTest.vendorSKU,
+                                    dataToTest.item_num_alt,
+                                    dataToTest.item_num
+                                ])
+                            )
+                                throw ' not matched.';
+
+                            returnValue = true;
+                            log.audit(logTitle, _logPrefix + ' >> matched. <<');
+                        } catch (check_error) {
+                            // log.audit(
+                            //     logTitle,
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
+                            // );
+                        }
+                        return returnValue;
+                    },
+                    dnhCheck: function (itemType) {
+                        var _logPrefix = logPrefix + ' // D&H Check:[' + itemType + ']',
+                            returnValue = false;
+
+                        try {
+                            if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
+                            if (xmlVendor !== vendorList.DandH) throw 'non D&H vendor';
+                            if (dataToFind.dandh !== dataToTest[itemType]) throw ' not matched.';
+
+                            returnValue = true;
+                            log.audit(logTitle, _logPrefix + ' >> matched. <<');
+                        } catch (check_error) {
+                            // log.audit(
+                            //     logTitle,
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
+                            // );
+                        }
+                        return returnValue;
+                    }
+                };
+
+                ['item_num', 'sku_name'].forEach(function (fld) {
+                    if (!hasMatch && (!fieldToTest || fieldToTest == fld)) {
+                        hasMatch =
+                            LineItemCheck.itemCheck(fld) ||
+                            LineItemCheck.ingramCheck(fld) ||
+                            LineItemCheck.dnhCheck(fld);
+                    }
+                    return true;
+                });
+
+                returnValue = hasMatch;
+            } catch (error) {
+                log.error(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
+                );
+                returnValue = false;
+                throw vc_util.extractError(error);
+            }
+
+            return returnValue;
+        },
+        findMatchingItem: function (option) {
+            var logTitle = [LogTitle, 'findMatchingItem'].join('::'),
+                returnValue;
+            option = option || {};
+            try {
+                var matchingItem = null;
+                var dataSet = option.dataSet || [],
+                    dataToFind = option.data || option.lineData,
+                    fieldToTest = option.fieldToTest;
+
+                for (var i = 0, j = dataSet.length; i < j; i++) {
+                    var dataToTest = dataSet[i];
+                    var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
+                    // log.audit(
+                    //     logTitle,
+                    //     logPrefix + '/// Testing -- : ' + JSON.stringify(dataToTest.item_num)
+                    // );
+
+                    if (
+                        Helper.isMatchingLine({
+                            dataToFind: dataToFind,
+                            dataToTest: dataToTest,
+                            fieldToTest: fieldToTest
+                        })
+                    ) {
+                        matchingItem = dataToTest;
+                        break;
+                    }
+                }
+
+                returnValue = matchingItem;
+            } catch (error) {
+                log.error(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
+                );
+                returnValue = false;
+                throw vc_util.extractError(error);
+            } finally {
+                // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+        findExistingOrders: function (option) {
+            var logTitle = [LogTitle, 'findExistingOrders'].join('::'),
+                logPrefix = LogPrefix + ' findExistingOrders || ',
+                returnValue;
+            option = option || {};
+
+            try {
+                var listOrderNum = option.orderNums;
+                if (vc_util.isEmpty(listOrderNum)) return false;
+
+                var searchOption = {
+                    type: 'itemreceipt',
+                    filters: [['type', 'anyof', 'ItemRcpt'], 'AND', ['mainline', 'is', 'T']],
+                    columns: [
+                        'mainline',
+                        'internalid',
+                        'trandate',
+                        'tranid',
+                        'entity',
+                        'custbody_ctc_if_vendor_order_match'
+                    ]
+                };
+
+                searchOption.filters.push('AND');
+                var orderNumFilter = [];
+                listOrderNum.forEach(function (orderNum) {
+                    orderNumFilter.push([
+                        'custbody_ctc_if_vendor_order_match',
+                        ns_search.Operator.IS,
+                        orderNum
+                    ]);
+                    orderNumFilter.push('OR');
+                    return true;
+                });
+                orderNumFilter.pop('OR');
+                searchOption.filters.push(orderNumFilter);
+
+                // log.audit(
+                //     logTitle,
+                //     vc_util.getUsage() +
+                //         LogPrefix +
+                //         '>> searchOption: ' +
+                //         JSON.stringify(searchOption)
+                // );
+
+                var arrResults = [];
+                var searchResults = vc_util.searchAllPaged({
+                    searchObj: ns_search.create(searchOption)
+                });
+
+                searchResults.forEach(function (result) {
+                    var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
+
+                    if (!vc_util.inArray(orderNum, arrResults)) {
+                        arrResults.push(orderNum);
+                    }
+
+                    return true;
+                });
+
+                returnValue = arrResults;
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw vc_util.extractError(error);
+            } finally {
+                // log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
+            }
+
+            return returnValue;
+        },
+
+        removeIRLine: function (option) {
+            var logTitle = [LogTitle, 'removeIRLine'].join('::'),
+                logPrefix = LogPrefix + ' removeIRLine || ',
+                returnValue;
+            option = option || {};
+
+            try {
+                option.record.selectLine({
+                    sublistId: 'item',
+                    line: option.line
+                });
+                option.record.setCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'itemreceive',
+                    value: false
+                });
+                option.record.commitLine({ sublistId: 'item' });
+                returnValue = true;
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw vc_util.extractError(error);
+            }
+
+            return returnValue;
+        },
+
+        addIRLine: function (option) {
+            var logTitle = [LogTitle, 'addIRLine'].join('::'),
+                logPrefix = LogPrefix + ' addIRLine || ',
+                returnValue;
+            option = option || {};
+
+            try {
+                option.record.selectLine({
+                    sublistId: 'item',
+                    line: option.line
+                });
+                option.record.setCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'itemreceive',
+                    value: true
+                });
+                option.record.commitLine({ sublistId: 'item' });
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw vc_util.extractError(error);
+            }
+
+            return returnValue;
+        },
+        setLineValues: function (option) {
+            var logTitle = [LogTitle, 'setLineValues'].join('::'),
+                logPrefix = LogPrefix + ' // set line value - ',
+                returnValue;
+            option = option || {};
+
+            try {
+                if (!option.record) throw 'Missing record';
+                if (vc_util.isEmpty(option.values)) throw 'Missing values';
+
+                if (option.line) {
+                    option.record.selectLine({
+                        sublistId: 'item',
+                        line: option.line
+                    });
+                }
+
+                log.audit(logTitle, logPrefix + '... ' + JSON.stringify(option.values));
+
+                for (var fld in option.values) {
+                    option.record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: fld,
+                        value: option.values[fld]
+                    });
+                }
+
+                if (option.line || option.doCommit) {
+                    option.record.commitLine({ sublistId: 'item' });
+                }
+            } catch (error) {
+                log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+            }
+
+            return returnValue;
+        }
     };
+
+    return ItemRRLib;
 });

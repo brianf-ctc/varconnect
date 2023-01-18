@@ -56,7 +56,8 @@ define(function (require) {
                 DEFAULT_SHIPPING_ITEM: 'custrecord_ctc_vc_bill_ship_item',
                 VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
                 DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
-                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled'
+                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled',
+                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num'
             }
         },
         VENDOR_CONFIG: {
@@ -121,10 +122,27 @@ define(function (require) {
                 INV_LINE: 'custrecord_ctc_vc_inv_line'
             }
         },
+        BILLCREATE_CONFIG: {
+            ID: 'customrecord_vc_bill_vendor_config',
+            FIELD: {
+                ENTRY_FUNC: 'custrecord_vc_bc_entry',
+                ACK_FUNC: 'custrecord_vc_bc_ack',
+                USER: 'custrecord_vc_bc_user',
+                PASSWORD: 'custrecord_vc_bc_pass',
+                PARTNERID: 'custrecord_vc_bc_partner',
+                CONNECTION_TYPE: 'custrecord_vc_bc_connect_type',
+                SFTP_HOSTKEY: 'custrecord_vc_bc_host_key',
+                URL: 'custrecord_vc_bc_url',
+                SFTP_RESOURCE_PATH: 'custrecord_vc_bc_res_path',
+                SFTP_ACK_PATH: 'custrecord_vc_bc_ack_path',
+                ENABLE_FULFILLLMENT: 'custrecord_vc_bc_enable_fulfillment'
+            }
+        },
         BILLFILE: {
             ID: 'customrecord_ctc_vc_bills',
             FIELD: {
                 ID: 'id',
+                NAME: 'name',
                 POID: 'custrecord_ctc_vc_bill_po',
                 PO_LINK: 'custrecord_ctc_vc_bill_linked_po',
                 BILL_NUM: 'custrecord_ctc_vc_bill_number',
@@ -155,7 +173,11 @@ define(function (require) {
             SERIAL_NUMBER_SCAN: 'custcol_ctc_serial_number_scan',
             SERIAL_NUMBER_UPDATE: 'custcol_ctc_serial_number_update',
             DH_MPN: 'custcol_ctc_vc_dh_mpn',
-            SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info'
+            SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info',
+            OVERRIDE_PONUM: 'custbody_ctc_vc_override_ponum'
+        },
+        ENTITY: {
+            BILLCONFIG: 'custentity_vc_bill_config'
         }
     };
 
@@ -174,7 +196,8 @@ define(function (require) {
             INGRAM_MICRO_V_ONE: '11',
             TECH_DATA_API: '12',
             JENNE: '13',
-            SCANSOURCE: '14'
+            SCANSOURCE: '14',
+			WEFI: '16'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',
@@ -186,7 +209,18 @@ define(function (require) {
             CANADA: '2'
         }
     };
-    VC_CONSTANTS.SCRIPT = {};
+    VC_CONSTANTS.SCRIPT = {
+        VIEW_SERIALS_SL: 'customscript_vc_view_serials',
+        LICENSE_VALIDATOR_SL: 'customscript_ctc_vc_sl_licensevalidator',
+        PRINT_SERIALS_SL: 'customscript_ctc_vc_sl_print_serial',
+        SERIAL_UPDATE_MR: 'customscript_ctc_vc_mr_serial_manip',
+        SERIAL_UPDATE_ALL_MR: 'customscript_ctc_vc_mr_serial_manip_so'
+    };
+    VC_CONSTANTS.DEPLOYMENT = {
+        VIEW_SERIALS_SL: 'customdeploy_vc_view_serials',
+        LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vc_sl_licensevalidator',
+        PRINT_SERIALS_SL: 'customdeploy_ctc_vc_sl_print_serial'
+    };
 
     var Bill_Creator = {};
     Bill_Creator.Status = {
@@ -220,11 +254,6 @@ define(function (require) {
             msg: 'PO Qty is insufficient for the bill.',
             status: Bill_Creator.Status.ERROR
         },
-        FULLY_BILLED: {
-            code: 'FULLY_BILLED',
-            msg: 'PO is Fully Billed',
-            status: Bill_Creator.Status.CLOSED
-        },
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',
             msg: 'Items are already billed',
@@ -245,6 +274,17 @@ define(function (require) {
             msg: 'Created Vendor Bill',
             status: Bill_Creator.Status.PROCESSED
         },
+        FULLY_BILLED: {
+            code: 'FULLY_BILLED',
+            msg: 'PO is Fully Billed',
+            status: Bill_Creator.Status.CLOSED
+        },
+        CLOSED_PO: {
+            code: 'CLOSED_PO',
+            msg: 'PO is Closed',
+            status: Bill_Creator.Status.CLOSED
+        },
+
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
@@ -272,6 +312,6 @@ define(function (require) {
         POHANDLING: 'Drop', // Special | Drop (default) | Both
         EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1'
     };
-    
+
     return VC_CONSTANTS;
 });

@@ -26,11 +26,10 @@ define([
     'N/search',
     'N/record',
     'N/runtime',
-    './VC_Globals.js',
-    './CTC_VC_Constants.js',
+    './CTC_VC2_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js'
-], function (search, record, runtime, vcGlobals, constants, vcLog, vc2Utils) {
+], function (ns_search, ns_record, ns_runtime, vc2_constant, vc_log, vc2_util) {
     var LogTitle = 'Create-ItemRcpt',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
@@ -46,14 +45,14 @@ define([
 
             if (!Helper.isEmpty(po_ID)) {
                 var d1 = Date.parse(PO_Valid_Date);
-                var searchId = runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
 
-                var filters = search.createFilter({
+                var filters = ns_search.createFilter({
                     name: 'internalid',
-                    operator: search.Operator.IS,
+                    operator: ns_search.Operator.IS,
                     values: po_ID
                 });
-                var mySearch = search.load({ id: searchId });
+                var mySearch = ns_search.load({ id: searchId });
                 mySearch.filters.push(filters);
                 mySearch.run().each(function (result) {
                     var docStatus = result.getText({
@@ -86,12 +85,12 @@ define([
             var logTitle = [LogTitle, 'orderExists'].join('::');
             // log.audit(logTitle, '>> ..order exists transid: ' + JSON.stringify(transID));
 
-            var filters = search.createFilter({
+            var filters = ns_search.createFilter({
                 name: 'custbody_ctc_if_vendor_order_match',
-                operator: search.Operator.IS,
+                operator: ns_search.Operator.IS,
                 values: transID
             });
-            var mySearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+            var mySearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
             mySearch.filters.push(filters);
 
             // If order num already exists do nothing
@@ -292,14 +291,14 @@ define([
                 status:
                     option.status ||
                     (option.error
-                        ? constants.Lists.VC_LOG_STATUS.ERROR
+                        ? vc2_constant.LIST.VC_LOG_STATUS.ERROR
                         : option.isSucces
-                        ? constants.Lists.VC_LOG_STATUS.SUCCESS
-                        : constants.Lists.VC_LOG_STATUS.INFO)
+                        ? vc2_constant.LIST.VC_LOG_STATUS.SUCCESS
+                        : vc2_constant.LIST.VC_LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
-            vcLog.recordLog(logOption);
+            vc_log.recordLog(logOption);
             return true;
         }
     };
@@ -407,10 +406,10 @@ define([
 
                 try {
                     // create item receipt from sales order
-                    objRecord = record.transform({
-                        fromType: record.Type.PURCHASE_ORDER,
+                    objRecord = ns_record.transform({
+                        fromType: ns_record.Type.PURCHASE_ORDER,
                         fromId: po_ID,
-                        toType: record.Type.ITEM_RECEIPT,
+                        toType: ns_record.Type.ITEM_RECEIPT,
                         isDynamic: true
                     });
 
@@ -433,14 +432,15 @@ define([
                 for (var cnt = 0; cnt < lineItemCount; cnt++) {
                     var tempItemNum = objRecord.getSublistText({
                         sublistId: 'item',
-                        fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
+                        fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
                         line: cnt
                     });
                     var tempVendorSKU = '';
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL != null) {
+
+                    if (vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL != null) {
                         tempVendorSKU = objRecord.getSublistText({
                             sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
+                            fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                             line: cnt
                         });
                     }
@@ -582,7 +582,7 @@ define([
                     if (received2) {
                         var currItemNum = objRecord.getCurrentSublistValue({
                             sublistId: 'item',
-                            fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL
+                            fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
                         });
                         var currItemQty = parseInt(
                             objRecord.getCurrentSublistValue({
@@ -592,10 +592,10 @@ define([
                         );
 
                         var currVendorSKU = '';
-                        if (vcGlobals.VENDOR_SKU_LOOKUP_COL) {
+                        if (vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL) {
                             currVendorSKU = objRecord.getCurrentSublistValue({
                                 sublistId: 'item',
-                                fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL
+                                fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                             });
                         }
 
@@ -741,12 +741,15 @@ define([
                 for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
                     var found = false;
                     var trackingField = mainConfig.useInboundTrackingNumbers
-                        ? constants.Columns.INBOUND_TRACKING_NUM
+                        ? vc2_constant.FIELD.TRANSACTION.INBOUND_TRACKING_NUM
                         : 'custcol_ctc_xml_tracking_num';
-                    if (vcGlobals.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
+                    if (
+                        vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL &&
+                        uniqueItems[tmp3].vendorSKU != 'NA'
+                    ) {
                         var index = objRecord.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vcGlobals.VENDOR_SKU_LOOKUP_COL,
+                            fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                             value: uniqueItems[tmp3].vendorSKU
                         });
 
@@ -765,10 +768,11 @@ define([
                             rec_Changed = true;
                         }
                     }
+
                     if (!found) {
                         var index = objRecord.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vcGlobals.ITEM_FUL_ID_LOOKUP_COL,
+                            fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
                             value: uniqueItems[tmp3].item_num
                         });
 

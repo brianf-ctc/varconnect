@@ -20,7 +20,6 @@ define(function (require) {
 
     var vc_util = require('./CTC_VC2_Lib_Utils'),
         vc_constants = require('./CTC_VC2_Constants'),
-        vc_global = require('./VC_Globals'),
         vc_license = require('./CTC_VC_Lib_LicenseValidator'),
         vc_maincfg = require('./CTC_VC_Lib_MainConfiguration'),
         vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig');

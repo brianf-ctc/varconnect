@@ -16,9 +16,6 @@ define([
     'N/https',
     'N/search',
     'N/format',
-    './CTC_VC_Constants.js',
-    './CTC_VC2_Lib_Utils',
-    './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_Synnex',
     './CTC_VC_Lib_TechData',
     './CTC_VC_Lib_DandH',
@@ -28,24 +25,29 @@ define([
     './CTC_VC_Lib_Ingram_v1',
     './CTC_VC_Lib_Jenne',
     './CTC_VC_Lib_ScanSource',
+	// './CTC_VC_Lib_WeFi.js',
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils',
+    './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_Log.js'
 ], function (
-    https,
-    search,
-    format,
-    constants,
-    vc_util,
-    libVendorConfig,
-    libSynnex,
-    libTechData,
-    libDandH,
-    libIngram,
-    libDell,
-    libArrow,
-    libIngramV1,
-    libJenne,
-    libScanSource,
-    vcLog
+    ns_https,
+    ns_search,
+    ns_format,
+    lib_synnex,
+    lib_techdata,
+    lib_dnh,
+    lib_ingram,
+    lib_dell,
+    lib_arrow,
+    lib_ingramv1,
+    lib_jenne,
+    lib_scansource,
+	// lib_wefi,
+    vc2_constant,
+    vc2_util,
+    vc_vendorcfg,
+    vc_log
 ) {
     var LogTitle = 'WebSvcLib',
         LogPrefix = '';
@@ -132,7 +134,7 @@ define([
 
         var vendorConfig = option.vendorConfig,
             xmlVendor = vendorConfig.xmlVendor,
-            vendorList = constants.Lists.XML_VENDOR,
+            vendorList = vc2_constant.LIST.XML_VENDOR,
             xmlVendorText = vendorConfig.xmlVendorText,
             libVendor;
 
@@ -140,34 +142,37 @@ define([
 
         switch (xmlVendor) {
             case vendorList.TECH_DATA:
-                libVendor = libTechData;
+                libVendor = lib_techdata;
                 break;
             case vendorList.SYNNEX:
-                libVendor = libSynnex;
+                libVendor = lib_synnex;
                 break;
             case vendorList.DandH:
-                libVendor = libDandH;
+                libVendor = lib_dnh;
                 break;
             case vendorList.INGRAM_MICRO:
-                libVendor = libIngram;
+                libVendor = lib_ingram;
                 break;
             case vendorList.AVNET:
             case vendorList.WESTCON:
             case vendorList.ARROW:
-                libVendor = libArrow;
+                libVendor = lib_arrow;
                 break;
             case vendorList.DELL:
-                libVendor = libDell;
+                libVendor = lib_dell;
                 break;
             case vendorList.INGRAM_MICRO_V_ONE:
-                libVendor = libIngramV1;
+                libVendor = lib_ingramv1;
                 break;
             case vendorList.JENNE:
-                libVendor = libJenne;
+                libVendor = lib_jenne;
                 break;
             case vendorList.SCANSOURCE:
-                libVendor = libScanSource;
+                libVendor = lib_scansource;
                 break;
+			// case vendorList.WEFI:
+            //     libVendor = lib_wefi;
+            //     break;
             default:
                 log.error('Switch case vendor', 'XML Vendor not setup');
                 break;
@@ -185,8 +190,8 @@ define([
             tranDate = option.tranDate,
             xmlVendorText = option.xmlVendorText;
 
-        var dtStartDate = vc_util.parseDate(startDate),
-            dtTranDate = vc_util.parseDate(tranDate);
+        var dtStartDate = vc2_util.parseDate(startDate),
+            dtTranDate = vc2_util.parseDate(tranDate);
 
         log.audit(
             logTitle,
@@ -227,7 +232,7 @@ define([
         });
 
         if (!dateCheck) {
-            vcLog.recordLog({
+            vc_log.recordLog({
                 header: 'WebService',
                 body:
                     'Invalid transaction date -- ' +
@@ -236,7 +241,7 @@ define([
                         'transaction date': tranDate
                     }),
                 transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR
+                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
             });
 
             return false;
@@ -258,16 +263,26 @@ define([
                     countryCode: option.countryCode,
                     vendorConfig: vendorConfig
                 });
-            } catch (e) {
-                log.error(logTitle, LogPrefix + '!! ERROR !!' + vc_util.extractError(e));
 
-                vcLog.recordLog({
+                vc_log.recordLog({
+                    header: 'Output Lines',
+                    body: !vc2_util.isEmpty(outputArray)
+                    ? JSON.stringify(outputArray)
+                    : '-no lines to process-',
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO,
+                    transaction: poId
+                });
+
+            } catch (e) {
+                log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
+
+                vc_log.recordLog({
                     header: 'VAR Connect ERROR',
                     body: JSON.stringify({
-                        error: vc_util.extractError(e),
+                        error: vc2_util.extractError(e),
                         details: JSON.stringify(e)
                     }),
-                    status: constants.Lists.VC_LOG_STATUS.ERROR,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
                     transaction: poId
                 });
             }
@@ -287,7 +302,7 @@ define([
             poNum = option.poNum,
             poId = option.poId,
             tranDate = option.tranDate,
-            configs = libVendorConfig.getMultipleConfigurations({
+            configs = vc_vendorcfg.getMultipleConfigurations({
                 vendor: vendor,
                 subsidiary: subsidiary
             }),
@@ -321,7 +336,7 @@ define([
                 });
 
                 if (!dateCheck) {
-                    vcLog.recordLog({
+                    vc_log.recordLog({
                         header: 'WebService',
                         body:
                             'Invalid transaction date -- ' +
@@ -330,7 +345,7 @@ define([
                                 'transaction date': tranDate
                             }),
                         transaction: poId,
-                        status: constants.Lists.VC_LOG_STATUS.ERROR
+                        status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                     });
 
                     continue;
@@ -347,11 +362,11 @@ define([
             } catch (e) {
                 log.error(logTitle, LogPrefix + '!! ERROR !!' + JSON.stringify(e));
 
-                vcLog.recordLog({
+                vc_log.recordLog({
                     header: 'WebService',
-                    body: 'Error encountered: ' + vc_util.extractError(e),
+                    body: 'Error encountered: ' + vc2_util.extractError(e),
                     transaction: poId,
-                    status: constants.Lists.VC_LOG_STATUS.ERROR
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                 });
             }
         }
@@ -370,7 +385,7 @@ define([
             poId = option.poId,
             tranDate = option.tranDate,
             subsidiary = option.subsidiary,
-            vendorList = constants.Lists.XML_VENDOR,
+            vendorList = vc2_constant.LIST.XML_VENDOR,
             xmlVendor = vendorConfig.xmlVendor,
             countryCode = option.countryCode,
             outputArray = null;
@@ -410,11 +425,11 @@ define([
         } catch (e) {
             log.error(logTitle, LogPrefix + '!! ERROR !!' + JSON.stringify(e));
 
-            vcLog.recordLog({
+            vc_log.recordLog({
                 header: 'WebService::process',
-                body: 'Error encountered: ' + vc_util.extractError(e),
+                body: 'Error encountered: ' + vc2_util.extractError(e),
                 transaction: poId,
-                status: constants.Lists.VC_LOG_STATUS.ERROR
+                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
             });
         }
     }

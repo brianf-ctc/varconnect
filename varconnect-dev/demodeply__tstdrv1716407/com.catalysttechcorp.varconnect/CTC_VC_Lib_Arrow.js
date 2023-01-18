@@ -19,11 +19,10 @@
  */
 define([
     'N/search',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_search, VC_Global, VC_Log, VC_Util, moment) {
+    './CTC_VC2_Constants.js'
+], function (ns_search, vc_log, vc_util, vc2_constant) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
@@ -38,7 +37,7 @@ define([
             option = option || {};
 
             try {
-                var tokenReq = VC_Util.sendRequest({
+                var tokenReq = vc_util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
@@ -46,7 +45,7 @@ define([
                     maxRetry: 3,
                     query: {
                         url: CURRENT.vendorConfig.accessEndPoint,
-                        body: VC_Util.convertToQuery({
+                        body: vc_util.convertToQuery({
                             client_id: CURRENT.vendorConfig.apiKey,
                             client_secret: CURRENT.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -78,7 +77,7 @@ define([
             option = option || {};
 
             try {
-                var reqOrderStatus = VC_Util.sendRequest({
+                var reqOrderStatus = vc_util.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' '),
                     recordId: CURRENT.recordId,
                     method: 'post',
@@ -158,12 +157,12 @@ define([
 
                 returnValue = LibArrowAPI.getOrderStatus();
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
             }
 
             return returnValue;
@@ -189,6 +188,7 @@ define([
                 if (!objOrderResponse.OrderDetails.length) throw 'Missing order details';
 
                 var orderResp = objOrderResponse.OrderDetails[0];
+                var orderDate, arrowSONum;
                 if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
                 if (orderResp.hasOwnProperty('Reseller')) {
                     orderDate = orderResp.Reseller.PODate;
@@ -250,23 +250,23 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Process Response',
                     error: error,
                     recordId: CURRENT.recordId
                 });
 
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !VC_Util.isEmpty(returnValue)
+                    body: !vc_util.isEmpty(returnValue)
                         ? JSON.stringify(returnValue)
                         : '-no lines to process-',
                     recordId: CURRENT.recordId,
-                    status: VC_Global.Lists.VC_LOG_STATUS.INFO
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
             }
 
@@ -292,12 +292,12 @@ define([
 
                 returnValue = this.processResponse({ response: responseBody });
             } catch (error) {
-                VC_Util.vcLog({
+                vc_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw VC_Util.extractError(error);
+                throw vc_util.extractError(error);
             }
 
             return returnValue;

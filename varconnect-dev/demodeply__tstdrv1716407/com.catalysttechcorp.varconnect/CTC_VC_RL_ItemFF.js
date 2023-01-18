@@ -201,8 +201,7 @@ define(function (require) {
                     if (OrderLines[i].ship_qty == 0) {
                         log.audit(
                             logTitle,
-                            vc_util.getUsage() +
-                                (LogPrefix + '......skipped: No items to ship.')
+                            vc_util.getUsage() + (LogPrefix + '......skipped: No items to ship.')
                         );
                         Helper.addToResponse({
                             orderNum: OrderLines[i].order_numm,

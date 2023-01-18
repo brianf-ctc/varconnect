@@ -15,11 +15,11 @@
 define(function (require) {
     var nsSearch = require('N/search'),
         currentRecord = require('N/currentRecord'),
-        constants = require('./CTC_VC_Constants.js'),
         vc_util = require('./CTC_VC2_Lib_Utils.js'),
         libVendorConfig = require('./CTC_VC_Lib_VendorConfig.js'),
         libWebService = require('./CTC_VC_Lib_WebService.js'),
-        vcGlobals = require('./VC_Globals.js');
+        vc2_constant = require('./CTC_VC2_Constants.js');
+
     var hljs = require('./highlight/highlight.js'),
         hljsXml = require('./highlight/languages/xml.min.js'),
         hljsJson = require('./highlight/languages/json.min.js');
@@ -37,7 +37,7 @@ define(function (require) {
 
     function _getPODetails(poNum) {
         var columns = [nsSearch.createColumn({ name: 'entity' })];
-        if (vcGlobals.ENABLE_SUBSIDIARIES)
+        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
             columns.push(nsSearch.createColumn({ name: 'subsidiary' }));
 
         var poObj = {},
@@ -55,12 +55,10 @@ define(function (require) {
         var searchResultCount = purchaseorderSearchObj.runPaged().count;
         log.debug('purchaseorderSearchObj result count', searchResultCount);
         purchaseorderSearchObj.run().each(function (result) {
-            if (vcGlobals.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
+                poObj['subsidiary'] = result.getValue('subsidiary');
             poObj['vendor'] = result.getValue('entity');
             poObj['id'] = result.id;
-            // ?
-            //            if (vcGlobals.ENABLE_SUBSIDIARIES)
-            //            	poObj['subsidiary'] = result.getValue('subsidiary');
 
             return false;
         });
@@ -130,8 +128,8 @@ define(function (require) {
                                     poId: objPO.id,
                                     country:
                                         vendorConfig.country == 'CA'
-                                            ? constants.Lists.COUNTRY.CA
-                                            : constants.Lists.COUNTRY.US,
+                                            ? vc2_constant.LIST.COUNTRY.CA
+                                            : vc2_constant.LIST.COUNTRY.US,
                                     countryCode: vendorConfig.country
                                 });
                             } catch (processErr) {
@@ -154,7 +152,7 @@ define(function (require) {
                             if (outputObj) {
                                 if (
                                     vendorConfig.xmlVendor ==
-                                    constants.Lists.XML_VENDOR.INGRAM_MICRO
+                                    vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO
                                 ) {
                                     xmlContent =
                                         '<!--Retrieved XML-->\n' +
@@ -164,38 +162,38 @@ define(function (require) {
                                     try {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
                                     } catch (parseErr) {
                                         xmlContent = JSON.stringify(outputObj);
                                         xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                         elementIdToShow = 'custpage_json__viewer';
                                         elementIdToHide = 'custpage_xml__viewer';
                                     }
                                 } else if (
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.ARROW ||
-                                    vendorConfig.xmlVendor == constants.Lists.XML_VENDOR.DELL ||
+                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
+                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
                                     vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.SYNNEX_API ||
+                                        vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
                                     vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_API ||
+                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_API ||
                                     vendorConfig.xmlVendor ==
-                                        constants.Lists.XML_VENDOR.INGRAM_MICRO_V_ONE
+                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_V_ONE
                                 ) {
                                     xmlContent = JSON.stringify(outputObj);
                                     try {
                                         xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'JSON'
-                                        }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
                                         else xmlContent = '<pre>' + xmlContent + '</pre>';
 
                                         elementIdToShow = 'custpage_json__viewer';
@@ -203,9 +201,9 @@ define(function (require) {
                                     } catch (parseErr) {
                                         xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                        xmlContent = hljs.highlight(xmlContent, {
-                                            language: 'xml'
-                                        }).value;
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
                                         else xmlContent = '<pre>' + xmlContent + '</pre>';
                                         elementIdToShow = 'custpage_xml__viewer';
                                         elementIdToHide = 'custpage_json__viewer';
@@ -216,9 +214,9 @@ define(function (require) {
                                         try {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
                                             else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
@@ -226,9 +224,9 @@ define(function (require) {
                                             xmlContent = JSON.stringify(outputObj);
                                             xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
                                             else xmlContent = '<pre>' + xmlContent + '</pre>';
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
@@ -238,17 +236,17 @@ define(function (require) {
                                         try {
                                             xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'JSON'
-                                            }).value;
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
                                             elementIdToShow = 'custpage_json__viewer';
                                             elementIdToHide = 'custpage_xml__viewer';
                                         } catch (parseErr) {
                                             xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                            xmlContent = hljs.highlight(xmlContent, {
-                                                language: 'xml'
-                                            }).value;
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
                                             elementIdToShow = 'custpage_xml__viewer';
                                             elementIdToHide = 'custpage_json__viewer';
                                         }
@@ -299,8 +297,8 @@ define(function (require) {
                         poId: objPO.id,
                         country:
                             vendorConfig.country == 'CA'
-                                ? constants.Lists.COUNTRY.CA
-                                : constants.Lists.COUNTRY.US,
+                                ? vc2_constant.LIST.COUNTRY.CA
+                                : vc2_constant.LIST.COUNTRY.US,
                         countryCode: vendorConfig.country
                     });
                 } catch (processErr) {

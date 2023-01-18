@@ -22,11 +22,10 @@
  */
 define([
     'N/runtime',
-    './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_runtime, vcGlobal, vcLog, vc2Utils, libMoment) {
+    './CTC_VC2_Constants.js'
+], function (ns_runtime, vc_log, vc2_util, vc2_constant) {
     'use strict';
     var LogTitle = 'WS:Dellv2';
 
@@ -37,7 +36,7 @@ define([
 
             log.audit(logTitle, option);
 
-            var tokenReq = vc2Utils.sendRequest({
+            var tokenReq = vc2_util.sendRequest({
                 header: [LogTitle, 'GenerateToken'].join(' '),
                 method: 'POST',
                 query: {
@@ -45,7 +44,7 @@ define([
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: vc2Utils.convertToQuery({
+                    body: vc2_util.convertToQuery({
                         client_id: option.vendorConfig.apiKey,
                         client_secret: option.vendorConfig.apiSecret,
                         grant_type: 'client_credentials'
@@ -57,7 +56,7 @@ define([
             });
 
             if (tokenReq.isError && tokenReq.errorMsg) throw tokenReq.errorMsg;
-            var tokenResp = vc2Utils.safeParse(tokenReq.RESPONSE);
+            var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
 
             if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
             return tokenResp.access_token;
@@ -88,7 +87,7 @@ define([
                 log.audit(logTitle, '>> orderLines: ' + JSON.stringify(orderLines));
             }
 
-            if (!orderLines || vc2Utils.isEmpty(orderLines)) throw 'No lines to processed';
+            if (!orderLines || vc2_util.isEmpty(orderLines)) throw 'No lines to processed';
             returnValue = orderLines;
 
             return returnValue;
@@ -111,7 +110,7 @@ define([
                 });
                 if (!tokenId) throw 'Missing token for authentication';
 
-                var orderStatusReq = vc2Utils.sendRequest({
+                var orderStatusReq = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' '),
                     method: 'post',
                     query: {
@@ -135,18 +134,19 @@ define([
 
                 if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
 
-                var orderStatusResp = vc2Utils.safeParse(orderStatusReq.RESPONSE);
+                var orderStatusResp = vc2_util.safeParse(orderStatusReq.RESPONSE);
                 if (!orderStatusResp) throw 'Unable to fetch Order Status';
 
                 option.responseBody = orderStatusResp;
                 returnValue = orderStatusResp;
             } catch (error) {
-                var errorMsg = vc2Utils.extractError(error);
-                vcLog.recordLog({
+                var errorMsg = vc2_util.extractError(error);
+
+                vc_log.recordLog({
                     header: [LogTitle + ': Error', errorMsg].join(' - '),
                     body: JSON.stringify(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
                     isDebugMode: option.fromDebug
                 });
                 if (!returnValue) returnValue = errorMsg;
@@ -165,8 +165,8 @@ define([
             var validShippedStatus = ['SHIPPED', 'DELIVERED'];
 
             try {
-                if (vc2Utils.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
-                if (vc2Utils.isEmpty(option.responseBody.purchaseOrderDetails))
+                if (vc2_util.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
+                if (vc2_util.isEmpty(option.responseBody.purchaseOrderDetails))
                     throw 'Missing Purchase Order Details';
 
                 var arrPODetails = option.responseBody.purchaseOrderDetails;
@@ -174,12 +174,12 @@ define([
                 var orderLines = [];
 
                 arrPODetails.forEach(function (poDetails) {
-                    if (vc2Utils.isEmpty(poDetails.dellOrders)) return false;
+                    if (vc2_util.isEmpty(poDetails.dellOrders)) return false;
                     poDetails.dellOrders.forEach(function (dellOrder) {
                         log.audit(logTitle, '>> dell order: ' + JSON.stringify(dellOrder));
 
                         var orderStatus = dellOrder.orderStatus.toUpperCase();
-                        if (vc2Utils.inArray(orderStatus, validShippedStatus)) {
+                        if (vc2_util.inArray(orderStatus, validShippedStatus)) {
                             var lineData = {};
 
                             /// get the lines
@@ -223,11 +223,11 @@ define([
             } catch (error) {
                 log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
 
-                vcLog.recordLog({
+                vc_log.recordLog({
                     header: [LogTitle, 'Processing'].join(' | ') + ' - ERROR',
-                    body: vc2Utils.extractError(error),
+                    body: vc2_util.extractError(error),
                     transaction: option.poId,
-                    status: vcGlobal.Lists.VC_LOG_STATUS.ERROR,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
                     isDebugMode: option.fromDebug
                 });
             } finally {

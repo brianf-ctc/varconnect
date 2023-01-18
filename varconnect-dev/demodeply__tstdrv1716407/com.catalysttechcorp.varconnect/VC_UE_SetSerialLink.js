@@ -31,10 +31,9 @@ define([
     'N/config',
     'N/search',
     'N/url',
-    './VC_Globals.js',
-    './CTC_VC_Lib_Utilities.js',
-    './CTC_VC_Constants.js'
-], function (record, runtime, error, config, search, url, vcGlobals, util, constants) {
+    './CTC_VC2_Constants',
+    './CTC_VC2_Lib_Utils'
+], function (ns_record, ns_runtime, ns_error, ns_config, ns_search, ns_url, vc2_global, vc2_util) {
     //        vcGlobals.SN_LINE_FIELD_LINK_ID
     var LogTitle = 'SetSerialLink';
 
@@ -44,7 +43,7 @@ define([
 
         try {
             if (context.type != context.UserEventType.VIEW) return false;
-            if (context.newRecord.type != record.Type.ITEM_FULFILLMENT) return false;
+            if (context.newRecord.type != ns_record.Type.ITEM_FULFILLMENT) return false;
 
             var lineCount = context.newRecord.getLineCount({ sublistId: 'item' });
             log.debug(logTitle, '>> Total lines: ' + lineCount);
@@ -136,8 +135,8 @@ define([
                     line: i
                 }));
 **/
-                var fieldLookUp = search.lookupFields({
-                    type: search.Type.ITEM,
+                var fieldLookUp = ns_search.lookupFields({
+                    type: ns_search.Type.ITEM,
                     id: itemId,
                     columns: ['itemid']
                 });
@@ -145,7 +144,7 @@ define([
 
                 // + '&compid='+accountId
                 //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-                var lineLinkUrl = util.generateSerialLink({
+                var lineLinkUrl = vc2_util.generateSerialLink({
                     transType: currentType,
                     transId: currentID,
                     itemId: itemId,
@@ -158,7 +157,7 @@ define([
                 });
                 current_rec.setSublistValue({
                     sublistId: 'item',
-                    fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
+                    fieldId: vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID,
                     line: i,
                     value: lineLinkUrl
                 });
@@ -173,7 +172,7 @@ define([
             var currentID = context.newRecord.id;
             var currentType = context.newRecord.type;
 
-            var current_rec = record.load({
+            var current_rec = ns_record.load({
                 type: currentType,
                 id: currentID,
                 isDynamic: false
@@ -201,8 +200,8 @@ define([
                 });
                 log.debug('itemtype', itemType);
                 if (itemType == 'EndGroup') continue;
-                var fieldLookUp = search.lookupFields({
-                    type: search.Type.ITEM,
+                var fieldLookUp = ns_search.lookupFields({
+                    type: ns_search.Type.ITEM,
                     id: itemId,
                     columns: ['itemid']
                 });
@@ -210,7 +209,7 @@ define([
 
                 // + '&compid='+accountId
                 //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-                var lineLinkUrl = util.generateSerialLink({
+                var lineLinkUrl = vc2_util.generateSerialLink({
                     transType: currentType,
                     transId: currentID,
                     itemId: itemId,
@@ -223,7 +222,7 @@ define([
                 });
                 current_rec.setSublistValue({
                     sublistId: 'item',
-                    fieldId: vcGlobals.SN_LINE_FIELD_LINK_ID,
+                    fieldId: vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID,
                     line: i,
                     value: lineLinkUrl
                 });

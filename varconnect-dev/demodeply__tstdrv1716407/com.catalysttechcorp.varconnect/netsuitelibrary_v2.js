@@ -37,18 +37,8 @@ define([
     'N/config',
     'N/format',
     './CTC_VC2_Lib_Utils',
-    './VC_Globals.js',
-    './CTC_VC_Constants.js'
-], function (
-    ns_search,
-    ns_runtime,
-    ns_record,
-    ns_config,
-    ns_format,
-    vc_util,
-    vc_global,
-    vc_constants
-) {
+    './CTC_VC2_Constants.js'
+], function (ns_search, ns_runtime, ns_record, ns_config, ns_format, vc_util, vc2_constant) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -323,7 +313,7 @@ define([
             logTitle,
             vc_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData)
         );
-        var vendorList = vc_constants.Lists.XML_VENDOR;
+        var vendorList = vc2_constant.LIST.XML_VENDOR;
 
         try {
             if (itemNum == null || itemNum.length == 0 || itemNum == 'NA')
@@ -339,14 +329,14 @@ define([
 
                 var tempItemNum = po_record.getSublistText({
                     sublistId: 'item',
-                    fieldId: vc_global.ITEM_ID_LOOKUP_COL,
+                    fieldId: vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                     line: line
                 });
 
-                var tempVendorSKU = vc_global.VENDOR_SKU_LOOKUP_COL
+                var tempVendorSKU = vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                     ? po_record.getSublistText({
                           sublistId: 'item',
-                          fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                          fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                           line: line
                       })
                     : null;
@@ -375,7 +365,7 @@ define([
                     //D&H Item replacement
                     var dAndhItem = po_record.getSublistValue({
                         sublistId: 'item',
-                        fieldId: vc_constants.Columns.DH_MPN,
+                        fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                         line: line
                     });
 
@@ -427,8 +417,7 @@ define([
         ) {
             if (
                 ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0 ||
-                (currentFieldValue.indexOf(xmlVal) < 0 &&
-                    xmlVal != 'NA')
+                (currentFieldValue.indexOf(xmlVal) < 0 && xmlVal != 'NA')
             ) {
                 var newFieldValue = null;
                 // some fields should just be overwritten
@@ -691,7 +680,7 @@ define([
                 for (var x = i + 1; x < lineItemCount; x++) {
                     var tempSubItem = po_record.getSublistText({
                         sublistId: 'item',
-                        fieldId: vc_global.ITEM_ID_LOOKUP_COL,
+                        fieldId: vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                         line: x
                     });
 
