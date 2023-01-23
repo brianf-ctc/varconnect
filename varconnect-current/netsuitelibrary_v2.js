@@ -96,10 +96,7 @@ define([
             var isDropPO = po_record.getValue({ fieldId: 'custbody_isdropshippo' });
 
             checkForDuplicateItems(po_record);
-            log.audit(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> lineData = ' + JSON.stringify(lineData)
-            );
+            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
 
             //4.01
             if (!dateFormat) {
@@ -107,10 +104,7 @@ define([
                     type: ns_config.Type.COMPANY_PREFERENCES
                 });
                 dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                log.audit(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat)
-                );
+                log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
             }
 
             if (lineData.header_info) {
@@ -152,10 +146,7 @@ define([
 
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() +
-                            LogPrefix +
-                            '>> lineData: ' +
-                            JSON.stringify([line_num, lineData[i]])
+                        vc_util.getUsage() + LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
                     );
 
                     if (line_num == null) {
@@ -181,11 +172,7 @@ define([
                     });
 
                     updateField(po_record, 'custcol_ctc_xml_dist_order_num', lineData[i].order_num);
-                    updateField(
-                        po_record,
-                        'custcol_ctc_xml_date_order_placed',
-                        lineData[i].order_date
-                    );
+                    updateField(po_record, 'custcol_ctc_xml_date_order_placed', lineData[i].order_date);
                     updateField(po_record, 'custcol_ctc_xml_eta', lineData[i].order_eta);
 
                     var nsDate = parseDate({ dateString: lineData[i].order_date });
@@ -202,16 +189,9 @@ define([
                         //updateFieldList (lineData[i].serial_num, po_record, 'custcol_ctc_xml_serial_num', line_num);
                     }
 
-                    if (
-                        lineData[i].order_status &&
-                        lineData[i].line_status &&
-                        lineData[i].line_status != 'NA'
-                    ) {
+                    if (lineData[i].order_status && lineData[i].line_status && lineData[i].line_status != 'NA') {
                         lineData[i].order_status =
-                            'Order: ' +
-                            lineData[i].order_status +
-                            '\nItem: ' +
-                            lineData[i].line_status;
+                            'Order: ' + lineData[i].order_status + '\nItem: ' + lineData[i].line_status;
                         mapLineOrderStatus[lineNum + ''] = lineData[i].order_status;
                     }
                     updateField(po_record, 'custcol_ctc_xml_carrier', lineData[i].carrier);
@@ -224,17 +204,8 @@ define([
                     updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
 
                     if (isDropPO || !mainConfig.useInboundTrackingNumbers)
-                        updateFieldList(
-                            lineData[i].tracking_num,
-                            po_record,
-                            'custcol_ctc_xml_tracking_num'
-                        );
-                    else
-                        updateFieldList(
-                            lineData[i].tracking_num,
-                            po_record,
-                            'custcol_ctc_xml_inb_tracking_num'
-                        );
+                        updateFieldList(lineData[i].tracking_num, po_record, 'custcol_ctc_xml_tracking_num');
+                    else updateFieldList(lineData[i].tracking_num, po_record, 'custcol_ctc_xml_inb_tracking_num');
 
                     po_record.commitLine({
                         sublistId: 'item'
@@ -242,10 +213,7 @@ define([
                 } catch (line_error) {
                     log.error(
                         logTitle,
-                        vc_util.getUsage() +
-                            LogPrefix +
-                            '## LINE ERROR ## ' +
-                            JSON.stringify(line_error)
+                        vc_util.getUsage() + LogPrefix + '## LINE ERROR ## ' + JSON.stringify(line_error)
                     );
                     vc_util.vcLog({
                         title: 'Update Record Line',
@@ -267,10 +235,7 @@ define([
             }
             return returnValue;
         } catch (err) {
-            log.error(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(err)
-            );
+            log.error(logTitle, vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
 
             vc_util.vcLog({
                 title: 'Update Record',
@@ -309,15 +274,11 @@ define([
             xmlVendor = option.xmlVendor;
 
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        log.audit(
-            logTitle,
-            vc_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData)
-        );
+        log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData));
         var vendorList = vc2_constant.LIST.XML_VENDOR;
 
         try {
-            if (itemNum == null || itemNum.length == 0 || itemNum == 'NA')
-                throw 'Item number is missing';
+            if (itemNum == null || itemNum.length == 0 || itemNum == 'NA') throw 'Item number is missing';
 
             var lineItemCount = po_record.getLineCount({ sublistId: 'item' });
             if (lineItemCount <= 0) throw 'No line items found';
@@ -348,17 +309,12 @@ define([
                 if (vendorSKU && tempVendorSKU && tempVendorSKU == vendorSKU) break;
 
                 //Ingram Hash replacement
-                if (
-                    hashSpace &&
-                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                        xmlVendor == vendorList.INGRAM_MICRO)
-                ) {
+                if (hashSpace && (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)) {
                     // check for itemNum
                     if (itemNum.replace('#', ' ') == tempItemNum) break;
 
                     // check vendor SKUI
-                    if (vendorSKU && tempVendorSKU && vendorSKU.replace('#', ' ') == tempVendorSKU)
-                        break;
+                    if (vendorSKU && tempVendorSKU && vendorSKU.replace('#', ' ') == tempVendorSKU) break;
                 }
 
                 if (xmlVendor == vendorList.DandH) {
@@ -378,10 +334,7 @@ define([
 
             returnValue = lineNotFound ? null : line;
         } catch (error) {
-            log.error(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(error)
-            );
+            log.error(logTitle, vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(error));
             returnValue = null;
         } finally {
             log.audit(logTitle, vc_util.getUsage() + LogPrefix + '// Line Number: ' + returnValue);
@@ -410,20 +363,14 @@ define([
         });
         // log.audit(logTitle, '>> currentFieldValue: ' + JSON.stringify(currentFieldValue));
 
-        if (
-            currentFieldValue != null &&
-            currentFieldValue.length > 0 &&
-            currentFieldValue != 'NA'
-        ) {
+        if (currentFieldValue != null && currentFieldValue.length > 0 && currentFieldValue != 'NA') {
             if (
                 ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0 ||
                 (currentFieldValue.indexOf(xmlVal) < 0 && xmlVal != 'NA')
             ) {
                 var newFieldValue = null;
                 // some fields should just be overwritten
-                if (
-                    ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0
-                ) {
+                if (['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0) {
                     // some fields should just be overwritten
                     newFieldValue = xmlVal;
                 } else if (
@@ -450,10 +397,7 @@ define([
                         fieldId: fieldID
                     });
 
-                    if (
-                        !returnedNewFieldValue ||
-                        (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)
-                    ) {
+                    if (!returnedNewFieldValue || (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)) {
                         po_record.setCurrentSublistValue({
                             sublistId: 'item',
                             fieldId: fieldID,
@@ -529,8 +473,7 @@ define([
                         currentNumbersList = newCurrent.split('\n');
 
                         /** check to see if the field already exceeds the max length **/
-                        if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
-                            errorFound = true;
+                        if (currentNumbersList[currentNumbersList.length - 1] === errorMsg) errorFound = true;
 
                         if (!errorFound) {
                             for (var j = 0; j < scannedNums.length; j++) {
@@ -544,10 +487,7 @@ define([
                                 if (!numFound && scannedNums[j] != 'NA') {
                                     /* OLD  newCurrent += ',' + scannedNums[j]; */
                                     newNumAdded = true;
-                                    if (
-                                        newCurrent.length + scannedNums[j].length <
-                                        maxFieldLength
-                                    ) {
+                                    if (newCurrent.length + scannedNums[j].length < maxFieldLength) {
                                         newCurrent += '\n' + scannedNums[j];
                                         currentNumbersList.push(scannedNums[j]);
                                     } else {
@@ -556,12 +496,7 @@ define([
                                     }
                                 }
                             }
-                            if (
-                                newNumAdded &&
-                                newCurrent &&
-                                newCurrent != null &&
-                                newCurrent != undefined
-                            ) {
+                            if (newNumAdded && newCurrent && newCurrent != null && newCurrent != undefined) {
                                 po_record.setCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: fieldID,
@@ -590,11 +525,7 @@ define([
                         }
                     }
                 } else {
-                    if (
-                        xmlNumbers.length <= maxFieldLength &&
-                        xmlNumbers != null &&
-                        xmlNumbers != undefined
-                    ) {
+                    if (xmlNumbers.length <= maxFieldLength && xmlNumbers != null && xmlNumbers != undefined) {
                         po_record.setCurrentSublistValue({
                             sublistId: 'item',
                             fieldId: fieldID,
@@ -638,10 +569,7 @@ define([
                     }
                 }
             } catch (err) {
-                log.error(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err)
-                );
+                log.error(logTitle, vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err));
             }
         }
     }
@@ -747,10 +675,7 @@ define([
                     }
                 }
             } catch (e) {
-                log.error(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e)
-                );
+                log.error(logTitle, vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e));
             }
         }
 

@@ -68,10 +68,7 @@ define(function (require) {
                 });
 
             if (!vendorConfig) {
-                log.audit(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
+                log.audit(logTitle, 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName);
             }
 
             log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));

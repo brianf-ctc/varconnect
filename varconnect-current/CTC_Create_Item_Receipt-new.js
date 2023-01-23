@@ -92,7 +92,7 @@ define([
             ///////////////////////////////////////////////////
             // Collect unique the Item Receipts orders from the response
             log.debug(logTitle, LogPrefix + '**** Looking for unique orders: ' + OrderLines.length);
-            
+
             for (var j = 0; j < receiptOrders.length; j++) {
                 // skip any existing orders
                 if (Helper.orderExists(Current.NumPrefix + receiptOrders[j])) {
@@ -105,10 +105,7 @@ define([
                 for (var x = 0; x < Current.OrderLines.length; x++) {
                     if (receiptOrders[j] !== Current.OrderLines[x].order_num) continue;
 
-                    log.audit(
-                        logTitle,
-                        '... verifying line data: ' + JSON.stringify(Current.OrderLines[x])
-                    );
+                    log.audit(logTitle, '... verifying line data: ' + JSON.stringify(Current.OrderLines[x]));
                     if (
                         Current.OrderLines[x].hasOwnProperty('is_shipped') &&
                         Current.OrderLines[x].is_shipped === false
@@ -120,10 +117,7 @@ define([
                     log.audit(logTitle, '... adding to receipt lines');
                     receiptLines.push(Current.OrderLines[x]);
                 }
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> receiptLines = ' + JSON.stringify(receiptLines)
-                );
+                log.audit(logTitle, LogPrefix + '>> receiptLines = ' + JSON.stringify(receiptLines));
                 if (!receiptLines.length) {
                     log.audit(logTitle, LogPrefix + '** No items to receive ** ');
                     continue;
@@ -248,27 +242,17 @@ define([
                         uniqueItems.push(el);
                     } else {
                         for (var uniqueIndex = 0; uniqueIndex < uniqueItems.length; uniqueIndex++) {
-                            if (
-                                receiptLines[itemCnt].item_num == uniqueItems[uniqueIndex].item_num
-                            ) {
-                                uniqueItems[uniqueIndex].totalShipped += parseInt(
-                                    receiptLines[itemCnt].ship_qty
-                                );
+                            if (receiptLines[itemCnt].item_num == uniqueItems[uniqueIndex].item_num) {
+                                uniqueItems[uniqueIndex].totalShipped += parseInt(receiptLines[itemCnt].ship_qty);
 
                                 var tempTrackingNums = Array();
                                 tempTrackingNums = receiptLines[itemCnt].tracking_num.split(',');
-                                for (
-                                    var tnIndex = 0;
-                                    tnIndex < tempTrackingNums.length;
-                                    tnIndex++
-                                ) {
+                                for (var tnIndex = 0; tnIndex < tempTrackingNums.length; tnIndex++) {
                                     if (
-                                        uniqueItems[uniqueIndex].all_tracking_nums.indexOf(
-                                            tempTrackingNums[tnIndex]
-                                        ) < 0
+                                        uniqueItems[uniqueIndex].all_tracking_nums.indexOf(tempTrackingNums[tnIndex]) <
+                                        0
                                     ) {
-                                        uniqueItems[uniqueIndex].all_tracking_nums +=
-                                            tempTrackingNums[tnIndex] + '\n';
+                                        uniqueItems[uniqueIndex].all_tracking_nums += tempTrackingNums[tnIndex] + '\n';
                                     }
                                 }
 
@@ -277,12 +261,9 @@ define([
                                     tempSerials = receiptLines[itemCnt].serial_num.split(',');
                                     for (var snIndex = 0; snIndex < tempSerials.length; snIndex++) {
                                         if (
-                                            uniqueItems[uniqueIndex].all_serial_nums.indexOf(
-                                                tempSerials[snIndex]
-                                            ) < 0
+                                            uniqueItems[uniqueIndex].all_serial_nums.indexOf(tempSerials[snIndex]) < 0
                                         ) {
-                                            uniqueItems[uniqueIndex].all_serial_nums +=
-                                                tempSerials[snIndex] + '\n';
+                                            uniqueItems[uniqueIndex].all_serial_nums += tempSerials[snIndex] + '\n';
                                         }
                                     }
                                 }
@@ -330,8 +311,7 @@ define([
                         for (var tmp2 = 0; tmp2 < uniqueItems.length; tmp2++) {
                             if (
                                 currItemNum == uniqueItems[tmp2].item_num ||
-                                (currVendorSKU != '' &&
-                                    currVendorSKU == uniqueItems[tmp2].vendorSKU)
+                                (currVendorSKU != '' && currVendorSKU == uniqueItems[tmp2].vendorSKU)
                             ) {
                                 if (currItemQty < parseInt(uniqueItems[tmp2].totalShipped)) {
                                     uniqueItems[tmp2].totalShipped -= parseInt(currItemQty);
@@ -367,21 +347,15 @@ define([
                                         if (uniqueItems[tmp2].all_serial_nums.length > 0) {
                                             var tempSerials = '';
                                             var tempSerials2 = '';
-                                            var snSplit =
-                                                uniqueItems[tmp2].all_serial_nums.split('\n');
-                                            for (
-                                                var tempCount = 0;
-                                                tempCount < snSplit.length;
-                                                tempCount++
-                                            ) {
+                                            var snSplit = uniqueItems[tmp2].all_serial_nums.split('\n');
+                                            for (var tempCount = 0; tempCount < snSplit.length; tempCount++) {
                                                 if (tempCount < parseInt(currItemQty))
                                                     tempSerials += snSplit.shift() + '\n';
                                                 else break;
                                             }
                                             // reset Unique serial nums to whatever is left after processing current line
                                             for (var i2 = 0; i2 < snSplit.length; i2++) {
-                                                if (snSplit[i2].length > 0)
-                                                    tempSerials2 += snSplit[i2] + '\n';
+                                                if (snSplit[i2].length > 0) tempSerials2 += snSplit[i2] + '\n';
                                             }
                                             uniqueItems[tmp2].all_serial_nums = tempSerials2;
 
@@ -439,10 +413,7 @@ define([
                                         objRecord.setCurrentSublistValue({
                                             sublistId: 'item',
                                             fieldId: 'custcol_ctc_xml_serial_num',
-                                            value: uniqueItems[tmp2].all_serial_nums.substr(
-                                                0,
-                                                _TEXT_AREA_MAX_LENGTH
-                                            )
+                                            value: uniqueItems[tmp2].all_serial_nums.substr(0, _TEXT_AREA_MAX_LENGTH)
                                         });
                                     }
                                     uniqueItems[tmp2].totalShipped = 0;
@@ -461,10 +432,7 @@ define([
                     sublistId: 'item'
                 });
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + ' >> Before Item receipt save: lineItemCountX' + lineItemCountX
-                );
+                log.audit(logTitle, LogPrefix + ' >> Before Item receipt save: lineItemCountX' + lineItemCountX);
 
                 for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
                     var found = false;
@@ -532,9 +500,7 @@ define([
 
                         log.audit(
                             logTitle,
-                            LogPrefix +
-                                'Before Item receipt save : ' +
-                                ('Item line count = ' + lineItemCountX)
+                            LogPrefix + 'Before Item receipt save : ' + ('Item line count = ' + lineItemCountX)
                         );
 
                         objId = objRecord.save({
@@ -553,10 +519,7 @@ define([
                         });
                     }
 
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '## Created Item Receipt: [itemreceipt:' + objId + ']'
-                    );
+                    log.audit(logTitle, LogPrefix + '## Created Item Receipt: [itemreceipt:' + objId + ']');
 
                     Helper.logMsg({
                         title: 'Create Item Receipt',
@@ -567,9 +530,7 @@ define([
                     var errMsg = VC_Util.extractError(err);
                     log.error(
                         logTitle,
-                        LogPrefix +
-                            ('## Item Receipt Error:  ' + errMsg) +
-                            ('|  Details: ' + JSON.stringify(err))
+                        LogPrefix + ('## Item Receipt Error:  ' + errMsg) + ('|  Details: ' + JSON.stringify(err))
                     );
                     Helper.logMsg({
                         error: err,
@@ -583,16 +544,12 @@ define([
             var errorMsg = Helper.extractError(error);
             log.error(
                 logTitle,
-                Helper.getUsage() +
-                    (LogPrefix + '## ERROR:  ' + errorMsg + '| Details: ' + JSON.stringify(error))
+                Helper.getUsage() + (LogPrefix + '## ERROR:  ' + errorMsg + '| Details: ' + JSON.stringify(error))
             );
             Helper.logMsg({ title: logTitle + ':: Error', error: error });
             return false;
         } finally {
-            log.debug(
-                logTitle,
-                Helper.getUsage() + '############ ITEM RECEIPT CREATION: END ############'
-            );
+            log.debug(logTitle, Helper.getUsage() + '############ ITEM RECEIPT CREATION: END ############');
         }
     }
 
@@ -675,10 +632,7 @@ define([
                     }
                 });
             }
-            log.audit(
-                logTitle,
-                LogPrefix + 'is Valid PO Date ? ' + JSON.stringify([po_ID, isValid])
-            );
+            log.audit(logTitle, LogPrefix + 'is Valid PO Date ? ' + JSON.stringify([po_ID, isValid]));
 
             return isValid;
         },
@@ -702,10 +656,7 @@ define([
                 foundId = result.id;
             });
 
-            log.audit(
-                logTitle,
-                LogPrefix + '.... is Order Exists ? ' + JSON.stringify([transID, foundId, found])
-            );
+            log.audit(logTitle, LogPrefix + '.... is Order Exists ? ' + JSON.stringify([transID, foundId, found]));
 
             return found;
         },
@@ -809,8 +760,7 @@ define([
                 outputString += '\n   Qty    : ' + line.totalShipped;
                 var serials;
                 if (typeof line.all_serial_nums == 'string') serials = line.all_serial_nums;
-                else if (typeof line.all_serial_nums == 'object')
-                    serials = line.all_serial_nums.join(',');
+                else if (typeof line.all_serial_nums == 'object') serials = line.all_serial_nums.join(',');
                 outputString += '\n   Serials: ' + serials;
             }
 

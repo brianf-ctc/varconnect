@@ -30,9 +30,7 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                         if (xml.attributes.length)
                             // element with attributes  ..
                             for (var i = 0; i < xml.attributes.length; i++)
-                                o['@' + xml.attributes[i].nodeName] = (
-                                    xml.attributes[i].nodeValue || ''
-                                ).toString();
+                                o['@' + xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue || '').toString();
                         if (xml.firstChild) {
                             // element has child nodes ..
                             var textChild = 0,
@@ -40,10 +38,7 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                                 hasElementChild = false;
                             for (var n = xml.firstChild; n; n = n.nextSibling) {
                                 if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
-                                else if (
-                                    n.nodeType == NodeType.TEXT &&
-                                    n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                                )
+                                else if (n.nodeType == NodeType.TEXT && n.nodeValue.match(/[^ \f\n\r\t\v]/))
                                     textChild++;
                                 // non-whitespace text
                                 else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
@@ -94,13 +89,10 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                 toJson: function (o, name, ind) {
                     var json = name ? '"' + name + '"' : '';
                     if (o instanceof Array) {
-                        for (var i = 0, n = o.length; i < n; i++)
-                            o[i] = X.toJson(o[i], '', ind + '');
+                        for (var i = 0, n = o.length; i < n; i++) o[i] = X.toJson(o[i], '', ind + '');
                         json +=
                             (name ? ':[' : '[') +
-                            (o.length > 1
-                                ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
-                                : o.join('')) +
+                            (o.length > 1 ? '' + ind + '' + o.join(',' + ind + '') + '' + ind : o.join('')) +
                             ']';
                     } else if (o == null) json += (name && ':') + 'null';
                     else if (typeof o == 'object') {
@@ -108,12 +100,9 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                         for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                         json +=
                             (name ? ':{' : '{') +
-                            (arr.length > 1
-                                ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
-                                : arr.join('')) +
+                            (arr.length > 1 ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind : arr.join('')) +
                             '}';
-                    } else if (typeof o == 'string')
-                        json += (name && ':') + '"' + o.toString() + '"';
+                    } else if (typeof o == 'string') json += (name && ':') + '"' + o.toString() + '"';
                     else json += (name && ':') + o.toString();
                     return json;
                 },
@@ -138,8 +127,7 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
                                     s += '</' + n.nodeName + '>';
                                 } else s += '/>';
                             } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
-                            else if (n.nodeType == NodeType.CDATA)
-                                s += '<![CDATA[' + n.nodeValue + ']]>';
+                            else if (n.nodeType == NodeType.CDATA) s += '<![CDATA[' + n.nodeValue + ']]>';
                             return s;
                         };
                         for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);

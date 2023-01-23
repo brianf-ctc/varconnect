@@ -20,12 +20,12 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/xml',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (ns_xml, vc_log, vc2_constant, vc_util) {
+define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
+    ns_xml,
+    vc_log,
+    vc2_constant,
+    vc_util
+) {
     var LogTitle = 'WS:Synnex';
 
     var CURRENT = {};
@@ -51,9 +51,7 @@ define([
                             ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
                             '</Credential>' +
                             '<OrderStatusRequest>' +
-                            ('<CustomerNumber>' +
-                                CURRENT.vendorConfig.customerNo +
-                                '</CustomerNumber>') +
+                            ('<CustomerNumber>' + CURRENT.vendorConfig.customerNo + '</CustomerNumber>') +
                             ('<PONumber>' + CURRENT.recordNum + '</PONumber>') +
                             '</OrderStatusRequest>' +
                             '</SynnexB2B>',
@@ -108,9 +106,7 @@ define([
 
                 vc_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
+                    body: !vc_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
@@ -216,19 +212,13 @@ define([
                                             switch (packageChildNodes[z].nodeName) {
                                                 case 'TrackingNumber':
                                                     if (itemRow.tracking_num === 'NA')
-                                                        itemRow.tracking_num =
-                                                            packageChildNodes[z].textContent;
-                                                    else
-                                                        itemRow.tracking_num +=
-                                                            ',' + packageChildNodes[z].textContent;
+                                                        itemRow.tracking_num = packageChildNodes[z].textContent;
+                                                    else itemRow.tracking_num += ',' + packageChildNodes[z].textContent;
                                                     break;
                                                 case 'SerialNo':
                                                     if (itemRow.serial_num === 'NA')
-                                                        itemRow.serial_num =
-                                                            packageChildNodes[z].textContent;
-                                                    else
-                                                        itemRow.serial_num +=
-                                                            ',' + packageChildNodes[z].textContent;
+                                                        itemRow.serial_num = packageChildNodes[z].textContent;
+                                                    else itemRow.serial_num += ',' + packageChildNodes[z].textContent;
                                                     break;
                                             }
                                         }

@@ -28,10 +28,7 @@ define(['N/record', './../CTC_VC2_Lib_Utils'], function (ns_record, vc_util) {
                 var lineToProcess = context.lineToProcess;
 
                 log.debug(logTitle, LogPrefix + ' // vcSerial:  ' + JSON.stringify(vcSerial));
-                log.debug(
-                    logTitle,
-                    LogPrefix + ' // lineToProcess:  ' + JSON.stringify(lineToProcess)
-                );
+                log.debug(logTitle, LogPrefix + ' // lineToProcess:  ' + JSON.stringify(lineToProcess));
 
                 for (var i = 0; i < vcSerial.lines[lineToProcess].serials.length; i++) {
                     var serialRec = ns_record.create({

@@ -117,10 +117,7 @@ define([
 
             try {
                 checkForDuplicateItems(po_record);
-                log.debug(
-                    'netsuiteLibrary:afterCheckForDups',
-                    'lineData = ' + JSON.stringify(lineData)
-                );
+                log.debug('netsuiteLibrary:afterCheckForDups', 'lineData = ' + JSON.stringify(lineData));
 
                 //4.01
                 if (!dateFormat) {
@@ -150,21 +147,12 @@ define([
                             line: line_num
                         });
 
-                        updateField(
-                            po_record,
-                            'custcol_ctc_xml_dist_order_num',
-                            lineData[i].order_num
-                        );
-                        updateField(
-                            po_record,
-                            'custcol_ctc_xml_date_order_placed',
-                            lineData[i].order_date
-                        );
+                        updateField(po_record, 'custcol_ctc_xml_dist_order_num', lineData[i].order_num);
+                        updateField(po_record, 'custcol_ctc_xml_date_order_placed', lineData[i].order_date);
                         updateField(po_record, 'custcol_ctc_xml_eta', lineData[i].order_eta);
 
                         var nsDate = parseDate({ dateString: lineData[i].order_date });
-                        if (nsDate)
-                            updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
+                        if (nsDate) updateField(po_record, 'custcol_ctc_vc_order_placed_date', nsDate);
                         nsDate = parseDate({ dateString: lineData[i].order_eta });
                         if (nsDate) updateField(po_record, 'custcol_ctc_vc_eta_date', nsDate);
 
@@ -175,24 +163,11 @@ define([
                         }
 
                         updateFieldList(lineData[i].carrier, po_record, 'custcol_ctc_xml_carrier');
-                        updateFieldList(
-                            lineData[i].ship_date,
-                            po_record,
-                            'custcol_ctc_xml_ship_date'
-                        );
+                        updateFieldList(lineData[i].ship_date, po_record, 'custcol_ctc_xml_ship_date');
 
                         if (isDropPO || !mainConfig.useInboundTrackingNumbers)
-                            updateFieldList(
-                                lineData[i].tracking_num,
-                                po_record,
-                                'custcol_ctc_xml_tracking_num'
-                            );
-                        else
-                            updateFieldList(
-                                lineData[i].tracking_num,
-                                po_record,
-                                'custcol_ctc_xml_inb_tracking_num'
-                            );
+                            updateFieldList(lineData[i].tracking_num, po_record, 'custcol_ctc_xml_tracking_num');
+                        else updateFieldList(lineData[i].tracking_num, po_record, 'custcol_ctc_xml_inb_tracking_num');
 
                         po_record.commitLine({
                             sublistId: 'item'
@@ -274,8 +249,7 @@ define([
                         //Ingram Hash replacement
                         if (
                             hashSpace &&
-                            (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                                xmlVendor == vendorList.INGRAM_MICRO)
+                            (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
                         ) {
                             if (vendorSKU.replace('#', ' ') == tempVendorSKU) {
                                 log.debug('matched vendor sku for line ' + i);
@@ -289,8 +263,7 @@ define([
                     //Ingram Hash replacement
                     if (
                         hashSpace &&
-                        (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                            xmlVendor == vendorList.INGRAM_MICRO)
+                        (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
                     ) {
                         if (itemNum.replace('#', ' ') == tempItemNum) return i;
                     }
@@ -325,16 +298,8 @@ define([
         });
         log.debug('netsuiteLibrary:updateField:currentFieldValue', currentFieldValue);
 
-        if (
-            currentFieldValue != null &&
-            currentFieldValue.length > 0 &&
-            currentFieldValue != 'NA'
-        ) {
-            if (
-                currentFieldValue.indexOf(xmlVal) < 0 &&
-                currentFieldValue.length < maxFieldLength &&
-                xmlVal != 'NA'
-            ) {
+        if (currentFieldValue != null && currentFieldValue.length > 0 && currentFieldValue != 'NA') {
+            if (currentFieldValue.indexOf(xmlVal) < 0 && currentFieldValue.length < maxFieldLength && xmlVal != 'NA') {
                 currentFieldValue += '\n' + xmlVal;
 
                 po_record.setCurrentSublistValue({
@@ -363,10 +328,7 @@ define([
         var errorMsg = 'Maximum Field Length Exceeded';
         var errorFound = false;
         var maxFieldLength = 3950;
-        log.debug(
-            'netsuiteLibrary:updateFieldList',
-            'field=' + fieldID + ' - xmlval ' + xmlNumbers
-        );
+        log.debug('netsuiteLibrary:updateFieldList', 'field=' + fieldID + ' - xmlval ' + xmlNumbers);
 
         // split up the comma delimited line data into arrays for easier processing
         if (xmlNumbers && xmlNumbers != null && xmlNumbers != undefined) {
@@ -410,8 +372,7 @@ define([
                         currentNumbersList = newCurrent.split('\n');
 
                         /** check to see if the field already exceeds the max length **/
-                        if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
-                            errorFound = true;
+                        if (currentNumbersList[currentNumbersList.length - 1] === errorMsg) errorFound = true;
 
                         if (!errorFound) {
                             for (var j = 0; j < scannedNums.length; j++) {
@@ -425,10 +386,7 @@ define([
                                 if (!numFound && scannedNums[j] != 'NA') {
                                     /* OLD  newCurrent += ',' + scannedNums[j]; */
                                     newNumAdded = true;
-                                    if (
-                                        newCurrent.length + scannedNums[j].length <
-                                        maxFieldLength
-                                    ) {
+                                    if (newCurrent.length + scannedNums[j].length < maxFieldLength) {
                                         newCurrent += '\n' + scannedNums[j];
                                         currentNumbersList.push(scannedNums[j]);
                                     } else {
@@ -437,12 +395,7 @@ define([
                                     }
                                 }
                             }
-                            if (
-                                newNumAdded &&
-                                newCurrent &&
-                                newCurrent != null &&
-                                newCurrent != undefined
-                            ) {
+                            if (newNumAdded && newCurrent && newCurrent != null && newCurrent != undefined) {
                                 po_record.setCurrentSublistValue({
                                     sublistId: 'item',
                                     fieldId: fieldID,
@@ -471,11 +424,7 @@ define([
                         }
                     }
                 } else {
-                    if (
-                        xmlNumbers.length <= maxFieldLength &&
-                        xmlNumbers != null &&
-                        xmlNumbers != undefined
-                    ) {
+                    if (xmlNumbers.length <= maxFieldLength && xmlNumbers != null && xmlNumbers != undefined) {
                         po_record.setCurrentSublistValue({
                             sublistId: 'item',
                             fieldId: fieldID,

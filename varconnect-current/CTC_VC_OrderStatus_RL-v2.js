@@ -55,14 +55,7 @@ define(function (request) {
                 });
                 Current.poData = util_record.extractValues({
                     record: Current.recordPO,
-                    fields: [
-                        'tranid',
-                        'trandate',
-                        'subsidiary',
-                        'entity',
-                        'dropshipso',
-                        'custbody_ctc_po_link_type'
-                    ]
+                    fields: ['tranid', 'trandate', 'subsidiary', 'entity', 'dropshipso', 'custbody_ctc_po_link_type']
                 });
                 log.debug(logTitle, LogPrefix + Current.poData);
 
@@ -73,8 +66,7 @@ define(function (request) {
                 if (!Current.VendorCFG) throw 'Missing Vendor Config';
 
                 Current.isDropPO =
-                    Current.poData.dropshipso ||
-                    Current.poData.custbody_ctc_po_link_type == 'Drop Shipment';
+                    Current.poData.dropshipso || Current.poData.custbody_ctc_po_link_type == 'Drop Shipment';
 
                 // TODO: create new websvc lib
                 var outputObj = vc_websvc.process({
@@ -92,10 +84,7 @@ define(function (request) {
                 log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
 
                 // if there are no lines.. just exit the script
-                if (
-                    !outputObj.itemArray ||
-                    (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-                ) {
+                if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info)) {
                     throw 'No line items to process';
                 }
 
@@ -107,10 +96,7 @@ define(function (request) {
                     mainConfig: Current.MainCFG,
                     vendorConfig: Current.VendorCFG
                 });
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> Update status: ' + JSON.stringify(updateStatus)
-                );
+                log.debug(logTitle, LogPrefix + '>> Update status: ' + JSON.stringify(updateStatus));
 
                 Current.soId = updateStatus && updateStatus.id;
 
@@ -191,10 +177,7 @@ define(function (request) {
                 });
 
             if (!vendorConfig) {
-                log.audit(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
+                log.audit(logTitle, 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName);
             }
 
             log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
@@ -249,11 +232,7 @@ define(function (request) {
                             })
                     );
 
-                    if (
-                        mainConfig.processDropships &&
-                        vendorConfig.processDropships &&
-                        mainConfig.createIF
-                    ) {
+                    if (mainConfig.processDropships && vendorConfig.processDropships && mainConfig.createIF) {
                         fulfillmentData = vc_itemfflib.updateItemFulfillments({
                             mainConfig: mainConfig,
                             vendorConfig: vendorConfig,
@@ -275,17 +254,12 @@ define(function (request) {
                             '>> Item Receipt Creation Settings << ' +
                             JSON.stringify({
                                 'mainConfig.processSpecialOrders': mainConfig.processSpecialOrders,
-                                'vendorConfig.processSpecialOrders':
-                                    vendorConfig.processSpecialOrders,
+                                'vendorConfig.processSpecialOrders': vendorConfig.processSpecialOrders,
                                 'mainConfig.createIR': mainConfig.createIR
                             })
                     );
 
-                    if (
-                        mainConfig.processSpecialOrders &&
-                        vendorConfig.processSpecialOrders &&
-                        mainConfig.createIR
-                    ) {
+                    if (mainConfig.processSpecialOrders && vendorConfig.processSpecialOrders && mainConfig.createIR) {
                         fulfillmentData = vc_itemrcpt.updateIR({
                             mainConfig: mainConfig,
                             vendorConfig: vendorConfig,
@@ -294,18 +268,12 @@ define(function (request) {
                             vendor: vendor
                         });
                     } else {
-                        log.audit(
-                            logTitle,
-                            LogPrefix + '*** Item Receipt Creation not allowed ***'
-                        );
+                        log.audit(logTitle, LogPrefix + '*** Item Receipt Creation not allowed ***');
                     }
                     /////////////////////////////////////////////
                 }
             } catch (e) {
-                log.error(
-                    logTitle,
-                    LogPrefix + 'Error creating fulfillment/receipt : ' + JSON.stringify(e)
-                );
+                log.error(logTitle, LogPrefix + 'Error creating fulfillment/receipt : ' + JSON.stringify(e));
 
                 vc_log.recordLog({
                     header: 'Fulfillment/Receipt Creation | Error',

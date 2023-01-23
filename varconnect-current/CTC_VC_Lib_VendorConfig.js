@@ -18,11 +18,7 @@
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  */
-define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
-    ns_search,
-    vc2_constant,
-    vc2_util
-) {
+define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (ns_search, vc2_constant, vc2_util) {
     var LogTitle = 'VendorCFG',
         LogPrefix = LogPrefix || '';
 

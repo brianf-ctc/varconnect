@@ -18,13 +18,7 @@
  * Script Name: CTC_VC_Lib_Jenne
  * Author: shawn.blackburn
  */
-define(['N/log', 'N/https', './CTC_VC_Lib_Log.js', 'N/xml', 'N/email'], function (
-    log,
-    https,
-    vcLog,
-    xml,
-    email
-) {
+define(['N/log', 'N/https', './CTC_VC_Lib_Log.js', 'N/xml', 'N/email'], function (log, https, vcLog, xml, email) {
     'use strict';
 
     /**
@@ -102,8 +96,8 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js', 'N/xml', 'N/email'], function
             });
 
             var responseBody =
-                j['soap:Body'].AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result
-                    .AdvanceShipNotices.AdvanceShipNotice_v2;
+                j['soap:Body'].AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result.AdvanceShipNotices
+                    .AdvanceShipNotice_v2;
 
             log.debug({
                 title: 'Response Body',

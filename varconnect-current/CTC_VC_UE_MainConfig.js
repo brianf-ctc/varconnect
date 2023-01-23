@@ -21,12 +21,12 @@
  *
  */
 
-define([
-    'N/runtime',
-    'N/ui/serverWidget',
-    './CTC_VC2_Constants.js',
-    './CTC_VC_Lib_LicenseValidator'
-], function (ns_runtime, ns_ui, vc2_constant, vc_license) {
+define(['N/runtime', 'N/ui/serverWidget', './CTC_VC2_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
+    ns_runtime,
+    ns_ui,
+    vc2_constant,
+    vc_license
+) {
     var LogTitle = 'MainCFG';
 
     var MAINCFG = vc2_constant.RECORD.MAIN_CONFIG;
@@ -108,26 +108,17 @@ define([
                 });
 
             log.debug(logTitle, '>> isProcessDropship: ' + JSON.stringify(isProcessDropship));
-            log.debug(
-                logTitle,
-                '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder)
-            );
+            log.debug(logTitle, '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder));
 
             if (!isProcessDropship)
                 _disableAndClearFields({
                     form: scriptContext.form,
-                    fields: [
-                        MAINCFG.FIELD.CREATE_ITEM_FULFILLMENTS,
-                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS
-                    ]
+                    fields: [MAINCFG.FIELD.CREATE_ITEM_FULFILLMENTS, MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS]
                 });
             if (!isProcessSpecialOrder)
                 _disableAndClearFields({
                     form: scriptContext.form,
-                    fields: [
-                        MAINCFG.FIELD.CREATE_ITEM_RECEIPTS,
-                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS
-                    ]
+                    fields: [MAINCFG.FIELD.CREATE_ITEM_RECEIPTS, MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS]
                 });
         }
         if (

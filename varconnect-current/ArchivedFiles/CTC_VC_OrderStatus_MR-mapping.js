@@ -133,8 +133,7 @@ define([
             var docnum = searchResult.values.tranid;
             var tranDate = searchResult.values.trandate;
             var isDropPO =
-                searchResult.values.custbody_isdropshippo == 'F' ||
-                !searchResult.values.custbody_isdropshippo
+                searchResult.values.custbody_isdropshippo == 'F' || !searchResult.values.custbody_isdropshippo
                     ? false
                     : true;
             var vendor = searchResult.values.entity.value;
@@ -231,10 +230,7 @@ define([
                     };
 
                     var fulfillmentData = Helper.processDropshipsAndSpecialOrders(params);
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> fulfillmentData: ' + JSON.stringify(fulfillmentData)
-                    );
+                    log.debug(logTitle, LogPrefix + '>> fulfillmentData: ' + JSON.stringify(fulfillmentData));
                 }
                 // logXML(outputObj.xmlString);
                 // logRowObjects(outputObj.itemArray);
@@ -265,10 +261,7 @@ define([
                         });
                         return true;
                     });
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments)
-                    );
+                    log.debug(logTitle, LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments));
 
                     var arrReceipts = [];
                     var ifSearch = search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
@@ -285,10 +278,7 @@ define([
                         });
                         return true;
                     });
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts)
-                    );
+                    log.debug(logTitle, LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts));
 
                     log.debug(logTitle, LogPrefix + '>> lineData: ' + JSON.stringify(lineData));
 
@@ -306,10 +296,7 @@ define([
 
                             if (isDropPO && mainConfig.processDropships) {
                                 for (var x = 0; x < arrFulfillments.length; x++) {
-                                    if (
-                                        arrFulfillments[x].num ==
-                                        numPrefix + lineData[i].order_num
-                                    ) {
+                                    if (arrFulfillments[x].num == numPrefix + lineData[i].order_num) {
                                         fulfillmentNum = arrFulfillments[x].id;
                                         break;
                                     }
@@ -330,13 +317,7 @@ define([
                             if (serialArray) {
                                 for (var j = 0; j < serialArray.length; j++) {
                                     if (serialArray[j] == '') continue;
-                                    var key =
-                                        'IF' +
-                                        fulfillmentNum +
-                                        '|IR' +
-                                        receiptNum +
-                                        '|IT' +
-                                        lineData[i].item_num;
+                                    var key = 'IF' + fulfillmentNum + '|IR' + receiptNum + '|IT' + lineData[i].item_num;
                                     //line serials
                                     //									contextM.write(key, {'docid': docid, 'itemnum': lineData[i].item_num, 'custid':custID, 'orderNum': fulfillmentNum, 'receiptNum': receiptNum, serial: serialArray[j]});
                                     //old
@@ -385,8 +366,7 @@ define([
             var itemId = '';
             var vendor = po_record.getValue({ fieldId: 'entity' });
             var subsidiary = null;
-            if (vcGlobals.ENABLE_SUBSIDIARIES)
-                subsidiary = po_record.getValue({ fieldId: 'subsidiary' });
+            if (vcGlobals.ENABLE_SUBSIDIARIES) subsidiary = po_record.getValue({ fieldId: 'subsidiary' });
 
             var mainConfig = _loadMainConfig();
             var vendorConfig = _loadVendorConfig({
@@ -479,10 +459,7 @@ define([
             } else if (rs.length == 1) {
                 log.debug(logTitle, LogPrefix + ' >> Matching serial found');
             } else {
-                log.debug(
-                    logTitle,
-                    LogPrefix + ' >> Multiple Duplicates ' + JSON.stringify(rs.length)
-                );
+                log.debug(logTitle, LogPrefix + ' >> Multiple Duplicates ' + JSON.stringify(rs.length));
                 // log.debug('xml app v2: error duplicates');
             }
         }
@@ -521,9 +498,7 @@ define([
                 transaction: option.tranId || option.transactionId,
                 header: [LogTitle, option.title ? '::' + option.title : null].join(''),
                 body:
-                    option.message ||
-                    option.note ||
-                    (option.error ? util.extractError(option.error) : option.errorMsg),
+                    option.message || option.note || (option.error ? util.extractError(option.error) : option.errorMsg),
                 status:
                     option.status ||
                     (option.error || option.isError
@@ -576,9 +551,7 @@ define([
             });
 
         if (!vendorConfig) {
-            log.error(
-                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
-            );
+            log.error('No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary);
         } else return vendorConfig;
     };
 
@@ -596,12 +569,7 @@ define([
             fulfillmentData;
 
         try {
-            if (
-                mainConfig.processDropships &&
-                vendorConfig.processDropships &&
-                mainConfig.createIF &&
-                isDropPO
-            ) {
+            if (mainConfig.processDropships && vendorConfig.processDropships && mainConfig.createIF && isDropPO) {
                 fulfillmentData = createIF.updateIF({
                     mainConfig: mainConfig,
                     vendorConfig: vendorConfig,

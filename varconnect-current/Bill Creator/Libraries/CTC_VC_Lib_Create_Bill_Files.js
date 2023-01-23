@@ -83,9 +83,7 @@ define([
             } finally {
                 log.audit(
                     logTitle,
-                    LogPrefix +
-                        ('Parsed Date [' + dateString + ']: ') +
-                        JSON.stringify([dateValue, typeof dateValue])
+                    LogPrefix + ('Parsed Date [' + dateString + ']: ') + JSON.stringify([dateValue, typeof dateValue])
                 );
             }
             return returnValue;
@@ -100,11 +98,7 @@ define([
                 type: 'purchaseorder',
                 filters: [
                     MainConfig.overridePONum
-                        ? [
-                              ['numbertext', 'is', poName],
-                              'OR',
-                              ['custbody_ctc_vc_override_ponum', 'is', poName]
-                          ]
+                        ? [['numbertext', 'is', poName], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poName]]
                         : ['numbertext', 'is', poName],
                     'AND',
                     ['mainline', 'is', 'T'],
@@ -287,10 +281,7 @@ define([
                 log.error(logTitle, '>> !! ERROR !! ' + util.extractError(e));
             }
         }
-        log.audit(
-            logTitle,
-            'Parsed Date :' + dateString + ' : ' + JSON.stringify([dateValue, typeof dateValue])
-        );
+        log.audit(logTitle, 'Parsed Date :' + dateString + ' : ' + JSON.stringify([dateValue, typeof dateValue]));
         // return date;
         //Convert to string
         if (dateValue) {
@@ -400,9 +391,7 @@ define([
                             columns: ['daysuntilnetdue']
                         }).daysuntilnetdue;
 
-                        dueDate = moment(currentOrder.date)
-                            .add(parseInt(daysToPay), 'days')
-                            .format('MM/DD/YYYY');
+                        dueDate = moment(currentOrder.date).add(parseInt(daysToPay), 'days').format('MM/DD/YYYY');
                     }
                 }
             }
@@ -433,11 +422,7 @@ define([
                             break;
                         }
                     }
-                    log.audit(
-                        logTitle,
-                        logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku)
-                    );
-
+                    log.audit(logTitle, logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku));
 
                     if (!matchedSku) {
                         matchedSku = Helper.isItemMatchRL({
@@ -446,13 +431,8 @@ define([
                             value: itemNo
                         });
 
-                        log.audit(
-                            logTitle,
-                            logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku)
-                        );
+                        log.audit(logTitle, logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku));
                     }
-
-
 
                     if (!matchedSku) {
                         billFileNotes.push('Not matched SKU: ' + itemNo);
@@ -463,10 +443,7 @@ define([
                     }
                 }
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
-                );
+                log.audit(logTitle, LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU));
 
                 if (arrMatchedSKU.length) {
                     billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);

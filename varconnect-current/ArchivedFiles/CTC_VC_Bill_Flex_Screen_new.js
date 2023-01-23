@@ -113,10 +113,7 @@ define([
                     });
                     log.audit('getItemName', itemLookup);
                     Helper.CACHE[cacheKey] = itemLookup.name;
-                    log.audit(
-                        'getItemName',
-                        '## Helper.CACHE[cacheKey] ##' + JSON.stringify(Helper.CACHE[cacheKey])
-                    );
+                    log.audit('getItemName', '## Helper.CACHE[cacheKey] ##' + JSON.stringify(Helper.CACHE[cacheKey]));
                 } catch (err) {
                     Helper.CACHE[cacheKey] = false;
                     log.audit('getItemName', '## ERROR ##' + JSON.stringify(err));
@@ -146,18 +143,12 @@ define([
 
             if (
                 Current.PO_DATA &&
-                vc2_util.inArray(Current.PO_DATA.statusRef, [
-                    'fullyBilled',
-                    'pendingReceipt',
-                    'closed'
-                ])
+                vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'pendingReceipt', 'closed'])
             ) {
                 // Current.WarnMessage.push(
                 //     'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
                 // );
-                Current.WarnMessage.push(
-                    'Purchase Order is not ready for billing: ' + Current.PO_DATA.statusText
-                );
+                Current.WarnMessage.push('Purchase Order is not ready for billing: ' + Current.PO_DATA.statusText);
                 returnValue = false;
             }
 
@@ -172,13 +163,9 @@ define([
                         });
                     } catch (bill_err) {
                         returnValue = false;
-                        log.audit(
-                            'isBillable',
-                            '>> ERROR Generating Bill Record: ' + vc2_util.extractError(bill_err)
-                        );
+                        log.audit('isBillable', '>> ERROR Generating Bill Record: ' + vc2_util.extractError(bill_err));
                         Current.ErrorMessage =
-                            'Unable to create Vendor Bill due to - ' +
-                            vc2_util.extractError(bill_err);
+                            'Unable to create Vendor Bill due to - ' + vc2_util.extractError(bill_err);
                     }
                 }
             }
@@ -205,8 +192,7 @@ define([
                     // if the PO is already fully billed
                     !Current.IS_BILLABLE ||
                     // bill file is already closed, but
-                    (!Current.BILLFILE_DATA.billLink &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
+                    (!Current.BILLFILE_DATA.billLink && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
                 ) {
                     returnValue = false;
                 }
@@ -281,8 +267,7 @@ define([
             }
 
             for (var lineItem in objLineItems) {
-                objLineItems[lineItem].amount =
-                    objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
+                objLineItems[lineItem].amount = objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
 
                 objLineItems[lineItem].amount = vc2_util.roundOff(objLineItems[lineItem].amount);
                 objLineItems[lineItem].taxAmount = Helper.calculateLineTax(objLineItems[lineItem]);
@@ -316,8 +301,7 @@ define([
                 var taxData = {};
 
                 if (objLineItems[lineItem].taxrate || objLineItems[lineItem].taxrate1) {
-                    taxData.taxrate1 =
-                        objLineItems[lineItem].taxrate || objLineItems[lineItem].taxrate1;
+                    taxData.taxrate1 = objLineItems[lineItem].taxrate || objLineItems[lineItem].taxrate1;
                 }
 
                 if (objLineItems[lineItem].taxrate2) {
@@ -405,8 +389,7 @@ define([
                         label: 'Bill Quantity',
                         type: ns_ui.FieldType.CURRENCY,
                         displayType:
-                            Current.IS_ACTIVE_EDIT &&
-                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                     },
@@ -430,8 +413,7 @@ define([
                         type: ns_ui.FieldType.CURRENCY,
                         label: 'Bill Rate',
                         displayType:
-                            Current.IS_ACTIVE_EDIT &&
-                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                     },
@@ -493,8 +475,7 @@ define([
                         id: 'applied',
                         type: ns_ui.FieldType.CHECKBOX,
                         displayType:
-                            Current.IS_ACTIVE_EDIT &&
-                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE,
                         label: 'Apply'
@@ -525,8 +506,7 @@ define([
                         type: ns_ui.FieldType.SELECT,
                         label: 'PO Item',
                         displayType:
-                            Current.IS_ACTIVE_EDIT &&
-                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE,
                         selectOptions: arrItemOptions
@@ -543,8 +523,7 @@ define([
                         label: 'Amount',
                         totallingField: true,
                         displayType:
-                            Current.IS_ACTIVE_EDIT &&
-                            Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                     },
@@ -592,11 +571,9 @@ define([
                     if (!vc2_util.isEmpty(Current.BILL_DATA.varianceLines)) {
                         Current.BILL_DATA.varianceLines.forEach(function (varianceValue) {
                             if (varianceValue.type == 'miscCharges') {
-                                if (!lineValues[varianceValue.type])
-                                    lineValues[varianceValue.type] = {};
+                                if (!lineValues[varianceValue.type]) lineValues[varianceValue.type] = {};
 
-                                lineValues[varianceValue.type][varianceValue.description] =
-                                    varianceValue;
+                                lineValues[varianceValue.type][varianceValue.description] = varianceValue;
                             } else {
                                 lineValues[varianceValue.type] = varianceValue;
                             }
@@ -769,9 +746,7 @@ define([
                         if (values) {
                             taxVariance.applied = true;
                             taxVariance.nsitem = values.item;
-                            taxVariance.amount = Current.IS_ACTIVE_RECALC
-                                ? Total.deltaTax
-                                : parseFloat(values.rate);
+                            taxVariance.amount = Current.IS_ACTIVE_RECALC ? Total.deltaTax : parseFloat(values.rate);
                         } else {
                             taxVariance.applied = Total.deltaTax != 0;
                             taxVariance.amount = Total.deltaTax;
@@ -872,12 +847,7 @@ define([
 
                 returnRec = ns_record.transform(option);
             } catch (err) {
-                throw (
-                    'Unable to transform record: ' +
-                    vc2_util.extractError(err) +
-                    '\n' +
-                    JSON.stringify(option)
-                );
+                throw 'Unable to transform record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         },
@@ -889,12 +859,7 @@ define([
 
                 returnRec = ns_record.load(option);
             } catch (err) {
-                throw (
-                    'Unable to load record: ' +
-                    vc2_util.extractError(err) +
-                    '\n' +
-                    JSON.stringify(option)
-                );
+                throw 'Unable to load record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         }
@@ -1150,9 +1115,7 @@ define([
                         label: 'PO Link',
                         source: 'transaction',
                         container: 'fg_po',
-                        displayType: Current.BILLFILE_DATA.linkedPO
-                            ? ns_ui.FieldDisplayType.INLINE
-                            : false,
+                        displayType: Current.BILLFILE_DATA.linkedPO ? ns_ui.FieldDisplayType.INLINE : false,
                         defaultValue: values.custpage_polink
                     },
                     {
@@ -1589,9 +1552,7 @@ define([
                     id: 'nsitem',
                     type: ns_ui.FieldType.SELECT,
                     label: 'NS Item',
-                    displayType: Current.IS_ACTIVE_EDIT
-                        ? ns_ui.FieldDisplayType.ENTRY
-                        : ns_ui.FieldDisplayType.INLINE
+                    displayType: Current.IS_ACTIVE_EDIT ? ns_ui.FieldDisplayType.ENTRY : ns_ui.FieldDisplayType.INLINE
                     // selectOptions: arrItemOptions
                 },
                 fqty: {
@@ -1599,8 +1560,7 @@ define([
                     label: 'Bill Quantity',
                     type: ns_ui.FieldType.CURRENCY,
                     displayType:
-                        Current.IS_ACTIVE_EDIT &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                        Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                             ? ns_ui.FieldDisplayType.ENTRY
                             : ns_ui.FieldDisplayType.INLINE
                 },
@@ -1624,8 +1584,7 @@ define([
                     type: ns_ui.FieldType.CURRENCY,
                     label: 'Bill Rate',
                     displayType:
-                        Current.IS_ACTIVE_EDIT &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                        Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                             ? ns_ui.FieldDisplayType.ENTRY
                             : ns_ui.FieldDisplayType.INLINE
                 },
@@ -1662,8 +1621,7 @@ define([
                     id: 'applied',
                     type: ns_ui.FieldType.CHECKBOX,
                     displayType:
-                        Current.IS_ACTIVE_EDIT &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                        Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                             ? ns_ui.FieldDisplayType.ENTRY
                             : ns_ui.FieldDisplayType.INLINE,
                     label: 'Apply'
@@ -1694,8 +1652,7 @@ define([
                     type: ns_ui.FieldType.SELECT,
                     label: 'PO Item',
                     displayType:
-                        Current.IS_ACTIVE_EDIT &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                        Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                             ? ns_ui.FieldDisplayType.ENTRY
                             : ns_ui.FieldDisplayType.INLINE
                     // selectOptions: arrItemOptions
@@ -1712,8 +1669,7 @@ define([
                     label: 'Amount',
                     totallingField: true,
                     displayType:
-                        Current.IS_ACTIVE_EDIT &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
+                        Current.IS_ACTIVE_EDIT && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.VARIANCE
                             ? ns_ui.FieldDisplayType.ENTRY
                             : ns_ui.FieldDisplayType.INLINE
                 },
@@ -1876,9 +1832,7 @@ define([
 
             Current.BILL_DATA = JSON.parse(Current.BILLFILE_DATA.billJson);
             ['shipping', 'other', 'tax'].forEach(function (chargeType) {
-                Current.BILL_DATA.charges[chargeType] = parseFloat(
-                    Current.BILL_DATA.charges[chargeType] || '0.00'
-                );
+                Current.BILL_DATA.charges[chargeType] = parseFloat(Current.BILL_DATA.charges[chargeType] || '0.00');
                 return true;
             });
 
@@ -1906,10 +1860,7 @@ define([
             }
             //////////////////////////
 
-            log.debug(
-                logTitle,
-                '>> Current.BILLFILE_DATA: ' + JSON.stringify(Current.BILLFILE_DATA)
-            );
+            log.debug(logTitle, '>> Current.BILLFILE_DATA: ' + JSON.stringify(Current.BILLFILE_DATA));
 
             //////////////////////////
             Current.ErrorMessage = '';

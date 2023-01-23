@@ -60,11 +60,7 @@ define([
 
                 // todo: add error response from ingram
                 if (!tokenResp || !tokenResp.access_token)
-                    throw (
-                        'Unable to generate access token!' +
-                        '\n Details: ' +
-                        JSON.stringify(tokenResp)
-                    );
+                    throw 'Unable to generate access token!' + '\n Details: ' + JSON.stringify(tokenResp);
 
                 LibIngramAPI.ACCESS_TOKEN = tokenResp.access_token;
                 returnValue = tokenResp.access_token;
@@ -87,10 +83,7 @@ define([
                     header: [LogTitle, 'Order Status'].join(' : '),
                     recordId: option.recordId,
                     query: {
-                        url:
-                            option.vendorConfig.endPoint +
-                            '/search?customerOrderNumber=' +
-                            option.tranId,
+                        url: option.vendorConfig.endPoint + '/search?customerOrderNumber=' + option.tranId,
                         headers: {
                             Authorization: 'Bearer ' + token,
                             Accept: 'application/json',
@@ -228,9 +221,7 @@ define([
                 vcLog.recordLog({
                     header: [LogTitle, ' Lines'].join(' - '),
                     body: [
-                        vc2Utils.isEmpty(arrayLines)
-                            ? ' - No lines to process - '
-                            : arrayLines.length,
+                        vc2Utils.isEmpty(arrayLines) ? ' - No lines to process - ' : arrayLines.length,
                         JSON.stringify(arrayLines)
                     ].join(' -- '),
                     transaction: option.poId,

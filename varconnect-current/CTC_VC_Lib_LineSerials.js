@@ -20,11 +20,7 @@
  * Build
  *
  */
-define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
-    ns_record,
-    ns_search,
-    vc2_constant
-) {
+define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (ns_record, ns_search, vc2_constant) {
     var SERIALFLD = vc2_constant.RECORD.SERIALS.FIELD;
 
     function processSerials(options) {
@@ -103,11 +99,7 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                 var values = [];
 
                 if (serialId) {
-                    lineIdLoop: for (
-                        ;
-                        lineIdCounter < txnLineNumbers.idList.length;
-                        lineIdCounter++
-                    ) {
+                    lineIdLoop: for (; lineIdCounter < txnLineNumbers.idList.length; lineIdCounter++) {
                         var lineId = txnLineNumbers.idList[lineIdCounter],
                             qty = txnLineNumbers[lineId],
                             count = existingSerialCounts[lineId];
@@ -180,17 +172,10 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                     });
 
                     //Get Field information per transaction type, line quantity, and serial count per line
-                    for (
-                        var txnTypeCounter = 0;
-                        txnTypeCounter < txnList.length;
-                        txnTypeCounter++
-                    ) {
+                    for (var txnTypeCounter = 0; txnTypeCounter < txnList.length; txnTypeCounter++) {
                         var txnType = txnList[txnTypeCounter],
                             txnId = txnIds[txnType];
-                        log.debug(
-                            'loop count ' + txnTypeCounter,
-                            'txnType' + txnType + ' txnId' + txnId
-                        );
+                        log.debug('loop count ' + txnTypeCounter, 'txnType' + txnType + ' txnId' + txnId);
 
                         //Transaction Field Ids on serial record grouped by transaction type
                         if (!allFields[txnType]) {
@@ -227,10 +212,7 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                                 txnType: txnType,
                                 fields: allFields[txnType]
                             });
-                            log.debug(
-                                'existingSerialCounts[txnType]',
-                                existingSerialCounts[txnType]
-                            );
+                            log.debug('existingSerialCounts[txnType]', existingSerialCounts[txnType]);
                         }
                         /* {
                          * 		lineId: count

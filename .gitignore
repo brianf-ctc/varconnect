@@ -1,3 +1,4 @@
 .files
 *.bak
 *.zip
+.DS_Store

@@ -78,9 +78,7 @@ define([
             if (orderDetails.miscCharges && orderDetails.miscCharges[orderKey]) {
                 log.audit(
                     logTitle,
-                    LogPrefix +
-                        '>> misc charge: ' +
-                        JSON.stringify(orderDetails.miscCharges[orderKey])
+                    LogPrefix + '>> misc charge: ' + JSON.stringify(orderDetails.miscCharges[orderKey])
                 );
 
                 invoiceData.xmlStr = JSON.stringify({
@@ -95,13 +93,9 @@ define([
                     if (chargeInfo.description) {
                         if (chargeInfo.description.match(/freight/gi)) {
                             // add it to as shipping charge
-                            invoiceData.ordObj.charges.shipping += vc_util.parseFloat(
-                                chargeInfo.amount
-                            );
+                            invoiceData.ordObj.charges.shipping += vc_util.parseFloat(chargeInfo.amount);
                         } else {
-                            invoiceData.ordObj.charges.other += vc_util.parseFloat(
-                                chargeInfo.amount
-                            );
+                            invoiceData.ordObj.charges.other += vc_util.parseFloat(chargeInfo.amount);
                         }
                     } else {
                         invoiceData.ordObj.charges.other += vc_util.parseFloat(chargeInfo.amount);
@@ -170,15 +164,12 @@ define([
                     }
                 });
 
-                var searchOrderResp =
-                    searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
+                var searchOrderResp = searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
 
                 if (searchOrderReq.isError || vc_util.isEmpty(searchOrderResp)) {
                     throw (
                         searchOrderReq.errorMsg +
-                        (searchOrderReq.details
-                            ? '\n' + JSON.stringify(searchOrderReq.details)
-                            : '')
+                        (searchOrderReq.details ? '\n' + JSON.stringify(searchOrderReq.details) : '')
                     );
                 }
 
@@ -294,15 +285,12 @@ define([
                     }
                 });
 
-                var orderDetailsResp =
-                    orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
+                var orderDetailsResp = orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
 
                 if (orderDetailsReq.isError || vc_util.isEmpty(orderDetailsReq)) {
                     throw (
                         orderDetailsReq.errorMsg +
-                        (orderDetailsReq.details
-                            ? '\n' + JSON.stringify(orderDetailsReq.details)
-                            : '')
+                        (orderDetailsReq.details ? '\n' + JSON.stringify(orderDetailsReq.details) : '')
                     );
                 }
 
@@ -313,8 +301,7 @@ define([
                     log.audit(logTitle, LogPrefix + '>> chargeInfo: ' + JSON.stringify(chargeInfo));
 
                     if (!chargeInfo.subOrderNumber) continue;
-                    if (!objMischCharges[chargeInfo.subOrderNumber])
-                        objMischCharges[chargeInfo.subOrderNumber] = [];
+                    if (!objMischCharges[chargeInfo.subOrderNumber]) objMischCharges[chargeInfo.subOrderNumber] = [];
 
                     objMischCharges[chargeInfo.subOrderNumber].push({
                         description: chargeInfo.chargeDescription,
@@ -374,22 +361,16 @@ define([
                     }
                 });
 
-                var invoiceDetailsResp =
-                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+                var invoiceDetailsResp = invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
                 if (invoiceDetailsReq.isError || vc_util.isEmpty(invoiceDetailsResp)) {
                     throw (
                         invoiceDetailsReq.errorMsg +
-                        (invoiceDetailsReq.details
-                            ? '\n' + JSON.stringify(invoiceDetailsReq.details)
-                            : '')
+                        (invoiceDetailsReq.details ? '\n' + JSON.stringify(invoiceDetailsReq.details) : '')
                     );
                 }
 
-                if (
-                    !invoiceDetailsResp.serviceresponse ||
-                    !invoiceDetailsResp.serviceresponse.invoicedetailresponse
-                )
+                if (!invoiceDetailsResp.serviceresponse || !invoiceDetailsResp.serviceresponse.invoicedetailresponse)
                     continue;
 
                 var invoiceInfo = invoiceDetailsResp.serviceresponse.invoicedetailresponse,
@@ -409,14 +390,8 @@ define([
                         },
                         lines: []
                     };
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> Invoice Data (initial): ' + JSON.stringify(invoiceData)
-                );
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> Processing lines: ' + JSON.stringify(invoiceInfo.lines.length)
-                );
+                log.audit(logTitle, LogPrefix + '>> Invoice Data (initial): ' + JSON.stringify(invoiceData));
+                log.audit(logTitle, LogPrefix + '>> Processing lines: ' + JSON.stringify(invoiceInfo.lines.length));
 
                 for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
                     var lineInfo = invoiceInfo.lines[ii];
@@ -460,26 +435,20 @@ define([
                         ITEMNO: lineData.ITEMNO,
                         PRICE: vc_util.parseFloat(lineInfo.unitprice)
                     });
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '>> ...lineItemRate: ' + JSON.stringify(lineItemRate)
-                    );
+                    log.audit(logTitle, LogPrefix + '>> ...lineItemRate: ' + JSON.stringify(lineItemRate));
 
                     if (lineItemRate >= 0) {
                         // increment the quantity
                         invoiceData.lines[lineIdx].QUANTITY += lineData.QUANTITY;
 
                         if (!vc_util.isEmpty(lineData.SERIAL)) {
-                            if (!invoiceData.lines[lineIdx].SERIAL)
-                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
+                            if (!invoiceData.lines[lineIdx].SERIAL) invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
                             else
                                 invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL.concat(
                                     invoiceData.lines[lineIdx].SERIAL
                                 );
                             // trim unique serials
-                            invoiceData.lines[lineIdx].SERIAL = vc_util.uniqueArray(
-                                invoiceData.lines[lineIdx].SERIAL
-                            );
+                            invoiceData.lines[lineIdx].SERIAL = vc_util.uniqueArray(invoiceData.lines[lineIdx].SERIAL);
                         }
 
                         if (!vc_util.isEmpty(lineData.TRACKING)) {

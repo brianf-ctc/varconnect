@@ -21,7 +21,7 @@ define([
     'N/url',
     'N/file',
     './CTC_VC2_Lib_Utils'
-], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc_util) {
+], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
     var LogTitle = 'VC DebugTool';
     var searchUtil = {
         getAllResults: function (searchObject, maxResults) {
@@ -38,10 +38,7 @@ define([
                 resultSet = searchObject.run();
             }
             for (
-                var hasMore = true && resultSet.count !== 0,
-                    ctr = 0,
-                    i = 0,
-                    count = resultSet.count || ctr + 1000;
+                var hasMore = true && resultSet.count !== 0, ctr = 0, i = 0, count = resultSet.count || ctr + 1000;
                 hasMore && ctr < count;
                 i += 1, ctr += 1000
             ) {
@@ -74,7 +71,7 @@ define([
 
     var Helper = {
         getActiveVendors: function () {
-            var arrSeachResults = vc_util.searchAllPaged({
+            var arrSeachResults = vc2_util.searchAllPaged({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filterExpression: [['isinactive', 'is', 'F']],
                 columns: [
@@ -137,7 +134,7 @@ define([
 
                     var arrActiveVendors = Helper.getActiveVendors();
                     arrActiveVendors.forEach(function (vendorEntry) {
-                        if (!vc_util.isEmpty(Current.vendorConfigId)) {
+                        if (!vc2_util.isEmpty(Current.vendorConfigId)) {
                             vendorEntry.isSelected = Current.vendorConfigId == vendorEntry.value;
                         }
                         fldVendors.addSelectOption(vendorEntry);
@@ -194,7 +191,7 @@ define([
                             scriptId: ns_runtime.getCurrentScript().id,
                             deploymentId: ns_runtime.getCurrentScript().deploymentId
                         }),
-                        currentfolder: JSON.stringify(vc_util.getCurrentFolder())
+                        currentfolder: JSON.stringify(vc2_util.getCurrentFolder())
                     };
 
                     for (var fld in hiddenFields) {
@@ -324,9 +321,7 @@ define([
                 '<iframe id="custpage_xml_viewer_frame" srcdoc="',
                 '<html>',
                 '<head>',
-                xmlViewerStylesheet.url
-                    ? "<link rel='stylesheet' href='" + xmlViewerStylesheet.url + "'>"
-                    : '',
+                xmlViewerStylesheet.url ? "<link rel='stylesheet' href='" + xmlViewerStylesheet.url + "'>" : '',
                 '</head>',
                 '<body>',
                 "<pre id='custpage_xml__viewer' lang='xml'><code id='custpage_xml__viewer_content' class='language-xml' /></pre>",

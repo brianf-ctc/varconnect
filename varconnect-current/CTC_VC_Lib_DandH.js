@@ -19,13 +19,13 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
-define([
-    'N/search',
-    'N/xml',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
+define(['N/search', 'N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (
+    ns_search,
+    ns_xml,
+    vc_log,
+    vc2_util,
+    vc2_constant
+) {
     // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
@@ -221,8 +221,7 @@ define([
                                             })[0]
                                         );
                                         if (serialNum != null && serialNum.length > 0) {
-                                            if (xml_items.serial_num == 'NA')
-                                                xml_items.serial_num = serialNum;
+                                            if (xml_items.serial_num == 'NA') xml_items.serial_num = serialNum;
                                             else xml_items.serial_num += ',' + serialNum;
                                         }
                                     }
@@ -243,9 +242,7 @@ define([
                                     if (carrierService != null && carrierService.length > 0) {
                                         if (xml_items.carrier == 'NA')
                                             xml_items.carrier = carrier + ' - ' + carrierService;
-                                        else
-                                            xml_items.carrier +=
-                                                ',' + carrier + ' - ' + carrierService;
+                                        else xml_items.carrier += ',' + carrier + ' - ' + carrierService;
                                     } else {
                                         if (xml_items.carrier == 'NA') xml_items.carrier = carrier;
                                         else xml_items.carrier += ',' + carrier;
@@ -258,8 +255,7 @@ define([
                                     })[0]
                                 );
                                 if (trackingNum != null && trackingNum.length > 0) {
-                                    if (xml_items.tracking_num == 'NA')
-                                        xml_items.tracking_num = trackingNum;
+                                    if (xml_items.tracking_num == 'NA') xml_items.tracking_num = trackingNum;
                                     else xml_items.tracking_num += ',' + trackingNum;
                                 }
 
@@ -270,8 +266,7 @@ define([
                                     })[0]
                                 );
                                 if (dateShipped != null && dateShipped.length > 0) {
-                                    if (xml_items.ship_date == 'NA')
-                                        xml_items.ship_date = dateShipped;
+                                    if (xml_items.ship_date == 'NA') xml_items.ship_date = dateShipped;
                                     else xml_items.ship_date += ',' + dateShipped;
                                 }
                             }
@@ -285,11 +280,7 @@ define([
                             xml_items.is_shipped = true;
                         }
                         // else, an order with no PACKAGE node but is invoiced will contain non-inventory items
-                    } else if (
-                        !!invoice &&
-                        invoice.length > 0 &&
-                        invoice.toUpperCase() !== 'IN PROCESS'
-                    ) {
+                    } else if (!!invoice && invoice.length > 0 && invoice.toUpperCase() !== 'IN PROCESS') {
                         xml_items.is_shipped = true;
                     }
                     // if order status message is "IN PROCESS", then package/ship info is being waited on
@@ -340,9 +331,7 @@ define([
 
                 vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
