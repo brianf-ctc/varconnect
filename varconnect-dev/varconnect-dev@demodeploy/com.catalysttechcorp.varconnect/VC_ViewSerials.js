@@ -18,14 +18,14 @@
  *@NApiVersion 2.x
  *@NScriptType Suitelet
  */
-define([
-    'N/ui/serverWidget',
-    'N/search',
-    'N/record',
-    'N/url',
-    './CTC_VC2_Constants.js',
-    './VC_SN_Library'
-], function (ns_ui, ns_search, ns_record, ns_url, vc_constant, vc_serial) {
+define(['N/ui/serverWidget', 'N/search', 'N/record', 'N/url', './CTC_VC2_Constants.js', './VC_SN_Library'], function (
+    ns_ui,
+    ns_search,
+    ns_record,
+    ns_url,
+    vc2_constant,
+    vc_serial
+) {
     const SUBLIST_ID = 'custpage_orders';
 
     function onRequest(context) {
@@ -114,8 +114,7 @@ define([
                     transId = vendorRMANum;
                 }
             } else {
-                tType =
-                    'ERROR - Transaction ID not found. Re-save source transaction and re-try SN Link';
+                tType = 'ERROR - Transaction ID not found. Re-save source transaction and re-try SN Link';
                 transId = 0;
             }
         } else {

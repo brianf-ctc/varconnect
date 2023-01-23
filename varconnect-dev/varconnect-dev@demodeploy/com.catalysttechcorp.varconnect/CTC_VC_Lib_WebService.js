@@ -25,7 +25,7 @@ define([
     './CTC_VC_Lib_Ingram_v1',
     './CTC_VC_Lib_Jenne',
     './CTC_VC_Lib_ScanSource',
-	// './CTC_VC_Lib_WeFi.js',
+    './CTC_VC_Lib_WeFi.js',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils',
     './CTC_VC_Lib_VendorConfig',
@@ -43,7 +43,7 @@ define([
     lib_ingramv1,
     lib_jenne,
     lib_scansource,
-	// lib_wefi,
+    lib_wefi,
     vc2_constant,
     vc2_util,
     vc_vendorcfg,
@@ -170,9 +170,9 @@ define([
             case vendorList.SCANSOURCE:
                 libVendor = lib_scansource;
                 break;
-			// case vendorList.WEFI:
-            //     libVendor = lib_wefi;
-            //     break;
+            case vendorList.WEFI:
+                libVendor = lib_wefi;
+                break;
             default:
                 log.error('Switch case vendor', 'XML Vendor not setup');
                 break;
@@ -193,10 +193,7 @@ define([
         var dtStartDate = vc2_util.parseDate(startDate),
             dtTranDate = vc2_util.parseDate(tranDate);
 
-        log.audit(
-            logTitle,
-            '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
-        );
+        log.audit(logTitle, '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate]));
 
         return dtStartDate <= dtTranDate;
     }
@@ -266,13 +263,10 @@ define([
 
                 vc_log.recordLog({
                     header: 'Output Lines',
-                    body: !vc2_util.isEmpty(outputArray)
-                    ? JSON.stringify(outputArray)
-                    : '-no lines to process-',
+                    body: !vc2_util.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO,
                     transaction: poId
                 });
-
             } catch (e) {
                 log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
 
@@ -396,8 +390,7 @@ define([
             if (vendorConfig) {
                 if (
                     mainConfig.multipleIngram &&
-                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                        xmlVendor == vendorList.INGRAM_MICRO)
+                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
                 ) {
                     outputArray = _handleMultipleVendor({
                         vendor: vendor,

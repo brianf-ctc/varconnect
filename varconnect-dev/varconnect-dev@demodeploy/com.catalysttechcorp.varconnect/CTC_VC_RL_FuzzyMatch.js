@@ -43,7 +43,7 @@ define(['./Bill Creator/Libraries/fuse.js'], function (Fuse) {
                     fieldKeys = scriptContext.keys,
                     searchValue = scriptContext.searchValue;
                 log.audit(logTitle, '>> scriptContext:  ' + JSON.stringify(scriptContext));
-                
+
                 const fuseOption = {
                     includeScore: true,
                     threshold: 0.4,

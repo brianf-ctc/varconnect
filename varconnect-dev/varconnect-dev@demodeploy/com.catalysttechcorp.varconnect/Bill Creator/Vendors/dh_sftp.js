@@ -74,8 +74,7 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
 
                 myObj.charges.tax = trimPadding(xmlObj[i][3], ' ').match(/\d|\./g).join('') * 1;
 
-                myObj.charges.shipping =
-                    trimPadding(xmlObj[i][10], ' ').match(/\d|\./g).join('') * 1;
+                myObj.charges.shipping = trimPadding(xmlObj[i][10], ' ').match(/\d|\./g).join('') * 1;
             }
         }
 

@@ -150,10 +150,7 @@ define([
                             var subLineCount = subRec.getLineCount({
                                 sublistId: 'inventoryassignment'
                             });
-                            log.audit(
-                                logTitle,
-                                LogPrefix + '....// subLineCount: ' + JSON.stringify(subLineCount)
-                            );
+                            log.audit(logTitle, LogPrefix + '....// subLineCount: ' + JSON.stringify(subLineCount));
                             for (var subline = 0; subline < subLineCount; subline++) {
                                 var invData = {
                                     numRcpt: subRec.getSublistText({
@@ -173,10 +170,7 @@ define([
                             }
                         }
                     } catch (subrec_error) {
-                        log.audit(
-                            logTitle,
-                            LogPrefix + JSON.stringify(subrec_error.message || subrec_error)
-                        );
+                        log.audit(logTitle, LogPrefix + JSON.stringify(subrec_error.message || subrec_error));
                     }
                     log.audit(logTitle, LogPrefix + '....// lineData: ' + JSON.stringify(lineData));
 
@@ -238,10 +232,7 @@ define([
                     });
                 }
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// Search Option: ' + JSON.stringify(searchOption)
-                );
+                log.audit(logTitle, LogPrefix + '// Search Option: ' + JSON.stringify(searchOption));
 
                 var searchObj = ns_search.create(searchOption);
                 var searchResults = Helper.searchAllPaged({ searchObj: searchObj });
@@ -265,8 +256,7 @@ define([
 
                             log.audit(
                                 logTitle,
-                                LogPrefix +
-                                    ('...// add to serial data: ' + JSON.stringify(resultData))
+                                LogPrefix + ('...// add to serial data: ' + JSON.stringify(resultData))
                             );
                             returnResults.push(resultData);
                             serialData.quantity--;
@@ -277,10 +267,7 @@ define([
                     return true;
                 });
 
-                log.audit(
-                    logTitle,
-                    '>> Total serials to update/create: ' + JSON.stringify(returnResults)
-                );
+                log.audit(logTitle, '>> Total serials to update/create: ' + JSON.stringify(returnResults));
 
                 return returnResults;
             } catch (error) {
@@ -347,10 +334,7 @@ define([
                 return true;
             });
             // if (reduceKeys && reduceKeys.length > 0) Helper.updateTransaction();
-            log.audit(
-                logTitle,
-                LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys)
-            );
+            log.audit(logTitle, LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys));
 
             // update the sync
             ns_record.submitFields({
@@ -422,9 +406,7 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
                 }
             }
             return arrData;
@@ -480,9 +462,7 @@ define([
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize
-                            ? pagedResults.data
-                            : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results

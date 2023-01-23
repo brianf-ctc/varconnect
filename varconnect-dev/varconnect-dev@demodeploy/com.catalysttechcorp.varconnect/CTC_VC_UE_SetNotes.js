@@ -30,7 +30,7 @@ define([
     'N/format',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc_util, vc2_constant) {
+], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc2_util, vc2_constant) {
     var LogTitle = 'VC UE Set Status';
 
     var EventActionsHelper = {},
@@ -61,10 +61,7 @@ define([
                 columns: columns
             };
             var logDateSearch = ns_search.create(searchOptions);
-            log.debug(
-                logTitle,
-                'Search date for latest log entries. ' + JSON.stringify(searchOptions)
-            );
+            log.debug(logTitle, 'Search date for latest log entries. ' + JSON.stringify(searchOptions));
             var maxLogDateResults = logDateSearch.run().getRange(0, 1);
             if (maxLogDateResults && maxLogDateResults.length) {
                 try {
@@ -228,7 +225,7 @@ define([
                 [CONTEXT_TYPE.USER_INTERFACE].indexOf(ContextData.execType) >= 0
             ) {
                 var paramSudo = context.request.parameters.sudo;
-                if (!vc_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
+                if (!vc2_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
                     var result = SUDO_ACTIONS[paramSudo].call(SUDO_ACTIONS, context);
 
                     if (result) {
@@ -250,11 +247,7 @@ define([
                 EventRouter[ContextData.recordType][eventName] &&
                 typeof EventRouter[ContextData.recordType][eventName] === 'function'
             ) {
-                returnValue = EventRouter[ContextData.recordType][eventName].call(
-                    EventRouter,
-                    ContextData,
-                    context
-                );
+                returnValue = EventRouter[ContextData.recordType][eventName].call(EventRouter, ContextData, context);
             }
 
             return returnValue;
@@ -264,13 +257,7 @@ define([
 
     var UserEvent = {
         beforeLoad: function (context) {
-            LogTitle = [
-                LogTitle,
-                'beforeLoad',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'beforeLoad', context.type, context.newRecord.type, context.newRecord.id].join('::');
             var logTitle = LogTitle,
                 returnValue = null;
             EventActionsHelper.initialize(context);
@@ -286,13 +273,9 @@ define([
             return returnValue;
         },
         beforeSubmit: function (context) {
-            LogTitle = [
-                LogTitle,
-                'beforeSubmit',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'beforeSubmit', context.type, context.newRecord.type, context.newRecord.id].join(
+                '::'
+            );
             var logTitle = LogTitle,
                 returnValue = null;
             EventActionsHelper.initialize(context);
@@ -307,13 +290,7 @@ define([
             return returnValue;
         },
         afterSubmit: function (context) {
-            LogTitle = [
-                LogTitle,
-                'afterSubmit',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'afterSubmit', context.type, context.newRecord.type, context.newRecord.id].join('::');
             var logTitle = LogTitle,
                 returnValue = null;
 

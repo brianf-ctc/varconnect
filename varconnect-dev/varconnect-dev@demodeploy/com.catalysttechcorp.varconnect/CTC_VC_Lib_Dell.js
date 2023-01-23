@@ -20,12 +20,12 @@
  * 2.00		May 25, 2021	paolodl		Include line numbers
  *
  */
-define([
-    'N/runtime',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (ns_runtime, vc_log, vc2_util, vc2_constant) {
+define(['N/runtime', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (
+    ns_runtime,
+    vc_log,
+    vc2_util,
+    vc2_constant
+) {
     'use strict';
     var LogTitle = 'WS:Dellv2';
 
@@ -166,8 +166,7 @@ define([
 
             try {
                 if (vc2_util.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
-                if (vc2_util.isEmpty(option.responseBody.purchaseOrderDetails))
-                    throw 'Missing Purchase Order Details';
+                if (vc2_util.isEmpty(option.responseBody.purchaseOrderDetails)) throw 'Missing Purchase Order Details';
 
                 var arrPODetails = option.responseBody.purchaseOrderDetails;
 
@@ -187,8 +186,7 @@ define([
                                 lineData = {
                                     line_num: prodIdx + 1,
                                     item_num: prodInfo.skuNumber,
-                                    ship_qty:
-                                        (lineData.ship_qty || 0) + parseInt(prodInfo.itemQuantity),
+                                    ship_qty: (lineData.ship_qty || 0) + parseInt(prodInfo.itemQuantity),
                                     serial_num:
                                         prodInfo.serviceTags && prodInfo.serviceTags.length
                                             ? prodInfo.serviceTags.join(',')
@@ -204,9 +202,7 @@ define([
                             lineData.order_eta = dellOrder.estimatedDeliveryDate;
                             lineData.carrier = dellOrder.carrierName;
                             lineData.serial_num =
-                                dellOrder.waybills && dellOrder.waybills.length
-                                    ? dellOrder.waybills.join(',')
-                                    : '';
+                                dellOrder.waybills && dellOrder.waybills.length ? dellOrder.waybills.join(',') : '';
 
                             log.audit(logTitle, '>> lineData: ' + JSON.stringify(lineData));
                             orderLines.push(lineData);

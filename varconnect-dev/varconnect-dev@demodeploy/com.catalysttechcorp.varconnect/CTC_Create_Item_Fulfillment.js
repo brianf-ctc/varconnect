@@ -37,16 +37,16 @@
  *                                          prevent blanking locations if the serials are not applied
  */
 
- define(function (require) {
+define(function (require) {
     var ns_record = require('N/record'),
         ns_search = require('N/search'),
         ns_runtime = require('N/runtime'),
         ns_format = require('N/format'),
         ns_config = require('N/config');
 
-    var vc_constants = require('./CTC_VC2_Constants.js'),
+    var vc2_constant = require('./CTC_VC2_Constants.js'),
         vc_log = require('./CTC_VC_Lib_Log.js'),
-        vc_util = require('./CTC_VC2_Lib_Utils.js'),
+        vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         util_record = require('./CTC_VC2_Lib_Record.js');
 
     var LogTitle = 'ItemFFLIB',
@@ -102,7 +102,7 @@
             if (!Current.MainCFG) throw 'Missing main configuration';
             if (!Current.VendorCFG) throw 'Missing vendor configuration';
             if (!Current.PO_ID) throw 'Missing PO ID';
-            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+            if (vc2_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
 
             if (!Helper.validateDate()) throw 'Invalid PO Date';
 
@@ -124,7 +124,7 @@
             Helper.log(logTitle, '*** LOOK for unique orders ***');
 
             OrderLines.forEach(function (orderLine) {
-                if (vc_util.inArray(orderLine.order_num, arrOrderNums)) {
+                if (vc2_util.inArray(orderLine.order_num, arrOrderNums)) {
                     orderLine.RESULT = 'DUPLICATE';
                     return;
                 }
@@ -179,8 +179,7 @@
 
                 try {
                     /// check if order exists //////////////////
-                    if (vc_util.inArray(vendorOrderNum, arrExistingIFS))
-                        throw 'Order already exists';
+                    if (vc2_util.inArray(vendorOrderNum, arrExistingIFS)) throw 'Order already exists';
 
                     // Build an array with all XML line data with the same order num
                     for (ii = 0; ii < OrderLines.length; ii++) {
@@ -213,7 +212,7 @@
                             isDynamic: true,
                             defaultValues: defaultItemFFValues
                         });
-                        if (vc_constants.GLOBAL.PICK_PACK_SHIP) {
+                        if (vc2_constant.GLOBAL.PICK_PACK_SHIP) {
                             record.setValue({ fieldId: 'shipstatus', value: 'C' });
                         }
 
@@ -223,7 +222,7 @@
                             title: 'Transform Error on SO: ' + Current.SO_ID,
                             error: transform_err
                         });
-                        throw 'Transform error on SO: ' + vc_util.extractError(transform_err);
+                        throw 'Transform error on SO: ' + vc2_util.extractError(transform_err);
                     }
 
                     var recordIsChanged = false;
@@ -244,13 +243,13 @@
                             line: line,
                             item_num: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
                                 line: line
                             }),
-                            skuName: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                            skuName: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                 ? record.getSublistText({
                                       sublistId: 'item',
-                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                      fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                                       line: line
                                   })
                                 : '',
@@ -266,7 +265,7 @@
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.TRANSACTION.DH_MPN,
+                                fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                 line: line
                             }),
                             quantity: record.getSublistText({
@@ -298,7 +297,7 @@
                             hasFulfillableLine = true;
                             recordIsChanged = true;
                         } catch (lineFF_err) {
-                            Helper.log(logTitle, '...removed: ' + vc_util.extractError(lineFF_err));
+                            Helper.log(logTitle, '...removed: ' + vc2_util.extractError(lineFF_err));
                             Helper.removeFulfillmentLine({ record: record, line: line });
                             recordIsChanged = true;
                         }
@@ -355,7 +354,7 @@
                             var tmpTrackList = Helper.uniqueList({
                                 value: lineToFulfill.tracking_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_tracking_nums)) {
+                            if (!vc2_util.isEmpty(uniqItem.all_tracking_nums)) {
                                 tmpTrackList += '\n' + uniqItem.all_tracking_nums;
                             }
                             uniqItem.all_tracking_nums = Helper.uniqueList({
@@ -367,7 +366,7 @@
                             var tmpSerialList = Helper.uniqueList({
                                 value: lineToFulfill.serial_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_serial_nums)) {
+                            if (!vc2_util.isEmpty(uniqItem.all_serial_nums)) {
                                 tmpTrackList += '\n' + uniqItem.all_serial_nums;
                             }
                             uniqItem.all_serial_nums = Helper.uniqueList({
@@ -390,7 +389,7 @@
                             lineNo: line,
                             item: record.getCurrentSublistValue({
                                 sublistId: 'item',
-                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
+                                fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
                             }),
                             quantity: record.getCurrentSublistValue({
                                 sublistId: 'item',
@@ -400,10 +399,10 @@
                                 sublistId: 'item',
                                 fieldId: 'itemreceive'
                             }),
-                            vendorSKU: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                            vendorSKU: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                 ? record.getCurrentSublistValue({
                                       sublistId: 'item',
-                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                                      fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                   })
                                 : '',
                             line_po: record.getSublistText({
@@ -413,7 +412,7 @@
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.TRANSACTION.DH_MPN,
+                                fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                 line: line
                             }),
                             isSerialized: record.getCurrentSublistValue({
@@ -444,11 +443,9 @@
 
                             var isMatchingLine =
                                 lineFFData.item == itemToShip.item_num ||
-                                (lineFFData.vendorSKU &&
-                                    lineFFData.vendorSKU == itemToShip.vendorSKU) ||
+                                (lineFFData.vendorSKU && lineFFData.vendorSKU == itemToShip.vendorSKU) ||
                                 (lineFFData.dandh &&
-                                    Current.VendorCFG.xmlVendor ==
-                                        vc_constants.LIST.XML_VENDOR.DandH &&
+                                    Current.VendorCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.DandH &&
                                     lineFFData.dandh == itemToShip.item_num);
 
                             if (!isMatchingLine) {
@@ -491,10 +488,7 @@
                             ////////////////////////////////////////////
                             // don't allow fulfillment if the available quantity is less
                             if (lineFFData.quantity < itemToShip.ship_qty) {
-                                Helper.log(
-                                    logTitle,
-                                    '... skipped: rem qty is less than required ship qty. '
-                                );
+                                Helper.log(logTitle, '... skipped: rem qty is less than required ship qty. ');
 
                                 Helper.setLineValues({
                                     record: record,
@@ -524,9 +518,7 @@
                             ///////////////////////////////////////////////
 
                             //// SERIALS DETECTION ////////////////
-                            var arrSerials = itemToShip.all_serial_nums
-                                ? itemToShip.all_serial_nums.split(/\n/)
-                                : [];
+                            var arrSerials = itemToShip.all_serial_nums ? itemToShip.all_serial_nums.split(/\n/) : [];
 
                             Helper.log(logTitle, '... serials', arrSerials);
 
@@ -588,7 +580,7 @@
 
                     Helper.log(logTitle, '>> record lines', recordLines);
 
-                    if (vc_util.isEmpty(recordLines)) {
+                    if (vc2_util.isEmpty(recordLines)) {
                         Helper.logMsg({
                             title: 'Fulfillment Lines',
                             message: '>> No Matching Lines To Fulfill:  ' + vendorOrderNum
@@ -607,26 +599,21 @@
                         for (ii = 0; ii < UniqueLineItems.length; ii++) {
                             var strTrackingNums = UniqueLineItems[ii].all_tracking_nums;
 
-                            if (!vc_util.isEmpty(strTrackingNums)) {
+                            if (!vc2_util.isEmpty(strTrackingNums)) {
                                 var arrTrackingNums = strTrackingNums.split('\n');
-                                arrAllTrackingNumbers =
-                                    arrAllTrackingNumbers.concat(arrTrackingNums);
+                                arrAllTrackingNumbers = arrAllTrackingNumbers.concat(arrTrackingNums);
                             }
                         }
                         Helper.log(logTitle, '/// tracking numbers', arrAllTrackingNumbers);
 
-                        if (!vc_util.isEmpty(arrAllTrackingNumbers)) {
+                        if (!vc2_util.isEmpty(arrAllTrackingNumbers)) {
                             record = Helper.addNativePackages({
                                 record: record,
                                 trackingnumbers: arrAllTrackingNumbers
                             });
                         }
 
-                        Helper.log(
-                            logTitle,
-                            '/// Package line count',
-                            record.getLineCount({ sublistId: 'package' })
-                        );
+                        Helper.log(logTitle, '/// Package line count', record.getLineCount({ sublistId: 'package' }));
                     } catch (package_error) {
                         Helper.log(logTitle, '/// PACKAGE error', package_error, 'error');
                         Helper.logMsg({
@@ -664,10 +651,7 @@
                             responseData.push({ id: objId, orderNum: orderNum });
                         }
 
-                        Helper.log(
-                            logTitle,
-                            '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
-                        );
+                        Helper.log(logTitle, '## Created Item Fulfillment: [itemfulfillment:' + objId + ']');
 
                         Helper.logMsg({
                             title: 'Create Fulfillment',
@@ -675,36 +659,28 @@
                             message: '## Created Item Fulfillment: [itemfulfillment:' + objId + ']'
                         });
                     } catch (itemff_err) {
-                        var errMsg = vc_util.extractError(itemff_err);
+                        var errMsg = vc2_util.extractError(itemff_err);
                         Helper.log(logTitle, '/// FULFILLMENT Create error', itemff_err, 'error');
 
                         Helper.logMsg({ error: itemff_err, title: 'Create Fulfillment Error' });
                         throw errMsg;
                     }
                 } catch (line_err) {
-                    log.audit(
-                        logTitle,
-                        vc_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err)
-                    );
+                    log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err));
                     continue;
                 }
             }
             return responseData;
         } catch (error) {
-            var errorMsg = vc_util.extractError(error);
+            var errorMsg = vc2_util.extractError(error);
             log.error(
                 logTitle,
-                vc_util.getUsage() +
-                    (LogPrefix + '## ERROR:  ') +
-                    (errorMsg + '| Details: ' + JSON.stringify(error))
+                vc2_util.getUsage() + (LogPrefix + '## ERROR:  ') + (errorMsg + '| Details: ' + JSON.stringify(error))
             );
             Helper.logMsg({ title: logTitle + ':: Error', error: error });
             return false;
         } finally {
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############'
-            );
+            log.debug(logTitle, vc2_util.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############');
         }
     };
     ////////////////////////////////////
@@ -723,7 +699,7 @@
             if (strList && util.isString(strList)) {
                 arrList = strList.split(splitStr);
             }
-            arrList = vc_util.uniqueArray(arrList);
+            arrList = vc2_util.uniqueArray(arrList);
 
             return arrList.join(joinStr);
         },
@@ -781,11 +757,9 @@
                         case 'DD.MM.YYYY':
                         case 'D/M/YYYY':
                         case 'D.M.YYYY':
-                            dateStr = [
-                                convertedMonth || dateComponents[1],
-                                dateComponents[0],
-                                dateComponents[2]
-                            ].join('/');
+                            dateStr = [convertedMonth || dateComponents[1], dateComponents[0], dateComponents[2]].join(
+                                '/'
+                            );
                             break;
                         default:
                             break;
@@ -804,10 +778,7 @@
         },
         printerFriendlyLines: function (option) {
             var logTitle = [LogTitle, 'printerFriendlyLines'].join('::');
-            log.audit(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option)
-            );
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option));
 
             var recordLines = option.recordLines,
                 outputString = '',
@@ -831,8 +802,7 @@
                 outputString += '\n   Qty    : ' + line.totalShipped;
                 var serials;
                 if (typeof line.all_serial_nums == 'string') serials = line.all_serial_nums;
-                else if (typeof line.all_serial_nums == 'object')
-                    serials = line.all_serial_nums.join(',');
+                else if (typeof line.all_serial_nums == 'object') serials = line.all_serial_nums.join(',');
                 outputString += '\n   Serials: ' + serials;
             }
 
@@ -868,12 +838,12 @@
         log: function (title, content, objVar, logtype) {
             logtype = logtype || 'audit';
             if (objVar && objVar !== null) content += ' -- ' + JSON.stringify(objVar);
-            return log[logtype](title, vc_util.getUsage() + LogPrefix + content);
+            return log[logtype](title, vc2_util.getUsage() + LogPrefix + content);
         },
         logMsg: function (option) {
             option = option || {};
 
-            var LOG_STATUS = vc_constants.LIST.VC_LOG_STATUS;
+            var LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
             var logOption = {
                 transaction: Current.PO_ID,
@@ -881,15 +851,11 @@
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
+                    (option.error ? vc2_util.extractError(option.error) : option.errorMsg),
 
                 status:
                     option.status ||
-                    (option.error
-                        ? LOG_STATUS.ERROR
-                        : option.isSuccess
-                        ? LOG_STATUS.SUCCESS
-                        : LOG_STATUS.INFO)
+                    (option.error ? LOG_STATUS.ERROR : option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
@@ -909,7 +875,7 @@
 
             log.audit(
                 logTitle,
-                vc_util.getUsage() +
+                vc2_util.getUsage() +
                     LogPrefix +
                     '>> Valid Serials: ' +
                     JSON.stringify([validSerialList.length, validSerialList])
@@ -955,13 +921,7 @@
 
                     addedSerials.push(validSerialList[i]);
                 } catch (serial_error) {
-                    log.error(
-                        logTitle,
-                        vc_util.getUsage() +
-                            LogPrefix +
-                            '## ERROR ## ' +
-                            JSON.stringify(serial_error)
-                    );
+                    log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(serial_error));
                 }
             }
 
@@ -980,12 +940,9 @@
         addNativePackages: function (data) {
             var ifRec = data.record;
             var arrTrackingNums = data.trackingnumbers;
-            log.audit(
-                'Create-ItemFF::addNativePackages',
-                '>> Tracking Nums List: ' + JSON.stringify(arrTrackingNums)
-            );
+            log.audit('Create-ItemFF::addNativePackages', '>> Tracking Nums List: ' + JSON.stringify(arrTrackingNums));
 
-            if (!vc_util.isEmpty(arrTrackingNums)) {
+            if (!vc2_util.isEmpty(arrTrackingNums)) {
                 for (var i = 0; i < arrTrackingNums.length; i++) {
                     // log.audit("Create-ItemFF::addNativePackages", '>> Tracking Num: ' + JSON.stringify(arrTrackingNums[i]));
 
@@ -1046,24 +1003,18 @@
             };
             log.audit(
                 logTitle,
-                vc_util.getUsage() +
-                    LogPrefix +
-                    '>> currrent item/location: ' +
-                    JSON.stringify(lineData)
+                vc2_util.getUsage() + LogPrefix + '>> currrent item/location: ' + JSON.stringify(lineData)
             );
 
             var lineLoc;
 
-            if (vc_util.isEmpty(lineData.location)) {
+            if (vc2_util.isEmpty(lineData.location)) {
                 //Use SO's header level Location
                 lineLoc = recSO.getValue({
                     fieldId: 'location'
                 });
 
-                log.audit(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '>> SO Location - ' + JSON.stringify(lineLoc)
-                );
+                log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> SO Location - ' + JSON.stringify(lineLoc));
 
                 // set the line item
                 if (lineLoc) {
@@ -1083,10 +1034,7 @@
 
             log.audit(
                 logTitle,
-                vc_util.getUsage() +
-                    LogPrefix +
-                    '>> Line Location : after: ' +
-                    JSON.stringify(lineLoc)
+                vc2_util.getUsage() + LogPrefix + '>> Line Location : after: ' + JSON.stringify(lineLoc)
             );
 
             return record;
@@ -1123,7 +1071,7 @@
                     })
                 };
 
-                if (!itemData.location || vc_util.inArray(itemData.location, arrLocation)) continue;
+                if (!itemData.location || vc2_util.inArray(itemData.location, arrLocation)) continue;
                 arrLocation.push(itemData.location);
             }
             log.audit(logTitle, logPrefix + '// unique location: ' + JSON.stringify(arrLocation));
@@ -1133,10 +1081,7 @@
 
                 if (Current.SO_REC) {
                     var orderLocation = Current.SO_REC.getValue({ fieldId: 'location' });
-                    log.audit(
-                        logTitle,
-                        logPrefix + '// orderLocation: ' + JSON.stringify(orderLocation)
-                    );
+                    log.audit(logTitle, logPrefix + '// orderLocation: ' + JSON.stringify(orderLocation));
                     if (orderLocation) arrLocation = [orderLocation];
                 }
             }
@@ -1156,17 +1101,11 @@
                     })
                 };
 
-                log.audit(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '... item data: ' + JSON.stringify(itemData)
-                );
+                log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '... item data: ' + JSON.stringify(itemData));
 
                 // only set those who are empty, or not the same
                 if (!itemData.location || itemData.location != arrLocation[0]) {
-                    log.audit(
-                        logTitle,
-                        LogTitle + '... set line data to: ' + JSON.stringify(arrLocation)
-                    );
+                    log.audit(logTitle, LogTitle + '... set line data to: ' + JSON.stringify(arrLocation));
                     record.selectLine({ sublistId: 'item', line: line });
                     record.setCurrentSublistValue({
                         sublistId: 'item',
@@ -1235,7 +1174,7 @@
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -1253,7 +1192,7 @@
 
                 var hashSpace = Current.MainCFG.ingramHashSpace,
                     xmlVendor = Current.VendorCFG.xmlVendor,
-                    vendorList = vc_constants.LIST.XML_VENDOR;
+                    vendorList = vc2_constant.LIST.XML_VENDOR;
 
                 var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
                 var hasMatch = false;
@@ -1266,15 +1205,11 @@
                             returnValue = false;
 
                         try {
-                            if (!dataToFind[itemType] || !dataToTest[itemType])
-                                throw '[' + itemType + '] not present';
+                            if (!dataToFind[itemType] || !dataToTest[itemType]) throw '[' + itemType + '] not present';
 
                             if (
                                 !hashSpace &&
-                                !vc_util.inArray(xmlVendor, [
-                                    vendorList.INGRAM_MICRO_V_ONE,
-                                    vendorList.INGRAM_MICRO
-                                ])
+                                !vc2_util.inArray(xmlVendor, [vendorList.INGRAM_MICRO_V_ONE, vendorList.INGRAM_MICRO])
                             )
                                 throw 'non ingram vendor';
 
@@ -1299,7 +1234,7 @@
                             if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
 
                             if (
-                                !vc_util.inArray(dataToFind[itemType], [
+                                !vc2_util.inArray(dataToFind[itemType], [
                                     dataToTest.vendorSKU,
                                     dataToTest.item_num_alt,
                                     dataToTest.item_num
@@ -1350,12 +1285,9 @@
 
                 returnValue = hasMatch;
             } catch (error) {
-                log.error(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
-                );
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1392,12 +1324,9 @@
 
                 returnValue = matchingItem;
             } catch (error) {
-                log.error(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
-                );
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -1412,7 +1341,7 @@
 
             try {
                 var listOrderNum = option.vendorOrderNums || option.orderNums;
-                if (vc_util.isEmpty(listOrderNum)) return false;
+                if (vc2_util.isEmpty(listOrderNum)) return false;
 
                 var searchOption = {
                     type: 'itemfulfillment',
@@ -1430,11 +1359,7 @@
                 searchOption.filters.push('AND');
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
-                    orderNumFilter.push([
-                        'custbody_ctc_if_vendor_order_match',
-                        ns_search.Operator.IS,
-                        orderNum
-                    ]);
+                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
                     orderNumFilter.push('OR');
                     return true;
                 });
@@ -1450,14 +1375,14 @@
                 // );
 
                 var arrResults = [];
-                var searchResults = vc_util.searchAllPaged({
+                var searchResults = vc2_util.searchAllPaged({
                     searchObj: ns_search.create(searchOption)
                 });
 
                 searchResults.forEach(function (result) {
                     var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
 
-                    if (!vc_util.inArray(orderNum, arrResults)) {
+                    if (!vc2_util.inArray(orderNum, arrResults)) {
                         arrResults.push(orderNum);
                     }
 
@@ -1468,7 +1393,7 @@
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 // log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -1496,7 +1421,7 @@
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1521,7 +1446,7 @@
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1534,7 +1459,7 @@
 
             try {
                 if (!option.record) throw 'Missing record';
-                if (vc_util.isEmpty(option.values)) throw 'Missing values';
+                if (vc2_util.isEmpty(option.values)) throw 'Missing values';
 
                 if (option.line) {
                     option.record.selectLine({

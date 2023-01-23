@@ -19,6 +19,7 @@ define([
     'N/record',
     'N/https',
     './CTC_VC2_Lib_Utils',
+    './CTC_VC2_Constants.js',
     './CTC_Create_Item_Fulfillment',
     './CTC_Create_Item_Receipt',
     './netsuitelibrary_v2.js',
@@ -26,14 +27,14 @@ define([
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
     './CTC_VC_Lib_LicenseValidator',
-    './CTC_VC2_Constants.js',
     './CTC_VC_Lib_Log.js'
 ], function (
     ns_search,
     ns_runtime,
     ns_record,
     ns_https,
-    vc_util,
+    vc2_util,
+    vc2_constant,
     vc_itemfflib,
     vc_itemrcpt,
     vc_record,
@@ -41,7 +42,6 @@ define([
     vc_vendorcfg,
     vc_websvclib,
     vc_license,
-    vc_constants,
     vc_log
 ) {
     var LogTitle = 'MR_OrderStatus';
@@ -64,12 +64,8 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_orderstatus_tranid'),
-                use_fulfill_rl: ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_fulfillcreate_restlet')
+                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid'),
+                use_fulfill_rl: ns_runtime.getCurrentScript().getParameter('custscript_fulfillcreate_restlet')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
@@ -108,7 +104,7 @@ define([
                 // add the override column
                 searchNew.columns.push(
                     ns_search.createColumn({
-                        name: vc_constants.FIELD.TRANSACTION.OVERRIDE_PONUM
+                        name: vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM
                     })
                 );
             } else {
@@ -120,14 +116,7 @@ define([
                         'AND',
                         ['type', 'anyof', 'PurchOrd'],
                         'AND',
-                        [
-                            'status',
-                            'noneof',
-                            'PurchOrd:C',
-                            'PurchOrd:G',
-                            'PurchOrd:H',
-                            'PurchOrd:F'
-                        ],
+                        ['status', 'noneof', 'PurchOrd:C', 'PurchOrd:G', 'PurchOrd:H', 'PurchOrd:F'],
                         'AND',
                         ['custbody_ctc_bypass_vc', 'is', 'F']
                     ],
@@ -142,7 +131,7 @@ define([
                         'incoterm',
                         'custbody_ctc_po_link_type',
                         'custbody_isdropshippo',
-                        vc_constants.FIELD.TRANSACTION.OVERRIDE_PONUM, // add the override column
+                        vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM, // add the override column
                         ns_search.createColumn({
                             name: 'internalid',
                             join: 'vendor'
@@ -156,11 +145,7 @@ define([
 
                 var vendorFilter = [];
                 for (var i = 0, j = activeVendors.length; i < j; i++) {
-                    if (
-                        Params.vendorId &&
-                        !vc_util.inArray(Params.vendorId, activeVendors[i].vendor)
-                    )
-                        continue;
+                    if (Params.vendorId && !vc2_util.inArray(Params.vendorId, activeVendors[i].vendor)) continue;
 
                     if (vendorFilter.length) vendorFilter.push('OR');
                     vendorFilter.push([
@@ -173,10 +158,7 @@ define([
 
                 log.audit(
                     logTitle,
-                    vc_util.getUsage() +
-                        LogPrefix +
-                        '// search option: ' +
-                        JSON.stringify(searchOption)
+                    vc2_util.getUsage() + LogPrefix + '// search option: ' + JSON.stringify(searchOption)
                 );
 
                 searchNew = ns_search.create(searchOption);
@@ -184,11 +166,8 @@ define([
 
             returnValue = searchNew;
         } catch (error) {
-            log.error(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + ' ## ERROR ## ' + JSON.stringify(error)
-            );
-            throw vc_util.extractError(error);
+            log.error(logTitle, vc2_util.getUsage() + LogPrefix + ' ## ERROR ## ' + JSON.stringify(error));
+            throw vc2_util.extractError(error);
         }
 
         var totalResults = returnValue.runPaged().count;
@@ -200,7 +179,7 @@ define([
                 'VAR Connect START' +
                 ('\n\nTotal Orders: ' + totalResults) +
                 ('\n\nParameters: ' + JSON.stringify(Params)),
-            status: vc_constants.LIST.VC_LOG_STATUS.INFO
+            status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
 
         return returnValue;
@@ -217,12 +196,8 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_orderstatus_tranid'),
-                use_fulfill_rl: ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_fulfillcreate_restlet')
+                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid'),
+                use_fulfill_rl: ns_runtime.getCurrentScript().getParameter('custscript_fulfillcreate_restlet')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
@@ -235,10 +210,7 @@ define([
 
             LogPrefix = 'MAP [purchaseorder:' + Current.poId + '] ';
 
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> data: ' + JSON.stringify(Current)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> data: ' + JSON.stringify(Current));
 
             Current.MainCFG = Helper.loadMainConfig();
             Current.VendorCFG = Helper.loadVendorConfig({
@@ -249,7 +221,7 @@ define([
             if (!Current.VendorCFG) return;
 
             if (Current.MainCFG.overridePONum) {
-                var tempPONum = searchResult.values[vc_constants.FIELD.TRANSACTION.OVERRIDE_PONUM];
+                var tempPONum = searchResult.values[vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM];
                 if (tempPONum) {
                     Current.poNum = tempPONum;
                     log.audit(logTitle, LogPrefix + '**** TEMP PO NUM: ' + tempPONum + ' ****');
@@ -272,10 +244,7 @@ define([
                 Current.PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
 
             ////////////////////////////////////////////////
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '///// Initiating library webservice ....'
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '///// Initiating library webservice ....');
             outputObj = vc_websvclib.process({
                 mainConfig: Current.MainCFG,
                 vendorConfig: Current.VendorCFG,
@@ -287,18 +256,12 @@ define([
                 subsidiary: Current.subsidiary,
                 countryCode: countryCode
             });
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
             ////////////////////////////////////////////////
 
             ////////////////////////////////////////////////
             // if there are no lines.. just exit the script
-            if (
-                !outputObj.itemArray ||
-                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-            )
+            if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info))
                 throw 'No lines to process.';
 
             ////////////////////////////////////////////////
@@ -316,20 +279,17 @@ define([
                 if (updateStatus.error && updateStatus.lineuniquekey) {
                     vc_log.recordLog({
                         header: 'PO Update | Error',
-                        body: vc_util.extractError(updateStatus.error),
+                        body: vc2_util.extractError(updateStatus.error),
                         transaction: Current.poId,
                         transactionLineKey: updateStatus.lineuniquekey,
-                        status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                        status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                     });
                 }
             }
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId));
             ////////////////////////////////////////////////
 
-            if (!vc_util.isEmpty(Current.soId)) {
+            if (!vc2_util.isEmpty(Current.soId)) {
                 Current.SO_REC = ns_record.load({
                     type: ns_record.Type.SALES_ORDER,
                     id: Current.soId
@@ -338,9 +298,7 @@ define([
             }
 
             Current.allowItemFF =
-                Current.MainCFG.processDropships &&
-                Current.VendorCFG.processDropships &&
-                Current.MainCFG.createIF;
+                Current.MainCFG.processDropships && Current.VendorCFG.processDropships && Current.MainCFG.createIF;
             Current.allowItemRcpt =
                 Current.MainCFG.processSpecialOrders &&
                 Current.VendorCFG.processSpecialOrders &&
@@ -378,11 +336,10 @@ define([
                     })
                 );
 
-                var ItemFFSearchAll = vc_util.searchAllPaged({ searchObj: objSearchIF });
+                var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() +
-                        (LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length)
+                    vc2_util.getUsage() + (LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length)
                 );
 
                 ItemFFSearchAll.forEach(function (result) {
@@ -394,8 +351,7 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() +
-                        (LogPrefix + '>> fulfillments: ' + JSON.stringify(arrFulfillments.length))
+                    vc2_util.getUsage() + (LogPrefix + '>> fulfillments: ' + JSON.stringify(arrFulfillments.length))
                 );
                 //////////////////////////////////////////////////
 
@@ -409,7 +365,7 @@ define([
                         values: Current.NumPrefix
                     })
                 );
-                var ItemRcptSearchAll = vc_util.searchAllPaged({ searchObj: objSearchIR });
+                var ItemRcptSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIR });
 
                 ItemRcptSearchAll.forEach(function (result) {
                     arrReceipts.push({
@@ -420,15 +376,11 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() +
-                        (LogPrefix + '>> receipts: ' + JSON.stringify(arrReceipts.length))
+                    vc2_util.getUsage() + (LogPrefix + '>> receipts: ' + JSON.stringify(arrReceipts.length))
                 );
                 //////////////////////////////////////////////////
 
-                log.debug(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '>> lineData: ' + outputObj.itemArray.length
-                );
+                log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> lineData: ' + outputObj.itemArray.length);
 
                 for (var i = 0; i < outputObj.itemArray.length; i++) {
                     var lineData = outputObj.itemArray[i];
@@ -436,8 +388,7 @@ define([
 
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() +
-                            (LogPrefix + '... line data: ' + JSON.stringify(lineData))
+                        vc2_util.getUsage() + (LogPrefix + '... line data: ' + JSON.stringify(lineData))
                     );
 
                     var serialArray =
@@ -461,8 +412,7 @@ define([
                         }
                         log.audit(
                             logTitle,
-                            '.... matching fulfillment: ' +
-                                JSON.stringify([lineData.order_num, fulfillmentNum])
+                            '.... matching fulfillment: ' + JSON.stringify([lineData.order_num, fulfillmentNum])
                         );
                     } else if (!Current.isDropPO && Current.MainCFG.processSpecialOrders) {
                         for (ii = 0; ii < arrReceipts.length; ii++) {
@@ -473,8 +423,7 @@ define([
                         }
                         log.audit(
                             logTitle,
-                            '... matching receipt: ' +
-                                JSON.stringify([lineData.order_num, receiptNum])
+                            '... matching receipt: ' + JSON.stringify([lineData.order_num, receiptNum])
                         );
                     }
 
@@ -499,15 +448,14 @@ define([
         } catch (error) {
             log.error(
                 logTitle,
-                vc_util.getUsage() +
-                    (LogPrefix + ' - Error encountered in map' + JSON.stringify(error))
+                vc2_util.getUsage() + (LogPrefix + ' - Error encountered in map' + JSON.stringify(error))
             );
 
             vc_log.recordLog({
                 header: LogTitle + ' | Error',
-                body: vc_util.extractError(error),
+                body: vc2_util.extractError(error),
                 transaction: Current.poId,
-                status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
             });
         } finally {
             log.debug(logTitle, '###### END: MAP ###### ');
@@ -527,14 +475,10 @@ define([
         if (serial == 'NA') return;
 
         if (!currentData.mainConfig) currentData.mainConfig = Helper.loadMainConfig();
-        if (!currentData.subsidiary)
-            currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
+        if (!currentData.subsidiary) currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
         // if (!currentData.vendorConfig) currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
 
-        log.debug(
-            logTitle,
-            vc_util.getUsage() + LogPrefix + '>> current data: ' + JSON.stringify(currentData)
-        );
+        log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> current data: ' + JSON.stringify(currentData));
 
         var po_record = ns_record.load({
             type: 'purchaseorder',
@@ -546,8 +490,7 @@ define([
         if (!currentData.vendorConfig) {
             var vendor = po_record.getValue({ fieldId: 'entity' });
             var subsidiaryId = null;
-            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES)
-                subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
 
             currentData.vendorConfig =
                 currentData.vendorConfig ||
@@ -567,10 +510,7 @@ define([
             ingramHashSpace: currentData.mainConfig.ingramHashSpace,
             xmlVendor: currentData.vendorConfig.xmlVendor
         });
-        log.debug(
-            logTitle,
-            vc_util.getUsage() + LogPrefix + '>> lineNum:  ' + JSON.stringify(currentData.lineNum)
-        );
+        log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> lineNum:  ' + JSON.stringify(currentData.lineNum));
 
         if (currentData.lineNum != null) {
             currentData.itemId = po_record.getSublistValue({
@@ -581,21 +521,15 @@ define([
         }
 
         currentData.soId = po_record.getValue({ fieldId: 'createdfrom' });
-        log.debug(
-            logTitle,
-            vc_util.getUsage() + LogPrefix + '>> SalesOrder Id: ' + JSON.stringify(currentData.soId)
-        );
+        log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> SalesOrder Id: ' + JSON.stringify(currentData.soId));
 
         if (currentData.soId) {
-            var customerInfo = vc_util.flatLookup({
+            var customerInfo = vc2_util.flatLookup({
                 type: ns_record.Type.SALES_ORDER,
                 id: currentData.soId,
                 columns: ['entity']
             });
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> customerInfo: ' + JSON.stringify(customerInfo)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> customerInfo: ' + JSON.stringify(customerInfo));
 
             currentData.customerId =
                 customerInfo.entity && customerInfo.entity.value ? customerInfo.entity.value : null;
@@ -604,12 +538,10 @@ define([
         var srchGlobal = ns_search.global({ keywords: serial });
         log.debug(
             logTitle,
-            vc_util.getUsage() +
-                LogPrefix +
-                ('>> Global Search - ' + serial + ': ' + JSON.stringify(srchGlobal))
+            vc2_util.getUsage() + LogPrefix + ('>> Global Search - ' + serial + ': ' + JSON.stringify(srchGlobal))
         );
 
-        var serialValues = vc_util.removeNullValues({
+        var serialValues = vc2_util.removeNullValues({
             name: serial,
             custrecordserialpurchase: currentData.poId || null,
             custrecordserialitem: currentData.itemId || null,
@@ -618,10 +550,7 @@ define([
             custrecorditemreceipt: currentData.receiptNum || null,
             custrecordcustomer: currentData.customerId
         });
-        log.debug(
-            logTitle,
-            vc_util.getUsage() + LogPrefix + '>> serialValues: ' + JSON.stringify(serialValues)
-        );
+        log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> serialValues: ' + JSON.stringify(serialValues));
 
         var recordSerial, serialId;
 
@@ -633,10 +562,7 @@ define([
             }
 
             serialId = recordSerial.save();
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> New Serial ID: ' + JSON.stringify(serialId)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> New Serial ID: ' + JSON.stringify(serialId));
         } else if (srchGlobal.length == 1) {
             var searchResult = srchGlobal[0];
 
@@ -650,17 +576,12 @@ define([
             }
             log.debug(
                 logTitle,
-                vc_util.getUsage() +
-                    LogPrefix +
-                    ' >> Matching serial found : ' +
-                    JSON.stringify(searchResult)
+                vc2_util.getUsage() + LogPrefix + ' >> Matching serial found : ' + JSON.stringify(searchResult)
             );
         } else {
             log.debug(
                 logTitle,
-                vc_util.getUsage() +
-                    LogPrefix +
-                    (' >> Multiple Duplicates ' + JSON.stringify(srchGlobal.length))
+                vc2_util.getUsage() + LogPrefix + (' >> Multiple Duplicates ' + JSON.stringify(srchGlobal.length))
             );
         }
 
@@ -686,7 +607,7 @@ define([
         vc_log.recordLog({
             header: 'VAR Connect END',
             body: 'VAR Connect END',
-            status: vc_constants.LIST.VC_LOG_STATUS.INFO
+            status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
 
         log.debug(logTitle, '###### END OF SCRIPT ###### ');
@@ -712,14 +633,14 @@ define([
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
+                    (option.error ? vc2_util.extractError(option.error) : option.errorMsg),
                 status:
                     option.status ||
                     (option.error || option.isError
-                        ? vc_constants.LIST.VC_LOG_STATUS.ERROR
+                        ? vc2_constant.LIST.VC_LOG_STATUS.ERROR
                         : option.isSucces
-                        ? vc_constants.LIST.VC_LOG_STATUS.SUCCESS
-                        : vc_constants.LIST.VC_LOG_STATUS.INFO)
+                        ? vc2_constant.LIST.VC_LOG_STATUS.SUCCESS
+                        : vc2_constant.LIST.VC_LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, '::' + JSON.stringify(logOption));
@@ -749,11 +670,7 @@ define([
             var objVendorSearch = ns_search.create({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filters: [['isinactive', 'is', 'F']],
-                columns: [
-                    'custrecord_ctc_vc_vendor',
-                    'custrecord_ctc_vc_vendor_start',
-                    'custrecord_ctc_vc_xml_vendor'
-                ]
+                columns: ['custrecord_ctc_vc_vendor', 'custrecord_ctc_vc_vendor_start', 'custrecord_ctc_vc_xml_vendor']
             });
 
             var arrVendors = [];
@@ -765,10 +682,7 @@ define([
                         name: 'custrecord_ctc_vc_vendor_start'
                     });
 
-                log.audit(
-                    logTitle,
-                    vc_util.getUsage() + LogPrefix + '..' + JSON.stringify([vendorList, startDate])
-                );
+                log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '..' + JSON.stringify([vendorList, startDate]));
 
                 if (vendorList) {
                     arrVendors.push({
@@ -781,10 +695,7 @@ define([
                 return true;
             });
 
-            log.audit(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> vendors list: ' + JSON.stringify(arrVendors)
-            );
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> vendors list: ' + JSON.stringify(arrVendors));
 
             return arrVendors;
         },
@@ -810,24 +721,18 @@ define([
                 });
 
             if (!vendorConfig) {
-                log.audit(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
+                log.audit(logTitle, 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName);
             }
 
             return vendorConfig;
         },
         getSubsidiary: function (poId) {
             var logTitle = [LogTitle, 'getSubsidiary'].join('::');
-            log.debug(
-                logTitle,
-                vc_util.getUsage() + LogPrefix + '>> poId: ' + JSON.stringify(poId)
-            );
+            log.debug(logTitle, vc2_util.getUsage() + LogPrefix + '>> poId: ' + JSON.stringify(poId));
 
             var subsidiary = null;
 
-            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES) {
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
                 var lookupObj = ns_search.lookupFields({
                     type: ns_search.Type.TRANSACTION,
                     id: poId,
@@ -869,7 +774,7 @@ define([
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -909,7 +814,7 @@ define([
 
             try {
                 var listOrderNum = option.vendorOrderNums || option.orderNums;
-                if (vc_util.isEmpty(listOrderNum)) return false;
+                if (vc2_util.isEmpty(listOrderNum)) return false;
 
                 var searchOption = {
                     type: 'itemfulfillment',
@@ -928,11 +833,7 @@ define([
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
                     if (orderNumFilter.length) orderNumFilter.push('OR');
-                    orderNumFilter.push([
-                        'custbody_ctc_if_vendor_order_match',
-                        ns_search.Operator.IS,
-                        orderNum
-                    ]);
+                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
                     return true;
                 });
                 searchOption.filters.push(orderNumFilter);
@@ -940,7 +841,7 @@ define([
                 log.audit(logTitle, logPrefix + '>> searchOption: ' + JSON.stringify(searchOption));
 
                 var arrResults = [];
-                var searchResults = vc_util.searchAllPaged({
+                var searchResults = vc2_util.searchAllPaged({
                     searchObj: ns_search.create(searchOption)
                 });
 
@@ -948,7 +849,7 @@ define([
                     var orderNum = result.getValue({
                         name: 'custbody_ctc_if_vendor_order_match'
                     });
-                    if (!vc_util.inArray(orderNum, arrResults)) arrResults.push(orderNum);
+                    if (!vc2_util.inArray(orderNum, arrResults)) arrResults.push(orderNum);
                     return true;
                 });
 
@@ -984,40 +885,29 @@ define([
                 for (i = 0; i < OrderLines.length; i++) {
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() +
+                        vc2_util.getUsage() +
                             LogPrefix +
                             ('... processing ' + '[' + OrderLines[i].order_num + '] .....')
                     );
 
-                    if (vc_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
+                    if (vc2_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
                         continue;
                     }
 
                     if (!OrderLines[i].order_num || OrderLines[i].order_num == 'NA') {
-                        log.audit(
-                            logTitle,
-                            vc_util.getUsage() + LogPrefix + '......skipped: no item order num'
-                        );
+                        log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '......skipped: no item order num');
                         continue;
                     }
 
-                    if (
-                        OrderLines[i].hasOwnProperty('is_shipped') &&
-                        OrderLines[i].is_shipped === false
-                    ) {
-                        log.audit(
-                            logTitle,
-                            vc_util.getUsage() + LogPrefix + '......skipped: not yet shipped'
-                        );
+                    if (OrderLines[i].hasOwnProperty('is_shipped') && OrderLines[i].is_shipped === false) {
+                        log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '......skipped: not yet shipped');
                         continue;
                     }
 
                     if (OrderLines[i].hasOwnProperty('ns_record') && OrderLines[i].ns_record) {
                         log.audit(
                             logTitle,
-                            vc_util.getUsage() +
-                                LogPrefix +
-                                '......skipped: fulfillment already exists.'
+                            vc2_util.getUsage() + LogPrefix + '......skipped: fulfillment already exists.'
                         );
                         continue;
                     }
@@ -1031,7 +921,7 @@ define([
 
                 log.audit(
                     logTitle,
-                    vc_util.getUsage() +
+                    vc2_util.getUsage() +
                         LogPrefix +
                         '/// OrderNums: ' +
                         JSON.stringify([arrOrderNums, arrVendorOrderNums])
@@ -1042,9 +932,7 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() +
-                        LogPrefix +
-                        ('>> arrExistingIFS: ' + JSON.stringify(arrExistingIFS))
+                    vc2_util.getUsage() + LogPrefix + ('>> arrExistingIFS: ' + JSON.stringify(arrExistingIFS))
                 );
 
                 /// run through all the ordernums
@@ -1053,13 +941,10 @@ define([
                         vendorOrderNum = numPrefix + orderNum;
 
                     var logPrefix = LogPrefix + ' [' + vendorOrderNum + ']  ';
-                    log.audit(
-                        logTitle,
-                        vc_util.getUsage() + logPrefix + '*** Processing order: *****'
-                    );
+                    log.audit(logTitle, vc2_util.getUsage() + logPrefix + '*** Processing order: *****');
 
                     try {
-                        if (vc_util.inArray(vendorOrderNum, arrExistingIFS)) throw 'ORDER_EXISTS';
+                        if (vc2_util.inArray(vendorOrderNum, arrExistingIFS)) throw 'ORDER_EXISTS';
 
                         // get the lineData;
                         var fulfillLine = [];
@@ -1068,12 +953,9 @@ define([
                             fulfillLine.push(OrderLines[ii]);
                         }
 
-                        if (vc_util.isEmpty(fulfillLine)) throw 'NO_LINES_TO_FULFILL';
+                        if (vc2_util.isEmpty(fulfillLine)) throw 'NO_LINES_TO_FULFILL';
 
-                        log.audit(
-                            logTitle,
-                            vc_util.getUsage() + LogPrefix + '// sending itemff restlet... '
-                        );
+                        log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '// sending itemff restlet... ');
                         /////////////////////////////////////////
                         // CREATE ITEM FULFILLMENT
                         var itemffResponse = ns_https.requestRestlet({
@@ -1091,10 +973,7 @@ define([
                         var respBody = JSON.parse(itemffResponse.body);
                         log.debug(
                             logTitle,
-                            vc_util.getUsage() +
-                                logPrefix +
-                                '>> responseBody: ' +
-                                JSON.stringify(respBody)
+                            vc2_util.getUsage() + logPrefix + '>> responseBody: ' + JSON.stringify(respBody)
                         );
 
                         for (var noteId in respBody) {
@@ -1103,7 +982,7 @@ define([
                             if (respdata.msg) {
                                 log.debug(
                                     logTitle,
-                                    vc_util.getUsage() +
+                                    vc2_util.getUsage() +
                                         logPrefix +
                                         '>> respdata.msg: ' +
                                         JSON.stringify([respdata.msg, util.isArray(respdata.msg)])
@@ -1114,17 +993,15 @@ define([
                                     body:
                                         noteId +
                                         ' - ' +
-                                        (util.isArray(respdata.msg)
-                                            ? respdata.msg.join('\r\n')
-                                            : respdata.msg),
+                                        (util.isArray(respdata.msg) ? respdata.msg.join('\r\n') : respdata.msg),
                                     transaction: Current.poId,
-                                    status: vc_constants.LIST.VC_LOG_STATUS.INFO
+                                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                                 });
                             }
                             if (respdata.error) {
                                 log.debug(
                                     logTitle,
-                                    vc_util.getUsage() +
+                                    vc2_util.getUsage() +
                                         logPrefix +
                                         '>> respdata.error: ' +
                                         JSON.stringify(respdata.error)
@@ -1132,25 +1009,21 @@ define([
                                 vc_log.recordLog({
                                     header: 'Fulfillment Creation | Error',
                                     body:
-                                        noteId + ' - ' +
-                                        (util.isArray(respdata.error)
+                                        noteId + ' - ' + util.isArray(respdata.error)
                                             ? respdata.error.join('\r\n')
-                                            : respdata.error),
+                                            : respdata.error,
                                     transaction: Current.poId,
-                                    status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                                 });
                             }
                         }
 
                         /////////////////////////////////////////
                     } catch (order_error) {
-                        var orderMsg = vc_util.extractError(order_error);
+                        var orderMsg = vc2_util.extractError(order_error);
 
                         if (ERROR_MSG[orderMsg]) {
-                            log.audit(
-                                logTitle,
-                                vc_util.getUsage() + logPrefix + '//Skipped: ' + ERROR_MSG[orderMsg]
-                            );
+                            log.audit(logTitle, vc2_util.getUsage() + logPrefix + '//Skipped: ' + ERROR_MSG[orderMsg]);
                         } else {
                             // unknown error, must report
                             throw order_error;
@@ -1162,17 +1035,14 @@ define([
             } catch (error) {
                 log.error(
                     logTitle,
-                    vc_util.getUsage() +
-                        LogPrefix +
-                        'Error creating fulfillment: ' +
-                        JSON.stringify(error)
+                    vc2_util.getUsage() + LogPrefix + 'Error creating fulfillment: ' + JSON.stringify(error)
                 );
 
                 vc_log.recordLog({
                     header: 'Fulfillment Creation | Error',
-                    body: vc_util.extractError(error),
+                    body: vc2_util.extractError(error),
                     transaction: Current.poId,
-                    status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                 });
             }
 
@@ -1196,15 +1066,14 @@ define([
             } catch (error) {
                 log.error(
                     logTitle,
-                    vc_util.getUsage() +
-                        (LogPrefix + 'Error creating item fulfillment : ' + JSON.stringify(error))
+                    vc2_util.getUsage() + (LogPrefix + 'Error creating item fulfillment : ' + JSON.stringify(error))
                 );
 
                 vc_log.recordLog({
                     header: 'Fulfillment Creation | Error',
-                    body: vc_util.extractError(error),
+                    body: vc2_util.extractError(error),
                     transaction: Current.poId,
-                    status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                 });
             }
 
@@ -1226,15 +1095,14 @@ define([
             } catch (error) {
                 log.error(
                     logTitle,
-                    vc_util.getUsage() +
-                        (LogPrefix + 'Error creating item receipt : ' + JSON.stringify(error))
+                    vc2_util.getUsage() + (LogPrefix + 'Error creating item receipt : ' + JSON.stringify(error))
                 );
 
                 vc_log.recordLog({
                     header: 'Item Receipt Creation | Error',
-                    body: vc_util.extractError(error),
+                    body: vc2_util.extractError(error),
                     transaction: Current.poId,
-                    status: vc_constants.LIST.VC_LOG_STATUS.ERROR
+                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
                 });
             }
 

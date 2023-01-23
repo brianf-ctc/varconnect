@@ -39,11 +39,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         var s2 = search.create({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '2'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
+            filters: [['custrecord_ctc_vc_bill_proc_status', 'anyof', '2'], 'AND', ['isinactive', 'is', 'F']],
             columns: ['internalid']
         });
 
@@ -65,11 +61,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         var s4 = search.create({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '6'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
+            filters: [['custrecord_ctc_vc_bill_proc_status', 'anyof', '6'], 'AND', ['isinactive', 'is', 'F']],
             columns: ['internalid']
         });
 
@@ -100,8 +92,9 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
         });
 
         data.to_be_proc_cnt = s6.runPaged().count;
-
         var html = file.load({ id: 'SuiteScripts/dashboard.html' }).getContents();
+
+        // TODO: look for the dashboard file, if not present, copy the sample and move it to SuiteScripts folder
 
         context.response.write(Mustache.render(html, data));
     }

@@ -19,11 +19,7 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
-    ns_search,
-    vc2_constant,
-    vc2_util
-) {
+define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (ns_search, vc2_constant, vc2_util) {
     var MainCFG = vc2_constant.RECORD.MAIN_CONFIG;
 
     var mainConfigFields = [

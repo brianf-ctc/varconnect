@@ -32,14 +32,14 @@ define([
     ns_config,
     moment,
     vc_billfile,
-    vc_util,
-    vc_constants
+    vc2_util,
+    vc2_constant
 ) {
     var LogTitle = 'VC PROCESS BILL',
         LogPrefix = '',
-        BILL_CREATOR = vc_constants.Bill_Creator,
-        BILL_FILE = vc_constants.RECORD.BILLFILE,
-        BILLFILE_FLD = vc_constants.RECORD.BILLFILE.FIELD;
+        BILL_CREATOR = vc2_constant.Bill_Creator,
+        BILL_FILE = vc2_constant.RECORD.BILLFILE,
+        BILLFILE_FLD = vc2_constant.RECORD.BILLFILE.FIELD;
 
     var SCRIPT = {
         RL_ITEMFF: {
@@ -53,7 +53,7 @@ define([
         RL_SERIALS: {
             ID: 'customscript_vc_serial_record_restlet',
             DEPLOY: 'customdeploy1'
-    }
+        }
     };
 
     var MAP_REDUCE = {
@@ -67,7 +67,7 @@ define([
                     name: 'custscript_ctc_vc_bc_bill_fileid'
                 }),
                 billInAdv: ns_runtime.getCurrentScript().getParameter({
-                name: 'custscript_ctc_vc_bc_bill_in_adv'
+                    name: 'custscript_ctc_vc_bc_bill_in_adv'
                 })
             };
 
@@ -138,7 +138,7 @@ define([
                 Helper.updateBillFile({
                     internalId: ScriptParam.billFileID,
                     updateValues: {
-                    custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
+                        custrecord_ctc_vc_bill_proc_statu: BILL_CREATOR.Status.REPROCESS
                     }
                 });
 
@@ -162,7 +162,7 @@ define([
                     name: 'custscript_ctc_vc_bc_bill_fileid'
                 }),
                 billInAdv: ns_runtime.getCurrentScript().getParameter({
-                name: 'custscript_ctc_vc_bc_bill_in_adv'
+                    name: 'custscript_ctc_vc_bc_bill_in_adv'
                 })
             };
 
@@ -178,40 +178,28 @@ define([
                     var poId = currentData.values[BILLFILE_FLD.PO_LINK].value;
                     LogPrefix = '[purchaseorder:' + poId + ' ]';
 
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... currentData: ' + JSON.stringify(currentData)
-                    );
+                    log.audit(logTitle, LogPrefix + ' ... currentData: ' + JSON.stringify(currentData));
 
                     var vendorCfg = Helper.loadVendorConfig({
                         entity: currentData.values['entity.' + BILLFILE_FLD.PO_LINK].value
                     });
 
                     var requestBillFile = Helper.fetchBillFile({ internalId: currentData.id });
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... billFileData: ' + JSON.stringify(requestBillFile)
-                    );
+                    log.audit(logTitle, LogPrefix + ' ... billFileData: ' + JSON.stringify(requestBillFile));
 
                     // check the PO Status
                     var poStatus = currentData.values['statusref.' + BILLFILE_FLD.PO_LINK];
                     log.audit(logTitle, LogPrefix + ' ... po status: ' + JSON.stringify(poStatus));
 
                     var isBillReceivable = requestBillFile[BILLFILE_FLD.IS_RCVBLE];
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable)
-                    );
+                    log.audit(logTitle, LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable));
 
-                    var isOrderReceivable = vc_util.inArray(poStatus.value, [
+                    var isOrderReceivable = vc2_util.inArray(poStatus.value, [
                         'pendingReceipt',
                         'partiallyReceived',
                         'pendingBillPartReceived'
                     ]);
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '... isOrderReceivable: ' + JSON.stringify(isOrderReceivable)
-                    );
+                    log.audit(logTitle, LogPrefix + '... isOrderReceivable: ' + JSON.stringify(isOrderReceivable));
 
                     var respItemff = {};
                     if (vendorCfg.ENABLE_FULFILLLMENT && isBillReceivable && isOrderReceivable) {
@@ -264,7 +252,7 @@ define([
                     log.debug(logTitle, '>> update fields: ' + JSON.stringify(updateValues));
 
                     //if the updateValues object isn't empty update the record
-                    if (!vc_util.isEmpty(updateValues)) {
+                    if (!vc2_util.isEmpty(updateValues)) {
                         ns_record.submitFields({
                             type: BILL_FILE.ID,
                             id: currentData.id,
@@ -352,7 +340,7 @@ define([
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
                 returnValue;
             var entityId = option.entity;
-            var BILLCREATE_CFG = vc_constants.RECORD.BILLCREATE_CONFIG;
+            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
 
             try {
                 var searchOption = {
@@ -365,7 +353,7 @@ define([
                     searchOption.columns.push(
                         ns_search.createColumn({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         })
                     );
                 }
@@ -378,7 +366,7 @@ define([
                     for (var field in BILLCREATE_CFG.FIELD) {
                         returnValue[field] = row.getValue({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         });
                     }
                     return true;
@@ -401,10 +389,7 @@ define([
                     billFileData = option.billFileData;
 
                 log.audit(logTitle, LogPrefix + '>> recordData   : ' + JSON.stringify(recordData));
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> billFileData   : ' + JSON.stringify(billFileData)
-                );
+                log.audit(logTitle, LogPrefix + '>> billFileData   : ' + JSON.stringify(billFileData));
 
                 var respItemFF = ns_https.requestRestlet({
                     method: 'POST',
@@ -416,10 +401,7 @@ define([
                     body: JSON.stringify(billFileData)
                 });
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> response-itemff   : ' + JSON.stringify(respItemFF)
-                );
+                log.audit(logTitle, LogPrefix + '>> response-itemff   : ' + JSON.stringify(respItemFF));
 
                 if (respItemFF.code == 200) {
                     var respBody = JSON.parse(respItemFF.body);
@@ -432,18 +414,14 @@ define([
                     if (respBody.itemff) {
                         vc_billfile.addNote({
                             id: recordData.id,
-                            note:
-                                'Item Fulfillment succesfully created...  ' +
-                                ('[id:' + respBody.itemff + ']')
+                            note: 'Item Fulfillment succesfully created...  ' + ('[id:' + respBody.itemff + ']')
                         });
                     }
 
                     if (respBody.serialData) {
                         log.audit(
                             logTitle,
-                            LogPrefix +
-                                '/// Processing serials...  ' +
-                                JSON.stringify(respBody.serialData)
+                            LogPrefix + '/// Processing serials...  ' + JSON.stringify(respBody.serialData)
                         );
 
                         var serialsToProcess = respBody.serialData;
@@ -464,10 +442,7 @@ define([
                                 })
                             });
 
-                            log.debug(
-                                logTitle,
-                                LogPrefix + '// serials: ' + JSON.stringify(respSerials)
-                            );
+                            log.debug(logTitle, LogPrefix + '// serials: ' + JSON.stringify(respSerials));
                         }
                     }
                 } else {
@@ -488,7 +463,7 @@ define([
                     ////////////////////////////
                 }
             } catch (error) {
-                log.error(logTitle, LogPrefix + '** ERROR **' + vc_util.extractError(error));
+                log.error(logTitle, LogPrefix + '** ERROR **' + vc2_util.extractError(error));
                 returnValue = false;
             }
 

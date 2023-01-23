@@ -11,12 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
-    ns_record,
-    ns_runtime,
-    ns_url,
-    ns_redir
-) {
+define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (ns_record, ns_runtime, ns_url, ns_redir) {
     var Helper = {
         isEmpty: function (stValue) {
             return (
@@ -83,8 +78,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
             if (eventType == this.Type.CUSTOM) {
                 if (!this.Action[eventType]) return;
                 if (!Helper.inArray(Current.execType, [ContextType.USER_INTERFACE])) return;
-                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT]))
-                    return;
+                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT])) return;
 
                 var paramAction = scriptContext.request.parameters[this.ParamStr];
                 RouterEventFn = this.Action[eventType][paramAction];
@@ -100,17 +94,17 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                         id: Current.recordId
                     });
                 }
-            } else if (this.Action[Current.recordType] ) {
+            } else if (this.Action[Current.recordType]) {
                 RouterEventFn = this.Action[Current.recordType][eventType];
                 if (!util.isFunction(RouterEventFn)) return;
-                
+
                 result = RouterEventFn.call(EventRouter, scriptContext, Current);
                 return result;
             }
-        }, 
+        },
         addActionURL: function (name) {
             return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join('');
-        }    
+        }
     };
 
     return EventRouter;

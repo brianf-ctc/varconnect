@@ -262,7 +262,7 @@ define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lod
                 });
 
                 if (lineIdx >= 0) {
-                    myObj.lines[lineIdx].QUANTITY+=lineObj.QUANTITY;
+                    myObj.lines[lineIdx].QUANTITY += lineObj.QUANTITY;
                 } else {
                     myObj.lines.push(lineObj);
                 }
@@ -285,7 +285,6 @@ define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lod
                 // lineObj.DESCRIPTION = lineItem[i].getElementsByTagName({
                 //     tagName: 'ProductDesc'
                 // })[0].textContent;
-
             }
 
             var returnObj = {};
