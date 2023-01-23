@@ -22,16 +22,16 @@ require([
     VCFolder + '/../CTC_VC2_Lib_Utils',
     VCFolder + '/../CTC_VC_Lib_MainConfiguration',
     VCFolder + '/Libraries/moment'
-], function (ns_record, ns_search, ns_format, ns_runtime, vc_constant, vc2_util, VC_MainCfg, moment) {
-    var LogTitle = 'VC_GENR_BILL_RL',
+], function (ns_record, ns_search, ns_format, ns_runtime, VC_Constants, VC2_Util, VC_MainCfg, moment) {
+    var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
         Current = {},
         LogPrefix = '',
-        BILL_CREATOR = vc_constant.Bill_Creator;
+        BILL_CREATOR = VC_Constants.Bill_Creator;
 
     function _post(context) {
-        var logTitle = [LogTitle, 'POST'].join('::'),
+        var logTitle = [LOG_TITLE, 'POST'].join('::'),
             returnObj = {},
             currScript = ns_runtime.getCurrentScript();
 
@@ -76,7 +76,7 @@ require([
 
             /// STATUS CHECK ////////////////////////////
             if (
-                vc2_util.inArray(Current.PO_DATA.statusRef, ['pendingBilling', 'pendingBillPartReceived']) ||
+                VC2_Util.inArray(Current.PO_DATA.statusRef, ['pendingBilling', 'pendingBillPartReceived']) ||
                 Current.billInAdvance
             ) {
                 // continue processing
@@ -760,7 +760,7 @@ require([
             return errorMessage;
         },
         getLinesToBill: function (option) {
-            var logTitle = [LogTitle, 'getLinesToBill'].join('::'),
+            var logTitle = [LOG_TITLE, 'getLinesToBill'].join('::'),
                 returnValue;
             option = option || {};
 
@@ -801,7 +801,7 @@ require([
             return returnValue;
         },
         getExistingBill: function (option) {
-            var logTitle = [LogTitle, 'getExistingBill'].join('::'),
+            var logTitle = [LOG_TITLE, 'getExistingBill'].join('::'),
                 returnValue;
             option = option || {};
             var arrExistingBills = [];
@@ -831,7 +831,7 @@ require([
             return returnValue;
         },
         getSalesOrderDetails: function (option) {
-            var logTitle = [LogTitle, 'getSalesOrderDetails'].join('::'),
+            var logTitle = [LOG_TITLE, 'getSalesOrderDetails'].join('::'),
                 returnValue;
             option = option || {};
             var poId = option.poId;
@@ -868,7 +868,7 @@ require([
             return returnValue;
         },
         isPeriodLocked: function (option) {
-            var logTitle = [LogTitle, 'isPeriodLocked'].join('::'),
+            var logTitle = [LOG_TITLE, 'isPeriodLocked'].join('::'),
                 returnValue;
             option = option || {};
 
@@ -887,7 +887,7 @@ require([
             return returnValue;
         },
         addNewLine: function (option) {
-            var logTitle = [LogTitle, 'addNewLine'].join('::'),
+            var logTitle = [LOG_TITLE, 'addNewLine'].join('::'),
                 returnValue;
             option = option || {};
             var record = option.record;
@@ -960,7 +960,7 @@ require([
             };
         },
         preprocessBillLines: function (option) {
-            var logTitle = [LogTitle, 'preprocessBillLines'].join('::');
+            var logTitle = [LOG_TITLE, 'preprocessBillLines'].join('::');
             var arrLines = [],
                 matchedLinesBill = {};
 
@@ -1072,7 +1072,7 @@ require([
 
                 returnRec = ns_record.transform(option);
             } catch (err) {
-                throw 'Unable to transform record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
+                throw 'Unable to transform record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         },
@@ -1084,7 +1084,7 @@ require([
 
                 returnRec = ns_record.load(option);
             } catch (err) {
-                throw 'Unable to load record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
+                throw 'Unable to load record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         },
@@ -1107,7 +1107,7 @@ require([
                     }
                 }
             } catch (error) {
-                throw 'Unable to load record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
+                throw 'Unable to load record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnData;
         },
@@ -1212,7 +1212,7 @@ require([
 
             for (var fieldId in lineData) {
                 if (fieldId == 'line') continue;
-                if (vc2_util.isEmpty(lineData[fieldId])) continue;
+                if (VC2_Util.isEmpty(lineData[fieldId])) continue;
 
                 record.setCurrentSublistValue(
                     Helper.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
@@ -1233,7 +1233,7 @@ require([
             record.selectNewLine(lineOption);
 
             for (var fieldId in lineData) {
-                if (vc2_util.isEmpty(lineData[fieldId])) continue;
+                if (VC2_Util.isEmpty(lineData[fieldId])) continue;
 
                 record.setCurrentSublistValue(
                     Helper.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })

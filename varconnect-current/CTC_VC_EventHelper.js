@@ -22,7 +22,7 @@ define([
     './CTC_VC2_Constants',
     './CTC_VC_Lib_MainConfiguration',
     './CTC_VC_Lib_VendorConfig'
-], function (ns_runtime, ns_search, ns_record, ns_msg, EventRouter, vc2_util, vc2_global, vc_maincfg, vc_vendorcfg) {
+], function (ns_runtime, ns_search, ns_record, ns_msg, EventRouter, vc2_util, vc2_constant, vc_maincfg, vc_vendorcfg) {
     var LogTitle = 'VC:BILLFILE';
 
     var Helper = {
@@ -145,7 +145,7 @@ define([
         }
     };
 
-    EventRouter.Action[vc2_global.RECORD.VC_LOG.ID] = {
+    EventRouter.Action[vc2_constant.RECORD.VC_LOG.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 

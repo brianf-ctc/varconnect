@@ -21,11 +21,11 @@ define([
     'N/url',
     'N/file',
     '../CTC_VC2_Lib_Utils'
-], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc_util) {
+], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
     var LogTitle = 'VC DebugTool';
     var Helper = {
         getActiveVendors: function () {
-            var arrSeachResults = vc_util.searchAllPaged({
+            var arrSeachResults = vc2_util.searchAllPaged({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filterExpression: [['isinactive', 'is', 'F']],
                 columns: [
@@ -82,7 +82,7 @@ define([
                             scriptId: ns_runtime.getCurrentScript().id,
                             deploymentId: ns_runtime.getCurrentScript().deploymentId
                         }),
-                        currentfolder: vc_util.getCurrentFolder()
+                        currentfolder: vc2_util.getCurrentFolder()
                     };
 
                     ///// VENDOR CONFIG LIST ///////////////////////////////
@@ -96,7 +96,7 @@ define([
 
                     var arrActiveVendors = Helper.getActiveVendors();
                     arrActiveVendors.forEach(function (vendorEntry) {
-                        if (!vc_util.isEmpty(Current.vendorConfigId)) {
+                        if (!vc2_util.isEmpty(Current.vendorConfigId)) {
                             vendorEntry.isSelected = Current.vendorConfigId == vendorEntry.value;
                         }
                         fldVendors.addSelectOption(vendorEntry);

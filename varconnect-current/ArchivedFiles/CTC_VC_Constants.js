@@ -56,8 +56,7 @@ define([], function () {
                 DEFAULT_SHIPPING_ITEM: 'custrecord_ctc_vc_bill_ship_item',
                 VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
                 DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
-                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled',
-                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num'
+                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled'
             },
             VendorConfig: {
                 ID: 'internalid',
@@ -93,8 +92,7 @@ define([], function () {
                 TRANSACTION: 'custrecord_ctc_vcsp_log_batch_txn'
             },
             Transaction: {
-                SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info',
-                OVERRIDE_PONUM: 'custbody_ctc_vc_override_ponum'
+                SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info'
             },
             Serials: {
                 ID: 'internalid',

@@ -23,7 +23,7 @@ define(function (require) {
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
-    var vc_util = {
+    var vc2_util = {
         CACHE: {},
         isEmpty: function (stValue) {
             return (
@@ -46,10 +46,10 @@ define(function (require) {
             return i > -1;
         },
         getCache: function (cacheKey) {
-            return vc_util.CACHE.hasOwnProperty(cacheKey) ? vc_util.CACHE[cacheKey] : null;
+            return vc2_util.CACHE.hasOwnProperty(cacheKey) ? vc2_util.CACHE[cacheKey] : null;
         },
         setCache: function (cacheKey, objVar) {
-            vc_util.CACHE[cacheKey] = objVar;
+            vc2_util.CACHE[cacheKey] = objVar;
         },
         getUsage: function () {
             var REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
@@ -58,7 +58,7 @@ define(function (require) {
         uniqueArray: function (arrVar) {
             var arrNew = [];
             for (var i = 0, j = arrVar.length; i < j; i++) {
-                if (vc_util.inArray(arrVar[i], arrNew)) continue;
+                if (vc2_util.inArray(arrVar[i], arrNew)) continue;
                 arrNew.push(arrVar[i]);
             }
 
@@ -105,11 +105,11 @@ define(function (require) {
         },
         getNodeTextContent: function (node) {
             // log.debug('node', node);
-            if (!vc_util.isUndefined(node)) return node.textContent;
+            if (!vc2_util.isUndefined(node)) return node.textContent;
             else return null;
         },
         generateSerialLink: function (option) {
-            var ns_url = vc_util.loadModule('N/url');
+            var ns_url = vc2_util.loadModule('N/url');
 
             var protocol = 'https://';
             var domain = ns_url.resolveDomain({
@@ -169,13 +169,13 @@ define(function (require) {
                     option.message ||
                     option.errorMessage ||
                     option.errorMsg ||
-                    (option.error ? vc_util.extractError(option.error) : '');
+                    (option.error ? vc2_util.extractError(option.error) : '');
 
                 logOption.BODY = util.isString(logOption.BODY) ? logOption.BODY : JSON.stringify(logOption.BODY);
 
                 if (
                     option.status &&
-                    vc_util.inArray(option.status, [LOG_STATUS.ERROR, LOG_STATUS.INFO, LOG_STATUS.SUCCESS])
+                    vc2_util.inArray(option.status, [LOG_STATUS.ERROR, LOG_STATUS.INFO, LOG_STATUS.SUCCESS])
                 )
                     logOption.STATUS = option.status;
                 else if (option.isError || option.error || option.errorMessage || option.errorMsg)
@@ -237,7 +237,7 @@ define(function (require) {
                     // log.audit(logOption.HEADER, logOption.BODY);
                 }
             } catch (error) {
-                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc_util.extractError(error));
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc2_util.extractError(error));
             }
             return true;
         },
@@ -259,7 +259,7 @@ define(function (require) {
             var ns_https = require('N/https');
 
             var queryOption = option.query || option.queryOption;
-            if (!queryOption || vc_util.isEmpty(queryOption)) throw 'Missing query option';
+            if (!queryOption || vc2_util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
             var response,
@@ -277,7 +277,7 @@ define(function (require) {
                     isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
                     isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: vc_util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
                 };
             if (option.isXML) param.isJSON = false;
 
@@ -286,7 +286,7 @@ define(function (require) {
             var startTime = new Date();
             try {
                 if (!param.noLogs) {
-                    vc_util.vcLog({
+                    vc2_util.vcLog({
                         title: [param.logHeader, ' Request ', '(' + param.method + ')'].join(''),
                         content: queryOption,
                         transaction: param.logTranId,
@@ -318,11 +318,11 @@ define(function (require) {
                 }
                 responseBody = response.body;
                 if (param.isJSON) {
-                    parsedResponse = vc_util.safeParse(response);
+                    parsedResponse = vc2_util.safeParse(response);
                     returnValue.PARSED_RESPONSE = parsedResponse;
                 }
 
-                if (!response.code || !vc_util.inArray(response.code, VALID_RESP_CODE)) {
+                if (!response.code || !vc2_util.inArray(response.code, VALID_RESP_CODE)) {
                     throw parsedResponse
                         ? JSON.stringify(parsedResponse)
                         : 'Received invalid response code - ' + response.code;
@@ -330,7 +330,7 @@ define(function (require) {
 
                 ////////////////////////////
             } catch (error) {
-                var errorMsg = vc_util.extractError(error);
+                var errorMsg = vc2_util.extractError(error);
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
                 returnValue.error = error;
@@ -344,7 +344,7 @@ define(function (require) {
                         })
                 );
 
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
                         (param.doRetry ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')' : ''),
@@ -359,12 +359,12 @@ define(function (require) {
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
                     option.retryCount = param.retryCount + 1;
-                    vc_util.waitMs(param.waitMs);
-                    returnValue = vc_util.sendRequest(option);
+                    vc2_util.waitMs(param.waitMs);
+                    returnValue = vc2_util.sendRequest(option);
                 }
             } finally {
                 if (!param.noLogs) {
-                    vc_util.vcLog({
+                    vc2_util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
                         content: param.isJSON
                             ? JSON.stringify(parsedResponse || responseBody || response)
@@ -385,7 +385,7 @@ define(function (require) {
             try {
                 returnValue = JSON.parse(response.body || response);
             } catch (error) {
-                log.error(logTitle, '## ERROR ##' + vc_util.extractError(error));
+                log.error(logTitle, '## ERROR ##' + vc2_util.extractError(error));
                 returnValue = null;
             }
 
@@ -457,7 +457,7 @@ define(function (require) {
             var logTitle = [LogTitle, 'parseDate'].join('::');
 
             var dateString = option.dateString || option,
-                dateFormat = vc_util.CACHE.DATE_FORMAT,
+                dateFormat = vc2_util.CACHE.DATE_FORMAT,
                 date = '';
 
             if (!dateFormat) {
@@ -476,7 +476,7 @@ define(function (require) {
                         dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
                     } catch (e) {}
                 }
-                vc_util.CACHE.DATE_FORMAT = dateFormat;
+                vc2_util.CACHE.DATE_FORMAT = dateFormat;
             }
 
             if (dateString && dateString.length > 0 && dateString != 'NA') {
@@ -601,7 +601,7 @@ define(function (require) {
 
         removeNullValues: function (option) {
             var newObj = {};
-            if (!option || vc_util.isEmpty(option) || !util.isObject(option)) return newObj;
+            if (!option || vc2_util.isEmpty(option) || !util.isObject(option)) return newObj;
 
             for (var prop in option) {
                 if (option[prop] === null) continue;
@@ -682,7 +682,7 @@ define(function (require) {
                 filter = option.filter,
                 findAll = option.findAll;
 
-            if (vc_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
+            if (vc2_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
 
             var arrResults = [];
             for (var i = 0, j = dataSource.length; i < j; i++) {
@@ -866,5 +866,5 @@ define(function (require) {
         }
     };
 
-    return vc_util;
+    return vc2_util;
 });

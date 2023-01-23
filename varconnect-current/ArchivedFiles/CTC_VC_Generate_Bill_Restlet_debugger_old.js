@@ -23,12 +23,12 @@ require([
     VCFolder + '/../CTC_VC2_Lib_Utils',
     VCFolder + '/../CTC_VC2_Constants',
     VCFolder + '/../CTC_VC_Lib_Log'
-], function (ns_record, ns_search, ns_format, ns_runtime, moment, VC2_Lib, vc_constant, vc_log) {
-    var LogTitle = 'VC_GENR_BILL_RL',
+], function (ns_record, ns_search, ns_format, ns_runtime, moment, VC2_Lib, VC_Constants, VC_Log) {
+    var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         LogPrefix = '',
         CURRENT_PO = '',
-        BILL_CREATOR = vc_constant.Bill_Creator,
+        BILL_CREATOR = VC_Constants.Bill_Creator,
         PARAM_FIELDS = {
             shipItem: 'custscript_ctc_bc_ship_item',
             taxItem: 'custscript_ctc_bc_tax_item',
@@ -53,7 +53,7 @@ require([
             return errorMessage;
         },
         getLinesToBill: function (option) {
-            var logTitle = [LogTitle, 'getLinesToBill'].join('::'),
+            var logTitle = [LOG_TITLE, 'getLinesToBill'].join('::'),
                 returnValue;
             option = option || {};
 
@@ -106,7 +106,7 @@ require([
             return returnValue;
         },
         getExistingBill: function (option) {
-            var logTitle = [LogTitle, 'getExistingBill'].join('::'),
+            var logTitle = [LOG_TITLE, 'getExistingBill'].join('::'),
                 returnValue;
             option = option || {};
             var arrExistingBills = [];
@@ -136,7 +136,7 @@ require([
             return returnValue;
         },
         isPeriodLocked: function (option) {
-            var logTitle = [LogTitle, 'isPeriodLocked'].join('::'),
+            var logTitle = [LOG_TITLE, 'isPeriodLocked'].join('::'),
                 returnValue;
             option = option || {};
 
@@ -155,7 +155,7 @@ require([
             return returnValue;
         },
         addNewLine: function (option) {
-            var logTitle = [LogTitle, 'addNewLine'].join('::'),
+            var logTitle = [LOG_TITLE, 'addNewLine'].join('::'),
                 returnValue;
             option = option || {};
             var record = option.record;
@@ -205,7 +205,7 @@ require([
     };
 
     function _post(context) {
-        var logTitle = [LogTitle, 'POST'].join('::'),
+        var logTitle = [LOG_TITLE, 'POST'].join('::'),
             returnObj = {},
             currentData = {},
             currScript = ns_runtime.getCurrentScript();
@@ -945,11 +945,13 @@ require([
                 title: LOG_APP,
                 recordId: CURRENT_PO,
                 body: [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join(' '),
-                status: returnObj.isError ? vc_constant.LIST.VC_LOG_STATUS.ERROR : vc_constant.LIST.VC_LOG_STATUS.INFO,
+                status: returnObj.isError
+                    ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
+                    : VC_Constants.LIST.VC_LOG_STATUS.INFO,
                 doLog: true
             });
 
-            // vc_log.add({
+            // VC_Log.add({
             //     header: LOG_APP,
             //     transaction: CURRENT_PO,
             //     body: [
@@ -957,8 +959,8 @@ require([
             //         returnObj.details != returnObj.msg ? returnObj.details : ''
             //     ].join(' '),
             //     status: returnObj.isError
-            //         ? vc_constant.LIST.VC_LOG_STATUS.ERROR
-            //         : vc_constant.LIST.VC_LOG_STATUS.INFO
+            //         ? VC_Constants.LIST.VC_LOG_STATUS.ERROR
+            //         : VC_Constants.LIST.VC_LOG_STATUS.INFO
             // });
 
             log.debug(logTitle, LogPrefix + '## EXIT SCRIPT ## ' + JSON.stringify(returnObj));

@@ -30,7 +30,7 @@ define([
     'N/format',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc_util, vc2_constant) {
+], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc2_util, vc2_constant) {
     var LogTitle = 'VC UE Set Status';
 
     var EventActionsHelper = {},
@@ -225,7 +225,7 @@ define([
                 [CONTEXT_TYPE.USER_INTERFACE].indexOf(ContextData.execType) >= 0
             ) {
                 var paramSudo = context.request.parameters.sudo;
-                if (!vc_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
+                if (!vc2_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
                     var result = SUDO_ACTIONS[paramSudo].call(SUDO_ACTIONS, context);
 
                     if (result) {

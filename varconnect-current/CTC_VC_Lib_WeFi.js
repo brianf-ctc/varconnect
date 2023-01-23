@@ -17,7 +17,7 @@
  *
  *
  */
-define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
+define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
     'use strict';
 
     var CURRENT = {};
@@ -191,7 +191,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
             var err = e.name + ': ' + e.message;
             log.error(logTitle, err);
 
-            VC_Util.vcLog({
+            v2_util.vcLog({
                 title: logTitle + ': Process Error',
                 error: err,
                 recordId: CURRENT.recordId
@@ -279,7 +279,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
         try {
             log.debug(logTitle, 'url=' + WEFI.endpoint.TOKEN);
 
-            var tokenReq = VC_Util.sendRequest({
+            var tokenReq = v2_util.sendRequest({
                 header: logTitle,
                 method: 'post',
                 recordId: CURRENT.recordId,
@@ -287,7 +287,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
                 //maxRetry: 3,
                 query: {
                     url: WEFI.endpoint.TOKEN,
-                    body: VC_Util.convertToQuery({
+                    body: v2_util.convertToQuery({
                         client_id: WEFI.credential.CLIENT_ID,
                         client_secret: WEFI.credential.CLIENT_SECRET,
                         scope: WEFI.credential.SCOPE,
@@ -300,7 +300,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
             });
 
             if (tokenReq.isError) throw tokenReq.errorMsg;
-            var tokenResp = VC_Util.safeParse(tokenReq.RESPONSE);
+            var tokenResp = v2_util.safeParse(tokenReq.RESPONSE);
             if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
             returnValue = tokenResp.access_token;
 
@@ -311,7 +311,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
             var err = e.name + ': ' + e.message;
             log.error(logTitle, err);
 
-            VC_Util.vcLog({
+            v2_util.vcLog({
                 title: logTitle + ': Process Error',
                 error: err,
                 recordId: CURRENT.recordId
@@ -353,7 +353,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
 
             log.debug(logTitle, 'order request url=' + url);
 
-            var response = VC_Util.sendRequest({
+            var response = v2_util.sendRequest({
                 header: logTitle,
                 query: {
                     url: url,
@@ -367,7 +367,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
             });
 
             if (response.isError) throw response.errorMsg;
-            var parsedResponse = VC_Util.safeParse(response.RESPONSE);
+            var parsedResponse = v2_util.safeParse(response.RESPONSE);
             if (!parsedResponse) throw 'Unable to fetch server response';
             if (!parsedResponse.value) throw 'Order(s) not found';
 
@@ -391,7 +391,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
                 var url = WEFI.endpoint.INVOICE + '?' + params;
                 log.debug(logTitle, 'invoice required url=' + url);
 
-                var response = VC_Util.sendRequest({
+                var response = v2_util.sendRequest({
                     header: logTitle,
                     query: {
                         url: url,
@@ -405,7 +405,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, VC_Util) {
                 });
 
                 if (response.isError) throw response.errorMsg;
-                var parsedResponse = VC_Util.safeParse(response.RESPONSE);
+                var parsedResponse = v2_util.safeParse(response.RESPONSE);
                 if (!parsedResponse) throw 'Unable to fetch server response';
                 if (!parsedResponse.value) throw 'Invoice(s) not found';
 

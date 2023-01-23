@@ -17,13 +17,13 @@ define(function (request) {
         ns_search = require('N/search'),
         ns_runtime = require('N/runtime');
 
-    var vc_util = require('./CTC_VC2_Lib_Utils'),
-        vc_main = require('./CTC_VC2_Lib_Main'),
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_main = require('./CTC_VC2_Lib_Main'),
         vc_websvc = require('./CTC_VC_Lib_WebService'),
         vc_record = require('./netsuitelibrary_v2'),
         util_record = require('./CTC_VC_Lib_Record'),
         vc_log = require('./CTC_VC_Lib_Log'),
-        vc_constants = require('./CTC_VC2_Constants');
+        vc2_constant = require('./CTC_VC2_Constants');
 
     var LogTitle = 'RL_OrderStatus',
         LogPrefix = '',
@@ -42,9 +42,9 @@ define(function (request) {
                 log.debug(logTitle, '##### START SCRIPT ##### ' + JSON.stringify(Current));
                 LogPrefix = '[' + ['PO', Current.poId, Current.action].join(':') + '] ';
 
-                if (!vc_main.validateLicense()) return 'Invalid license';
+                if (!vc2_main.validateLicense()) return 'Invalid license';
 
-                Current.MainCFG = vc_main.loadMainConfig();
+                Current.MainCFG = vc2_main.loadMainConfig();
                 if (!Current.MainCFG) throw 'Missing Main Config';
 
                 // load the PO
@@ -59,7 +59,7 @@ define(function (request) {
                 });
                 log.debug(logTitle, LogPrefix + Current.poData);
 
-                Current.VendorCFG = vc_main.loadVendorConfig({
+                Current.VendorCFG = vc2_main.loadVendorConfig({
                     vendor: Current.poData.entity,
                     subsidiary: Current.poData.subsidiary
                 });
@@ -104,10 +104,10 @@ define(function (request) {
                     // todo: move vc log to vc main lib
                     vc_log.recordLog({
                         header: 'PO Update | Error',
-                        body: vc_util.extractError(updateStatus.error),
+                        body: vc2_util.extractError(updateStatus.error),
                         transaction: docid,
                         transactionLineKey: updateStatus.lineuniquekey,
-                        status: vc_constants.Lists.VC_LOG_STATUS.ERROR
+                        status: vc2_constant.Lists.VC_LOG_STATUS.ERROR
                     });
                 }
 
@@ -123,7 +123,7 @@ define(function (request) {
                     : null;
             } catch (error) {
                 util.extend(returnObj, {
-                    msg: error.msg || vc_util.extractError(error),
+                    msg: error.msg || vc2_util.extractError(error),
                     details: returnObj.details || JSON.stringify(error),
                     isError: true
                 });

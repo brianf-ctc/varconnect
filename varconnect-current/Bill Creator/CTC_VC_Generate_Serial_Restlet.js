@@ -12,7 +12,7 @@
  * @NModuleScope Public
  * @NScriptType Restlet
  */
-define(['N/record', './../CTC_VC2_Lib_Utils'], function (ns_record, vc_util) {
+define(['N/record', './../CTC_VC2_Lib_Utils'], function (ns_record, vc2_util) {
     var LogTitle = 'VC|Generate Serials',
         LogPrefix = '';
 
@@ -78,7 +78,7 @@ define(['N/record', './../CTC_VC2_Lib_Utils'], function (ns_record, vc_util) {
                     log.debug('created', record_id);
                 }
             } catch (error) {
-                returnObj.msg = vc_util.extractError(error);
+                returnObj.msg = vc2_util.extractError(error);
                 returnObj.isError = true;
                 log.debug(logTitle, '## ERROR ## ' + JSON.stringify(error));
             }

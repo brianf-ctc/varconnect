@@ -12,7 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_record, ns_search, ns_task) {
+define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_Record, NS_Search, NS_Task) {
     var LogTitle = 'CTC_Util';
 
     var CTC_Util = {
@@ -144,9 +144,9 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             /// attempt to parse it first
             if (!dateValue) {
                 try {
-                    dateValue = ns_format.parse({
+                    dateValue = NS_Format.parse({
                         value: dateStr,
-                        type: option.format || ns_file.Type.DATETIMETZ
+                        type: option.format || NS_File.Type.DATETIMETZ
                     });
                 } catch (err) {}
             }
@@ -187,7 +187,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             var optionFormat = {};
 
             optionFormat.value = this.parseDate(option);
-            optionFormat.format = option.format || ns_format.Type.DATE;
+            optionFormat.format = option.format || NS_Format.Type.DATE;
 
             return this.formatDate(optionFormat);
         },
@@ -197,13 +197,13 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             optionFormat.value = option.value || option.date;
             if (option.format) optionFormat.format = option.format;
 
-            return ns_format.format(optionFormat);
+            return NS_Format.format(optionFormat);
         },
         flatLookup: function (option) {
             var arrData = null,
                 arrResults = null;
 
-            arrResults = ns_search.lookupFields(option);
+            arrResults = NS_Search.lookupFields(option);
             // log.debug('flatLookup', 'arrResults>>' + JSON.stringify(arrResults));
 
             if (arrResults) {
@@ -238,7 +238,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
 
             try {
                 var searchOption = {
-                    type: ns_record.Type.CONTACT,
+                    type: NS_Record.Type.CONTACT,
                     filters: [],
                     columns: ['internalid', 'entityid', 'email', 'phone']
                 };
@@ -252,7 +252,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                     searchOption.filters.push(['email', 'is', option.email]);
                 }
 
-                var contactSearchObj = ns_search.create(searchOption);
+                var contactSearchObj = NS_Search.create(searchOption);
                 var contactData = {};
 
                 contactSearchObj.run().each(function (result) {
@@ -301,7 +301,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             return str.substring(str.length - len, str.length);
         },
         getTaskStatus: function (taskId) {
-            return ns_task.checkStatus({ taskId: taskId });
+            return NS_Task.checkStatus({ taskId: taskId });
         },
         forceDeploy: function (option) {
             var logTitle = [LogTitle, 'forceDeploy'].join('::');
@@ -324,10 +324,10 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                         if (deployId) taskInfo.deploymentId = deployId;
                         if (scriptParams) taskInfo.params = scriptParams;
 
-                        var objTask = ns_task.create(taskInfo);
+                        var objTask = NS_Task.create(taskInfo);
 
                         var taskId = objTask.submit();
-                        var taskStatus = ns_task.checkStatus({
+                        var taskStatus = NS_Task.checkStatus({
                             taskId: taskId
                         });
 
@@ -351,8 +351,8 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                     var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
                     var returnValue = false;
                     try {
-                        var searchDeploy = ns_search.create({
-                            type: ns_search.Type.SCRIPT_DEPLOYMENT,
+                        var searchDeploy = NS_Search.create({
+                            type: NS_Search.Type.SCRIPT_DEPLOYMENT,
                             filters: [
                                 ['script.scriptid', 'is', scriptId],
                                 'AND',
@@ -366,8 +366,8 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
 
                         searchDeploy.run().each(function (result) {
                             if (!result.id) return false;
-                            newDeploy = ns_record.copy({
-                                type: ns_record.Type.SCRIPT_DEPLOYMENT,
+                            newDeploy = NS_Record.copy({
+                                type: NS_Record.Type.SCRIPT_DEPLOYMENT,
                                 id: result.id
                             });
 
@@ -409,11 +409,11 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                     });
 
                 if (!option.taskType) {
-                    option.taskType = ns_task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = NS_Task.TaskType.SCHEDULED_SCRIPT;
                     option.taskType = option.isMapReduce
-                        ? ns_task.TaskType.MAP_REDUCE
+                        ? NS_Task.TaskType.MAP_REDUCE
                         : option.isSchedScript
-                        ? ns_task.TaskType.SCHEDULED_SCRIPT
+                        ? NS_Task.TaskType.SCHEDULED_SCRIPT
                         : option.taskType;
                 }
 
@@ -463,7 +463,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                     }
                     if (!scriptId) return false;
 
-                    var objSearch = ns_search.create({
+                    var objSearch = NS_Search.create({
                         type: 'script',
                         filters: [['scriptid', 'is', scriptId]],
                         columns: ['scriptfile', 'name']
@@ -475,8 +475,8 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                         return true;
                     });
 
-                    var ns_file = this.loadModule('N/file');
-                    var fileObj = ns_file.load({
+                    var NS_File = this.loadModule('N/file');
+                    var fileObj = NS_File.load({
                         id: fileId
                     });
 
@@ -518,7 +518,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                 }
 
                 var transactionName = option.type || option.name;
-                var dupSearchObj = ns_search.create({
+                var dupSearchObj = NS_Search.create({
                     type: transactionName,
                     filters: filterExpr,
                     columns: ['tranid', 'internalid']
@@ -563,10 +563,10 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             }
 
             // search the last tranid
-            var orderSearch = ns_search.create({
+            var orderSearch = NS_Search.create({
                 type: 'salesorder',
                 filters: [filterExpr],
-                columns: ['tranid', ns_search.createColumn({ name: 'internalid', sort: ns_search.Sort.DESC })]
+                columns: ['tranid', NS_Search.createColumn({ name: 'internalid', sort: NS_Search.Sort.DESC })]
             });
 
             var lastTranId;
@@ -600,7 +600,7 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
             var fileInfo = this.CACHE[cacheKey];
 
             if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                var objSearch = ns_search.create(searchOption);
+                var objSearch = NS_Search.create(searchOption);
                 fileInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
                     var fInfo = {};
@@ -644,8 +644,8 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (ns_format, ns_r
                 }
 
                 // load the file
-                var ns_file = this.loadModule('N/file');
-                var fileObj = ns_file.load({
+                var NS_File = this.loadModule('N/file');
+                var fileObj = NS_File.load({
                     id: fileId
                 });
 

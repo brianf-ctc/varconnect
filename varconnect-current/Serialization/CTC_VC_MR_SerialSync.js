@@ -32,7 +32,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
     ns_search,
     ns_url,
     ns_runtime,
-    vc_util
+    vc2_util
 ) {
     var LogTitle = 'VC_SERIALS',
         LogPrefix = '';
@@ -47,7 +47,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
         if (!srchId) throw new Error('No search provided');
         var srch = ns_search.load({ id: srchId });
 
-        var allSerialsSearch = vc_util.searchAllPaged({ searchObj: srch });
+        var allSerialsSearch = vc2_util.searchAllPaged({ searchObj: srch });
 
         log.debug(logTitle, '>> Total Serials: ' + allSerialsSearch.length);
 
@@ -329,7 +329,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
             log.audit(logTitle, LogPrefix + '>> PROCESS serial -- ' + JSON.stringify(options));
 
             try {
-                if (vc_util.isEmpty(customSerial)) {
+                if (vc2_util.isEmpty(customSerial)) {
                     var newId = Helper.createCustomSerial({
                         id: id,
                         item: item,

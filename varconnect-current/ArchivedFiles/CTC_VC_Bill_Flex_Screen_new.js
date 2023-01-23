@@ -28,7 +28,7 @@ define([
 ], function (
     VC_MainCfg,
     VC2_Constants,
-    vc2_util,
+    VC2_Util,
     ns_ui,
     ns_msg,
     ns_record,
@@ -38,7 +38,7 @@ define([
     ns_runtime,
     ns_task
 ) {
-    var LogTitle = 'FlexScreen',
+    var LOG_TITLE = 'FlexScreen',
         BILL_CREATOR = VC2_Constants.Bill_Creator;
 
     var BOOLMAP = {
@@ -106,7 +106,7 @@ define([
 
             if (!Helper.CACHE.hasOwnProperty(cacheKey)) {
                 try {
-                    var itemLookup = vc2_util.flatLookup({
+                    var itemLookup = VC2_Util.flatLookup({
                         type: 'item',
                         id: itemId,
                         columns: ['name']
@@ -126,7 +126,7 @@ define([
             var returnValue = false;
 
             if (
-                vc2_util.inArray(Current.BILLFILE_DATA.status, [
+                VC2_Util.inArray(Current.BILLFILE_DATA.status, [
                     BILL_CREATOR.Status.PENDING,
                     BILL_CREATOR.Status.VARIANCE
                 ]) &&
@@ -143,7 +143,7 @@ define([
 
             if (
                 Current.PO_DATA &&
-                vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'pendingReceipt', 'closed'])
+                VC2_Util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'pendingReceipt', 'closed'])
             ) {
                 // Current.WarnMessage.push(
                 //     'Unable to create Vendor Bill due to - ' + Current.PO_DATA.statusText
@@ -163,9 +163,9 @@ define([
                         });
                     } catch (bill_err) {
                         returnValue = false;
-                        log.audit('isBillable', '>> ERROR Generating Bill Record: ' + vc2_util.extractError(bill_err));
+                        log.audit('isBillable', '>> ERROR Generating Bill Record: ' + VC2_Util.extractError(bill_err));
                         Current.ErrorMessage =
-                            'Unable to create Vendor Bill due to - ' + vc2_util.extractError(bill_err);
+                            'Unable to create Vendor Bill due to - ' + VC2_Util.extractError(bill_err);
                     }
                 }
             }
@@ -177,7 +177,7 @@ define([
             if (!Current.BILLFILE_DATA) return false; // no bill file, return false;
 
             if (
-                vc2_util.inArray(Current.BILLFILE_DATA.status, [
+                VC2_Util.inArray(Current.BILLFILE_DATA.status, [
                     BILL_CREATOR.Status.PENDING,
                     BILL_CREATOR.Status.ERROR,
                     BILL_CREATOR.Status.CLOSED,
@@ -247,7 +247,7 @@ define([
                         lineData[field] = parseFloat(lineData[field]);
                     }
 
-                    if (!vc2_util.isEmpty(filter) && filter.hasOwnProperty(field)) {
+                    if (!VC2_Util.isEmpty(filter) && filter.hasOwnProperty(field)) {
                         if (filter[field] != lineData[field]) {
                             isSkipped = true;
                             break;
@@ -269,7 +269,7 @@ define([
             for (var lineItem in objLineItems) {
                 objLineItems[lineItem].amount = objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
 
-                objLineItems[lineItem].amount = vc2_util.roundOff(objLineItems[lineItem].amount);
+                objLineItems[lineItem].amount = VC2_Util.roundOff(objLineItems[lineItem].amount);
                 objLineItems[lineItem].taxAmount = Helper.calculateLineTax(objLineItems[lineItem]);
             }
 
@@ -285,11 +285,11 @@ define([
             var taxAmount = taxRate1 ? (taxRate1 / 100) * amount : 0;
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
-            return vc2_util.roundOff(taxAmount) || 0;
+            return VC2_Util.roundOff(taxAmount) || 0;
         },
         collectTaxItems: function (objLineItems, itemId) {
             if (!Current.listTaxItems) Current.listTaxItems = {};
-            if (!objLineItems || vc2_util.isEmpty(objLineItems)) return false;
+            if (!objLineItems || VC2_Util.isEmpty(objLineItems)) return false;
 
             log.audit('collectTaxItems', '>> items: ' + JSON.stringify([objLineItems, itemId]));
 
@@ -308,7 +308,7 @@ define([
                     taxData.taxrate1 = objLineItems[lineItem].taxrate2;
                 }
 
-                if (!vc2_util.isEmpty(taxData)) {
+                if (!VC2_Util.isEmpty(taxData)) {
                     Current.listTaxItems[lineItem] = taxData;
                 }
             }
@@ -359,7 +359,7 @@ define([
 
                 log.audit('SublistFields.InvoiceLines', JSON.stringify(objItemLines));
 
-                if (!vc2_util.isEmpty(objItemLines)) {
+                if (!VC2_Util.isEmpty(objItemLines)) {
                     for (var lineItem in objItemLines) {
                         var lineData = objItemLines[lineItem];
                         arrItemOptions.push({
@@ -453,7 +453,7 @@ define([
                 var arrItemOptions = [{ text: ' ', value: ' ' }];
 
                 log.audit('SublistFields.Variance', JSON.stringify(objItemLines));
-                if (!vc2_util.isEmpty(objItemLines)) {
+                if (!VC2_Util.isEmpty(objItemLines)) {
                     for (var lineItem in objItemLines) {
                         var lineData = objItemLines[lineItem];
                         arrItemOptions.push({
@@ -546,7 +546,7 @@ define([
         },
         processInvoiceLines: function () {},
         processVariance: function (option) {
-            var logTitle = [LogTitle, 'processVariance'].join('::');
+            var logTitle = [LOG_TITLE, 'processVariance'].join('::');
 
             var varianceOption = option,
                 varianceLineValues = {};
@@ -565,10 +565,10 @@ define([
 
             return {
                 loadValues: function () {
-                    // if (vc2_util.isEmpty(Current.BILL_DATA.varianceLines)) return false;
+                    // if (VC2_Util.isEmpty(Current.BILL_DATA.varianceLines)) return false;
 
                     var lineValues = {};
-                    if (!vc2_util.isEmpty(Current.BILL_DATA.varianceLines)) {
+                    if (!VC2_Util.isEmpty(Current.BILL_DATA.varianceLines)) {
                         Current.BILL_DATA.varianceLines.forEach(function (varianceValue) {
                             if (varianceValue.type == 'miscCharges') {
                                 if (!lineValues[varianceValue.type]) lineValues[varianceValue.type] = {};
@@ -847,7 +847,7 @@ define([
 
                 returnRec = ns_record.transform(option);
             } catch (err) {
-                throw 'Unable to transform record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
+                throw 'Unable to transform record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         },
@@ -859,7 +859,7 @@ define([
 
                 returnRec = ns_record.load(option);
             } catch (err) {
-                throw 'Unable to load record: ' + vc2_util.extractError(err) + '\n' + JSON.stringify(option);
+                throw 'Unable to load record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
             }
             return returnRec;
         }
@@ -1027,7 +1027,7 @@ define([
 
                 if (
                     !Current.BILLFILE_DATA.billLink &&
-                    vc2_util.inArray(Current.BILLFILE_DATA.status, Current.ActiveStatus)
+                    VC2_Util.inArray(Current.BILLFILE_DATA.status, Current.ActiveStatus)
                 ) {
                     if (Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED) {
                         arrFields[0].selectOptions.push({
@@ -1036,7 +1036,7 @@ define([
                         });
 
                         if (
-                            vc2_util.inArray(Current.PO_DATA.statusRef, [
+                            VC2_Util.inArray(Current.PO_DATA.statusRef, [
                                 'partiallyReceived',
                                 'pendingBillPartReceived',
                                 'pendingBilling'
@@ -1048,8 +1048,8 @@ define([
                             });
                         }
                     } else if (
-                        !vc2_util.isEmpty(Current.PO_DATA) &&
-                        vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled'])
+                        !VC2_Util.isEmpty(Current.PO_DATA) &&
+                        VC2_Util.inArray(Current.PO_DATA.statusRef, ['fullyBilled'])
                     ) {
                         arrFields[0].selectOptions.push({
                             text: 'Save & Close',
@@ -1757,7 +1757,7 @@ define([
 
     var SL_FlexScreen = {
         initialize: function (context) {
-            var logTitle = [LogTitle, 'initialize'].join('::'),
+            var logTitle = [LOG_TITLE, 'initialize'].join('::'),
                 returnValue;
 
             Param.RecordId = context.request.parameters.record_id;
@@ -1839,7 +1839,7 @@ define([
             return returnValue;
         },
         viewForm: function (context) {
-            var logTitle = [LogTitle, 'viewForm'].join('::'),
+            var logTitle = [LOG_TITLE, 'viewForm'].join('::'),
                 returnValue;
 
             /// Buttons //////////////
@@ -1847,7 +1847,7 @@ define([
             Current.Form.addResetButton({ label: 'Reset' });
 
             if (
-                vc2_util.inArray(Current.BILLFILE_DATA.status, [
+                VC2_Util.inArray(Current.BILLFILE_DATA.status, [
                     BILL_CREATOR.Status.PENDING,
                     BILL_CREATOR.Status.REPROCESS
                 ])
@@ -1904,7 +1904,7 @@ define([
         },
         postAction: function (context) {},
         handleError: function (error) {
-            var errorMessage = vc2_util.extractError(error);
+            var errorMessage = VC2_Util.extractError(error);
 
             // Current.Form.addPageInitMessage({
             //     title: 'Error',
@@ -1929,12 +1929,12 @@ define([
 
     return {
         onRequest: function (context) {
-            var logTitle = [LogTitle, 'onRequest'].join('::');
+            var logTitle = [LOG_TITLE, 'onRequest'].join('::');
             log.audit(logTitle, '>> Params: ' + JSON.stringify(context.request.parameters));
 
             try {
                 SL_FlexScreen.initialize(context);
-                logTitle = [LogTitle, Current.Method, Param.RecordId].join('::');
+                logTitle = [LOG_TITLE, Current.Method, Param.RecordId].join('::');
 
                 if (Current.Method == 'GET') {
                     if (Param.TaskId == 'processbill') Helper.processBill();

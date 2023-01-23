@@ -19,7 +19,7 @@ define([
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Lib_Record'
-], function (ns_record, ns_search, ns_format, vc_constants, vc_util, vc_recordlib) {
+], function (ns_record, ns_search, ns_format, vc2_constant, vc2_util, vc_recordlib) {
     var LogTitle = 'VC|Generate IF/IR',
         CURRENT = {},
         LogPrefix = '';
@@ -52,7 +52,7 @@ define([
                 log.debug(logTitle, LogPrefix + '// PO Data: ' + JSON.stringify(CURRENT.PO_DATA));
 
                 if (CURRENT.PO_DATA.createdfrom) {
-                    CURRENT.SO_DATA = vc_util.flatLookup({
+                    CURRENT.SO_DATA = vc2_util.flatLookup({
                         type: ns_search.Type.SALES_ORDER,
                         id: CURRENT.PO_DATA.createdfrom,
                         columns: ['entity', 'tranid']
@@ -88,7 +88,7 @@ define([
 
                 // check the po status and if it's not ready for billing return back a null value
                 if (
-                    !vc_util.inArray(CURRENT.PO_DATA.statusRef, [
+                    !vc2_util.inArray(CURRENT.PO_DATA.statusRef, [
                         'pendingBillPartReceived',
                         'pendingReceipt',
                         'partiallyReceived'
@@ -311,7 +311,7 @@ define([
                 };
                 returnObj.msg = 'Created IF/IR';
             } catch (error) {
-                returnObj.msg = vc_util.extractError(error);
+                returnObj.msg = vc2_util.extractError(error);
                 returnObj.isError = true;
                 log.debug(logTitle, '## ERROR ## ' + JSON.stringify(error));
             } finally {
@@ -366,7 +366,7 @@ define([
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
                 returnValue;
             var entityId = option.entity;
-            var BILLCREATE_CFG = vc_constants.RECORD.BILLCREATE_CONFIG;
+            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
 
             try {
                 var searchOption = {
@@ -379,7 +379,7 @@ define([
                     searchOption.columns.push(
                         ns_search.createColumn({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         })
                     );
                 }
@@ -392,7 +392,7 @@ define([
                     for (var field in BILLCREATE_CFG.FIELD) {
                         returnValue[field] = row.getValue({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         });
                     }
                     return true;

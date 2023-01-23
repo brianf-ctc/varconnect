@@ -18,8 +18,8 @@ define(function (require) {
         ns_search = require('N/search'),
         ns_runtime = require('N/runtime');
 
-    var vc_util = require('./CTC_VC2_Lib_Utils'),
-        vc_constants = require('./CTC_VC2_Constants'),
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_constant = require('./CTC_VC2_Constants'),
         vc_license = require('./CTC_VC_Lib_LicenseValidator'),
         vc_maincfg = require('./CTC_VC_Lib_MainConfiguration'),
         vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig');

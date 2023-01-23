@@ -43,7 +43,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js'
-], function (ns_search, ns_runtime, ns_record, ns_format, ns_config, vc_global, vc_constant, vc_log, vc2_util) {
+], function (NS_Search, NS_Runtime, NS_Record, NS_Format, NS_Config, VC_Global, VC_Constants, VC_Log, VC2_Util) {
     var LogTitle = 'Create-ItemFF',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
@@ -59,14 +59,14 @@ define([
 
             if (!Helper.isEmpty(po_ID)) {
                 var d1 = Date.parse(PO_Valid_Date);
-                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchId = NS_Runtime.getCurrentScript().getParameter('custscript_searchid2');
 
-                var filters = ns_search.createFilter({
+                var filters = NS_Search.createFilter({
                     name: 'internalid',
-                    operator: ns_search.Operator.IS,
+                    operator: NS_Search.Operator.IS,
                     values: po_ID
                 });
-                var mySearch = ns_search.load({ id: searchId });
+                var mySearch = NS_Search.load({ id: searchId });
                 mySearch.filters.push(filters);
                 mySearch.run().each(function (result) {
                     var docStatus = result.getText({
@@ -95,12 +95,12 @@ define([
             var logTitle = [LogTitle, 'orderExists'].join('::');
             // log.audit(logTitle, '>> ..order exists transid: ' + JSON.stringify(transID));
 
-            var filters = ns_search.createFilter({
+            var filters = NS_Search.createFilter({
                 name: 'custbody_ctc_if_vendor_order_match',
-                operator: ns_search.Operator.IS,
+                operator: NS_Search.Operator.IS,
                 values: transID
             });
-            var mySearch = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+            var mySearch = NS_Search.load({ id: 'customsearch_ctc_if_vendor_orders' });
             mySearch.filters.push(filters);
             // If order num already exists do nothing
             var found = false,
@@ -119,7 +119,7 @@ define([
             var logTitle = [LogTitle, 'itemInLineData'].join('::');
             // log.audit(logTitle, LogPrefix + '>> params: ' + JSON.stringify(option));
 
-            var vendorList = vc_constant.Lists.XML_VENDOR;
+            var vendorList = VC_Constants.Lists.XML_VENDOR;
             var isInData = false;
 
             var lineData = option.lineData,
@@ -143,12 +143,12 @@ define([
                     !lineData.poLine ||
                     fulfillLineData.line_num == lineData.poLine ||
                     lineData.itemNum == fulfillLineData.item_num ||
-                    vc2_util.inArray(lineData.itemNum, [
+                    VC2_Util.inArray(lineData.itemNum, [
                         fulfillLineData.item_num,
                         fulfillLineData.item_num_alt,
                         fulfillLineData.vendorSKU
                     ]) ||
-                    vc2_util.inArray(lineData.skuName, [
+                    VC2_Util.inArray(lineData.skuName, [
                         fulfillLineData.item_num,
                         fulfillLineData.item_num_alt,
                         fulfillLineData.vendorSKU
@@ -292,7 +292,7 @@ define([
             if (strList && util.isString(strList)) {
                 arrList = strList.split(splitStr);
             }
-            arrList = vc2_util.uniqueArray(arrList);
+            arrList = VC2_Util.uniqueArray(arrList);
 
             return arrList.join(joinStr);
         },
@@ -301,8 +301,8 @@ define([
                 date;
 
             if (!dateFormat) {
-                var generalPref = ns_config.load({
-                    type: ns_config.Type.COMPANY_PREFERENCES
+                var generalPref = NS_Config.load({
+                    type: NS_Config.Type.COMPANY_PREFERENCES
                 });
                 dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
                 // log.debug('dateFormat', dateFormat);
@@ -336,9 +336,9 @@ define([
                     date.setFullYear(year);
                 }
 
-                date = ns_format.format({
+                date = NS_Format.format({
                     value: date,
-                    type: dateFormat ? dateFormat : ns_format.Type.DATE
+                    type: dateFormat ? dateFormat : NS_Format.Type.DATE
                 });
             }
 
@@ -440,21 +440,21 @@ define([
                 status:
                     option.status ||
                     (option.error
-                        ? vc_constant.Lists.VC_LOG_STATUS.ERROR
+                        ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
                         : option.isSucces
-                        ? vc_constant.Lists.VC_LOG_STATUS.SUCCESS
-                        : vc_constant.Lists.VC_LOG_STATUS.INFO)
+                        ? VC_Constants.Lists.VC_LOG_STATUS.SUCCESS
+                        : VC_Constants.Lists.VC_LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
-            vc_log.recordLog(logOption);
+            VC_Log.recordLog(logOption);
             return true;
         },
         // Added by Clemen - 03/18/2022
         getSerials: function (soId, itemId) {
             var retVal;
 
-            var customrecordserialnumSearchObj = ns_search.create({
+            var customrecordserialnumSearchObj = NS_Search.create({
                 type: 'customrecordserialnum',
                 filters: [['custrecordserialsales', 'is', soId], 'AND', ['custrecordserialitem', 'is', itemId]],
                 columns: ['name']
@@ -607,7 +607,7 @@ define([
 
             if (Helper.isEmpty(lineData.location)) {
                 //Use SO's header level Location
-                var locationLookup = ns_search.lookupFields({
+                var locationLookup = NS_Search.lookupFields({
                     type: 'salesorder',
                     id: orderId,
                     columns: ['location']
@@ -699,7 +699,7 @@ define([
             for (i = 0; i < arrLineData.length; i++) {
                 if (
                     arrLineData[i].order_num &&
-                    !vc2_util.inArray(arrLineData[i].order_num, fulfillmentOrders)
+                    !VC2_Util.inArray(arrLineData[i].order_num, fulfillmentOrders)
                     // fulfillmentOrders.indexOf(arrLineData[i].order_num) < 0
                 )
                     fulfillmentOrders.push(arrLineData[i].order_num);
@@ -755,10 +755,10 @@ define([
                 log.audit(logTitle, LogPrefix + '****  Transform to Fulfillment ****');
                 try {
                     // create item fulfillment from sales order
-                    recItemFF = ns_record.transform({
-                        fromType: ns_record.Type.SALES_ORDER,
+                    recItemFF = NS_Record.transform({
+                        fromType: NS_Record.Type.SALES_ORDER,
                         fromId: so_ID,
-                        toType: ns_record.Type.ITEM_FULFILLMENT,
+                        toType: NS_Record.Type.ITEM_FULFILLMENT,
                         isDynamic: true
                     });
                     log.audit(logTitle, LogPrefix + '...success');
@@ -792,13 +792,13 @@ define([
                         line: line,
                         itemNum: recItemFF.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL,
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL,
                             line: line
                         }),
-                        skuName: vc_global.VENDOR_SKU_LOOKUP_COL
+                        skuName: VC_Global.VENDOR_SKU_LOOKUP_COL
                             ? recItemFF.getSublistText({
                                   sublistId: 'item',
-                                  fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                                  fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL,
                                   line: line
                               })
                             : '',
@@ -814,7 +814,7 @@ define([
                         }),
                         dandh: recItemFF.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_constant.Columns.DH_MPN,
+                            fieldId: VC_Constants.Columns.DH_MPN,
                             line: line
                         })
                     };
@@ -959,7 +959,7 @@ define([
                         lineNo: line,
                         item: recItemFF.getCurrentSublistValue({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL
                         }),
                         quantity: recItemFF.getCurrentSublistValue({
                             sublistId: 'item',
@@ -969,10 +969,10 @@ define([
                             sublistId: 'item',
                             fieldId: 'itemreceive'
                         }),
-                        vendorSKU: vc_global.VENDOR_SKU_LOOKUP_COL
+                        vendorSKU: VC_Global.VENDOR_SKU_LOOKUP_COL
                             ? recItemFF.getCurrentSublistValue({
                                   sublistId: 'item',
-                                  fieldId: vc_global.VENDOR_SKU_LOOKUP_COL
+                                  fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL
                               })
                             : '',
                         poLine: recItemFF.getCurrentSublistText({
@@ -981,7 +981,7 @@ define([
                         }),
                         dandh: recItemFF.getCurrentSublistText({
                             sublistId: 'item',
-                            fieldId: vc_constant.Columns.DH_MPN
+                            fieldId: VC_Constants.Columns.DH_MPN
                         })
                     };
 
@@ -1013,7 +1013,7 @@ define([
                                 (lineFFData.vendorSKU != '' && lineFFData.vendorSKU == uniqueItems[tmp2].vendorSKU) ||
                                 // D&H Item recognition
                                 (lineFFData.dandh == uniqueItems[tmp2].item_num &&
-                                    vendorConfig.xmlVendor == vc_constant.Lists.XML_VENDOR.DandH)
+                                    vendorConfig.xmlVendor == VC_Constants.Lists.XML_VENDOR.DandH)
                             ) {
                                 log.audit(
                                     logTitle,
@@ -1318,9 +1318,9 @@ define([
 
                 log.audit(logTitle, LogPrefix + '>> recordLines: ' + JSON.stringify(recordLines));
 
-                if (vc2_util.isEmpty(recordLines)) {
+                if (VC2_Util.isEmpty(recordLines)) {
                     Helper.logMsg({
-                        status: vc_constant.Lists.VC_LOG_STATUS.INFO,
+                        status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
                         title: 'Fulfillment Lines',
                         message: '>> No Matching Lines To Fulfill'
                     });
@@ -1329,7 +1329,7 @@ define([
                 }
 
                 Helper.logMsg({
-                    status: vc_constant.Lists.VC_LOG_STATUS.INFO,
+                    status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
                     title: 'Fulfillment Lines',
                     message: Helper.printerFriendlyLines({
                         recordLines: recordLines
@@ -1350,10 +1350,10 @@ define([
 
                 for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
                     var found = false;
-                    if (vc_global.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
+                    if (VC_Global.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
                         var index = recItemFF.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                            fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL,
                             value: uniqueItems[tmp3].vendorSKU
                         });
 
@@ -1375,7 +1375,7 @@ define([
                     if (!found) {
                         var index = recItemFF.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL,
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL,
                             value: uniqueItems[tmp3].item_num
                         });
 
@@ -1409,7 +1409,7 @@ define([
                     var objId;
 
                     if (rec_Changed) {
-                        if (vc_global.PICK_PACK_SHIP) {
+                        if (VC_Global.PICK_PACK_SHIP) {
                             recItemFF.setValue({
                                 fieldId: 'shipstatus',
                                 value: 'C'

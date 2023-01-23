@@ -15,10 +15,10 @@
 define(function (require) {
     var nsSearch = require('N/search'),
         currentRecord = require('N/currentRecord'),
-        vc_util = require('./CTC_VC2_Lib_Utils.js'),
+        vc2_util = require('./CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('./CTC_VC2_Constants.js'),
         libVendorConfig = require('./CTC_VC_Lib_VendorConfig.js'),
-        libWebService = require('./CTC_VC_Lib_WebService.js'),
-        vc2_constant = require('./CTC_VC2_Constants.js');
+        libWebService = require('./CTC_VC_Lib_WebService.js');
 
     var hljs = require('./highlight/highlight.js'),
         hljsXml = require('./highlight/languages/xml.min.js'),

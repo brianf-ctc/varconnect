@@ -27,7 +27,7 @@ define([
     'N/task'
 ], function (
     VC_MainCfg,
-    vc_constant,
+    VC_Constants,
     CTC_Util,
     ns_ui,
     ns_msg,
@@ -38,8 +38,8 @@ define([
     ns_runtime,
     ns_task
 ) {
-    var LogTitle = 'FlexScreen',
-        BILL_CREATOR = vc_constant.Bill_Creator;
+    var LOG_TITLE = 'FlexScreen',
+        BILL_CREATOR = VC_Constants.Bill_Creator;
 
     var Helper = {
             CACHE: {},
@@ -970,7 +970,7 @@ define([
             },
             processInvoiceLines: function () {},
             processVariance: function (option) {
-                var logTitle = [LogTitle, 'processVariance'].join('::');
+                var logTitle = [LOG_TITLE, 'processVariance'].join('::');
 
                 var varianceOption = option,
                     varianceLineValues = {};
@@ -1262,7 +1262,7 @@ define([
                 };
             },
             findLineItem: function (option) {
-                var logTitle = [LogTitle, 'findLineItem'].join('::'),
+                var logTitle = [LOG_TITLE, 'findLineItem'].join('::'),
                     returnValue;
                 try {
                     var lineCount = option.record.getLineCount({
@@ -1365,7 +1365,7 @@ define([
         Param.TaskId = context.request.parameters.taskact;
         Current.Method = context.request.method.toUpperCase();
 
-        var logTitle = [LogTitle, Current.Method, Param.RecordId].join('::');
+        var logTitle = [LOG_TITLE, Current.Method, Param.RecordId].join('::');
         Current.Script = ns_runtime.getCurrentScript();
 
         log.debug(logTitle, '****** START ****** :  ' + JSON.stringify({ method: Current.Method, param: Param }));

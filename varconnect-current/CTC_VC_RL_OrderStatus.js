@@ -17,12 +17,12 @@ define(function (require) {
         ns_search = require('N/search'),
         ns_runtime = require('N/runtime');
 
-    var vc_util = require('./CTC_VC2_Lib_Utils'),
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_constant = require('./CTC_VC2_Constants'),
         vc_websvclib = require('./CTC_VC_Lib_WebService'),
         vc_record = require('./netsuitelibrary_v2'),
         util_record = require('./CTC_VC_Lib_Record'),
-        vc_log = require('./CTC_VC_Lib_Log'),
-        vc_constants = require('./CTC_VC2_Constants');
+        vc_log = require('./CTC_VC_Lib_Log');
 
     var LogTitle = 'RL_OrderStatus',
         LogPrefix = '',
@@ -121,17 +121,17 @@ define(function (require) {
                     if (updateStatus.error && updateStatus.lineuniquekey) {
                         vc_log.recordLog({
                             header: 'PO Update | Error',
-                            body: vc_util.extractError(updateStatus.error),
+                            body: vc2_util.extractError(updateStatus.error),
                             transaction: Current.Data.poId,
                             transactionLineKey: updateStatus.lineuniquekey,
-                            status: vc_constants.Lists.VC_LOG_STATUS.ERROR
+                            status: vc2_constant.Lists.VC_LOG_STATUS.ERROR
                         });
                     }
                 }
 
                 log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId));
 
-                if (!vc_util.isEmpty(Current.soId)) {
+                if (!vc2_util.isEmpty(Current.soId)) {
                     Current.Record.SO = ns_record.load({
                         type: ns_record.Type.SALES_ORDER,
                         id: Current.soId
@@ -172,7 +172,7 @@ define(function (require) {
                         })
                     );
 
-                    var ItemFFSearchAll = vc_util.searchAllPaged({ searchObj: objSearchIF });
+                    var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
                     log.debug(logTitle, LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length);
 
                     ItemFFSearchAll.forEach(function (result) {
@@ -195,7 +195,7 @@ define(function (require) {
                             values: numPrefix
                         })
                     );
-                    var ItemRcptSearchAll = vc_util.searchAllPaged({
+                    var ItemRcptSearchAll = vc2_util.searchAllPaged({
                         searchObj: objSearchIR
                     });
 
@@ -293,7 +293,7 @@ define(function (require) {
                 }
             } catch (e) {
                 util.extend(returnObj, {
-                    msg: error.msg || vc_util.extractError(error),
+                    msg: error.msg || vc2_util.extractError(error),
                     details: returnObj.details || JSON.stringify(error),
                     isError: true
                 });
@@ -431,9 +431,9 @@ define(function (require) {
 
                 vc_log.recordLog({
                     header: 'Fulfillment/Receipt Creation | Error',
-                    body: vc_util.extractError(e),
+                    body: vc2_util.extractError(e),
                     transaction: CurrentData.poId,
-                    status: vc_constants.Lists.VC_LOG_STATUS.ERROR
+                    status: vc2_constant.Lists.VC_LOG_STATUS.ERROR
                 });
 
                 throw e;

@@ -11,7 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/url', './CTC_VC2_Constants.js'], function (ns_url, vc2_constant) {
+define(['N/url', './CTC_VC_Constants.js'], function (url, vc_constant) {
     var Util = {
         isEmpty: function (stValue) {
             if (stValue == '' || stValue == null || stValue == undefined) {
@@ -37,12 +37,12 @@ define(['N/url', './CTC_VC2_Constants.js'], function (ns_url, vc2_constant) {
         },
         generateSerialLink: function (params) {
             var protocol = 'https://';
-            var domain = ns_url.resolveDomain({
-                hostType: ns_url.HostType.APPLICATION
+            var domain = url.resolveDomain({
+                hostType: url.HostType.APPLICATION
             });
-            var linkUrl = ns_url.resolveScript({
-                scriptId: vc2_constant.SCRIPT.VIEW_SERIALS_SL,
-                deploymentId: vc2_constant.DEPLOYMENT.VIEW_SERIALS_SL,
+            var linkUrl = url.resolveScript({
+                scriptId: vc_constant.Scripts.Script.VIEW_SERIALS_SL,
+                deploymentId: vc_constant.Scripts.Deployment.VIEW_SERIALS_SL,
                 params: params
             });
 

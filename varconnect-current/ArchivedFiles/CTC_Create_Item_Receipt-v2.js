@@ -30,7 +30,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js'
-], function (ns_search, ns_record, ns_runtime, vc_global, vc_constant, vc_log, vc_util) {
+], function (NS_Search, NS_Record, NS_Runtime, VC_Global, VC_Constants, VC_Log, VC_Util) {
     var LogTitle = 'ItemRcptLIB',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
@@ -68,7 +68,7 @@ define([
             if (!Current.MainCFG) throw 'Missing main configuration';
             if (!Current.VendorCFG) throw 'Missing vendor configuration';
             if (!Current.PO_ID) throw 'Missing PO ID';
-            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+            if (VC_Util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
 
             if (!ItemRcptLib.validateDate()) throw 'Invalid PO Date';
 
@@ -91,7 +91,7 @@ define([
             for (i = 0; i < OrderLines.length; i++) {
                 var logPrefix = LogPrefix + ' [' + OrderLines[i].order_num + '] ';
 
-                if (vc_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
+                if (VC_Util.inArray(OrderLines[i].order_num, arrOrderNums)) {
                     log.debug(logTitle, logPrefix + '......skipped: same order');
                     continue;
                 }
@@ -173,7 +173,7 @@ define([
 
                 ///////////////////////////////////////////////
                 var defaultItemFFValues = {};
-                if (ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' })) {
+                if (NS_Runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' })) {
                     var defaultShipGroup = Helper.getShipGroup({
                         recSalesOrd: Current.SO_REC,
                         recPurchOrd: Current.PO_REC
@@ -195,10 +195,10 @@ define([
                 );
                 try {
                     // create item fulfillment from sales order
-                    record = ns_record.transform({
-                        fromType: ns_record.Type.SALES_ORDER,
+                    record = NS_Record.transform({
+                        fromType: NS_Record.Type.SALES_ORDER,
                         fromId: Current.SO_ID,
-                        toType: ns_record.Type.ITEM_FULFILLMENT,
+                        toType: NS_Record.Type.ITEM_FULFILLMENT,
                         isDynamic: true,
                         defaultValues: defaultItemFFValues
                     });
@@ -238,13 +238,13 @@ define([
                         line: line,
                         item_num: record.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL,
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL,
                             line: line
                         }),
-                        skuName: vc_global.VENDOR_SKU_LOOKUP_COL
+                        skuName: VC_Global.VENDOR_SKU_LOOKUP_COL
                             ? record.getSublistText({
                                   sublistId: 'item',
-                                  fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                                  fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL,
                                   line: line
                               })
                             : '',
@@ -260,7 +260,7 @@ define([
                         }),
                         dandh: record.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_constant.Columns.DH_MPN,
+                            fieldId: VC_Constants.Columns.DH_MPN,
                             line: line
                         }),
                         quantity: record.getSublistText({
@@ -369,7 +369,7 @@ define([
                         var tmpTrackList = Helper.uniqueList({
                             value: LinesToFulfill[ii].tracking_num
                         });
-                        if (!vc_util.isEmpty(UniqueLineItems[iii].all_tracking_nums)) {
+                        if (!VC_Util.isEmpty(UniqueLineItems[iii].all_tracking_nums)) {
                             tmpTrackList += '\n' + UniqueLineItems[iii].all_tracking_nums;
                         }
                         UniqueLineItems[iii].all_tracking_nums = Helper.uniqueList({
@@ -380,7 +380,7 @@ define([
                         var tmpSerialList = Helper.uniqueList({
                             value: LinesToFulfill[ii].serial_num
                         });
-                        if (!vc_util.isEmpty(UniqueLineItems[iii].all_serial_nums)) {
+                        if (!VC_Util.isEmpty(UniqueLineItems[iii].all_serial_nums)) {
                             tmpTrackList += '\n' + UniqueLineItems[iii].all_serial_nums;
                         }
                         UniqueLineItems[iii].all_serial_nums = Helper.uniqueList({
@@ -419,7 +419,7 @@ define([
                         lineNo: line,
                         item: record.getCurrentSublistValue({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL
                         }),
                         quantity: record.getCurrentSublistValue({
                             sublistId: 'item',
@@ -429,10 +429,10 @@ define([
                             sublistId: 'item',
                             fieldId: 'itemreceive'
                         }),
-                        vendorSKU: vc_global.VENDOR_SKU_LOOKUP_COL
+                        vendorSKU: VC_Global.VENDOR_SKU_LOOKUP_COL
                             ? record.getCurrentSublistValue({
                                   sublistId: 'item',
-                                  fieldId: vc_global.VENDOR_SKU_LOOKUP_COL
+                                  fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL
                               })
                             : '',
                         line_po: record.getSublistText({
@@ -442,7 +442,7 @@ define([
                         }),
                         dandh: record.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_constant.Columns.DH_MPN,
+                            fieldId: VC_Constants.Columns.DH_MPN,
                             line: line
                         }),
                         isSerialized: record.getCurrentSublistValue({
@@ -484,7 +484,7 @@ define([
                                 lineFFData.vendorSKU == itemToShip.vendorSKU) ||
                             (lineFFData.dandh &&
                                 Current.VendorCFG.xmlVendor ==
-                                    vc_constant.Lists.XML_VENDOR.DandH &&
+                                    VC_Constants.Lists.XML_VENDOR.DandH &&
                                 lineFFData.dandh == itemToShip.item_num)
                         ) {
                             log.debug(logTitle, LogPrefix + '....selected');
@@ -629,9 +629,9 @@ define([
 
                 log.debug(logTitle, LogPrefix + '>> recordLines: ' + JSON.stringify(recordLines));
 
-                if (vc_util.isEmpty(recordLines)) {
+                if (VC_Util.isEmpty(recordLines)) {
                     Helper.logMsg({
-                        status: vc_constant.Lists.VC_LOG_STATUS.INFO,
+                        status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
                         title: 'Fulfillment Lines',
                         message: '>> No Matching Lines To Fulfill'
                     });
@@ -640,7 +640,7 @@ define([
                 }
 
                 Helper.logMsg({
-                    status: vc_constant.Lists.VC_LOG_STATUS.INFO,
+                    status: VC_Constants.Lists.VC_LOG_STATUS.INFO,
                     title: 'Fulfillment Lines',
                     message: Helper.printerFriendlyLines({
                         recordLines: recordLines
@@ -652,7 +652,7 @@ define([
                 for (ii = 0; ii < UniqueLineItems.length; ii++) {
                     var strTrackingNums = UniqueLineItems[ii].all_tracking_nums;
 
-                    if (!vc_util.isEmpty(strTrackingNums)) {
+                    if (!VC_Util.isEmpty(strTrackingNums)) {
                         var arrTrackingNums = strTrackingNums.split('\n');
                         arrAllTrackingNumbers = arrAllTrackingNumbers.concat(arrTrackingNums);
                     }
@@ -663,7 +663,7 @@ define([
                     var objId;
 
                     if (recordIsChanged) {
-                        if (vc_global.PICK_PACK_SHIP) {
+                        if (VC_Global.PICK_PACK_SHIP) {
                             record.setValue({
                                 fieldId: 'shipstatus',
                                 value: 'C'
@@ -696,7 +696,7 @@ define([
                         );
 
                         if (
-                            !vc_util.isEmpty(arrAllTrackingNumbers) &&
+                            !VC_Util.isEmpty(arrAllTrackingNumbers) &&
                             arrAllTrackingNumbers.length > 0
                         ) {
                             record = Helper.addNativePackages({
@@ -793,20 +793,20 @@ define([
                 if (!Current.PO_ID) throw 'Missing PO ID';
                 if (!Current.VendorCFG) throw 'Missing Vendor Config';
 
-                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
-                var searchObj = ns_search.load({ id: searchId });
+                var searchId = NS_Runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchObj = NS_Search.load({ id: searchId });
 
                 searchObj.filters.push(
-                    ns_search.createFilter({
+                    NS_Search.createFilter({
                         name: 'internalid',
-                        operator: ns_search.Operator.IS,
+                        operator: NS_Search.Operator.IS,
                         values: Current.PO_ID
                     })
                 );
                 searchObj.filters.push(
-                    ns_search.createFilter({
+                    NS_Search.createFilter({
                         name: 'trandate',
-                        operator: ns_search.Operator.ONORAFTER,
+                        operator: NS_Search.Operator.ONORAFTER,
                         values: Current.VendorCFG.startDate
                     })
                 );
@@ -834,14 +834,14 @@ define([
 
             if (!Helper.isEmpty(Current.PO_ID)) {
                 var d1 = Date.parse(PO_Valid_Date);
-                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchId = NS_Runtime.getCurrentScript().getParameter('custscript_searchid2');
 
-                var filters = ns_search.createFilter({
+                var filters = NS_Search.createFilter({
                     name: 'internalid',
-                    operator: ns_search.Operator.IS,
+                    operator: NS_Search.Operator.IS,
                     values: Current.PO_ID
                 });
-                var mySearch = ns_search.load({ id: searchId });
+                var mySearch = NS_Search.load({ id: searchId });
                 mySearch.filters.push(filters);
                 mySearch.run().each(function (result) {
                     var docStatus = result.getText({
@@ -873,12 +873,12 @@ define([
             var logTitle = [LogTitle, 'orderExists'].join('::');
             // log.audit(logTitle, '>> ..order exists transid: ' + JSON.stringify(transID));
 
-            var filters = ns_search.createFilter({
+            var filters = NS_Search.createFilter({
                 name: 'custbody_ctc_if_vendor_order_match',
-                operator: ns_search.Operator.IS,
+                operator: NS_Search.Operator.IS,
                 values: transID
             });
-            var mySearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+            var mySearch = NS_Search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
             mySearch.filters.push(filters);
 
             // If order num already exists do nothing
@@ -1072,14 +1072,14 @@ define([
                 status:
                     option.status ||
                     (option.error
-                        ? vc_constant.Lists.VC_LOG_STATUS.ERROR
+                        ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
                         : option.isSucces
-                        ? vc_constant.Lists.VC_LOG_STATUS.SUCCESS
-                        : vc_constant.Lists.VC_LOG_STATUS.INFO)
+                        ? VC_Constants.Lists.VC_LOG_STATUS.SUCCESS
+                        : VC_Constants.Lists.VC_LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
-            vc_log.recordLog(logOption);
+            VC_Log.recordLog(logOption);
             return true;
         }
     };

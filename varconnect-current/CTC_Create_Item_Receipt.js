@@ -30,9 +30,9 @@ define(function (require) {
         ns_format = require('N/format'),
         ns_config = require('N/config');
 
-    var vc_constants = require('./CTC_VC2_Constants.js'),
+    var vc2_constant = require('./CTC_VC2_Constants.js'),
         vc_log = require('./CTC_VC_Lib_Log.js'),
-        vc_util = require('./CTC_VC2_Lib_Utils.js'),
+        vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         util_record = require('./CTC_VC2_Lib_Record.js');
 
     var LogTitle = 'ItemRRLib',
@@ -83,7 +83,7 @@ define(function (require) {
             if (!Current.MainCFG) throw 'Missing main configuration';
             if (!Current.VendorCFG) throw 'Missing vendor configuration';
             if (!Current.PO_ID) throw 'Missing PO ID';
-            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+            if (vc2_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
 
             if (!Helper.validatePODate()) throw 'Invalid PO Date';
 
@@ -104,7 +104,7 @@ define(function (require) {
             Helper.log(logTitle, '*** LOOK for unique orders ***');
 
             OrderLines.forEach(function (orderLine) {
-                if (vc_util.inArray(orderLine.order_num, arrOrderNums)) {
+                if (vc2_util.inArray(orderLine.order_num, arrOrderNums)) {
                     orderLine.RESULT = 'DUPLICATE';
                     return;
                 }
@@ -159,7 +159,7 @@ define(function (require) {
 
                 try {
                     // skip any existing orders
-                    if (vc_util.inArray(vendorOrderNum, arrExistingIRS)) throw 'Order already exists';
+                    if (vc2_util.inArray(vendorOrderNum, arrExistingIRS)) throw 'Order already exists';
 
                     // Build an array with all XML line data with the same order num
                     for (ii = 0; ii < OrderLines.length; ii++) {
@@ -186,7 +186,7 @@ define(function (require) {
                             title: 'Transform Error on PO: ' + Current.PO_ID,
                             error: transform_err
                         });
-                        throw 'Transform error on PO: ' + vc_util.extractError(transform_err);
+                        throw 'Transform error on PO: ' + vc2_util.extractError(transform_err);
                     }
 
                     var recordIsChanged = false;
@@ -207,13 +207,13 @@ define(function (require) {
                             line: line,
                             item_num: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
                                 line: line
                             }),
-                            skuName: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                            skuName: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                 ? record.getSublistText({
                                       sublistId: 'item',
-                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                      fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                                       line: line
                                   })
                                 : '',
@@ -229,7 +229,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                                fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
                                 line: line
                             }),
                             quantity: record.getSublistText({
@@ -258,7 +258,7 @@ define(function (require) {
                             hasReceivableLine = true;
                             recordIsChanged = true;
                         } catch (lineRR_err) {
-                            Helper.log(logTitle, '...removed: ' + vc_util.extractError(lineRR_err));
+                            Helper.log(logTitle, '...removed: ' + vc2_util.extractError(lineRR_err));
                             Helper.removeIRLine({ record: record, line: line });
                             recordIsChanged = true;
                         }
@@ -314,7 +314,7 @@ define(function (require) {
                             var tmpTrackList = Helper.uniqueList({
                                 value: lineToReceive.tracking_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_tracking_nums)) {
+                            if (!vc2_util.isEmpty(uniqItem.all_tracking_nums)) {
                                 tmpTrackList += '\n' + uniqItem.all_tracking_nums;
                             }
                             uniqItem.all_tracking_nums = Helper.uniqueList({
@@ -326,7 +326,7 @@ define(function (require) {
                             var tmpSerialList = Helper.uniqueList({
                                 value: lineToReceive.serial_num
                             });
-                            if (!vc_util.isEmpty(uniqItem.all_serial_nums)) {
+                            if (!vc2_util.isEmpty(uniqItem.all_serial_nums)) {
                                 tmpTrackList += '\n' + uniqItem.all_serial_nums;
                             }
                             uniqItem.all_serial_nums = Helper.uniqueList({
@@ -348,7 +348,7 @@ define(function (require) {
                             lineNo: line,
                             item: record.getCurrentSublistValue({
                                 sublistId: 'item',
-                                fieldId: vc_constants.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
+                                fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
                             }),
                             quantity: record.getCurrentSublistValue({
                                 sublistId: 'item',
@@ -358,10 +358,10 @@ define(function (require) {
                                 sublistId: 'item',
                                 fieldId: 'itemreceive'
                             }),
-                            vendorSKU: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                            vendorSKU: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                 ? record.getCurrentSublistValue({
                                       sublistId: 'item',
-                                      fieldId: vc_constants.GLOBAL.VENDOR_SKU_LOOKUP_COL
+                                      fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                                   })
                                 : '',
                             line_po: record.getSublistText({
@@ -371,7 +371,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc_constants.FIELD.ITEM.DH_MPN,
+                                fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
                                 line: line
                             }),
                             isSerialized: record.getCurrentSublistValue({
@@ -404,7 +404,7 @@ define(function (require) {
                                 lineRRData.item == itemToShip.item_num ||
                                 (lineRRData.vendorSKU && lineRRData.vendorSKU == itemToShip.vendorSKU) ||
                                 (lineRRData.dandh &&
-                                    Current.VendorCFG.xmlVendor == vc_constants.LIST.XML_VENDOR.DandH &&
+                                    Current.VendorCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.DandH &&
                                     lineRRData.dandh == itemToShip.item_num);
 
                             if (!isMatchingLine) {
@@ -495,7 +495,7 @@ define(function (require) {
                             Helper.log(logTitle, '... tracking', arrTrackingNums);
 
                             var trackingField = Current.MainCFG.useInboundTrackingNumbers
-                                ? vc_constants.FIELD.TRANSACTION.INBOUND_TRACKING_NUM
+                                ? vc2_constant.FIELD.TRANSACTION.INBOUND_TRACKING_NUM
                                 : 'custcol_ctc_xml_tracking_num';
                             record.setCurrentSublistValue({
                                 sublistId: 'item',
@@ -551,7 +551,7 @@ define(function (require) {
 
                     Helper.log(logTitle, '>> record lines', recordLines);
 
-                    if (vc_util.isEmpty(recordLines)) {
+                    if (vc2_util.isEmpty(recordLines)) {
                         Helper.logMsg({
                             title: 'Item Receipt Lines',
                             message: '>> No Matching Lines To Receive:  ' + vendorOrderNum
@@ -595,28 +595,28 @@ define(function (require) {
                             message: '## Created Item Receipt: [itemreceipt:' + objId + ']'
                         });
                     } catch (itemrr_err) {
-                        var errMsg = vc_util.extractError(itemrr_err);
+                        var errMsg = vc2_util.extractError(itemrr_err);
                         Helper.log(logTitle, '/// ITEM RECEIPT Create error', itemrr_err, 'error');
 
                         Helper.logMsg({ error: itemrr_err, title: 'Create Item Receipt Error' });
                         throw errMsg;
                     }
                 } catch (line_err) {
-                    log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err));
+                    log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err));
                     continue;
                 }
             }
             return responseData;
         } catch (error) {
-            var errorMsg = vc_util.extractError(error);
+            var errorMsg = vc2_util.extractError(error);
             log.error(
                 logTitle,
-                vc_util.getUsage() + (LogPrefix + '## ERROR:  ') + (errorMsg + '| Details: ' + JSON.stringify(error))
+                vc2_util.getUsage() + (LogPrefix + '## ERROR:  ') + (errorMsg + '| Details: ' + JSON.stringify(error))
             );
             Helper.logMsg({ title: logTitle + ':: Error', error: error });
             return false;
         } finally {
-            log.debug(logTitle, vc_util.getUsage() + '############ ITEM RECEIPT CREATION: END ############');
+            log.debug(logTitle, vc2_util.getUsage() + '############ ITEM RECEIPT CREATION: END ############');
         }
     };
     ////////////////////////////////////
@@ -635,7 +635,7 @@ define(function (require) {
             if (strList && util.isString(strList)) {
                 arrList = strList.split(splitStr);
             }
-            arrList = vc_util.uniqueArray(arrList);
+            arrList = vc2_util.uniqueArray(arrList);
 
             return arrList.join(joinStr);
         },
@@ -714,7 +714,7 @@ define(function (require) {
         },
         printerFriendlyLines: function (option) {
             var logTitle = [LogTitle, 'printerFriendlyLines'].join('::');
-            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option));
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option));
 
             var recordLines = option.recordLines,
                 outputString = '',
@@ -774,13 +774,13 @@ define(function (require) {
         log: function (title, content, objVar, logtype) {
             logtype = logtype || 'audit';
             if (objVar && objVar !== null) content += ' -- ' + JSON.stringify(objVar);
-            return log[logtype](title, vc_util.getUsage() + LogPrefix + content);
+            return log[logtype](title, vc2_util.getUsage() + LogPrefix + content);
         },
 
         logMsg: function (option) {
             option = option || {};
 
-            var LOG_STATUS = vc_constants.LIST.VC_LOG_STATUS;
+            var LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
             var logOption = {
                 transaction: Current.PO_ID,
@@ -788,7 +788,7 @@ define(function (require) {
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
+                    (option.error ? vc2_util.extractError(option.error) : option.errorMsg),
 
                 status:
                     option.status ||
@@ -812,7 +812,7 @@ define(function (require) {
 
             log.audit(
                 logTitle,
-                vc_util.getUsage() +
+                vc2_util.getUsage() +
                     LogPrefix +
                     '>> Valid Serials: ' +
                     JSON.stringify([validSerialList.length, validSerialList])
@@ -858,7 +858,7 @@ define(function (require) {
 
                     addedSerials.push(validSerialList[i]);
                 } catch (serial_error) {
-                    log.error(logTitle, vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(serial_error));
+                    log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(serial_error));
                 }
             }
 
@@ -906,7 +906,7 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -924,7 +924,7 @@ define(function (require) {
 
                 var hashSpace = Current.MainCFG.ingramHashSpace,
                     xmlVendor = Current.VendorCFG.xmlVendor,
-                    vendorList = vc_constants.LIST.XML_VENDOR;
+                    vendorList = vc2_constant.LIST.XML_VENDOR;
 
                 var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
                 var hasMatch = false;
@@ -941,7 +941,7 @@ define(function (require) {
 
                             if (
                                 !hashSpace &&
-                                !vc_util.inArray(xmlVendor, [vendorList.INGRAM_MICRO_V_ONE, vendorList.INGRAM_MICRO])
+                                !vc2_util.inArray(xmlVendor, [vendorList.INGRAM_MICRO_V_ONE, vendorList.INGRAM_MICRO])
                             )
                                 throw 'non ingram vendor';
 
@@ -966,7 +966,7 @@ define(function (require) {
                             if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
 
                             if (
-                                !vc_util.inArray(dataToFind[itemType], [
+                                !vc2_util.inArray(dataToFind[itemType], [
                                     dataToTest.vendorSKU,
                                     dataToTest.item_num_alt,
                                     dataToTest.item_num
@@ -1017,9 +1017,9 @@ define(function (require) {
 
                 returnValue = hasMatch;
             } catch (error) {
-                log.error(logTitle, vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1056,9 +1056,9 @@ define(function (require) {
 
                 returnValue = matchingItem;
             } catch (error) {
-                log.error(logTitle, vc_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -1073,7 +1073,7 @@ define(function (require) {
 
             try {
                 var listOrderNum = option.orderNums;
-                if (vc_util.isEmpty(listOrderNum)) return false;
+                if (vc2_util.isEmpty(listOrderNum)) return false;
 
                 var searchOption = {
                     type: 'itemreceipt',
@@ -1107,14 +1107,14 @@ define(function (require) {
                 // );
 
                 var arrResults = [];
-                var searchResults = vc_util.searchAllPaged({
+                var searchResults = vc2_util.searchAllPaged({
                     searchObj: ns_search.create(searchOption)
                 });
 
                 searchResults.forEach(function (result) {
                     var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
 
-                    if (!vc_util.inArray(orderNum, arrResults)) {
+                    if (!vc2_util.inArray(orderNum, arrResults)) {
                         arrResults.push(orderNum);
                     }
 
@@ -1125,7 +1125,7 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 // log.audit(logTitle, logPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
@@ -1154,7 +1154,7 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1180,7 +1180,7 @@ define(function (require) {
             } catch (error) {
                 log.error(logTitle, logPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -1193,7 +1193,7 @@ define(function (require) {
 
             try {
                 if (!option.record) throw 'Missing record';
-                if (vc_util.isEmpty(option.values)) throw 'Missing values';
+                if (vc2_util.isEmpty(option.values)) throw 'Missing values';
 
                 if (option.line) {
                     option.record.selectLine({

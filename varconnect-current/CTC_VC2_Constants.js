@@ -15,11 +15,11 @@
 define(function (require) {
     var ns_runtime = require('N/runtime');
 
-    var VC_CONSTANTS = {
+    var VC2_CONSTANT = {
         LOG_APPLICATION: 'VAR Connect'
     };
 
-    VC_CONSTANTS.RECORD = {
+    VC2_CONSTANT.RECORD = {
         MAIN_CONFIG: {
             ID: 'customrecord_ctc_vc_main_config',
             FIELD: {
@@ -164,7 +164,7 @@ define(function (require) {
         }
     };
 
-    VC_CONSTANTS.FIELD = {
+    VC2_CONSTANT.FIELD = {
         ITEM: {
             DH_MPN: 'custitem_ctc_vc_dh_item'
         },
@@ -181,7 +181,7 @@ define(function (require) {
         }
     };
 
-    VC_CONSTANTS.LIST = {
+    VC2_CONSTANT.LIST = {
         XML_VENDOR: {
             TECH_DATA: '1',
             INGRAM_MICRO: '2',
@@ -209,7 +209,7 @@ define(function (require) {
             CANADA: '2'
         }
     };
-    VC_CONSTANTS.SCRIPT = {
+    VC2_CONSTANT.SCRIPT = {
         VIEW_SERIALS_SL: 'customscript_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customscript_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customscript_ctc_vc_sl_print_serial',
@@ -217,7 +217,7 @@ define(function (require) {
         SERIAL_UPDATE_ALL_MR: 'customscript_ctc_vc_mr_serial_manip_so',
         ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch'
     };
-    VC_CONSTANTS.DEPLOYMENT = {
+    VC2_CONSTANT.DEPLOYMENT = {
         VIEW_SERIALS_SL: 'customdeploy_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customdeploy_ctc_vc_sl_print_serial',
@@ -299,9 +299,9 @@ define(function (require) {
         }
     };
 
-    VC_CONSTANTS.Bill_Creator = Bill_Creator;
+    VC2_CONSTANT.Bill_Creator = Bill_Creator;
 
-    VC_CONSTANTS.GLOBAL = {
+    VC2_CONSTANT.GLOBAL = {
         ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),
         COUNTRY: ns_runtime.country,
@@ -315,5 +315,5 @@ define(function (require) {
         EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1'
     };
 
-    return VC_CONSTANTS;
+    return VC2_CONSTANT;
 });

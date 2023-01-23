@@ -36,12 +36,12 @@ define([
     ns_runtime,
     ns_task,
     vc_mainConfig,
-    vc_constants,
-    vc_util,
+    vc2_constant,
+    vc2_util,
     vc_recordlib
 ) {
     var LogTitle = 'FlexScreen',
-        BILL_CREATOR = vc_constants.Bill_Creator;
+        BILL_CREATOR = vc2_constant.Bill_Creator;
 
     var DEBUG_MODE = false;
 
@@ -116,8 +116,8 @@ define([
                 if (Current.Method == 'GET') {
                     FlexScreen_UI[Current.Task].call(FlexScreen_UI, scriptContext);
 
-                    if (!vc_util.isEmpty(Current.ErrorMessage)) throw Current.ErrorMessage;
-                    if (!vc_util.isEmpty(Current.WarnMessage)) {
+                    if (!vc2_util.isEmpty(Current.ErrorMessage)) throw Current.ErrorMessage;
+                    if (!vc2_util.isEmpty(Current.WarnMessage)) {
                         FormHelper.Form.addPageInitMessage({
                             title: 'Warning',
                             message:
@@ -194,18 +194,18 @@ define([
 
             ////////// BILL FILE RECORD /////////////////////
             Current.BILLFILE_REC = vc_recordlib.load({
-                type: vc_constants.RECORD.BILLFILE.ID,
+                type: vc2_constant.RECORD.BILLFILE.ID,
                 id: Current.BillFileId,
                 isDynamic: false
             });
 
             Current.BILLFILE_DATA = vc_recordlib.extractValues({
                 record: Current.BILLFILE_REC,
-                fields: vc_constants.RECORD.BILLFILE.FIELD
+                fields: vc2_constant.RECORD.BILLFILE.FIELD
             });
             log.debug(logTitle, '>> Bill File: ' + JSON.stringify(Current.BILLFILE_DATA));
 
-            Current.JSON_DATA = vc_util.safeParse(Current.BILLFILE_DATA.JSON);
+            Current.JSON_DATA = vc2_util.safeParse(Current.BILLFILE_DATA.JSON);
 
             ['shipping', 'other', 'tax'].forEach(function (chargeType) {
                 Current.JSON_DATA.charges[chargeType] = parseFloat(Current.JSON_DATA.charges[chargeType] || '0');
@@ -302,7 +302,7 @@ define([
             Current.IS_ACTIVE_EDIT = Helper.isEditActive();
             if (
                 // Current.IS_BILLABLE &&
-                vc_util.inArray(Current.BILLFILE_DATA.STATUS, [
+                vc2_util.inArray(Current.BILLFILE_DATA.STATUS, [
                     BILL_CREATOR.Status.PENDING,
                     BILL_CREATOR.Status.REPROCESS
                 ])
@@ -341,9 +341,9 @@ define([
             FormHelper.Form.addTab({ id: 'tab_logs', label: 'Processing Logs' });
             FormHelper.Form.addTab({ id: 'tab_payload', label: 'Payload Data' });
 
-            FormHelper.renderField(vc_util.extend(FormHelper.Fields.PROCESS_LOGS, { container: 'tab_logs' }));
-            FormHelper.renderField(vc_util.extend(FormHelper.Fields.BILLFILE_SOURCE, { container: 'tab_payload' }));
-            FormHelper.renderField(vc_util.extend(FormHelper.Fields.BILLFILE_JSON, { container: 'tab_payload' }));
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.PROCESS_LOGS, { container: 'tab_logs' }));
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.BILLFILE_SOURCE, { container: 'tab_payload' }));
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.BILLFILE_JSON, { container: 'tab_payload' }));
 
             /// SUBLIST: Items ////////////////////////
             /// PRE PROCESS BILLDATA LINES
@@ -351,7 +351,7 @@ define([
             var arrLines = Helper.preprocessBillLines();
 
             // items sublist
-            var itemSublist = FormHelper.renderSublist(vc_util.extend({ tab: 'tab_lines' }, FormHelper.Sublists.ITEM));
+            var itemSublist = FormHelper.renderSublist(vc2_util.extend({ tab: 'tab_lines' }, FormHelper.Sublists.ITEM));
 
             log.audit(logTitle, '//// WRITE BILL LINES //////////');
 
@@ -419,7 +419,7 @@ define([
 
             // variance sublist
             var varianceSublist = FormHelper.renderSublist(
-                vc_util.extend(FormHelper.Sublists.VARIANCE, { tab: 'tab_variance' })
+                vc2_util.extend(FormHelper.Sublists.VARIANCE, { tab: 'tab_variance' })
             );
 
             /// write the variance lines
@@ -429,7 +429,7 @@ define([
 
                 if (!varianceLine.item) continue;
 
-                lineData = vc_util.extend(varianceLine, {
+                lineData = vc2_util.extend(varianceLine, {
                     applied: 'T',
                     itemname: Helper.getItemName(varianceLine.item),
                     nsitem: varianceLine.item,
@@ -486,10 +486,10 @@ define([
                         // calculated variance total (charges on the bill)
                         Current.TOTALS_DATA.VARIANCE_AMT);
 
-                adjustmentTotal = vc_util.roundOff(adjustmentTotal);
+                adjustmentTotal = vc2_util.roundOff(adjustmentTotal);
 
                 if (adjustmentTotal != 0) {
-                    var adjustmentLine = vc_util.extend(VARIANCE_DEF.miscCharges, {
+                    var adjustmentLine = vc2_util.extend(VARIANCE_DEF.miscCharges, {
                         applied: 'T',
                         description: 'VC | Adjustment',
                         type: 'adjustment',
@@ -589,7 +589,7 @@ define([
                 param.varianceLines.push(lineData);
             }
             //////////////////////////////////////////
-            var BILLFILE_FIELD = vc_constants.RECORD.BILLFILE.FIELD;
+            var BILLFILE_FIELD = vc2_constant.RECORD.BILLFILE.FIELD;
 
             updateValues[BILLFILE_FIELD.NOTES] = param.notes;
             updateValues[BILLFILE_FIELD.HOLD_REASON] = param.holdReason;
@@ -640,7 +640,7 @@ define([
             log.audit(logTitle, '>>> updateValues: ' + JSON.stringify(updateValues));
             ////////////////////////
             ns_record.submitFields({
-                type: vc_constants.RECORD.BILLFILE.ID,
+                type: vc2_constant.RECORD.BILLFILE.ID,
                 id: Current.BillFileId,
                 values: updateValues
             });
@@ -696,7 +696,7 @@ define([
                 }
             });
             mrTask.submit();
-            vc_util.waitMs(2000);
+            vc2_util.waitMs(2000);
 
             ns_redirect.redirect({
                 url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&sortcol=dateCreated&sortdir=DESC&scripttype=&primarykey=' //&scripttype=customscript_ctc_vc_process_bills'
@@ -705,7 +705,7 @@ define([
             return returnValue;
         },
         handleError: function (error) {
-            var errorMessage = vc_util.extractError(error);
+            var errorMessage = vc2_util.extractError(error);
 
             FormHelper.Form.addPageInitMessage({
                 title: 'Error ' + errorMessage,
@@ -740,7 +740,7 @@ define([
 
             if (!Helper.CACHE.hasOwnProperty(cacheKey)) {
                 try {
-                    var itemLookup = vc_util.flatLookup({
+                    var itemLookup = vc2_util.flatLookup({
                         type: 'item',
                         id: itemId,
                         columns: ['name']
@@ -761,16 +761,16 @@ define([
             if (!Current.PO_DATA) return false;
 
             if (
-                vc_util.inArray(Current.BILLFILE_DATA.STATUS, [
+                vc2_util.inArray(Current.BILLFILE_DATA.STATUS, [
                     BILL_CREATOR.Status.PROCESSED,
                     BILL_CREATOR.Status.CLOSED
                 ])
             ) {
                 returnValue = false;
-            } else if (vc_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'closed'])) {
+            } else if (vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'closed'])) {
                 Current.WarnMessage.push('Purchase Order is already ' + Current.PO_DATA.status);
                 returnValue = false;
-            } else if (vc_util.inArray(Current.PO_DATA.statusRef, ['pendingReceipt', 'partiallyReceived'])) {
+            } else if (vc2_util.inArray(Current.PO_DATA.statusRef, ['pendingReceipt', 'partiallyReceived'])) {
                 Current.WarnMessage.push('Purchase Order is not ready for billing: ' + Current.PO_DATA.status);
                 returnValue = false;
             } else if (Current.BILLFILE_DATA.BILL_LINK) {
@@ -786,9 +786,9 @@ define([
                         });
                     } catch (bill_err) {
                         returnValue = false;
-                        log.audit('isBillable', '>> ERROR Generating Bill Record: ' + vc_util.extractError(bill_err));
+                        log.audit('isBillable', '>> ERROR Generating Bill Record: ' + vc2_util.extractError(bill_err));
                         Current.ErrorMessage =
-                            'Unable to create Vendor Bill due to - ' + vc_util.extractError(bill_err);
+                            'Unable to create Vendor Bill due to - ' + vc2_util.extractError(bill_err);
                     }
                 }
             }
@@ -800,7 +800,7 @@ define([
             if (!Current.BILLFILE_DATA) return false; // no bill file, return false;
 
             if (
-                vc_util.inArray(Current.BILLFILE_DATA.STATUS, [
+                vc2_util.inArray(Current.BILLFILE_DATA.STATUS, [
                     BILL_CREATOR.Status.PENDING,
                     BILL_CREATOR.Status.ERROR,
                     BILL_CREATOR.Status.CLOSED,
@@ -822,7 +822,7 @@ define([
             }
 
             if (
-                vc_util.inArray(Current.BILLFILE_DATA.STATUS, [
+                vc2_util.inArray(Current.BILLFILE_DATA.STATUS, [
                     BILL_CREATOR.Status.ERROR,
                     BILL_CREATOR.Status.HOLD,
                     BILL_CREATOR.Status.VARIANCE
@@ -884,11 +884,11 @@ define([
                                 line: line
                             });
 
-                        if (vc_util.inArray(field, DEF_LINEFIELDS.number)) fieldValue = parseInt(fieldValue, 10);
-                        if (vc_util.inArray(field, DEF_LINEFIELDS.currency)) fieldValue = parseFloat(fieldValue);
+                        if (vc2_util.inArray(field, DEF_LINEFIELDS.number)) fieldValue = parseInt(fieldValue, 10);
+                        if (vc2_util.inArray(field, DEF_LINEFIELDS.currency)) fieldValue = parseFloat(fieldValue);
                         lineData[field] = fieldValue;
 
-                        if (vc_util.inArray(field, DEF_LINEFIELDS.list))
+                        if (vc2_util.inArray(field, DEF_LINEFIELDS.list))
                             lineData[field + '_text'] = record.getSublistText({
                                 sublistId: 'item',
                                 fieldId: field,
@@ -896,7 +896,7 @@ define([
                             });
 
                         //// FILTERS ///////////
-                        if (!vc_util.isEmpty(filter) && filter.hasOwnProperty(field)) {
+                        if (!vc2_util.isEmpty(filter) && filter.hasOwnProperty(field)) {
                             if (filter[field] != fieldValue) {
                                 isSkipped = true;
                                 break;
@@ -919,7 +919,7 @@ define([
                 for (var lineItem in objLineItems) {
                     objLineItems[lineItem].amount = objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
 
-                    objLineItems[lineItem].amount = vc_util.roundOff(objLineItems[lineItem].amount);
+                    objLineItems[lineItem].amount = vc2_util.roundOff(objLineItems[lineItem].amount);
                     objLineItems[lineItem].taxAmount = Helper.calculateLineTax(objLineItems[lineItem]);
                 }
 
@@ -940,7 +940,7 @@ define([
             var taxAmount = taxRate1 ? (taxRate1 / 100) * amount : 0;
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
-            return vc_util.roundOff(taxAmount) || 0;
+            return vc2_util.roundOff(taxAmount) || 0;
         },
 
         loadBillingConfig: function () {
@@ -1079,10 +1079,10 @@ define([
 
                 ///////////
                 ['BILLRATE', 'RATE', 'PRICE'].forEach(function (field) {
-                    if (billLine.hasOwnProperty(field)) billLine[field] = vc_util.forceFloat(billLine[field]);
+                    if (billLine.hasOwnProperty(field)) billLine[field] = vc2_util.forceFloat(billLine[field]);
                     return true;
                 });
-                billLine.QUANTITY = vc_util.forceInt(billLine.QUANTITY);
+                billLine.QUANTITY = vc2_util.forceInt(billLine.QUANTITY);
                 ///////////
 
                 // var billLine = {};
@@ -1107,7 +1107,7 @@ define([
 
                 var matchingLines = {
                     fullyMatched:
-                        vc_util.findMatching({
+                        vc2_util.findMatching({
                             dataSet: arrBillLines,
                             findAll: true,
                             filter: {
@@ -1120,7 +1120,7 @@ define([
                             }
                         }) || [],
                     itemRateMatch:
-                        vc_util.findMatching({
+                        vc2_util.findMatching({
                             dataSet: arrBillLines,
                             findAll: true,
                             filter: {
@@ -1132,7 +1132,7 @@ define([
                             }
                         }) || [],
                     itemMatch:
-                        vc_util.findMatching({
+                        vc2_util.findMatching({
                             dataSet: arrBillLines,
                             findAll: true,
                             filter: {
@@ -1188,21 +1188,21 @@ define([
 
                 var varianceInfo = VARIANCE_DEF[varType] || {},
                     chargeInfo = Current.JSON_DATA.charges[varType],
-                    matchingVarianceLine = vc_util.findMatching({
+                    matchingVarianceLine = vc2_util.findMatching({
                         dataSet: Current.JSON_DATA.varianceLines,
                         filter: { type: varType }
                     });
 
                 if (matchingVarianceLine.item) delete matchingVarianceLine.item;
 
-                if (!vc_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
+                if (!vc2_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
                 varianceInfo.type = varType;
 
                 switch (varType) {
                     case VARIANCE_TYPE.MISC:
                         (chargeInfo || []).forEach(function (miscCharge) {
                             // look for any existing varianceLine
-                            var matchingMiscLine = vc_util.findMatching({
+                            var matchingMiscLine = vc2_util.findMatching({
                                 dataSet: Current.JSON_DATA.varianceLines,
                                 filter: {
                                     type: varType,
@@ -1211,18 +1211,18 @@ define([
                             });
 
                             // add it to our variance lines
-                            arrVarianceLines.push(vc_util.extend(varianceInfo, matchingMiscLine || miscCharge));
+                            arrVarianceLines.push(vc2_util.extend(varianceInfo, matchingMiscLine || miscCharge));
                         });
 
                         break;
                     case VARIANCE_TYPE.TAX:
                         // get the diff from TAX TOTAL, and TAX CHARGES
                         arrVarianceLines.push(
-                            vc_util.extend(
+                            vc2_util.extend(
                                 varianceInfo,
                                 matchingVarianceLine || {
-                                    rate: vc_util.roundOff(chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT),
-                                    amount: vc_util.roundOff(chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT)
+                                    rate: vc2_util.roundOff(chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT),
+                                    amount: vc2_util.roundOff(chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT)
                                 }
                             )
                         );
@@ -1230,11 +1230,11 @@ define([
                         break;
                     case VARIANCE_TYPE.SHIP:
                         arrVarianceLines.push(
-                            vc_util.extend(
+                            vc2_util.extend(
                                 varianceInfo,
                                 matchingVarianceLine || {
-                                    rate: vc_util.roundOff(chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT),
-                                    amount: vc_util.roundOff(chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT)
+                                    rate: vc2_util.roundOff(chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT),
+                                    amount: vc2_util.roundOff(chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT)
                                 }
                             )
                         );
@@ -1243,7 +1243,7 @@ define([
                     case VARIANCE_TYPE.OTHER:
                     case VARIANCE_TYPE.ADJ:
                         arrVarianceLines.push(
-                            vc_util.extend(
+                            vc2_util.extend(
                                 varianceInfo,
                                 matchingVarianceLine || {
                                     rate: chargeInfo,
@@ -1325,7 +1325,7 @@ define([
                             if (
                                 Current.PO_DATA &&
                                 Current.PO_DATA.statusRef &&
-                                vc_util.inArray(Current.PO_DATA.statusRef, [
+                                vc2_util.inArray(Current.PO_DATA.statusRef, [
                                     'partiallyReceived',
                                     'pendingBillPartReceived',
                                     'pendingBilling'
@@ -1336,7 +1336,7 @@ define([
                         } else if (
                             Current.PO_DATA &&
                             Current.PO_DATA.statusRef &&
-                            vc_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled'])
+                            vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled'])
                         ) {
                             selectElems.push(FLEXFORM_ACTION.CLOSE);
                         } else if (billStatus == BILL_CREATOR.Status.VARIANCE) {
@@ -1900,7 +1900,7 @@ define([
                 fieldOption.id = fieldInfo.id || ['custpage_fld', new Date().getTime(), this.fieldCounter].join('_');
             }
 
-            if (vc_util.isEmpty(fieldOption)) return;
+            if (vc2_util.isEmpty(fieldOption)) return;
 
             if (containerId) fieldOption.container = containerId;
 
@@ -2066,10 +2066,10 @@ define([
                 lineData = option.lineData,
                 line = option.line;
 
-            if (!sublistObj || !lineData || vc_util.isEmpty(line)) return;
+            if (!sublistObj || !lineData || vc2_util.isEmpty(line)) return;
 
             for (var field in lineData) {
-                if (vc_util.isEmpty(lineData[field])) continue;
+                if (vc2_util.isEmpty(lineData[field])) continue;
                 if (util.isObject(lineData[field])) continue;
 
                 try {

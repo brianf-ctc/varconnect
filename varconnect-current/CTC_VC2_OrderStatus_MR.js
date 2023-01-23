@@ -17,8 +17,8 @@ define(function (request) {
         ns_search = require('N/search'),
         ns_runtime = require('N/runtime');
 
-    var vc_util = require('./CTC_VC2_Lib_Utils'),
-        vc_constants = require('./CTC_VC2_Constants');
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_constant = require('./CTC_VC2_Constants');
 
     var LogTitle = 'MR_OrderStatus',
         LogPrefix = '',
@@ -34,7 +34,7 @@ define(function (request) {
             try {
             } catch (error) {
                 log.error(logTitle, LogPrefix + ' ## ERROR ## ' + JSON.stringify(error));
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
             }
 

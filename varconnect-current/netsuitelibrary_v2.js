@@ -38,7 +38,7 @@ define([
     'N/format',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (ns_search, ns_runtime, ns_record, ns_config, ns_format, vc_util, vc2_constant) {
+], function (ns_search, ns_runtime, ns_record, ns_config, ns_format, vc2_util, vc2_constant) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -96,7 +96,7 @@ define([
             var isDropPO = po_record.getValue({ fieldId: 'custbody_isdropshippo' });
 
             checkForDuplicateItems(po_record);
-            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> lineData = ' + JSON.stringify(lineData));
 
             //4.01
             if (!dateFormat) {
@@ -104,7 +104,7 @@ define([
                     type: ns_config.Type.COMPANY_PREFERENCES
                 });
                 dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
+                log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
             }
 
             if (lineData.header_info) {
@@ -146,14 +146,14 @@ define([
 
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() + LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
+                        vc2_util.getUsage() + LogPrefix + '>> lineData: ' + JSON.stringify([line_num, lineData[i]])
                     );
 
                     if (line_num == null) {
                         throw (
                             'Could not find line number for item - ' +
                             JSON.stringify(
-                                vc_util.extractValues({
+                                vc2_util.extractValues({
                                     source: lineData[i],
                                     params: ['item_num', 'vendorSKU']
                                 })
@@ -213,9 +213,9 @@ define([
                 } catch (line_error) {
                     log.error(
                         logTitle,
-                        vc_util.getUsage() + LogPrefix + '## LINE ERROR ## ' + JSON.stringify(line_error)
+                        vc2_util.getUsage() + LogPrefix + '## LINE ERROR ## ' + JSON.stringify(line_error)
                     );
-                    vc_util.vcLog({
+                    vc2_util.vcLog({
                         title: 'Update Record Line',
                         error: line_error,
                         transaction: po_record ? po_record.id : null,
@@ -235,9 +235,9 @@ define([
             }
             return returnValue;
         } catch (err) {
-            log.error(logTitle, vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
+            log.error(logTitle, vc2_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(err));
 
-            vc_util.vcLog({
+            vc2_util.vcLog({
                 title: 'Update Record',
                 error: err,
                 transaction: po_record ? po_record.id : null,
@@ -274,7 +274,7 @@ define([
             xmlVendor = option.xmlVendor;
 
         LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData));
+        log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> params: ' + JSON.stringify(lineData));
         var vendorList = vc2_constant.LIST.XML_VENDOR;
 
         try {
@@ -334,10 +334,10 @@ define([
 
             returnValue = lineNotFound ? null : line;
         } catch (error) {
-            log.error(logTitle, vc_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(error));
+            log.error(logTitle, vc2_util.getUsage() + LogPrefix + '!! ERROR !! ' + JSON.stringify(error));
             returnValue = null;
         } finally {
-            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '// Line Number: ' + returnValue);
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '// Line Number: ' + returnValue);
         }
 
         return returnValue;
@@ -569,7 +569,7 @@ define([
                     }
                 }
             } catch (err) {
-                log.error(logTitle, vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(err));
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc2_util.extractError(err));
             }
         }
     }
@@ -675,7 +675,7 @@ define([
                     }
                 }
             } catch (e) {
-                log.error(logTitle, vc_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc_util.extractError(e));
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '>> !! ERROR !! ' + vc2_util.extractError(e));
             }
         }
 

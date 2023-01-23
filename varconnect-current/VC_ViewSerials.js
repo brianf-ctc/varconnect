@@ -23,7 +23,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/record', 'N/url', './CTC_VC2_Constan
     ns_search,
     ns_record,
     ns_url,
-    vc_constant,
+    vc2_constant,
     vc_serial
 ) {
     const SUBLIST_ID = 'custpage_orders';

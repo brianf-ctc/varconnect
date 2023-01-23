@@ -32,14 +32,14 @@ define([
     ns_config,
     moment,
     vc_billfile,
-    vc_util,
-    vc_constants
+    vc2_util,
+    vc2_constant
 ) {
     var LogTitle = 'VC PROCESS BILL',
         LogPrefix = '',
-        BILL_CREATOR = vc_constants.Bill_Creator,
-        BILL_FILE = vc_constants.RECORD.BILLFILE,
-        BILLFILE_FLD = vc_constants.RECORD.BILLFILE.FIELD;
+        BILL_CREATOR = vc2_constant.Bill_Creator,
+        BILL_FILE = vc2_constant.RECORD.BILLFILE,
+        BILLFILE_FLD = vc2_constant.RECORD.BILLFILE.FIELD;
 
     var SCRIPT = {
         RL_ITEMFF: {
@@ -194,7 +194,7 @@ define([
                     var isBillReceivable = requestBillFile[BILLFILE_FLD.IS_RCVBLE];
                     log.audit(logTitle, LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable));
 
-                    var isOrderReceivable = vc_util.inArray(poStatus.value, [
+                    var isOrderReceivable = vc2_util.inArray(poStatus.value, [
                         'pendingReceipt',
                         'partiallyReceived',
                         'pendingBillPartReceived'
@@ -252,7 +252,7 @@ define([
                     log.debug(logTitle, '>> update fields: ' + JSON.stringify(updateValues));
 
                     //if the updateValues object isn't empty update the record
-                    if (!vc_util.isEmpty(updateValues)) {
+                    if (!vc2_util.isEmpty(updateValues)) {
                         ns_record.submitFields({
                             type: BILL_FILE.ID,
                             id: currentData.id,
@@ -340,7 +340,7 @@ define([
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
                 returnValue;
             var entityId = option.entity;
-            var BILLCREATE_CFG = vc_constants.RECORD.BILLCREATE_CONFIG;
+            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
 
             try {
                 var searchOption = {
@@ -353,7 +353,7 @@ define([
                     searchOption.columns.push(
                         ns_search.createColumn({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         })
                     );
                 }
@@ -366,7 +366,7 @@ define([
                     for (var field in BILLCREATE_CFG.FIELD) {
                         returnValue[field] = row.getValue({
                             name: BILLCREATE_CFG.FIELD[field],
-                            join: vc_constants.FIELD.ENTITY.BILLCONFIG
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
                         });
                     }
                     return true;
@@ -463,7 +463,7 @@ define([
                     ////////////////////////////
                 }
             } catch (error) {
-                log.error(logTitle, LogPrefix + '** ERROR **' + vc_util.extractError(error));
+                log.error(logTitle, LogPrefix + '** ERROR **' + vc2_util.extractError(error));
                 returnValue = false;
             }
 

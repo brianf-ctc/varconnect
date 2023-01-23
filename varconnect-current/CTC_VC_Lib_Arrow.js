@@ -20,7 +20,7 @@
 define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (
     ns_search,
     vc_log,
-    vc_util,
+    vc2_util,
     vc2_constant
 ) {
     'use strict';
@@ -37,7 +37,7 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
             option = option || {};
 
             try {
-                var tokenReq = vc_util.sendRequest({
+                var tokenReq = vc2_util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
@@ -45,7 +45,7 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
                     maxRetry: 3,
                     query: {
                         url: CURRENT.vendorConfig.accessEndPoint,
-                        body: vc_util.convertToQuery({
+                        body: vc2_util.convertToQuery({
                             client_id: CURRENT.vendorConfig.apiKey,
                             client_secret: CURRENT.vendorConfig.apiSecret,
                             grant_type: 'client_credentials'
@@ -77,7 +77,7 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
             option = option || {};
 
             try {
-                var reqOrderStatus = vc_util.sendRequest({
+                var reqOrderStatus = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Status'].join(' '),
                     recordId: CURRENT.recordId,
                     method: 'post',
@@ -156,12 +156,12 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
 
                 returnValue = LibArrowAPI.getOrderStatus();
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -249,19 +249,19 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
 
                 returnValue = itemArray;
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Process Response',
                     error: error,
                     recordId: CURRENT.recordId
                 });
 
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
@@ -289,12 +289,12 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
 
                 returnValue = this.processResponse({ response: responseBody });
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;

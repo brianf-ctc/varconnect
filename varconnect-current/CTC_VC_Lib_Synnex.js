@@ -24,7 +24,7 @@ define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib
     ns_xml,
     vc_log,
     vc2_constant,
-    vc_util
+    vc2_util
 ) {
     var LogTitle = 'WS:Synnex';
 
@@ -36,7 +36,7 @@ define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib
             option = option || {};
 
             try {
-                var reqOrderStatus = vc_util.sendRequest({
+                var reqOrderStatus = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     method: 'post',
                     isXML: true,
@@ -95,18 +95,18 @@ define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Process Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
 
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
@@ -129,12 +129,12 @@ define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib
 
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Request Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
             }
 
             return returnValue;
@@ -236,12 +236,12 @@ define(['N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib
 
                 returnValue = itemArray;
             } catch (error) {
-                vc_util.vcLog({
+                vc2_util.vcLog({
                     title: LogTitle + ': Response Error',
                     error: error,
                     recordId: CURRENT.recordId
                 });
-                throw vc_util.extractError(error);
+                throw vc2_util.extractError(error);
                 returnValue = errorMsg;
             }
 

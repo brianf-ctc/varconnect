@@ -30,7 +30,7 @@ define([
     './CTC_VC_Constants.js',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js'
-], function (ns_search, ns_record, ns_runtime, vc_global, vc_constant, vc_log, vc_util) {
+], function (NS_Search, NS_Record, NS_Runtime, VC_Global, VC_Constants, VC_Log, VC_Util) {
     var LogTitle = 'ItemRcptLIB',
         LogPrefix = '',
         _TEXT_AREA_MAX_LENGTH = 4000;
@@ -58,7 +58,7 @@ define([
         Current.VendorCFG = option.vendorConfig;
 
         Current.PO_ID = option.poId;
-        Current.Script = ns_runtime.getCurrentScript();
+        Current.Script = NS_Runtime.getCurrentScript();
 
         Current.OrderLines = option.lineData;
         Current.Vendor = option.vendor;
@@ -69,7 +69,7 @@ define([
             if (!Current.MainCFG) throw 'Missing main configuration';
             if (!Current.VendorCFG) throw 'Missing vendor configuration';
             if (!Current.PO_ID) throw 'Missing PO ID';
-            if (vc_util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
+            if (VC_Util.isEmpty(Current.OrderLines)) throw 'Empty Line Data';
 
             if (!ItemRcptLib.validateDate()) throw 'Invalid PO Date';
 
@@ -129,10 +129,10 @@ define([
 
                 try {
                     // create item receipt from sales order
-                    objRecord = ns_record.transform({
-                        fromType: ns_record.Type.PURCHASE_ORDER,
+                    objRecord = NS_Record.transform({
+                        fromType: NS_Record.Type.PURCHASE_ORDER,
                         fromId: Current.PO_ID,
-                        toType: ns_record.Type.ITEM_RECEIPT,
+                        toType: NS_Record.Type.ITEM_RECEIPT,
                         isDynamic: true
                     });
 
@@ -155,14 +155,14 @@ define([
                 for (var cnt = 0; cnt < lineItemCount; cnt++) {
                     var tempItemNum = objRecord.getSublistText({
                         sublistId: 'item',
-                        fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL,
+                        fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL,
                         line: cnt
                     });
                     var tempVendorSKU = '';
-                    if (vc_global.VENDOR_SKU_LOOKUP_COL != null) {
+                    if (VC_Global.VENDOR_SKU_LOOKUP_COL != null) {
                         tempVendorSKU = objRecord.getSublistText({
                             sublistId: 'item',
-                            fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                            fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL,
                             line: cnt
                         });
                     }
@@ -291,7 +291,7 @@ define([
                     if (received2) {
                         var currItemNum = objRecord.getCurrentSublistValue({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL
                         });
                         var currItemQty = parseInt(
                             objRecord.getCurrentSublistValue({
@@ -301,10 +301,10 @@ define([
                         );
 
                         var currVendorSKU = '';
-                        if (vc_global.VENDOR_SKU_LOOKUP_COL) {
+                        if (VC_Global.VENDOR_SKU_LOOKUP_COL) {
                             currVendorSKU = objRecord.getCurrentSublistValue({
                                 sublistId: 'item',
-                                fieldId: vc_global.VENDOR_SKU_LOOKUP_COL
+                                fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL
                             });
                         }
 
@@ -437,12 +437,12 @@ define([
                 for (var tmp3 = 0; tmp3 < uniqueItems.length; tmp3++) {
                     var found = false;
                     var trackingField = Current.MainCFG.useInboundTrackingNumbers
-                        ? vc_constant.Columns.INBOUND_TRACKING_NUM
+                        ? VC_Constants.Columns.INBOUND_TRACKING_NUM
                         : 'custcol_ctc_xml_tracking_num';
-                    if (vc_global.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
+                    if (VC_Global.VENDOR_SKU_LOOKUP_COL && uniqueItems[tmp3].vendorSKU != 'NA') {
                         var index = objRecord.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vc_global.VENDOR_SKU_LOOKUP_COL,
+                            fieldId: VC_Global.VENDOR_SKU_LOOKUP_COL,
                             value: uniqueItems[tmp3].vendorSKU
                         });
 
@@ -464,7 +464,7 @@ define([
                     if (!found) {
                         var index = objRecord.findSublistLineWithValue({
                             sublistId: 'item',
-                            fieldId: vc_global.ITEM_FUL_ID_LOOKUP_COL,
+                            fieldId: VC_Global.ITEM_FUL_ID_LOOKUP_COL,
                             value: uniqueItems[tmp3].item_num
                         });
 
@@ -527,7 +527,7 @@ define([
                         message: '## Created Item Receipt: [itemfulfillment:' + objId + ']'
                     });
                 } catch (err) {
-                    var errMsg = vc_util.extractError(err);
+                    var errMsg = VC_Util.extractError(err);
                     log.error(
                         logTitle,
                         LogPrefix + ('## Item Receipt Error:  ' + errMsg) + ('|  Details: ' + JSON.stringify(err))
@@ -564,20 +564,20 @@ define([
                 if (!Current.PO_ID) throw 'Missing PO ID';
                 if (!Current.VendorCFG) throw 'Missing Vendor Config';
 
-                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
-                var searchObj = ns_search.load({ id: searchId });
+                var searchId = NS_Runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchObj = NS_Search.load({ id: searchId });
 
                 searchObj.filters.push(
-                    ns_search.createFilter({
+                    NS_Search.createFilter({
                         name: 'internalid',
-                        operator: ns_search.Operator.IS,
+                        operator: NS_Search.Operator.IS,
                         values: Current.PO_ID
                     })
                 );
                 searchObj.filters.push(
-                    ns_search.createFilter({
+                    NS_Search.createFilter({
                         name: 'trandate',
-                        operator: ns_search.Operator.ONORAFTER,
+                        operator: NS_Search.Operator.ONORAFTER,
                         values: Current.VendorCFG.startDate
                     })
                 );
@@ -602,16 +602,16 @@ define([
 
             var isValid = false;
 
-            if (!vc_util.isEmpty(po_ID)) {
+            if (!VC_Util.isEmpty(po_ID)) {
                 var d1 = Date.parse(PO_Valid_Date);
-                var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
+                var searchId = NS_Runtime.getCurrentScript().getParameter('custscript_searchid2');
 
-                var filters = ns_search.createFilter({
+                var filters = NS_Search.createFilter({
                     name: 'internalid',
-                    operator: ns_search.Operator.IS,
+                    operator: NS_Search.Operator.IS,
                     values: po_ID
                 });
-                var mySearch = ns_search.load({ id: searchId });
+                var mySearch = NS_Search.load({ id: searchId });
                 mySearch.filters.push(filters);
                 mySearch.run().each(function (result) {
                     var docStatus = result.getText({
@@ -623,7 +623,7 @@ define([
                         var docDate = result.getValue({
                             name: 'trandate'
                         });
-                        if (!vc_util.isEmpty(docDate)) {
+                        if (!VC_Util.isEmpty(docDate)) {
                             var d2 = Date.parse(docDate);
                             if (d1 < d2) {
                                 isValid = true;
@@ -640,12 +640,12 @@ define([
             var logTitle = [LogTitle, 'orderExists'].join('::');
             // log.audit(logTitle, '>> ..order exists transid: ' + JSON.stringify(transID));
 
-            var filters = ns_search.createFilter({
+            var filters = NS_Search.createFilter({
                 name: 'custbody_ctc_if_vendor_order_match',
-                operator: ns_search.Operator.IS,
+                operator: NS_Search.Operator.IS,
                 values: transID
             });
-            var mySearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+            var mySearch = NS_Search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
             mySearch.filters.push(filters);
 
             // If order num already exists do nothing
@@ -695,7 +695,7 @@ define([
             var logTitle = [LogTitle, 'updateXMLField'].join('::');
             // log.audit(logTitle, '>>> : ' + JSON.stringify([fieldVal, fieldID]));
 
-            if (!vc_util.isEmpty(fieldVal)) {
+            if (!VC_Util.isEmpty(fieldVal)) {
                 objRecord.setCurrentSublistValue({
                     sublistId: 'item',
                     fieldId: fieldID,
@@ -802,19 +802,19 @@ define([
                 body:
                     option.message ||
                     option.note ||
-                    (option.error ? vc_util.extractError(option.error) : option.errorMsg),
+                    (option.error ? VC_Util.extractError(option.error) : option.errorMsg),
 
                 status:
                     option.status ||
                     (option.error
-                        ? vc_constant.Lists.VC_LOG_STATUS.ERROR
+                        ? VC_Constants.Lists.VC_LOG_STATUS.ERROR
                         : option.isSucces
-                        ? vc_constant.Lists.VC_LOG_STATUS.SUCCESS
-                        : vc_constant.Lists.VC_LOG_STATUS.INFO)
+                        ? VC_Constants.Lists.VC_LOG_STATUS.SUCCESS
+                        : VC_Constants.Lists.VC_LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
-            vc_log.recordLog(logOption);
+            VC_Log.recordLog(logOption);
             return true;
         }
     };

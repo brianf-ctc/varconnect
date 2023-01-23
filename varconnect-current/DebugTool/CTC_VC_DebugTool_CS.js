@@ -22,7 +22,7 @@ define([
     hlFolder + '/highlight.js',
     hlFolder + '/languages/xml.min.js',
     hlFolder + '/languages/json.min.js'
-], function (ns_search, ns_currentRecord, vc_vendorcfg, vc_websvc, vc_constants, hljs, hljsXml, hljsJson) {
+], function (ns_search, ns_currentRecord, vc_vendorcfg, vc_websvc, vc2_constant, hljs, hljsXml, hljsJson) {
     // get current folder
     if (hljs) {
         hljs.registerLanguage('xml', hljsXml);
@@ -32,7 +32,7 @@ define([
     var Helper = {
         getPODetails: function (poNum) {
             var columns = [ns_search.createColumn({ name: 'entity' })];
-            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES) columns.push(ns_search.createColumn({ name: 'subsidiary' }));
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) columns.push(ns_search.createColumn({ name: 'subsidiary' }));
 
             var poObj = {},
                 purchaseorderSearchObj = ns_search.create({
@@ -49,7 +49,7 @@ define([
             var searchResultCount = purchaseorderSearchObj.runPaged().count;
             log.debug('purchaseorderSearchObj result count', searchResultCount);
             purchaseorderSearchObj.run().each(function (result) {
-                if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
                 poObj['vendor'] = result.getValue('entity');
                 poObj['id'] = result.id;
                 // ?
@@ -127,8 +127,8 @@ define([
                                 poId: objPO.id,
                                 country:
                                     vendorConfig.country == 'CA'
-                                        ? vc_constants.LIST.COUNTRY.CA
-                                        : vc_constants.LIST.COUNTRY.US,
+                                        ? vc2_constant.LIST.COUNTRY.CA
+                                        : vc2_constant.LIST.COUNTRY.US,
                                 countryCode: vendorConfig.country
                             });
                         } catch (processErr) {

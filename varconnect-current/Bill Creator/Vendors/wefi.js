@@ -16,7 +16,7 @@
  * 1.10			Jan 10, 2023			jjacob			Group invoice lines by inv detail id
  */
 
-define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, NS_Search, VC_Util) {
+define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (ns_error, ns_search, vc2_util) {
     var WEFI_BC = {};
     WEFI_BC.credential = {};
     WEFI_BC.endpoint = {};
@@ -61,7 +61,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             var arrInvoices = [];
 
             if (!poInternalId) {
-                throw NS_Error.create({
+                throw ns_error.create({
                     name: 'MISSING_REQUIRED_PARAM',
                     message: 'ns po internal id'
                 });
@@ -70,8 +70,8 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             log.debug(logTitle, 'poInternalId=' + poInternalId);
             log.debug(logTitle, 'vendorConfig=' + JSON.stringify(vendorConfig));
 
-            var objLookup = NS_Search.lookupFields({
-                type: NS_Search.Type.PURCHASE_ORDER,
+            var objLookup = ns_search.lookupFields({
+                type: ns_search.Type.PURCHASE_ORDER,
                 id: poInternalId,
                 columns: ['tranid']
             });
@@ -80,14 +80,14 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             log.debug(logTitle, 'poNumber=' + poNumber);
 
             if (!poNumber) {
-                throw NS_Error.create({
+                throw ns_error.create({
                     name: 'MISSING_REQUIRED_PARAM',
                     message: 'ns po tranid'
                 });
             }
 
             if (!vendorConfig) {
-                throw NS_Error.create({
+                throw ns_error.create({
                     name: 'MISSING_REQUIRED_PARAM',
                     message: 'ns vendor config'
                 });
@@ -101,14 +101,14 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             log.debug(logTitle, 'wefiPO=' + JSON.stringify(wefiPO));
 
             if (!wefiPO) {
-                throw NS_Error.create({
+                throw ns_error.create({
                     name: 'RECORD_NOT_FOUND',
                     message: 'wefi order (' + poNumber + ')'
                 });
             }
 
             if (!wefiPO.approvalId) {
-                throw NS_Error.create({
+                throw ns_error.create({
                     name: 'MISSING_REQUIRED_PARAM',
                     message: 'apparoval id: order (' + poNumber + ')'
                 });
@@ -206,7 +206,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             log.debug(logTitle, 'url=' + url);
 
             // Get PO
-            var response = VC_Util.sendRequest({
+            var response = vc2_util.sendRequest({
                 header: [logTitle, 'Order Search'].join(' : '),
                 query: {
                     url: url,
@@ -220,7 +220,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             });
 
             if (response.isError) throw response.errorMsg;
-            var parsedResponse = VC_Util.safeParse(response.RESPONSE);
+            var parsedResponse = vc2_util.safeParse(response.RESPONSE);
             if (!parsedResponse) throw 'Unable to fetch server response';
             if (!parsedResponse.value) throw 'Order(s) not found';
 
@@ -249,7 +249,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             var url = WEFI_BC.endpoint.INVOICE + '?' + params;
             log.debug(logTitle, 'get invoice url=' + url);
 
-            var response = VC_Util.sendRequest({
+            var response = vc2_util.sendRequest({
                 header: [logTitle, 'Order Line Search'].join(' : '),
                 query: {
                     url: url,
@@ -263,7 +263,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             });
 
             if (response.isError) throw response.errorMsg;
-            var parsedResponse = VC_Util.safeParse(response.RESPONSE);
+            var parsedResponse = vc2_util.safeParse(response.RESPONSE);
             if (!parsedResponse) throw 'Unable to fetch server response';
             if (!parsedResponse.value) throw 'Invoice(s) not found';
 
@@ -288,7 +288,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
         try {
             log.debug(logTitle, 'url=' + WEFI_BC.endpoint.TOKEN);
 
-            var tokenReq = VC_Util.sendRequest({
+            var tokenReq = vc2_util.sendRequest({
                 header: [logTitle, 'Generate Token'].join(' '),
                 method: 'post',
                 recordId: null,
@@ -296,7 +296,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
                 maxRetry: 1,
                 query: {
                     url: WEFI_BC.endpoint.TOKEN,
-                    body: VC_Util.convertToQuery({
+                    body: vc2_util.convertToQuery({
                         client_id: WEFI_BC.credential.CLIENT_ID,
                         client_secret: WEFI_BC.credential.CLIENT_SECRET,
                         scope: WEFI_BC.credential.SCOPE,
@@ -309,7 +309,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (NS_Error, N
             });
 
             if (tokenReq.isError) throw tokenReq.errorMsg;
-            var tokenResp = VC_Util.safeParse(tokenReq.RESPONSE);
+            var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
             if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
             log.debug(logTitle, 'access token=' + tokenResp.access_token);

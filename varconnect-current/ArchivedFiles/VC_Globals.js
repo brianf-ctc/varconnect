@@ -13,23 +13,18 @@
  * @NModuleScope Public
  */
 
-define(['N/error', 'N/runtime', 'N/url', './CTC_VC2_Constants.js'], function (
-    ns_error,
-    ns_runtime,
-    ns_url,
-    vc2_constant
-) {
+define(['N/error', 'N/runtime', 'N/url', './CTC_VC_Constants.js'], function (error, runtime, url, vc_constant) {
     function generateLink(params) {
-        var link = ns_url.resolveScript({
-            scriptId: vc2_constant.SCRIPT.VIEW_SERIALS_SL,
+        var link = url.resolveScript({
+            scriptId: vc_constant.Scripts.VIEW_SERIALS_SL,
             params: params
         });
     }
 
     return {
-        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
-        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),
-        COUNTRY: ns_runtime.country,
+        ENABLE_SUBSIDIARIES: runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
+        PICK_PACK_SHIP: runtime.isFeatureInEffect({ feature: 'pickpackship' }),
+        COUNTRY: runtime.country,
         SN_VIEW_SL_URL: generateLink,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',

@@ -35,7 +35,7 @@ define([
     '../CTC_VC_Lib_LicenseValidator',
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils'
-], function (ns_task, ns_ui, ns_runtime, ns_record, ns_search, vc_mainconfig, vc_licenselib, vc2_constant, vc_util) {
+], function (ns_task, ns_ui, ns_runtime, ns_record, ns_search, vc_mainconfig, vc_licenselib, vc2_constant, vc2_util) {
     var LogTitle = 'UE|Serials',
         LogPrefix;
 
@@ -128,7 +128,7 @@ define([
             if (!mainConfig) return;
 
             if (
-                !vc_util.inArray(scriptContext.type, [
+                !vc2_util.inArray(scriptContext.type, [
                     scriptContext.UserEventType.CREATE,
                     scriptContext.UserEventType.EDIT,
                     scriptContext.UserEventType.XEDIT
@@ -202,7 +202,7 @@ define([
                 });
 
                 // if (vendorConfig) {
-                vc_util.waitRandom(10000);
+                vc2_util.waitRandom(10000);
 
                 taskOption = {
                     isMapReduce: true,
@@ -216,7 +216,7 @@ define([
             }
 
             if (hasSerials && mainConfig.serialScanUpdate) {
-                vc_util.waitRandom(10000);
+                vc2_util.waitRandom(10000);
 
                 taskOption = {
                     isMapReduce: true,
@@ -301,7 +301,7 @@ define([
 
             var results = [],
                 searchObj = ns_search.create(searchOption),
-                searchResults = vc_util.searchAllPaged({ searchObj: searchObj });
+                searchResults = vc2_util.searchAllPaged({ searchObj: searchObj });
 
             searchResults.forEach(function (result) {
                 results.push({
