@@ -59,7 +59,8 @@ define(['N/url', './CTC_VC_Constants.js'], function (url, vc_constant) {
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         }

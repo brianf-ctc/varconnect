@@ -13,7 +13,12 @@
  * @NModuleScope Public
  */
 
-define(['N/error', 'N/runtime', 'N/url', './CTC_VC_Constants.js'], function (error, runtime, url, vc_constant) {
+define(['N/error', 'N/runtime', 'N/url', './CTC_VC_Constants.js'], function (
+    error,
+    runtime,
+    url,
+    vc_constant
+) {
     function generateLink(params) {
         var link = url.resolveScript({
             scriptId: vc_constant.Scripts.VIEW_SERIALS_SL,

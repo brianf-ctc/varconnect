@@ -17,12 +17,12 @@
  * Script Name: CTC_VC_Lib_Arrow
  * Author: john.ramonel
  */
-define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (
-    ns_search,
-    vc_log,
-    vc2_util,
-    vc2_constant
-) {
+define([
+    'N/search',
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js'
+], function (ns_search, vc_log, vc2_util, vc2_constant) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
@@ -123,7 +123,8 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
                 });
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
-                if (!reqOrderStatus.PARSED_RESPONSE) throw 'Unable to fetch a valid server response';
+                if (!reqOrderStatus.PARSED_RESPONSE)
+                    throw 'Unable to fetch a valid server response';
 
                 returnValue = reqOrderStatus.PARSED_RESPONSE;
             } catch (error) {
@@ -261,7 +262,9 @@ define(['N/search', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_
 
                 vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });

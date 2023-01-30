@@ -111,7 +111,9 @@ require([
             });
 
         if (!vendorConfig) {
-            log.error('No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary);
+            log.error(
+                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
+            );
         } else return vendorConfig;
     }
 
@@ -129,7 +131,12 @@ require([
             fulfillmentData;
 
         try {
-            if (mainConfig.processDropships && vendorConfig.processDropships && mainConfig.createIF && isDropPO) {
+            if (
+                mainConfig.processDropships &&
+                vendorConfig.processDropships &&
+                mainConfig.createIF &&
+                isDropPO
+            ) {
                 fulfillmentData = createIF.updateIF({
                     mainConfig: mainConfig,
                     vendorConfig: vendorConfig,
@@ -220,7 +227,8 @@ require([
             var docnum = searchResult.values.tranid;
             var tranDate = searchResult.values.trandate;
             var isDropPO =
-                searchResult.values.custbody_isdropshippo == 'F' || !searchResult.values.custbody_isdropshippo
+                searchResult.values.custbody_isdropshippo == 'F' ||
+                !searchResult.values.custbody_isdropshippo
                     ? false
                     : true;
             var vendor = searchResult.values.entity[0].value;
@@ -367,7 +375,10 @@ require([
 
                             if (isDropPO && mainConfig.processDropships) {
                                 for (var x = 0; x < arrFulfillments.length; x++) {
-                                    if (arrFulfillments[x].num == numPrefix + lineData[i].order_num) {
+                                    if (
+                                        arrFulfillments[x].num ==
+                                        numPrefix + lineData[i].order_num
+                                    ) {
                                         fulfillmentNum = arrFulfillments[x].id;
                                         break;
                                     }
@@ -386,7 +397,13 @@ require([
                             if (serialArray) {
                                 for (var j = 0; j < serialArray.length; j++) {
                                     if (serialArray[j] == '') continue;
-                                    var key = 'IF' + fulfillmentNum + '|IR' + receiptNum + '|IT' + lineData[i].item_num;
+                                    var key =
+                                        'IF' +
+                                        fulfillmentNum +
+                                        '|IR' +
+                                        receiptNum +
+                                        '|IT' +
+                                        lineData[i].item_num;
                                     //line serials
                                     //									contextM.write(key, {'docid': docid, 'itemnum': lineData[i].item_num, 'custid':custID, 'orderNum': fulfillmentNum, 'receiptNum': receiptNum, serial: serialArray[j]});
                                     //old
@@ -588,7 +605,8 @@ require([
             var itemId = '';
             var vendor = po_record.getValue({ fieldId: 'entity' });
             var subsidiary = null;
-            if (vcGlobals.ENABLE_SUBSIDIARIES) subsidiary = po_record.getValue({ fieldId: 'subsidiary' });
+            if (vcGlobals.ENABLE_SUBSIDIARIES)
+                subsidiary = po_record.getValue({ fieldId: 'subsidiary' });
 
             var mainConfig = _loadMainConfig();
             var vendorConfig = _loadVendorConfig({

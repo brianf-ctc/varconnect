@@ -12,7 +12,12 @@
  * @NModuleScope Public
  */
 
-define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_Record, NS_Search, NS_Task) {
+define(['N/format', 'N/record', 'N/search', 'N/task'], function (
+    NS_Format,
+    NS_Record,
+    NS_Search,
+    NS_Task
+) {
     var LogTitle = 'CTC_Util';
 
     var CTC_Util = {
@@ -98,7 +103,9 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
                 dateValue.setSeconds(this.parseFloat(parts.time[2]));
             }
 
-            var thisTZ = this.parseFloat(new Date().toString().replace(/^.*GMT([\s+-]\d{2}).*$/gi, '$1'));
+            var thisTZ = this.parseFloat(
+                new Date().toString().replace(/^.*GMT([\s+-]\d{2}).*$/gi, '$1')
+            );
             if (!CTC_Util.isEmpty(parts.tmz) && thisTZ != parts.tmz) {
                 // check the native timezone
                 // var dt1 = new Date( dateValue.getTime() + ((parts.tmz-thisTZ) * 60 * 60 * 1000) );
@@ -176,7 +183,10 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
             if (!dateValue || dateValue == 'Invalid Date') {
                 try {
                     dateValue = new Date(
-                        dateStr.replace(/(\d{4}).(\d{2}).(\d{2})T(\d{2}):(\d{2}):(\d{2})(.\d{2}):(\d{2})/gi, '$1-$2-$3')
+                        dateStr.replace(
+                            /(\d{4}).(\d{2}).(\d{2})T(\d{2}):(\d{2}):(\d{2})(.\d{2}):(\d{2})/gi,
+                            '$1-$2-$3'
+                        )
                     );
                 } catch (err) {}
             }
@@ -209,7 +219,9 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
                 }
             }
             return arrData;
@@ -420,7 +432,12 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
                 log.debug(logTitle, '>> params: ' + JSON.stringify(option));
 
                 returnValue =
-                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
@@ -566,7 +583,10 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
             var orderSearch = NS_Search.create({
                 type: 'salesorder',
                 filters: [filterExpr],
-                columns: ['tranid', NS_Search.createColumn({ name: 'internalid', sort: NS_Search.Sort.DESC })]
+                columns: [
+                    'tranid',
+                    NS_Search.createColumn({ name: 'internalid', sort: NS_Search.Sort.DESC })
+                ]
             });
 
             var lastTranId;
@@ -581,7 +601,15 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
             var fileName = option.filename || option.name;
             if (!fileName) return false;
 
-            var arrCols = ['name', 'folder', 'documentsize', 'url', 'created', 'modified', 'filetype'];
+            var arrCols = [
+                'name',
+                'folder',
+                'documentsize',
+                'url',
+                'created',
+                'modified',
+                'filetype'
+            ];
             var searchOption = {
                 type: 'file',
                 columns: arrCols,
@@ -621,7 +649,9 @@ define(['N/format', 'N/record', 'N/search', 'N/task'], function (NS_Format, NS_R
                 this.CACHE[cacheKey] = fileInfo;
             }
 
-            return option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
+            return option.doReturnArray && option.doReturnArray === true
+                ? fileInfo
+                : fileInfo.shift();
         },
         getFileContent: function (option) {
             var returnValue = null;

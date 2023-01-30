@@ -134,7 +134,8 @@ define(function (require) {
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -171,11 +172,17 @@ define(function (require) {
                     option.errorMsg ||
                     (option.error ? vc2_util.extractError(option.error) : '');
 
-                logOption.BODY = util.isString(logOption.BODY) ? logOption.BODY : JSON.stringify(logOption.BODY);
+                logOption.BODY = util.isString(logOption.BODY)
+                    ? logOption.BODY
+                    : JSON.stringify(logOption.BODY);
 
                 if (
                     option.status &&
-                    vc2_util.inArray(option.status, [LOG_STATUS.ERROR, LOG_STATUS.INFO, LOG_STATUS.SUCCESS])
+                    vc2_util.inArray(option.status, [
+                        LOG_STATUS.ERROR,
+                        LOG_STATUS.INFO,
+                        LOG_STATUS.SUCCESS
+                    ])
                 )
                     logOption.STATUS = option.status;
                 else if (option.isError || option.error || option.errorMessage || option.errorMsg)
@@ -183,7 +190,8 @@ define(function (require) {
                 else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
                 else logOption.STATUS = LOG_STATUS.INFO;
 
-                logOption.TRANSACTION = option.recordId || option.transaction || option.id || option.internalid || '';
+                logOption.TRANSACTION =
+                    option.recordId || option.transaction || option.id || option.internalid || '';
 
                 logOption.DATE = new Date();
                 // log.audit(logTitle, logOption);
@@ -194,7 +202,9 @@ define(function (require) {
                         TRANSACTION: batchTransaction
                     };
                     // create the log as an inline item
-                    var recBatch = this._batchedVCLogs[batchTransaction] || ns_record.create({ type: VC_LOG_BATCH.ID });
+                    var recBatch =
+                        this._batchedVCLogs[batchTransaction] ||
+                        ns_record.create({ type: VC_LOG_BATCH.ID });
                     for (var field in VC_LOG_BATCH.FIELD) {
                         var fieldName = VC_LOG_BATCH.FIELD[field];
                         recBatch.setValue({
@@ -269,15 +279,21 @@ define(function (require) {
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
                     retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
-                    responseType: option.hasOwnProperty('responseType') ? option.responseType : 'JSON',
-                    maxRetry: option.hasOwnProperty('maxRetry') ? option.maxRetry : _DEFAULT.maxRetries || 0,
+                    responseType: option.hasOwnProperty('responseType')
+                        ? option.responseType
+                        : 'JSON',
+                    maxRetry: option.hasOwnProperty('maxRetry')
+                        ? option.maxRetry
+                        : _DEFAULT.maxRetries || 0,
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
                     isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
                     isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods)
+                        ? option.method
+                        : 'get'
                 };
             if (option.isXML) param.isJSON = false;
 
@@ -347,14 +363,20 @@ define(function (require) {
                 vc2_util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
-                        (param.doRetry ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')' : ''),
+                        (param.doRetry
+                            ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
+                            : ''),
                     content: { error: errorMsg, details: returnValue.details },
                     transaction: param.logTranId,
                     isError: true
                 });
 
                 log.error(logTitle, '## ERROR ##' + errorMsg + '\n' + JSON.stringify(error));
-                if (param.doRetry) log.audit(logTitle, '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry);
+                if (param.doRetry)
+                    log.audit(
+                        logTitle,
+                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
+                    );
 
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
@@ -439,7 +461,9 @@ define(function (require) {
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize
+                            ? pagedResults.data
+                            : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results
@@ -481,7 +505,10 @@ define(function (require) {
 
             if (dateString && dateString.length > 0 && dateString != 'NA') {
                 try {
-                    var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
+                    var stringToProcess = dateString
+                        .replace(/-/g, '/')
+                        .replace(/\n/g, ' ')
+                        .split(' ');
 
                     for (var i = 0; i < stringToProcess.length; i++) {
                         var singleString = stringToProcess[i];
@@ -534,7 +561,9 @@ define(function (require) {
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
                 }
             }
             return arrData;
@@ -693,7 +722,12 @@ define(function (require) {
                 log.debug(logTitle, '>> params: ' + JSON.stringify(option));
 
                 returnValue =
-                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
@@ -799,7 +833,12 @@ define(function (require) {
             }
 
             returnValue = {
-                data: arrResults && arrResults.length ? (findAll ? arrResults : arrResults.shift()) : false,
+                data:
+                    arrResults && arrResults.length
+                        ? findAll
+                            ? arrResults
+                            : arrResults.shift()
+                        : false,
                 index: arrIndex && arrIndex.length ? (findAll ? arrIndex : arrIndex.shift()) : false
             };
 
@@ -831,7 +870,12 @@ define(function (require) {
                 }
             }
 
-            returnValue = arrResults && arrResults.length ? (findAll ? arrResults : arrResults.shift()) : false;
+            returnValue =
+                arrResults && arrResults.length
+                    ? findAll
+                        ? arrResults
+                        : arrResults.shift()
+                    : false;
 
             return returnValue;
         },
@@ -918,7 +962,15 @@ define(function (require) {
             var fileName = option.filename || option.name;
             if (!fileName) return false;
 
-            var arrCols = ['name', 'folder', 'documentsize', 'url', 'created', 'modified', 'filetype'];
+            var arrCols = [
+                'name',
+                'folder',
+                'documentsize',
+                'url',
+                'created',
+                'modified',
+                'filetype'
+            ];
             var searchOption = {
                 type: 'file',
                 columns: arrCols,
@@ -958,7 +1010,8 @@ define(function (require) {
                 this.CACHE[cacheKey] = fileInfo;
             }
 
-            returnValue = option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
+            returnValue =
+                option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
 
             return returnValue;
         },

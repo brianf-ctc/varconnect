@@ -43,7 +43,9 @@ define(['N/search', 'N/runtime', 'N/record'], function (ns_search, ns_runtime, n
         },
         cleanText: function (value) {
             // return value;
-            return util.isString(value) && !Helper.isEmpty(value) ? value.replace(/&/gm, '&amp;') : value;
+            return util.isString(value) && !Helper.isEmpty(value)
+                ? value.replace(/&/gm, '&amp;')
+                : value;
         },
         isSecured: function (context, reqData) {
             var logTitle = [LogTitle, '::securityCheck'].join('');
@@ -72,7 +74,9 @@ define(['N/search', 'N/runtime', 'N/record'], function (ns_search, ns_runtime, n
             var filters = [
                     {
                         name:
-                            recType == ns_record.Type.INVOICE ? 'custrecordserialinvoice' : 'custrecorditemfulfillment',
+                            recType == ns_record.Type.INVOICE
+                                ? 'custrecordserialinvoice'
+                                : 'custrecorditemfulfillment',
                         operator: 'anyof',
                         values: recId
                     }

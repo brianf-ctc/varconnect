@@ -124,7 +124,8 @@ define(function (require) {
                     var value = record.getSublistValue(lineOption),
                         textValue = record.getSublistText(lineOption);
                     lineData[columns[i]] = value;
-                    if (textValue !== null && value != textValue) lineData[columns[i] + '_text'] = textValue;
+                    if (textValue !== null && value != textValue)
+                        lineData[columns[i] + '_text'] = textValue;
                 }
 
                 returnValue = lineData;

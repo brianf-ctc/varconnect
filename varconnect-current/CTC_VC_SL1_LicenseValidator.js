@@ -55,7 +55,11 @@ function _validateLicenseParams(options) {
                 PRODUCT_CODE
         );
         result = 'invalid';
-    } else if (licenseAccountId && accountId && licenseAccountId.toLowerCase() != accountId.toLowerCase()) {
+    } else if (
+        licenseAccountId &&
+        accountId &&
+        licenseAccountId.toLowerCase() != accountId.toLowerCase()
+    ) {
         nlapiLogExecution(
             'ERROR',
             'Invalid License Key - TERMINATING SCRIPT',

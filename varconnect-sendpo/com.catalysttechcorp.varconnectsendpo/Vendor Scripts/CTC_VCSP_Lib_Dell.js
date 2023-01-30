@@ -148,21 +148,21 @@ define([
                         SupplierPartIdExt: itemData.quotenumber,
                         Quantity: itemData.quantity.toString(),
                         UnitPrice: itemData.rate.toString(),
-                        Currency: record.currency,
-                        FinalRecipient: {
-                            Company: config.Bill.addressee,
-                            ContactName: config.Bill.attention,
-                            Email: config.Bill.email,
-                            Telephone: config.Bill.phoneno,
-                            Address: {
-                                Address1: config.Bill.address1,
-                                Address2: record.custPO, //config.Bill.address2,config.Bill.address2,
-                                City: config.Bill.city,
-                                StateOrProvince: config.Bill.state,
-                                PostalCode: config.Bill.zip,
-                                Country: config.Bill.country
-                            }
-                        }
+                        Currency: record.currency
+                        // FinalRecipient: {
+                        //     Company: config.Bill.addressee,
+                        //     ContactName: config.Bill.attention,
+                        //     Email: config.Bill.email,
+                        //     Telephone: config.Bill.phoneno,
+                        //     Address: {
+                        //         Address1: config.Bill.address1,
+                        //         Address2: record.custPO, //config.Bill.address2,config.Bill.address2,
+                        //         City: config.Bill.city,
+                        //         StateOrProvince: config.Bill.state,
+                        //         PostalCode: config.Bill.zip,
+                        //         Country: config.Bill.country
+                        //     }
+                        // }
                     };
                     // skip the item if no quote number
                     if (!itemDetails.SupplierPartId) continue;
@@ -309,7 +309,6 @@ define([
             returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
             returnResponse.responseCode = sendPOReq.RESPONSE.code;
             returnResponse.message = 'Success';
-
         } catch (error) {
             var errorMsg = ctc_util.extractError(error);
 

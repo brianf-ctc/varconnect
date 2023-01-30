@@ -22,7 +22,16 @@ require([
     VCFolder + '/../CTC_VC2_Lib_Utils',
     VCFolder + '/../CTC_VC_Lib_MainConfiguration',
     VCFolder + '/Libraries/moment'
-], function (ns_record, ns_search, ns_format, ns_runtime, VC_Constants, VC2_Util, VC_MainCfg, moment) {
+], function (
+    ns_record,
+    ns_search,
+    ns_format,
+    ns_runtime,
+    VC_Constants,
+    VC2_Util,
+    VC_MainCfg,
+    moment
+) {
     var LOG_TITLE = 'VC_GENR_BILL_RL',
         LOG_APP = 'Bill Creator : Generate Bill (Restlet)',
         CURRENT_PO = '',
@@ -43,7 +52,8 @@ require([
 
             Current = {
                 poId:
-                    context.custrecord_ctc_vc_bill_linked_po && context.custrecord_ctc_vc_bill_linked_po[0]
+                    context.custrecord_ctc_vc_bill_linked_po &&
+                    context.custrecord_ctc_vc_bill_linked_po[0]
                         ? context.custrecord_ctc_vc_bill_linked_po[0].value
                         : false,
                 billInAdvance: context.billInAdvance || false,
@@ -69,31 +79,47 @@ require([
             });
 
             Current.PO_DATA.taxTotal =
-                parseFloat(Current.PO_DATA.taxtotal || 0) + parseFloat(Current.PO_DATA.tax2total || 0);
+                parseFloat(Current.PO_DATA.taxtotal || 0) +
+                parseFloat(Current.PO_DATA.tax2total || 0);
 
-            log.debug(logTitle, LogPrefix + '>> Current.PO_DATA: ' + JSON.stringify(Current.PO_DATA));
+            log.debug(
+                logTitle,
+                LogPrefix + '>> Current.PO_DATA: ' + JSON.stringify(Current.PO_DATA)
+            );
             /////////////////////////////////////////////
 
             /// STATUS CHECK ////////////////////////////
             if (
-                VC2_Util.inArray(Current.PO_DATA.statusRef, ['pendingBilling', 'pendingBillPartReceived']) ||
+                VC2_Util.inArray(Current.PO_DATA.statusRef, [
+                    'pendingBilling',
+                    'pendingBillPartReceived'
+                ]) ||
                 Current.billInAdvance
             ) {
                 // continue processing
                 log.debug(logTitle, LogPrefix + '>> PO is ready for billing: ');
             } else {
                 /// not ready for billing!
-                log.debug(logTitle, LogPrefix + '>>  Skipping poId, Purchase Order not Ready to Bill');
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>>  Skipping poId, Purchase Order not Ready to Bill'
+                );
 
                 util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
-                returnObj.details = ['PO #' + Current.tranid, ' - : ' + Current.PO_DATA.status].join('');
+                returnObj.details = [
+                    'PO #' + Current.tranid,
+                    ' - : ' + Current.PO_DATA.status
+                ].join('');
 
                 return returnObj;
             }
             ///////////////////////////////////
 
             Current.PayloadData = JSON.parse(context.custrecord_ctc_vc_bill_json);
-            log.audit(logTitle, LogPrefix + '>> Bill Payload:' + JSON.stringify(Current.PayloadData));
+            log.audit(
+                logTitle,
+                LogPrefix + '>> Bill Payload:' + JSON.stringify(Current.PayloadData)
+            );
 
             /// FIND EXISTING BILLS ////////////////////////////
             log.debug(logTitle, LogPrefix + ' // Checking for existing bills...');
@@ -158,7 +184,9 @@ require([
 
             log.debug(
                 logTitle,
-                LogPrefix + '***** Vendor Bill record creation:start *****' + JSON.stringify(transformOption)
+                LogPrefix +
+                    '***** Vendor Bill record creation:start *****' +
+                    JSON.stringify(transformOption)
             );
 
             Current.BILL_REC = RecordHelper.transform(transformOption);
@@ -169,7 +197,10 @@ require([
 
             // store the current posting period
             var currentPostingPeriod = Current.BILL_REC.getValue({ fieldId: 'postingperiod' });
-            log.audit(logTitle, LogPrefix + '>> posting period: ' + JSON.stringify(currentPostingPeriod));
+            log.audit(
+                logTitle,
+                LogPrefix + '>> posting period: ' + JSON.stringify(currentPostingPeriod)
+            );
 
             Current.BILL_REC.setValue({
                 fieldId: 'trandate',
@@ -259,7 +290,10 @@ require([
                             qty: line.QUANTITY
                         })
                     ].join('');
-                    log.debug(logTitle, '// line has remaining unprocessed qty' + JSON.stringify(line));
+                    log.debug(
+                        logTitle,
+                        '// line has remaining unprocessed qty' + JSON.stringify(line)
+                    );
                 }
             });
 
@@ -325,7 +359,8 @@ require([
                     ? parseFloat(currentLineData.taxrate1 || '0')
                     : currentLineData.taxrate1;
                 if (currentLineData.taxrate1 > 0) {
-                    currentLineData.taxAmount1 = currentLineData.amount * (currentLineData.taxrate1 / 100);
+                    currentLineData.taxAmount1 =
+                        currentLineData.amount * (currentLineData.taxrate1 / 100);
                     lineTaxTotal += currentLineData.taxAmount1;
                 }
 
@@ -333,11 +368,15 @@ require([
                     ? parseFloat(currentLineData.taxrate2 || '0')
                     : currentLineData.taxrate2;
                 if (currentLineData.taxrate2 > 0) {
-                    currentLineData.taxAmount2 = currentLineData.amount * (currentLineData.taxrate2 / 100);
+                    currentLineData.taxAmount2 =
+                        currentLineData.amount * (currentLineData.taxrate2 / 100);
                     lineTaxTotal += currentLineData.taxAmount2;
                 }
 
-                log.debug(logTitle, log_prefix + 'Checking for variance: ' + JSON.stringify(currentLineData));
+                log.debug(
+                    logTitle,
+                    log_prefix + 'Checking for variance: ' + JSON.stringify(currentLineData)
+                );
 
                 /// LINE: QTY Variance /////////////////////
                 ///////////////////////////////////
@@ -412,7 +451,10 @@ require([
                 Current.BILL_REC.commitLine({ sublistId: 'item' });
             }
             ///////////////////////////////
-            log.debug(logTitle, 'Processing charges :  ' + JSON.stringify(Current.PayloadData.charges));
+            log.debug(
+                logTitle,
+                'Processing charges :  ' + JSON.stringify(Current.PayloadData.charges)
+            );
             log.debug(logTitle, '// variances :  ' + JSON.stringify(Current.PayloadData.variance));
 
             taxTotal = Helper.roundOff(taxTotal) || 0;
@@ -438,9 +480,13 @@ require([
             );
 
             var ignoreVariance =
-                Current.PayloadData.hasOwnProperty('ignoreVariance') && Current.PayloadData.ignoreVariance == 'T';
+                Current.PayloadData.hasOwnProperty('ignoreVariance') &&
+                Current.PayloadData.ignoreVariance == 'T';
 
-            log.audit(logTitle, '>> variance lines: ' + JSON.stringify(Current.PayloadData.varianceLines));
+            log.audit(
+                logTitle,
+                '>> variance lines: ' + JSON.stringify(Current.PayloadData.varianceLines)
+            );
             log.audit(logTitle, '>> variance: ' + JSON.stringify(Current.PayloadData.variance));
 
             var varianceLines = [];
@@ -647,9 +693,13 @@ require([
                 totalVarianceAmount = Helper.roundOff(totalVarianceAmount);
 
                 log.debug(logTitle, '>>> totalVarianceAmount: ' + totalVarianceAmount);
-                log.debug(logTitle, '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold);
+                log.debug(
+                    logTitle,
+                    '>>> allowableVarianceThreshold: ' + allowableVarianceThreshold
+                );
 
-                allowBillVariance = Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
+                allowBillVariance =
+                    Math.abs(totalVarianceAmount) <= Math.abs(allowableVarianceThreshold);
                 log.debug(logTitle, '>>> allowBillVariance: ' + allowBillVariance);
             }
 
@@ -705,7 +755,11 @@ require([
             });
 
             if (newRecordId) {
-                log.debug(logTitle, '>>> Bill Created succesfully...' + [Current.tranid, Current.PayloadData.invoice]);
+                log.debug(
+                    logTitle,
+                    '>>> Bill Created succesfully...' +
+                        [Current.tranid, Current.PayloadData.invoice]
+                );
 
                 returnObj = JSON.parse(JSON.stringify(Current.BILL_REC));
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
@@ -726,9 +780,13 @@ require([
                 }
 
                 returnObj.details =
-                    'Linked to vendor bill ' + JSON.stringify({ id: newRecordId, name: Current.PayloadData.invoice });
+                    'Linked to vendor bill ' +
+                    JSON.stringify({ id: newRecordId, name: Current.PayloadData.invoice });
             } else {
-                log.debug(logTitle, '// bill creation fail...' + [Current.tranid, Current.PayloadData.invoice]);
+                log.debug(
+                    logTitle,
+                    '// bill creation fail...' + [Current.tranid, Current.PayloadData.invoice]
+                );
                 util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
                 return returnObj;
             }
@@ -739,7 +797,10 @@ require([
             returnObj.details = returnObj.details || Helper.extractError(error);
             returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
             returnObj.isError = true;
-            returnObj.msg = [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join(' ');
+            returnObj.msg = [
+                returnObj.msg,
+                returnObj.details != returnObj.msg ? returnObj.details : ''
+            ].join(' ');
 
             log.audit(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
         } finally {
@@ -755,7 +816,8 @@ require([
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -779,13 +841,17 @@ require([
                 lineData.line = line;
 
                 lineData.remainingQty =
-                    parseFloat(lineData.quantityreceived || '0') - parseFloat(lineData.quantitybilled || '0');
+                    parseFloat(lineData.quantityreceived || '0') -
+                    parseFloat(lineData.quantitybilled || '0');
 
                 log.audit(logTitle, '...>> vbline: ' + JSON.stringify(vbLineData));
 
                 billPayload.lines.forEach(function (lineBill) {
                     if (lineBill.NSITEM == lineData.item) hasFoundLines = true;
-                    if (lineBill.NSITEM == lineData.item && lineBill.QUANTITY <= lineData.remainingQty) {
+                    if (
+                        lineBill.NSITEM == lineData.item &&
+                        lineBill.QUANTITY <= lineData.remainingQty
+                    ) {
                         arrLinesToBill.push(lineBill);
                     }
 
@@ -825,7 +891,10 @@ require([
                 return true;
             });
 
-            log.audit(logTitle, LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills));
+            log.audit(
+                logTitle,
+                LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills)
+            );
             returnValue = arrExistingBills;
 
             return returnValue;
@@ -861,7 +930,9 @@ require([
                 }
                 log.debug(
                     logTitle,
-                    LogPrefix + ('>> PO: ' + JSON.stringify(poDetails)) + ('<br />\nSO: ' + JSON.stringify(soDetails))
+                    LogPrefix +
+                        ('>> PO: ' + JSON.stringify(poDetails)) +
+                        ('<br />\nSO: ' + JSON.stringify(soDetails))
                 );
                 returnValue = soDetails;
             }
@@ -1015,10 +1086,17 @@ require([
                             }
                         });
 
-                    log.audit(logTitle, logPrefix + '>> matchingLinesBill: ' + JSON.stringify(matchingLinesBill));
+                    log.audit(
+                        logTitle,
+                        logPrefix + '>> matchingLinesBill: ' + JSON.stringify(matchingLinesBill)
+                    );
 
                     lineData.matchingLinesBill = [];
-                    for (ii = 0, jj = matchingLinesBill ? matchingLinesBill.length : 0; ii < jj; ii++) {
+                    for (
+                        ii = 0, jj = matchingLinesBill ? matchingLinesBill.length : 0;
+                        ii < jj;
+                        ii++
+                    ) {
                         var matchedLine = matchingLinesBill[ii];
                         if (matchedLinesBill[matchedLine.line]) continue;
                         matchedLinesBill[matchedLine.line] = lineInfo;
@@ -1029,7 +1107,10 @@ require([
                 arrLines.push(lineData);
             }
 
-            log.audit(logTitle, LogPrefix + '/// Look for bill lines that doesnt have direct matches...');
+            log.audit(
+                logTitle,
+                LogPrefix + '/// Look for bill lines that doesnt have direct matches...'
+            );
             // do a second round, and look for unmatched lines
             for (i = 0, j = arrLines.length; i < j; i++) {
                 lineInfo = arrLines[i];
@@ -1048,7 +1129,10 @@ require([
 
                     matchedLinesBill[matchedLines[ii].line] = lineInfo.info;
 
-                    log.audit(logTitle, logPrefix + '>> matching items: ' + JSON.stringify(matchedLines[ii]));
+                    log.audit(
+                        logTitle,
+                        logPrefix + '>> matching items: ' + JSON.stringify(matchedLines[ii])
+                    );
                 }
             }
 
@@ -1072,7 +1156,12 @@ require([
 
                 returnRec = ns_record.transform(option);
             } catch (err) {
-                throw 'Unable to transform record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
+                throw (
+                    'Unable to transform record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
             }
             return returnRec;
         },
@@ -1084,7 +1173,12 @@ require([
 
                 returnRec = ns_record.load(option);
             } catch (err) {
-                throw 'Unable to load record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
+                throw (
+                    'Unable to load record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
             }
             return returnRec;
         },
@@ -1107,7 +1201,12 @@ require([
                     }
                 }
             } catch (error) {
-                throw 'Unable to load record: ' + VC2_Util.extractError(err) + '\n' + JSON.stringify(option);
+                throw (
+                    'Unable to load record: ' +
+                    VC2_Util.extractError(err) +
+                    '\n' +
+                    JSON.stringify(option)
+                );
             }
             return returnData;
         },
@@ -1132,7 +1231,8 @@ require([
                 var value = record.getSublistValue(lineOption),
                     textValue = record.getSublistText(lineOption);
                 lineData[columns[i]] = value;
-                if (textValue !== null && value != textValue) lineData[columns[i] + '_text'] = textValue;
+                if (textValue !== null && value != textValue)
+                    lineData[columns[i] + '_text'] = textValue;
             }
 
             return lineData;

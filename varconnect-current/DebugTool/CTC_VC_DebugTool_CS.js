@@ -22,7 +22,16 @@ define([
     hlFolder + '/highlight.js',
     hlFolder + '/languages/xml.min.js',
     hlFolder + '/languages/json.min.js'
-], function (ns_search, ns_currentRecord, vc_vendorcfg, vc_websvc, vc2_constant, hljs, hljsXml, hljsJson) {
+], function (
+    ns_search,
+    ns_currentRecord,
+    vc_vendorcfg,
+    vc_websvc,
+    vc2_constant,
+    hljs,
+    hljsXml,
+    hljsJson
+) {
     // get current folder
     if (hljs) {
         hljs.registerLanguage('xml', hljsXml);
@@ -32,7 +41,8 @@ define([
     var Helper = {
         getPODetails: function (poNum) {
             var columns = [ns_search.createColumn({ name: 'entity' })];
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) columns.push(ns_search.createColumn({ name: 'subsidiary' }));
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
+                columns.push(ns_search.createColumn({ name: 'subsidiary' }));
 
             var poObj = {},
                 purchaseorderSearchObj = ns_search.create({
@@ -49,7 +59,8 @@ define([
             var searchResultCount = purchaseorderSearchObj.runPaged().count;
             log.debug('purchaseorderSearchObj result count', searchResultCount);
             purchaseorderSearchObj.run().each(function (result) {
-                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
+                    poObj['subsidiary'] = result.getValue('subsidiary');
                 poObj['vendor'] = result.getValue('entity');
                 poObj['id'] = result.id;
                 // ?
@@ -80,7 +91,8 @@ define([
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         }
@@ -278,7 +290,11 @@ define([
                     str += shift[deep] + ar[ix];
                     inComment = true;
                     // end comment  or <![CDATA[...]]> //
-                    if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1 || ar[ix].search(/!DOCTYPE/) > -1) {
+                    if (
+                        ar[ix].search(/-->/) > -1 ||
+                        ar[ix].search(/\]>/) > -1 ||
+                        ar[ix].search(/!DOCTYPE/) > -1
+                    ) {
                         inComment = false;
                     }
                 }
@@ -291,13 +307,18 @@ define([
                 else if (
                     /^<\w/.exec(ar[ix - 1]) &&
                     /^<\/\w/.exec(ar[ix]) &&
-                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) == /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
+                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) ==
+                        /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
                 ) {
                     str += ar[ix];
                     if (!inComment) deep--;
                 }
                 // <elm> //
-                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) == -1 && ar[ix].search(/\/>/) == -1) {
+                else if (
+                    ar[ix].search(/<\w/) > -1 &&
+                    ar[ix].search(/<\//) == -1 &&
+                    ar[ix].search(/\/>/) == -1
+                ) {
                     str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
@@ -371,7 +392,9 @@ define([
         //----------------------------------------------------------------------------
 
         function isSubquery(str, parenthesisLevel) {
-            return parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length);
+            return (
+                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
+            );
         }
 
         function split_sql(str, tab) {
@@ -505,7 +528,9 @@ define([
         };
 
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
-            var str = preserveComments ? text : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
+            var str = preserveComments
+                ? text
+                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
             return str
                 .replace(/\s{1,}/g, ' ')

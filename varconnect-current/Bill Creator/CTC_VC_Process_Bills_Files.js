@@ -178,28 +178,40 @@ define([
                     var poId = currentData.values[BILLFILE_FLD.PO_LINK].value;
                     LogPrefix = '[purchaseorder:' + poId + ' ]';
 
-                    log.audit(logTitle, LogPrefix + ' ... currentData: ' + JSON.stringify(currentData));
+                    log.audit(
+                        logTitle,
+                        LogPrefix + ' ... currentData: ' + JSON.stringify(currentData)
+                    );
 
                     var vendorCfg = Helper.loadVendorConfig({
                         entity: currentData.values['entity.' + BILLFILE_FLD.PO_LINK].value
                     });
 
                     var requestBillFile = Helper.fetchBillFile({ internalId: currentData.id });
-                    log.audit(logTitle, LogPrefix + ' ... billFileData: ' + JSON.stringify(requestBillFile));
+                    log.audit(
+                        logTitle,
+                        LogPrefix + ' ... billFileData: ' + JSON.stringify(requestBillFile)
+                    );
 
                     // check the PO Status
                     var poStatus = currentData.values['statusref.' + BILLFILE_FLD.PO_LINK];
                     log.audit(logTitle, LogPrefix + ' ... po status: ' + JSON.stringify(poStatus));
 
                     var isBillReceivable = requestBillFile[BILLFILE_FLD.IS_RCVBLE];
-                    log.audit(logTitle, LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable));
+                    log.audit(
+                        logTitle,
+                        LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable)
+                    );
 
                     var isOrderReceivable = vc2_util.inArray(poStatus.value, [
                         'pendingReceipt',
                         'partiallyReceived',
                         'pendingBillPartReceived'
                     ]);
-                    log.audit(logTitle, LogPrefix + '... isOrderReceivable: ' + JSON.stringify(isOrderReceivable));
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '... isOrderReceivable: ' + JSON.stringify(isOrderReceivable)
+                    );
 
                     var respItemff = {};
                     if (vendorCfg.ENABLE_FULFILLLMENT && isBillReceivable && isOrderReceivable) {
@@ -389,7 +401,10 @@ define([
                     billFileData = option.billFileData;
 
                 log.audit(logTitle, LogPrefix + '>> recordData   : ' + JSON.stringify(recordData));
-                log.audit(logTitle, LogPrefix + '>> billFileData   : ' + JSON.stringify(billFileData));
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> billFileData   : ' + JSON.stringify(billFileData)
+                );
 
                 var respItemFF = ns_https.requestRestlet({
                     method: 'POST',
@@ -401,7 +416,10 @@ define([
                     body: JSON.stringify(billFileData)
                 });
 
-                log.audit(logTitle, LogPrefix + '>> response-itemff   : ' + JSON.stringify(respItemFF));
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> response-itemff   : ' + JSON.stringify(respItemFF)
+                );
 
                 if (respItemFF.code == 200) {
                     var respBody = JSON.parse(respItemFF.body);
@@ -414,14 +432,18 @@ define([
                     if (respBody.itemff) {
                         vc_billfile.addNote({
                             id: recordData.id,
-                            note: 'Item Fulfillment succesfully created...  ' + ('[id:' + respBody.itemff + ']')
+                            note:
+                                'Item Fulfillment succesfully created...  ' +
+                                ('[id:' + respBody.itemff + ']')
                         });
                     }
 
                     if (respBody.serialData) {
                         log.audit(
                             logTitle,
-                            LogPrefix + '/// Processing serials...  ' + JSON.stringify(respBody.serialData)
+                            LogPrefix +
+                                '/// Processing serials...  ' +
+                                JSON.stringify(respBody.serialData)
                         );
 
                         var serialsToProcess = respBody.serialData;
@@ -442,7 +464,10 @@ define([
                                 })
                             });
 
-                            log.debug(logTitle, LogPrefix + '// serials: ' + JSON.stringify(respSerials));
+                            log.debug(
+                                logTitle,
+                                LogPrefix + '// serials: ' + JSON.stringify(respSerials)
+                            );
                         }
                     }
                 } else {

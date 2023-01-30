@@ -72,7 +72,9 @@ define([
 
         log.debug(
             logTitle,
-            LogPrefix + '>> Valid API Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
+            LogPrefix +
+                '>> Valid API Configs : ' +
+                JSON.stringify([validVendorCfgName, validVendorCfg])
         );
 
         // G = Fully Billed
@@ -137,7 +139,10 @@ define([
         var searchValues = vc2_util.safeParse(context.values.shift());
 
         log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
-        log.audit(logTitle, LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length));
+        log.audit(
+            logTitle,
+            LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length)
+        );
         LogPrefix = ['[', searchValues.recordType, ':', searchValues.id, '] '].join('');
         //var record_id = searchValues.id;
         log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));

@@ -63,7 +63,10 @@ define([
             return true;
         });
 
-        log.debug(logTitle, '>> Valid SFTP Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg]));
+        log.debug(
+            logTitle,
+            '>> Valid SFTP Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
+        );
 
         return validVendorCfg;
     }
@@ -143,7 +146,9 @@ define([
                 'AND',
                 ['formulanumeric: FLOOR({now}-{created})', 'lessthanorequalto', '90']
             ],
-            columns: [ns_search.createColumn({ name: 'name', summary: 'GROUP', sort: ns_search.Sort.ASC })]
+            columns: [
+                ns_search.createColumn({ name: 'name', summary: 'GROUP', sort: ns_search.Sort.ASC })
+            ]
         });
 
         var pagedData = s.runPaged({ pageSize: 1000 });
@@ -178,11 +183,16 @@ define([
                     list[i].name.split('.') && list[i].name.split('.').length > 1
                         ? list[i].name.split('.').pop()
                         : '-no-ext-',
-                is90days: moment(list[i].lastModified).isSameOrAfter(moment().subtract(90, 'days'), 'day'),
+                is90days: moment(list[i].lastModified).isSameOrAfter(
+                    moment().subtract(90, 'days'),
+                    'day'
+                ),
                 idx: i + 1,
                 list: list.length
             };
-            currentFile.ext_rgx = currentFile.ext_rgx ? currentFile.ext_rgx.toLowerCase() : currentFile.ext_rgx;
+            currentFile.ext_rgx = currentFile.ext_rgx
+                ? currentFile.ext_rgx.toLowerCase()
+                : currentFile.ext_rgx;
 
             if (!currentFile.is90days) {
                 currentFile.skippedReason = 'older than 90days';
@@ -231,7 +241,10 @@ define([
             });
         }
 
-        log.audit(logTitle, '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles]));
+        log.audit(
+            logTitle,
+            '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles])
+        );
     }
 
     function reduce(context) {

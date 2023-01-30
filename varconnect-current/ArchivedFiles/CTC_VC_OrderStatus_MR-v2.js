@@ -64,7 +64,9 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid')
+                internalid: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_orderstatus_tranid')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
@@ -108,7 +110,14 @@ define([
                         'AND',
                         ['type', 'anyof', 'PurchOrd'],
                         'AND',
-                        ['status', 'noneof', 'PurchOrd:C', 'PurchOrd:G', 'PurchOrd:H', 'PurchOrd:F'],
+                        [
+                            'status',
+                            'noneof',
+                            'PurchOrd:C',
+                            'PurchOrd:G',
+                            'PurchOrd:H',
+                            'PurchOrd:F'
+                        ],
                         'AND',
                         ['custbody_ctc_bypass_vc', 'is', 'F']
                     ],
@@ -136,7 +145,11 @@ define([
 
                 var vendorFilter = [];
                 for (var i = 0, j = activeVendors.length; i < j; i++) {
-                    if (Params.vendorId && !vc_util.inArray(Params.vendorId, activeVendors[i].vendor)) continue;
+                    if (
+                        Params.vendorId &&
+                        !vc_util.inArray(Params.vendorId, activeVendors[i].vendor)
+                    )
+                        continue;
 
                     if (vendorFilter.length) vendorFilter.push('OR');
                     vendorFilter.push([
@@ -149,7 +162,10 @@ define([
 
                 log.audit(
                     logTitle,
-                    vc_util.getUsage() + LogPrefix + '// search option: ' + JSON.stringify(searchOption)
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        '// search option: ' +
+                        JSON.stringify(searchOption)
                 );
 
                 searchNew = ns_search.create(searchOption);
@@ -157,7 +173,10 @@ define([
 
             returnValue = searchNew;
         } catch (error) {
-            log.error(logTitle, vc_util.getUsage() + LogPrefix + ' ## ERROR ## ' + JSON.stringify(error));
+            log.error(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + ' ## ERROR ## ' + JSON.stringify(error)
+            );
             throw vc_util.extractError(error);
         }
 
@@ -187,7 +206,9 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid')
+                internalid: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_orderstatus_tranid')
             };
             log.debug(logTitle, '>> Params: ' + JSON.stringify(Params));
 
@@ -199,7 +220,10 @@ define([
             Current.subsidiary = Helper.getSubsidiary(Current.poId);
 
             LogPrefix = 'MAP [purchaseorder:' + Current.poId + '] ';
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> data: ' + JSON.stringify(Current));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> data: ' + JSON.stringify(Current)
+            );
 
             Current.MainCFG = Helper.loadMainConfig();
             Current.VendorCFG = Helper.loadVendorConfig({
@@ -224,7 +248,10 @@ define([
                 }) == 'Drop Shipment';
 
             ////////////////////////////////////////////////
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '///// Initiating library webservice ....');
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '///// Initiating library webservice ....'
+            );
             outputObj = vc_websvclib.process({
                 mainConfig: Current.MainCFG,
                 vendorConfig: Current.VendorCFG,
@@ -236,12 +263,18 @@ define([
                 subsidiary: Current.subsidiary,
                 countryCode: countryCode
             });
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj)
+            );
             ////////////////////////////////////////////////
 
             ////////////////////////////////////////////////
             // if there are no lines.. just exit the script
-            if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info))
+            if (
+                !outputObj.itemArray ||
+                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
+            )
                 throw 'No lines to process.';
 
             ////////////////////////////////////////////////
@@ -266,7 +299,10 @@ define([
                     });
                 }
             }
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId)
+            );
             ////////////////////////////////////////////////
 
             if (!vc_util.isEmpty(Current.soId)) {
@@ -278,7 +314,9 @@ define([
             }
 
             Current.allowItemFF =
-                Current.MainCFG.processDropships && Current.VendorCFG.processDropships && Current.MainCFG.createIF;
+                Current.MainCFG.processDropships &&
+                Current.VendorCFG.processDropships &&
+                Current.MainCFG.createIF;
             Current.allowItemRcpt =
                 Current.MainCFG.processSpecialOrders &&
                 Current.VendorCFG.processSpecialOrders &&
@@ -314,7 +352,8 @@ define([
                 var ItemFFSearchAll = vc_util.searchAllPaged({ searchObj: objSearchIF });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() + (LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length)
+                    vc_util.getUsage() +
+                        (LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length)
                 );
 
                 ItemFFSearchAll.forEach(function (result) {
@@ -326,7 +365,8 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() + (LogPrefix + '>> fulfillments: ' + JSON.stringify(arrFulfillments.length))
+                    vc_util.getUsage() +
+                        (LogPrefix + '>> fulfillments: ' + JSON.stringify(arrFulfillments.length))
                 );
                 //////////////////////////////////////////////////
 
@@ -351,11 +391,15 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() + (LogPrefix + '>> receipts: ' + JSON.stringify(arrReceipts.length))
+                    vc_util.getUsage() +
+                        (LogPrefix + '>> receipts: ' + JSON.stringify(arrReceipts.length))
                 );
                 //////////////////////////////////////////////////
 
-                log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> lineData: ' + outputObj.itemArray.length);
+                log.debug(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '>> lineData: ' + outputObj.itemArray.length
+                );
 
                 for (var i = 0; i < outputObj.itemArray.length; i++) {
                     var lineData = outputObj.itemArray[i];
@@ -363,7 +407,8 @@ define([
 
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() + (LogPrefix + '... line data: ' + JSON.stringify(lineData))
+                        vc_util.getUsage() +
+                            (LogPrefix + '... line data: ' + JSON.stringify(lineData))
                     );
 
                     var serialArray =
@@ -387,7 +432,8 @@ define([
                         }
                         log.audit(
                             logTitle,
-                            '.... matching fulfillment: ' + JSON.stringify([lineData.order_num, fulfillmentNum])
+                            '.... matching fulfillment: ' +
+                                JSON.stringify([lineData.order_num, fulfillmentNum])
                         );
                     } else if (!Current.isDropPO && Current.MainCFG.processSpecialOrders) {
                         for (ii = 0; ii < arrReceipts.length; ii++) {
@@ -398,7 +444,8 @@ define([
                         }
                         log.audit(
                             logTitle,
-                            '... matching receipt: ' + JSON.stringify([lineData.order_num, receiptNum])
+                            '... matching receipt: ' +
+                                JSON.stringify([lineData.order_num, receiptNum])
                         );
                     }
 
@@ -420,7 +467,8 @@ define([
         } catch (error) {
             log.error(
                 logTitle,
-                vc_util.getUsage() + (LogPrefix + ' - Error encountered in map' + JSON.stringify(error))
+                vc_util.getUsage() +
+                    (LogPrefix + ' - Error encountered in map' + JSON.stringify(error))
             );
 
             vc_log.recordLog({
@@ -448,7 +496,10 @@ define([
 
         LogPrefix = 'REDUCE [purchaseorder:' + poId + '] ';
 
-        log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> serial data: ' + JSON.stringify(data));
+        log.debug(
+            logTitle,
+            vc_util.getUsage() + LogPrefix + '>> serial data: ' + JSON.stringify(data)
+        );
 
         var po_record = ns_record.load({
             type: 'purchaseorder',
@@ -459,7 +510,8 @@ define([
             var itemId = '';
             var vendor = po_record.getValue({ fieldId: 'entity' });
             var subsidiaryId = null;
-            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES) subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
+            if (vc_constants.GLOBAL.ENABLE_SUBSIDIARIES)
+                subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
 
             var mainConfig = Helper.loadMainConfig();
             var subsidiary = Helper.getSubsidiary(poId);
@@ -498,11 +550,17 @@ define([
                 fieldId: 'createdfrom'
             });
 
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> SalesOrder Id: ' + JSON.stringify(soId));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> SalesOrder Id: ' + JSON.stringify(soId)
+            );
 
             var rs = ns_search.global({ keywords: serial });
             //log.debug("Global search result", rs);
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> Global Search - serial: ' + serial);
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> Global Search - serial: ' + serial
+            );
 
             if (rs.length == 0) {
                 // log.debug('xml app v2: saveSerial', serial);
@@ -558,13 +616,19 @@ define([
                 }
 
                 var sc = sn_record.save();
-                log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> New Serial ID: ' + JSON.stringify(sc));
+                log.debug(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '>> New Serial ID: ' + JSON.stringify(sc)
+                );
             } else if (rs.length == 1) {
                 log.debug(logTitle, vc_util.getUsage() + LogPrefix + ' >> Matching serial found');
             } else {
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() + LogPrefix + ' >> Multiple Duplicates ' + JSON.stringify(rs.length)
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        ' >> Multiple Duplicates ' +
+                        JSON.stringify(rs.length)
                 );
                 // log.debug('xml app v2: error duplicates');
             }
@@ -648,7 +712,11 @@ define([
             var objVendorSearch = ns_search.create({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filters: [['isinactive', 'is', 'F']],
-                columns: ['custrecord_ctc_vc_vendor', 'custrecord_ctc_vc_vendor_start', 'custrecord_ctc_vc_xml_vendor']
+                columns: [
+                    'custrecord_ctc_vc_vendor',
+                    'custrecord_ctc_vc_vendor_start',
+                    'custrecord_ctc_vc_xml_vendor'
+                ]
             });
 
             var arrVendors = [];
@@ -660,7 +728,10 @@ define([
                         name: 'custrecord_ctc_vc_vendor_start'
                     });
 
-                log.audit(logTitle, vc_util.getUsage() + LogPrefix + '..' + JSON.stringify([vendorList, startDate]));
+                log.audit(
+                    logTitle,
+                    vc_util.getUsage() + LogPrefix + '..' + JSON.stringify([vendorList, startDate])
+                );
 
                 if (vendorList) {
                     arrVendors.push({
@@ -673,7 +744,10 @@ define([
                 return true;
             });
 
-            log.audit(logTitle, vc_util.getUsage() + LogPrefix + '>> vendors list: ' + JSON.stringify(arrVendors));
+            log.audit(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> vendors list: ' + JSON.stringify(arrVendors)
+            );
 
             return arrVendors;
         },
@@ -699,15 +773,24 @@ define([
                 });
 
             if (!vendorConfig) {
-                log.audit(logTitle, 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName);
+                log.audit(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
             }
 
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig)
+            );
             return vendorConfig;
         },
         getSubsidiary: function (poId) {
             var logTitle = [LogTitle, 'getSubsidiary'].join('::');
-            log.debug(logTitle, vc_util.getUsage() + LogPrefix + '>> poId: ' + JSON.stringify(poId));
+            log.debug(
+                logTitle,
+                vc_util.getUsage() + LogPrefix + '>> poId: ' + JSON.stringify(poId)
+            );
 
             var subsidiary = null;
 
@@ -812,7 +895,11 @@ define([
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
                     if (orderNumFilter.length) orderNumFilter.push('OR');
-                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
+                    orderNumFilter.push([
+                        'custbody_ctc_if_vendor_order_match',
+                        ns_search.Operator.IS,
+                        orderNum
+                    ]);
                     return true;
                 });
                 searchOption.filters.push(orderNumFilter);
@@ -864,7 +951,9 @@ define([
                 for (i = 0; i < OrderLines.length; i++) {
                     log.audit(
                         logTitle,
-                        vc_util.getUsage() + LogPrefix + ('... processing ' + '[' + OrderLines[i].order_num + '] .....')
+                        vc_util.getUsage() +
+                            LogPrefix +
+                            ('... processing ' + '[' + OrderLines[i].order_num + '] .....')
                     );
 
                     if (vc_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
@@ -872,19 +961,30 @@ define([
                     }
 
                     if (!OrderLines[i].order_num || OrderLines[i].order_num == 'NA') {
-                        log.audit(logTitle, vc_util.getUsage() + LogPrefix + '......skipped: no item order num');
+                        log.audit(
+                            logTitle,
+                            vc_util.getUsage() + LogPrefix + '......skipped: no item order num'
+                        );
                         continue;
                     }
 
-                    if (OrderLines[i].hasOwnProperty('is_shipped') && OrderLines[i].is_shipped === false) {
-                        log.audit(logTitle, vc_util.getUsage() + LogPrefix + '......skipped: not yet shipped');
+                    if (
+                        OrderLines[i].hasOwnProperty('is_shipped') &&
+                        OrderLines[i].is_shipped === false
+                    ) {
+                        log.audit(
+                            logTitle,
+                            vc_util.getUsage() + LogPrefix + '......skipped: not yet shipped'
+                        );
                         continue;
                     }
 
                     if (OrderLines[i].hasOwnProperty('ns_record') && OrderLines[i].ns_record) {
                         log.audit(
                             logTitle,
-                            vc_util.getUsage() + LogPrefix + '......skipped: fulfillment already exists.'
+                            vc_util.getUsage() +
+                                LogPrefix +
+                                '......skipped: fulfillment already exists.'
                         );
                         continue;
                     }
@@ -909,7 +1009,9 @@ define([
                 });
                 log.debug(
                     logTitle,
-                    vc_util.getUsage() + LogPrefix + ('>> arrExistingIFS: ' + JSON.stringify(arrExistingIFS))
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        ('>> arrExistingIFS: ' + JSON.stringify(arrExistingIFS))
                 );
 
                 /// run through all the ordernums
@@ -921,7 +1023,8 @@ define([
                     log.audit(logTitle, logPrefix + '*** Processing order: *****');
 
                     try {
-                        if (vc_util.inArray(vendorOrderNum, arrExistingIFS)) throw '... order already exists.';
+                        if (vc_util.inArray(vendorOrderNum, arrExistingIFS))
+                            throw '... order already exists.';
 
                         // get the lineData;
                         var fulfillLine = [];
@@ -932,7 +1035,10 @@ define([
 
                         if (vc_util.isEmpty(fulfillLine)) throw '... no line items to fulfill';
 
-                        log.audit(logTitle, vc_util.getUsage() + LogPrefix + '// sending itemff restlet... ');
+                        log.audit(
+                            logTitle,
+                            vc_util.getUsage() + LogPrefix + '// sending itemff restlet... '
+                        );
                         /////////////////////////////////////////
                         // CREATE ITEM FULFILLMENT
                         var itemffResponse = ns_https.requestRestlet({
@@ -948,13 +1054,19 @@ define([
                         });
 
                         var respBody = JSON.parse(itemffResponse.body);
-                        log.debug(logTitle, logPrefix + '>> responseBody: ' + JSON.stringify(respBody));
+                        log.debug(
+                            logTitle,
+                            logPrefix + '>> responseBody: ' + JSON.stringify(respBody)
+                        );
 
                         for (var noteId in respBody) {
                             var respdata = respBody[noteId];
 
                             if (respdata.msg) {
-                                log.debug(logTitle, logPrefix + '>> respdata.msg: ' + JSON.stringify(respdata.msg));
+                                log.debug(
+                                    logTitle,
+                                    logPrefix + '>> respdata.msg: ' + JSON.stringify(respdata.msg)
+                                );
 
                                 vc_log.recordLog({
                                     header: 'Fulfillment Creation | Notes',
@@ -967,7 +1079,12 @@ define([
                                 });
                             }
                             if (respdata.error) {
-                                log.debug(logTitle, logPrefix + '>> respdata.error: ' + JSON.stringify(respdata.error));
+                                log.debug(
+                                    logTitle,
+                                    logPrefix +
+                                        '>> respdata.error: ' +
+                                        JSON.stringify(respdata.error)
+                                );
                                 vc_log.recordLog({
                                     header: 'Fulfillment Creation | Error',
                                     body:
@@ -982,14 +1099,20 @@ define([
 
                         /////////////////////////////////////////
                     } catch (order_error) {
-                        log.audit(logTitle, logPrefix + '//Skipped: ' + vc_util.extractError(order_error));
+                        log.audit(
+                            logTitle,
+                            logPrefix + '//Skipped: ' + vc_util.extractError(order_error)
+                        );
                         continue;
                     }
                 }
             } catch (error) {
                 log.error(
                     logTitle,
-                    vc_util.getUsage() + LogPrefix + 'Error creating fulfillment: ' + JSON.stringify(error)
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        'Error creating fulfillment: ' +
+                        JSON.stringify(error)
                 );
 
                 vc_log.recordLog({
@@ -1017,7 +1140,10 @@ define([
             } catch (error) {
                 log.error(
                     logTitle,
-                    vc_util.getUsage() + LogPrefix + 'Error creating item receipt : ' + JSON.stringify(error)
+                    vc_util.getUsage() +
+                        LogPrefix +
+                        'Error creating item receipt : ' +
+                        JSON.stringify(error)
                 );
 
                 vc_log.recordLog({

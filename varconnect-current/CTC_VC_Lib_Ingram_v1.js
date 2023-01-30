@@ -90,7 +90,10 @@ define([
                 var reqValidOrders = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     query: {
-                        url: CURRENT.vendorConfig.endPoint + '/search?customerOrderNumber=' + CURRENT.recordNum,
+                        url:
+                            CURRENT.vendorConfig.endPoint +
+                            '/search?customerOrderNumber=' +
+                            CURRENT.recordNum,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
@@ -223,7 +226,10 @@ define([
                     method: 'post',
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint.replace(/orders.*$/gi, 'catalog/priceandavailability?') +
+                            CURRENT.vendorConfig.endPoint.replace(
+                                /orders.*$/gi,
+                                'catalog/priceandavailability?'
+                            ) +
                             'includeAvailability=true&includePricing=true&includeProductAttributes=true',
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
@@ -258,7 +264,10 @@ define([
                 log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
                 returnValue = [];
             } finally {
-                log.audit(logTitle, LogPrefix + '>> item availability: ' + JSON.stringify(returnValue));
+                log.audit(
+                    logTitle,
+                    LogPrefix + '>> item availability: ' + JSON.stringify(returnValue)
+                );
             }
             return returnValue;
         },
@@ -299,7 +308,10 @@ define([
                 });
             }
 
-            log.audit(logTitle, LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd));
+            log.audit(
+                logTitle,
+                LogPrefix + '>> arrDateBackOrderd: ' + JSON.stringify(arrDateBackOrderd)
+            );
 
             if (vc2_util.isEmpty(arrDateBackOrderd)) return;
 
@@ -391,7 +403,10 @@ define([
                         !vc2_util.inArray(lineData.status, LibIngramAPI.ValidLineStatus) &&
                         !vc2_util.inArray(lineData.status, LibIngramAPI.NegativeStatus)
                     ) {
-                        log.audit(logTitle, '.... skipping line, invalid status :  [' + lineData.status + ']');
+                        log.audit(
+                            logTitle,
+                            '.... skipping line, invalid status :  [' + lineData.status + ']'
+                        );
                         continue;
                     }
 
@@ -421,7 +436,9 @@ define([
             } catch (error) {
                 log.audit(
                     logTitle,
-                    LogPrefix + ('## ERROR ## ' + vc2_util.extractError(error)) + ('\n' + JSON.stringify(error))
+                    LogPrefix +
+                        ('## ERROR ## ' + vc2_util.extractError(error)) +
+                        ('\n' + JSON.stringify(error))
                 );
                 returnValue = false;
             } finally {
@@ -496,9 +513,14 @@ define([
                 for (var i = 0, j = arrValidOrders.length; i < j; i++) {
                     var validOrder = arrValidOrders[i];
                     LogPrefix =
-                        '' + ('[purchaseorder:' + CURRENT.recordId + '][') + (validOrder.ingramOrderNumber + '] ');
+                        '' +
+                        ('[purchaseorder:' + CURRENT.recordId + '][') +
+                        (validOrder.ingramOrderNumber + '] ');
 
-                    log.audit(logTitle, LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder));
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '>> Ingram Order: ' + JSON.stringify(validOrder)
+                    );
 
                     var respOrderDetails = LibIngramAPI.getOrderDetails({
                         ingramOrder: validOrder
@@ -552,7 +574,9 @@ define([
 
                     var validOrder = orderResponse.orderInfo;
                     LogPrefix =
-                        '' + ('[purchaseorder:' + CURRENT.recordId + '][') + (validOrder.ingramOrderNumber + '] ');
+                        '' +
+                        ('[purchaseorder:' + CURRENT.recordId + '][') +
+                        (validOrder.ingramOrderNumber + '] ');
 
                     var ingramOrderDate = validOrder.ingramOrderDate;
                     var defaultETA = {
@@ -572,7 +596,10 @@ define([
                             line_num: itemDetail.customerLineNumber,
                             item_num: itemDetail.vendorPartNumber,
                             item_num_alt: itemDetail.ingramPartNumber,
-                            is_shipped: vc2_util.inArray(lineStatus, LibIngramAPI.ValidShippedStatus),
+                            is_shipped: vc2_util.inArray(
+                                lineStatus,
+                                LibIngramAPI.ValidShippedStatus
+                            ),
                             line_status: lineStatus,
                             order_num: itemDetail.subOrderNumber
                         };
@@ -582,14 +609,17 @@ define([
                             if (!vc2_util.isEmpty(shipment.detail)) {
                                 outputLineData.order_date = shipment.detail.invoiceDate;
                                 outputLineData.ship_date = shipment.detail.shippedDate;
-                                outputLineData.order_eta = shipment.detail.estimatedDeliveryDate || defaultETA.text;
-                                outputLineData.order_eta_ship = shipment.detail.estimatedDeliveryDate;
+                                outputLineData.order_eta =
+                                    shipment.detail.estimatedDeliveryDate || defaultETA.text;
+                                outputLineData.order_eta_ship =
+                                    shipment.detail.estimatedDeliveryDate;
                                 outputLineData.carrier = shipment.carrier;
                             }
                         }
 
                         //// SERIALS / TRACKING //////////////////////
-                        if (!allSerials[outputLineData.item_num]) allSerials[outputLineData.item_num] = [];
+                        if (!allSerials[outputLineData.item_num])
+                            allSerials[outputLineData.item_num] = [];
 
                         if (!vc2_util.isEmpty(shipment) && !vc2_util.isEmpty(shipment.serials)) {
                             // add the shipment serials
@@ -604,7 +634,10 @@ define([
                             outputLineData.serial_num = 'NA';
                         }
 
-                        if (!vc2_util.isEmpty(shipment) && !vc2_util.isEmpty(shipment.trackingNumbers)) {
+                        if (
+                            !vc2_util.isEmpty(shipment) &&
+                            !vc2_util.isEmpty(shipment.trackingNumbers)
+                        ) {
                             outputLineData.tracking_num = shipment.trackingNumbers.join(',');
                         } else {
                             outputLineData.tracking_num = 'NA';
@@ -620,7 +653,10 @@ define([
                             outputLineData.ns_record = nsItemFF;
                         }
 
-                        log.audit(logTitle, LogPrefix + '>> Line Data: ' + JSON.stringify(outputLineData));
+                        log.audit(
+                            logTitle,
+                            LogPrefix + '>> Line Data: ' + JSON.stringify(outputLineData)
+                        );
 
                         arrLineOutput.push(outputLineData);
                     }
@@ -640,7 +676,9 @@ define([
 
                 vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });

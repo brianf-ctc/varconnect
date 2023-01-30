@@ -193,7 +193,10 @@ define([
         var dtStartDate = vc2_util.parseDate(startDate),
             dtTranDate = vc2_util.parseDate(tranDate);
 
-        log.audit(logTitle, '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate]));
+        log.audit(
+            logTitle,
+            '>> check dates: ' + JSON.stringify([dtStartDate, dtTranDate, dtStartDate < dtTranDate])
+        );
 
         return dtStartDate <= dtTranDate;
     }
@@ -263,7 +266,9 @@ define([
 
                 vc_log.recordLog({
                     header: 'Output Lines',
-                    body: !vc2_util.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(outputArray)
+                        ? JSON.stringify(outputArray)
+                        : '-no lines to process-',
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO,
                     transaction: poId
                 });
@@ -390,7 +395,8 @@ define([
             if (vendorConfig) {
                 if (
                     mainConfig.multipleIngram &&
-                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
+                    (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
+                        xmlVendor == vendorList.INGRAM_MICRO)
                 ) {
                     outputArray = _handleMultipleVendor({
                         vendor: vendor,

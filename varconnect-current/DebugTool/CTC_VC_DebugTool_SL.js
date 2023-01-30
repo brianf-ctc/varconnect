@@ -158,7 +158,9 @@ define([
                         '<iframe id="custpage_xml_viewer_frame" srcdoc="',
                         '<html>',
                         '<head>',
-                        cssHighlightStyle.url ? "<link rel='stylesheet' href='" + cssHighlightStyle.url + "'>" : '',
+                        cssHighlightStyle.url
+                            ? "<link rel='stylesheet' href='" + cssHighlightStyle.url + "'>"
+                            : '',
                         '</head>',
                         '<body>',
 

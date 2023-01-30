@@ -59,7 +59,9 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
                 }
             }
             return arrData;
@@ -82,7 +84,9 @@ define([
         _validateLicense({ mainConfig: mainConfig });
 
         if (_checkDandHVendorConfig()) {
-            var srchId = ns_runtime.getCurrentScript().getParameter('custscript_ctc_vc_dh_itemrequest_srch');
+            var srchId = ns_runtime
+                .getCurrentScript()
+                .getParameter('custscript_ctc_vc_dh_itemrequest_srch');
             if (!srchId) srchId = 'customsearch_ctc_vc_dh_itemrequest';
 
             log.debug(logTitle, 'Search id=' + srchId);
@@ -165,8 +169,10 @@ define([
             log.debug(logTitle, 'itemNumbers=' + JSON.stringify(itemNumbers));
             var valToSave;
 
-            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase()) valToSave = itemNumbers.partNum;
-            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase()) valToSave = itemNumbers.itemNum;
+            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.partNum;
+            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.itemNum;
 
             values = {};
             values[vc2_constant.FIELD.ITEM.DH_MPN] = valToSave;
@@ -180,7 +186,10 @@ define([
                         id: item,
                         values: values
                     });
-                    log.debug(logTitle, '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item);
+                    log.debug(
+                        logTitle,
+                        '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item
+                    );
                 } catch (error) {
                     log.error(logTitle, '## ERROR: ' + JSON.stringify(error));
                     throw error;
@@ -277,7 +286,10 @@ define([
             });
 
         if (!vendorConfig) {
-            log.debug(logTitle, 'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary);
+            log.debug(
+                logTitle,
+                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
+            );
         } else return vendorConfig;
     }
 
@@ -446,7 +458,9 @@ define([
                 itemNum = vc2_util.getNodeTextContent(
                     ns_xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
                 );
-                partNum = vc2_util.getNodeTextContent(ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]);
+                partNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
+                );
             }
         }
 

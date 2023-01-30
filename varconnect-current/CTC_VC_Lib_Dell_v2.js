@@ -20,13 +20,13 @@
  * 2.00		May 25, 2021	paolodl		Include line numbers
  *
  */
-define(['N/https', 'N/runtime', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
-    ns_https,
-    ns_runtime,
-    vc_log,
-    vc2_constant,
-    vc2_util
-) {
+define([
+    'N/https',
+    'N/runtime',
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js'
+], function (ns_https, ns_runtime, vc_log, vc2_constant, vc2_util) {
     'use strict';
     var LogTitle = 'WS:Dellv2',
         Config = {
@@ -78,10 +78,14 @@ define(['N/https', 'N/runtime', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js',
                     throw 'Unable to retrieve access token';
                 }
 
-                log.audit(logTitle, '>> Access Token: ' + JSON.stringify(responseBody.access_token));
+                log.audit(
+                    logTitle,
+                    '>> Access Token: ' + JSON.stringify(responseBody.access_token)
+                );
             } catch (error) {
                 var retryCount = option.retryCount || 0;
-                if (!Config.AllowRetry || !Config.NumRetries || retryCount >= Config.NumRetries) throw error;
+                if (!Config.AllowRetry || !Config.NumRetries || retryCount >= Config.NumRetries)
+                    throw error;
 
                 option.retryCount = retryCount + 1;
 
@@ -136,7 +140,10 @@ define(['N/https', 'N/runtime', './CTC_VC_Lib_Log.js', './CTC_VC2_Constants.js',
                 returnValue = orderLines;
             } catch (error) {
                 var errorMsg = vc2_util.extactError(error);
-                log.error(logTitle, '## ERROR ## ' + errorMsg + '\n>> Details:' + JSON.stringify(error));
+                log.error(
+                    logTitle,
+                    '## ERROR ## ' + errorMsg + '\n>> Details:' + JSON.stringify(error)
+                );
 
                 vc_log.recordLog({
                     header: LogTitle + ' Error | ' + errorMsg,

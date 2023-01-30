@@ -20,13 +20,13 @@
  *
  */
 
-define(['N/search', 'N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (
-    ns_search,
-    ns_xml,
-    vc_log,
-    vc2_util,
-    vc2_constant
-) {
+define([
+    'N/search',
+    'N/xml',
+    './CTC_VC_Lib_Log.js',
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js'
+], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
     var LogTitle = 'WS:TechData';
     var Helper = {
         getNodeValue: function (node, xpath) {
@@ -117,7 +117,8 @@ define(['N/search', 'N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', '.
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
@@ -136,7 +137,9 @@ define(['N/search', 'N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', '.
 
                 vc2_util.vcLog({
                     title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue) ? JSON.stringify(returnValue) : '-no lines to process-',
+                    body: !vc2_util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
                     recordId: CURRENT.recordId,
                     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
@@ -151,7 +154,8 @@ define(['N/search', 'N/xml', './CTC_VC_Lib_Log.js', './CTC_VC2_Lib_Utils.js', '.
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
