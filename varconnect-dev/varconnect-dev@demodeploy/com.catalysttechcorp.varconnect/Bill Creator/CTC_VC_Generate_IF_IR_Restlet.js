@@ -42,7 +42,8 @@ define([
                 log.debug(logTitle, LogPrefix + '// Current Data: ' + JSON.stringify(CURRENT));
 
                 if (!CURRENT.poId) throw 'Purchase Order Required';
-                if (!CURRENT.isRecievable) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!CURRENT.isRecievable)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 CURRENT.PO_REC = ns_record.load({ type: 'purchaseorder', id: CURRENT.poId });
                 CURRENT.PO_DATA = vc_recordlib.extractValues({
@@ -57,7 +58,10 @@ define([
                         id: CURRENT.PO_DATA.createdfrom,
                         columns: ['entity', 'tranid']
                     });
-                    log.debug(logTitle, LogPrefix + '// SO Data: ' + JSON.stringify(CURRENT.PO_DATA));
+                    log.debug(
+                        logTitle,
+                        LogPrefix + '// SO Data: ' + JSON.stringify(CURRENT.PO_DATA)
+                    );
                 }
 
                 if (CURRENT.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
@@ -73,7 +77,8 @@ define([
                 // Current.PO_DATA.entity == '496'
                 //Cisco || Dell || EMC || Scansource || Westcon
 
-                if (!vendorCfg.ENABLE_FULFILLLMENT) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!vendorCfg.ENABLE_FULFILLLMENT)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 // if (vc_util.inArray(CURRENT.PO_DATA.entity, ['75', '203', '216', '371', '496']))
                 //     throw 'IF/IR creation skipped.';
@@ -143,7 +148,8 @@ define([
                     }
                 });
 
-                if (lineMissingSku.length) throw 'Does not have SKU assigned -- ' + lineMissingSku.join(', ');
+                if (lineMissingSku.length)
+                    throw 'Does not have SKU assigned -- ' + lineMissingSku.join(', ');
 
                 var arrLines = [],
                     arrSerialLines = [];
@@ -202,7 +208,9 @@ define([
                             lineData.tracking = lineData.tracking.concat(billLine.TRACKING);
 
                         if (billLine.SERIAL && billLine.SERIAL.length)
-                            lineData.serials = lineData.serials.concat(billLine.SERIAL.splice(0, receiveQty));
+                            lineData.serials = lineData.serials.concat(
+                                billLine.SERIAL.splice(0, receiveQty)
+                            );
 
                         return true;
                     });
@@ -293,7 +301,10 @@ define([
 
                 var newRecordId = recItemFF.save();
                 if (newRecordId) {
-                    log.audit(logTitle, LogPrefix + '/// IFIR created... ' + '[itemfulfillment:' + newRecordId + ']');
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '/// IFIR created... ' + '[itemfulfillment:' + newRecordId + ']'
+                    );
                 } else {
                     log.audit(logTitle, LogPrefix + '## Unable to create item fulfillment');
                     throw 'Could Not Create New IF/IR';

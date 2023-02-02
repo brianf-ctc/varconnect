@@ -243,14 +243,17 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
                     o.order_date = order.DateEntered;
                     o.order_num = order.SalesOrderNumber;
                     o.line_num =
-                        Math.floor(delivery.DeliveryDocumentNumber + '.' + line.DeliveryDocumentLineNumber) * 1;
+                        Math.floor(
+                            delivery.DeliveryDocumentNumber + '.' + line.DeliveryDocumentLineNumber
+                        ) * 1;
                     o.vendorSKU = line.ItemNumber;
                     o.ship_qty = parseInt(line.QuantityShipped);
 
                     // change date format
                     // from YYYY-MM-DD to MM/DD/YYYY
                     var sdate = delivery.ShippedDate;
-                    o.ship_date = sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
+                    o.ship_date =
+                        sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
 
                     o.order_eta = '';
                     o.carrier = p.carrier;

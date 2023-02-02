@@ -75,7 +75,8 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         var customerNumber = '597668';
         var custPONumber = poNum;
-        var requestURL = 'https://companya.cloudfloordns.com/b2b/OrderStatus/v2/OrderStatus.svc?wsdl';
+        var requestURL =
+            'https://companya.cloudfloordns.com/b2b/OrderStatus/v2/OrderStatus.svc?wsdl';
 
         var orderXMLLineData = [];
 
@@ -174,7 +175,11 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         var credentials = decodeCredentials('Synnex', poNum);
         if (credentials == null) return 'Synnex Credentials missing';
-        if (isEmpty(credentials.userName) || isEmpty(credentials.password) || isEmpty(credentials.customerNum))
+        if (
+            isEmpty(credentials.userName) ||
+            isEmpty(credentials.password) ||
+            isEmpty(credentials.customerNum)
+        )
             return 'Synnex Credentials missing';
 
         var userName = credentials.userName;
@@ -257,7 +262,8 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         var credentials = decodeCredentials('DandH', poNum);
         if (credentials == null) return 'DandH Credentials missing';
-        if (isEmpty(credentials.userName) || isEmpty(credentials.password)) return 'DandH Credentials missing';
+        if (isEmpty(credentials.userName) || isEmpty(credentials.password))
+            return 'DandH Credentials missing';
 
         var userName = credentials.userName;
         var password = credentials.password;
@@ -320,7 +326,8 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         var credentials = decodeCredentials('TechData', poNum);
         if (credentials == null) return 'TechData Credentials not found';
-        if (isEmpty(credentials.userName) || isEmpty(credentials.password)) return 'TechData Credentials missing';
+        if (isEmpty(credentials.userName) || isEmpty(credentials.password))
+            return 'TechData Credentials missing';
 
         var userName = credentials.userName;
         var password = credentials.password;
@@ -390,7 +397,8 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         var credentials = decodeCredentials('IngramMicro', poNum);
         if (credentials == null) return 'IngramMicro Credentials not found';
-        if (isEmpty(credentials.userName) || isEmpty(credentials.password)) return 'IngramMicro Credentials missing';
+        if (isEmpty(credentials.userName) || isEmpty(credentials.password))
+            return 'IngramMicro Credentials missing';
 
         var userName = credentials.userName;
         var password = credentials.password;
@@ -606,20 +614,28 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
 
         if (company == 'Synnex') {
             loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_synnex_user' });
-            loginCreds.password = cred.getValue({ fieldId: 'custrecord_vc_synnex_pass' }).replace('&', '&amp;');
+            loginCreds.password = cred
+                .getValue({ fieldId: 'custrecord_vc_synnex_pass' })
+                .replace('&', '&amp;');
             loginCreds.customerNum = cred.getValue({ fieldId: 'custrecord_vc_synnex_customernum' });
             return loginCreds;
         } else if (company == 'DandH') {
             loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_dandh_user' });
-            loginCreds.password = cred.getValue({ fieldId: 'custrecord_vc_dandh_pass' }).replace('&', '&amp;');
+            loginCreds.password = cred
+                .getValue({ fieldId: 'custrecord_vc_dandh_pass' })
+                .replace('&', '&amp;');
             return loginCreds;
         } else if (company == 'IngramMicro') {
             loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_ingrammicro_user' });
-            loginCreds.password = cred.getValue({ fieldId: 'custrecord_vc_ingrammicro_pass' }).replace('&', '&amp;');
+            loginCreds.password = cred
+                .getValue({ fieldId: 'custrecord_vc_ingrammicro_pass' })
+                .replace('&', '&amp;');
             return loginCreds;
         } else if (company == 'TechData') {
             loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_techdata_user' });
-            loginCreds.password = cred.getValue({ fieldId: 'custrecord_vc_techdata_pass' }).replace('&', '&amp;');
+            loginCreds.password = cred
+                .getValue({ fieldId: 'custrecord_vc_techdata_pass' })
+                .replace('&', '&amp;');
             log.debug({
                 title: 'TechData info',
                 details: 'user = ' + loginCreds.userName + ' pass = ' + loginCreds.password
@@ -777,7 +793,11 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
                     str += shift[deep] + ar[ix];
                     inComment = true;
                     // end comment  or <![CDATA[...]]> //
-                    if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1 || ar[ix].search(/!DOCTYPE/) > -1) {
+                    if (
+                        ar[ix].search(/-->/) > -1 ||
+                        ar[ix].search(/\]>/) > -1 ||
+                        ar[ix].search(/!DOCTYPE/) > -1
+                    ) {
                         inComment = false;
                     }
                 }
@@ -790,13 +810,18 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
                 else if (
                     /^<\w/.exec(ar[ix - 1]) &&
                     /^<\/\w/.exec(ar[ix]) &&
-                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) == /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
+                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) ==
+                        /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
                 ) {
                     str += ar[ix];
                     if (!inComment) deep--;
                 }
                 // <elm> //
-                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) == -1 && ar[ix].search(/\/>/) == -1) {
+                else if (
+                    ar[ix].search(/<\w/) > -1 &&
+                    ar[ix].search(/<\//) == -1 &&
+                    ar[ix].search(/\/>/) == -1
+                ) {
                     str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
@@ -870,7 +895,9 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
         //----------------------------------------------------------------------------
 
         function isSubquery(str, parenthesisLevel) {
-            return parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length);
+            return (
+                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
+            );
         }
 
         function split_sql(str, tab) {
@@ -1004,7 +1031,9 @@ define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], 
         };
 
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
-            var str = preserveComments ? text : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
+            var str = preserveComments
+                ? text
+                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
             return str
                 .replace(/\s{1,}/g, ' ')

@@ -28,10 +28,9 @@
  * 2.10     Feb 20, 2019    jcorrea     Updated isEmpty to use === when testing for empty string
  * 2.11     Aug 12, 2022    christian   Clearing a value from PO will also clear the value on SO
  */
-define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'], function (
+define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     ns_record,
     ns_runtime,
-    ns_error,
     ns_search,
     ns_config,
     ns_format
@@ -69,29 +68,52 @@ define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'],
             'custcol_ctc_xml_tracking_num',
             'custcol_ctc_xml_inb_tracking_num'
         ],
-        DATE: ['custcol_ctc_vc_order_placed_date', 'custcol_ctc_vc_eta_date', 'custcol_ctc_vc_shipped_date']
+        DATE: [
+            'custcol_ctc_vc_order_placed_date',
+            'custcol_ctc_vc_eta_date',
+            'custcol_ctc_vc_shipped_date'
+        ]
     };
 
     var SEARCH_PO_TO_SO = 'customsearch_ctc_po_so_line_nums';
     var SEARCH_INVOICE_MATCH_SO = 'customsearch_ctc_invoice_search';
     var SEARCH_INVOICE_TO_SO = 'customsearch_ctc_invoice_line_ids';
 
+    var PARAM = {
+            RESTRICT_INVOICE: true,
+            RESTRICT_SALESORD: true
+        },
+        PARAM_FLD = {
+            RESTRICT_INVOICE: 'custscript_ctc_xmlupdate_not_invoice',
+            RESTRICT_SALESORD: 'custscript_ctc_xmlupdate_not_order'
+        };
+
     function afterSubmit(context) {
         var logTitle = [LogTitle, 'afterSubmit'].join('::');
+
+        PARAM.RESTRICT_INVOICE = ns_runtime
+            .getCurrentScript()
+            .getParameter(PARAM_FLD.RESTRICT_INVOICE);
+        PARAM.RESTRICT_SALESORD = ns_runtime
+            .getCurrentScript()
+            .getParameter(PARAM_FLD.RESTRICT_SALESORD);
+
         log.debug(
             logTitle,
             JSON.stringify({
                 eventType: context.type,
-                contextType: ns_runtime.executionContext
+                contextType: ns_runtime.executionContext,
+                PARAM: PARAM
             })
         );
 
-        if (context.type == context.UserEventType.CREATE || context.type == context.UserEventType.EDIT) {
+        if (
+            context.type == context.UserEventType.CREATE ||
+            context.type == context.UserEventType.EDIT
+        ) {
             var current_rec = context.newRecord;
             var currentID = current_rec.id;
-            var createdFromSO = current_rec.getValue({
-                fieldId: 'createdfrom'
-            });
+            var createdFromSO = current_rec.getValue({ fieldId: 'createdfrom' });
             var createdFromType;
             if (createdFromSO)
                 createdFromType = ns_search.lookupFields({
@@ -125,6 +147,13 @@ define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'],
     }
 
     function updateSO_v2(createdFromSO, transID, transRec) {
+        var logTitle = [LogTitle, 'updateSO_v2'].join('::');
+
+        if (PARAM.RESTRICT_SALESORD === true || PARAM.RESTRICT_SALESORD == 'T') {
+            log.debug(logTitle, '*** UPDATE RECORD: Not Allowed ***');
+            return;
+        }
+
         var recType = transRec.type;
 
         log.debug({
@@ -176,7 +205,8 @@ define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'],
                 var soLineNum = getLineNum(soRec, soLineKey);
                 log.debug({
                     title: 'Update SO V2',
-                    details: 'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
+                    details:
+                        'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
                 });
 
                 if (!isEmpty(transLineNum)) {
@@ -301,6 +331,13 @@ define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'],
     }
 
     function updateInvoiceRecords(soID) {
+        var logTitle = [LogTitle, 'updateInvoiceRecords'].join('::');
+
+        if (PARAM.RESTRICT_INVOICE === true || PARAM.RESTRICT_INVOICE == 'T') {
+            log.debug(logTitle, '*** UPDATE RECORD: Not Allowed ***');
+            return;
+        }
+
         log.debug({
             title: 'Update Invoice Records',
             details: 'Updating SO nums = ' + soID
@@ -552,7 +589,8 @@ define(['N/record', 'N/runtime', 'N/error', 'N/search', 'N/config', 'N/format'],
                     currentNumbersList = newCurrent.split('\n');
 
                     /** check to see if the field already exceeds the max length **/
-                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg) errorFound = true;
+                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
+                        errorFound = true;
 
                     if (!errorFound) {
                         for (var j = 0; j < scannedNums.length; j++) {

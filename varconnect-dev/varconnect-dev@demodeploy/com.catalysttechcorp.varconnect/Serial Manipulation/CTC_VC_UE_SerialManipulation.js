@@ -35,7 +35,17 @@ define([
     '../CTC_VC_Lib_LicenseValidator',
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils'
-], function (ns_task, ns_ui, ns_runtime, ns_record, ns_search, vc_mainconfig, vc_licenselib, vc2_constant, vc2_util) {
+], function (
+    ns_task,
+    ns_ui,
+    ns_runtime,
+    ns_record,
+    ns_search,
+    vc_mainconfig,
+    vc_licenselib,
+    vc2_constant,
+    vc2_util
+) {
     var LogTitle = 'UE|Serials',
         LogPrefix;
 
@@ -48,9 +58,11 @@ define([
             var mainConfig = Helper.loadMainConfig(),
                 validLicense = Helper.validateLicense({ mainConfig: mainConfig });
 
-            LogPrefix = [scriptContext.type, scriptContext.newRecord.type, scriptContext.newRecord.id || '_NEW_'].join(
-                ':'
-            );
+            LogPrefix = [
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id || '_NEW_'
+            ].join(':');
             LogPrefix = '[' + LogPrefix + '] ';
 
             log.debug(
@@ -95,7 +107,8 @@ define([
 
                 // serial sync checkbox
                 chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
-                if (chkSerialSync) chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
+                if (chkSerialSync)
+                    chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
             }
 
             // if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
@@ -119,9 +132,11 @@ define([
 
         afterSubmit: function (scriptContext) {
             var logTitle = [LogTitle, 'afterSubmit'].join('::');
-            LogPrefix = [scriptContext.type, scriptContext.newRecord.type, scriptContext.newRecord.id || '_NEW_'].join(
-                ':'
-            );
+            LogPrefix = [
+                scriptContext.type,
+                scriptContext.newRecord.type,
+                scriptContext.newRecord.id || '_NEW_'
+            ].join(':');
             LogPrefix = '[' + LogPrefix + '] ';
 
             var mainConfig = Helper.loadMainConfig();
@@ -166,10 +181,14 @@ define([
                     line: line
                 });
 
-                if ((serialString && serialString.trim()) || (serialStringUpdate && serialStringUpdate.trim())) {
+                if (
+                    (serialString && serialString.trim()) ||
+                    (serialStringUpdate && serialStringUpdate.trim())
+                ) {
                     hasSerials = true;
                 } else if (
-                    (record.type == ns_record.Type.ITEM_FULFILLMENT || record.type == ns_record.Type.INVOICE) &&
+                    (record.type == ns_record.Type.ITEM_FULFILLMENT ||
+                        record.type == ns_record.Type.INVOICE) &&
                     scriptContext.type == scriptContext.UserEventType.CREATE &&
                     (!serialStringUpdate || serialStringUpdate.trim().length == 0)
                 ) {
@@ -524,7 +543,12 @@ define([
                 log.debug(logTitle, '>> params: ' + JSON.stringify(option));
 
                 returnValue =
-                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 

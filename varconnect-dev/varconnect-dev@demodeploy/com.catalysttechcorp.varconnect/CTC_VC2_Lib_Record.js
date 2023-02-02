@@ -14,7 +14,7 @@
 define(function (require) {
     var ns_record = require('N/record'),
         ns_error = require('N/error'),
-        vc_util = require('./CTC_VC2_Lib_Utils.js');
+        vc2_util = require('./CTC_VC2_Lib_Utils.js');
 
     var LogTitle = 'VC_RecordLib';
 
@@ -36,7 +36,7 @@ define(function (require) {
 
                 throw ns_error.create({
                     name: 'Unable to transform record',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             }
             return returnValue;
@@ -55,7 +55,7 @@ define(function (require) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 throw ns_error.create({
                     name: 'Unable to load record',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
                 // throw (
                 //     'Unable to load record: ' +
@@ -91,7 +91,7 @@ define(function (require) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 throw ns_error.create({
                     name: 'Unable to extract values',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
@@ -112,7 +112,6 @@ define(function (require) {
 
                 if (!record || !columns) return false;
                 if (line == null || line < 0) return false;
-
 
                 var lineData = {};
                 for (var i = 0, j = columns.length; i < j; i++) {
@@ -135,7 +134,7 @@ define(function (require) {
                 returnValue = false;
                 throw ns_error.create({
                     name: 'Unable to extract values',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
@@ -212,7 +211,7 @@ define(function (require) {
 
                 throw ns_error.create({
                     name: 'Unable to extract line values',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             } finally {
                 // log.audit(logTitle, '>> ' + JSON.stringify(returnValue));
@@ -239,10 +238,10 @@ define(function (require) {
                 record.selectLine(lineOption);
                 for (var fieldId in lineData) {
                     if (fieldId == 'line') continue;
-                    if (vc_util.isEmpty(lineData[fieldId])) continue;
+                    if (vc2_util.isEmpty(lineData[fieldId])) continue;
 
                     record.setCurrentSublistValue(
-                        vc_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
+                        vc2_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
                     );
                 }
 
@@ -254,7 +253,7 @@ define(function (require) {
 
                 throw ns_error.create({
                     name: 'Unable to update line values',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             }
 
@@ -276,10 +275,10 @@ define(function (require) {
 
                 record.selectNewLine(lineOption);
                 for (var fieldId in lineData) {
-                    if (vc_util.isEmpty(lineData[fieldId])) continue;
+                    if (vc2_util.isEmpty(lineData[fieldId])) continue;
 
                     record.setCurrentSublistValue(
-                        vc_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
+                        vc2_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
                     );
                 }
                 record.commitLine(lineOption);
@@ -292,7 +291,7 @@ define(function (require) {
 
                 throw ns_error.create({
                     name: 'Unable to add line values',
-                    message: vc_util.extractError(error)
+                    message: vc2_util.extractError(error)
                 });
             }
             return returnValue;

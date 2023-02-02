@@ -12,7 +12,11 @@
  * @NModuleScope Public
  * @NScriptType ClientScript
  */
-define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, message, currentRecord) {
+define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
+    dialog,
+    message,
+    currentRecord
+) {
     var Helper = {
         calculateLineTax: function (option) {
             var amount = option.amount,
@@ -70,7 +74,9 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
                 })
             };
             lineData.amount = lineData.quantity * lineData.rate;
-            lineData.taxAmount = Helper.calculateLineTax(util.extend(lineData, taxLines[lineData.itemid]));
+            lineData.taxAmount = Helper.calculateLineTax(
+                util.extend(lineData, taxLines[lineData.itemid])
+            );
 
             console.log('lineData (item) >> ', lineData, taxLines[lineData.itemid]);
             Totals.lineTax += lineData.taxAmount;
@@ -98,7 +104,9 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (dialog, mes
                     line: line
                 })
             };
-            lineData.taxAmount = Helper.calculateLineTax(util.extend(lineData, taxLines[lineData.itemid]));
+            lineData.taxAmount = Helper.calculateLineTax(
+                util.extend(lineData, taxLines[lineData.itemid])
+            );
 
             console.log('lineData (variance) >> ', lineData, taxLines[lineData.itemid]);
 

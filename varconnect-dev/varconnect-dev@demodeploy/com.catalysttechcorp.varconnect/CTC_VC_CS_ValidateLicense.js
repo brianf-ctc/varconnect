@@ -20,7 +20,10 @@
  * 1.00		July 25, 2019	paolodl		Enables and disables fields depending on current selection
  *
  */
-define(['./CTC_VC2_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (vc2_constant, libLicenseValidator) {
+define(['./CTC_VC2_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
+    vc2_constant,
+    libLicenseValidator
+) {
     /**
      * Validation function to be executed when field is changed.
      *

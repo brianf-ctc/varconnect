@@ -11,7 +11,11 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (ns_record, ns_format, vc2_constant) {
+define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (
+    ns_record,
+    ns_format,
+    vc2_constant
+) {
     var REC_VCLOG = vc2_constant.RECORD.VC_LOG;
 
     function _getCurrentTime() {

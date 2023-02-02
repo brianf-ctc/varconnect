@@ -25,12 +25,23 @@ define([
     'N/url',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (ns_search, ns_email, ns_record, ns_runtime, ns_render, ns_url, vc2_util, vc2_constant) {
+], function (
+    ns_search,
+    ns_email,
+    ns_record,
+    ns_runtime,
+    ns_render,
+    ns_url,
+    vc2_util,
+    vc2_constant
+) {
     function execute() {
         log.audit({ title: 'Scheduled set serial Script', details: 'STARTING' });
 
         var currentID = ns_runtime.getCurrentScript().getParameter('custscript_ss_seriallink_id');
-        var currentType = ns_runtime.getCurrentScript().getParameter('custscript_ss_seriallink_type');
+        var currentType = ns_runtime
+            .getCurrentScript()
+            .getParameter('custscript_ss_seriallink_type');
 
         var current_rec = ns_record.load({
             type: currentType,

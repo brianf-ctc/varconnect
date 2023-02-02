@@ -28,7 +28,18 @@ define([
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
     './CTC_VC_Lib_MainConfiguration.js'
-], function (ns_ui, ns_search, ns_record, ns_file, ns_task, ns_https, ns_config, vc2_util, vc2_constant, lib_maincfg) {
+], function (
+    ns_ui,
+    ns_search,
+    ns_record,
+    ns_file,
+    ns_task,
+    ns_https,
+    ns_config,
+    vc2_util,
+    vc2_constant,
+    lib_maincfg
+) {
     const PO_SERIAL_NUMBER_FOLDER = vc2_constant.GLOBAL.SN_FOLDER_ID;
 
     function onRequest(context) {
@@ -206,7 +217,9 @@ define([
                     itemObj.itemId = itemsField[i].id;
 
                     // get new sn's and strip out any carriage return/new lines
-                    var newSNStr = getNewSNStr(params, itemsField[i].id).replace(/\\n/g, ',').replace(/\\r/g, ',');
+                    var newSNStr = getNewSNStr(params, itemsField[i].id)
+                        .replace(/\\n/g, ',')
+                        .replace(/\\r/g, ',');
                     log.debug({
                         title: 'In POST code',
                         details: 'Item ' + itemsField[i].id + ' New SNs = ' + newSNStr
