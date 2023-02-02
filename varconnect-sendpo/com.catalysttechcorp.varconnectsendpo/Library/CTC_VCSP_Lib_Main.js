@@ -17,7 +17,11 @@
  * Version	Date            Author		Remarks
  * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
  */
-define(['N/record', '../Library/CTC_VCSP_Lib_WebService.js', '../Library/CTC_VCSP_Constants.js'], function (record, libWebService, constants) {
+define([
+    'N/record',
+    '../Library/CTC_VCSP_Lib_WebService.js',
+    '../Library/CTC_VCSP_Constants.js'
+], function (record, libWebService, constants) {
     var LogTitle = 'VCSendPO';
     function _updateNativePO(options) {
         var logTitle = [LogTitle, '_updateNativePO'].join('::');
@@ -29,17 +33,28 @@ define(['N/record', '../Library/CTC_VCSP_Lib_WebService.js', '../Library/CTC_VCS
         if (response) {
             var newHeaderValues = {};
             if (response.transactionNum) {
-                newHeaderValues[constants.Fields.Transaction.VENDOR_PO_NUMBER] = response.transactionNum;
+                newHeaderValues[constants.Fields.Transaction.VENDOR_PO_NUMBER] =
+                    response.transactionNum;
             }
             newHeaderValues[constants.Fields.Transaction.VCSP_TIMESTAMP] = new Date();
-            newHeaderValues[constants.Fields.Transaction.IS_PO_SENT] = response.isError ? false : true;
-            newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify({
-                code: response.responseCode,
-                message: response.message
-            }, null, '\t');
+            newHeaderValues[constants.Fields.Transaction.IS_PO_SENT] = response.isError
+                ? false
+                : true;
+            newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
+                {
+                    code: response.responseCode,
+                    message: response.message
+                },
+                null,
+                '\t'
+            );
 
             if (response.isError) {
-                newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(response, null, '\t');
+                newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
+                    response,
+                    null,
+                    '\t'
+                );
             }
 
             for (var fieldId in newHeaderValues) {
@@ -108,10 +123,14 @@ define(['N/record', '../Library/CTC_VCSP_Lib_WebService.js', '../Library/CTC_VCS
             }
 
             if (isRecChanged) {
-                log.audit(logTitle, 'Update purchase order. Id=' + rec.save({
-                    enableSourcing: false,
-                    ignoreMandatoryFields: true
-                }));
+                log.audit(
+                    logTitle,
+                    'Update purchase order. Id=' +
+                        rec.save({
+                            enableSourcing: false,
+                            ignoreMandatoryFields: true
+                        })
+                );
             }
         }
     }

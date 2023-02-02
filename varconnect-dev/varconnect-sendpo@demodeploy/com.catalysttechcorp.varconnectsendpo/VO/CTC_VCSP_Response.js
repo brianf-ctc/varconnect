@@ -20,9 +20,16 @@ define([], function () {
         this.orderStatus = options.orderStatus;
         this.responseBody = options.responseBody;
         this.responseCode = options.responseCode;
-        this.isError = options.isError || (function(options) {
-            return (options.status == 'error' || !options.responseCode || options.responseCode < 200 || options.responseCode >= 300);
-        })(this);
+        this.isError =
+            options.isError ||
+            (function (options) {
+                return (
+                    options.status == 'error' ||
+                    !options.responseCode ||
+                    options.responseCode < 200 ||
+                    options.responseCode >= 300
+                );
+            })(this);
     }
 
     return Response;

@@ -309,7 +309,6 @@ define([
             returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
             returnResponse.responseCode = sendPOReq.RESPONSE.code;
             returnResponse.message = 'Success';
-
         } catch (error) {
             var errorMsg = ctc_util.extractError(error);
 

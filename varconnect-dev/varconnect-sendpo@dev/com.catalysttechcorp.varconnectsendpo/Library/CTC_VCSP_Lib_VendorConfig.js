@@ -18,11 +18,7 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Vendor Configuration
  *
  */
-define(['N/search', './CTC_VCSP_Constants.js', 'N/runtime'], function (
-    search,
-    constants,
-    runtime
-) {
+define(['N/search', './CTC_VCSP_Constants.js', 'N/runtime'], function (search, constants, runtime) {
     var LogTitle = 'VC:SENDPO';
     var vendorConfigFields = [
         constants.Fields.VendorConfig.ID, //0

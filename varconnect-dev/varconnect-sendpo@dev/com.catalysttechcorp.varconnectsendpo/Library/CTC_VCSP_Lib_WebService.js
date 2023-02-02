@@ -21,7 +21,17 @@ define([
     '../Vendor Scripts/CTC_VCSP_Lib_IngramMicro.js',
     '../VO/CTC_VCSP_Response.js',
     '../VO/CTC_VCSP_PO.js'
-], function (ctc_util, constants, libVendorConfig, libDell, libArrow, libSynnex, libIngram, response, PO) {
+], function (
+    ctc_util,
+    constants,
+    libVendorConfig,
+    libDell,
+    libArrow,
+    libSynnex,
+    libIngram,
+    response,
+    PO
+) {
     var LogTitle = 'LibWS';
 
     function _validateVendorConfig(options) {
@@ -32,7 +42,7 @@ define([
             endpoint = recVendorConfig.endPoint;
 
         var requiredWebserviceInfo = {
-            endpoint : endpoint
+            endpoint: endpoint
         };
         switch (apiVendor) {
             case constants.Lists.API_VENDOR.SYNNEX:
@@ -69,9 +79,9 @@ define([
             vendorList = constants.Lists.API_VENDOR,
             libVendor;
 
-            log.debug(logTitle, '>> API Vendor: ' + apiVendor);
-            log.debug(logTitle, '>> lib Vendor: ' + libVendor);
-            
+        log.debug(logTitle, '>> API Vendor: ' + apiVendor);
+        log.debug(logTitle, '>> lib Vendor: ' + libVendor);
+
         switch (apiVendor) {
             case vendorList.DELL:
                 libVendor = libDell;
@@ -91,7 +101,7 @@ define([
         }
         log.debug(logTitle, 'Lib Vendor: ' + libVendor);
         // log.debug(logTitle, JSON.stringify(libVendor) + ' :: Object Keys: ' + libVendor.constructor);
-        
+
         return libVendor;
     }
 
@@ -130,17 +140,22 @@ define([
                 });
 
                 log.debug(logTitle, 'Lib Vendor: ' + Object.keys(libVendor));
-                if (!libVendor || (Object.keys(libVendor).length === 0 && libVendor.constructor === Object)) throw 'Missing or invalid vendor configuration';
+                if (
+                    !libVendor ||
+                    (Object.keys(libVendor).length === 0 && libVendor.constructor === Object)
+                )
+                    throw 'Missing or invalid vendor configuration';
 
                 _validateVendorConfig({
                     recVendorConfig: recVendorConfig
                 });
 
-                resp = new response(libVendor.process({
-                    recVendorConfig: recVendorConfig,
-                    recPO: recPO
-                }));
-                
+                resp = new response(
+                    libVendor.process({
+                        recVendorConfig: recVendorConfig,
+                        recPO: recPO
+                    })
+                );
             }
         } catch (e) {
             resp = new response({

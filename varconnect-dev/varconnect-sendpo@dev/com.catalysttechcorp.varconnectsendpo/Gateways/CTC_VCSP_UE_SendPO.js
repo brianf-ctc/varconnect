@@ -72,7 +72,7 @@ define([
                 if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
                 switch (Current.eventType) {
-                    case (scriptContext.UserEventType.VIEW):
+                    case scriptContext.UserEventType.VIEW:
                         /////////////////////////////////
                         var sessionObj = NS_Runtime.getCurrentSession();
                         var sessionData = {
@@ -158,18 +158,19 @@ define([
                                         '(function(url){window.location.href=url;})("' +
                                         EventRouter.addActionURL('sendPO') +
                                         '")'
-                                }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                }).isDisabled =
+                                    !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
                             }
                         }
                         break;
-                    case (scriptContext.UserEventType.CREATE):
-                    case (scriptContext.UserEventType.COPY):
+                    case scriptContext.UserEventType.CREATE:
+                    case scriptContext.UserEventType.COPY:
                         var fieldIdsToBlankOut = [
                             VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER,
                             VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP,
                             VCSP_Global.Fields.Transaction.VENDOR_RECEIPT
                         ];
-                        fieldIdsToBlankOut.forEach(function(fieldId) {
+                        fieldIdsToBlankOut.forEach(function (fieldId) {
                             log.debug(logTitle, 'Emptying ' + fieldId + '...');
                             scriptContext.newRecord.setValue({
                                 fieldId: fieldId,
@@ -211,8 +212,9 @@ define([
                 var searchResults = CTC_Util.searchAllPaged({
                     type: NS_Search.Type.TRANSACTION,
                     filterExpression: [
-                        [ 'recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER], 'AND',
-                        [ 'internalid', NS_Search.Operator.ANYOF, recordData.id ]
+                        ['recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER],
+                        'AND',
+                        ['internalid', NS_Search.Operator.ANYOF, recordData.id]
                     ],
                     columns: [
                         createdFromRecTypeCol,
@@ -244,21 +246,37 @@ define([
                 // TODO: please test, currently untested
                 var isPendingSendOnCreate;
                 if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE) {
-                    var createEventTypes = [scriptContext.UserEventType.CREATE, scriptContext.UserEventType.COPY];
+                    var createEventTypes = [
+                        scriptContext.UserEventType.CREATE,
+                        scriptContext.UserEventType.COPY
+                    ];
                     isPendingSendOnCreate = createEventTypes.indexOf(Current.eventType) >= 0;
                 }
-                if (isPendingSendOnCreate || vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE) {
-                    var isToBeSent = !lookupData.getValue(VCSP_Global.Fields.Transaction.IS_PO_SENT);
-                    var isCreatedFromSalesOrder = lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
+                if (
+                    isPendingSendOnCreate ||
+                    vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE
+                ) {
+                    var isToBeSent = !lookupData.getValue(
+                        VCSP_Global.Fields.Transaction.IS_PO_SENT
+                    );
+                    var isCreatedFromSalesOrder =
+                        lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
                     var isApproved = lookupData.getValue('approvalstatus') >= 2;
-                    log.debug(logTitle, JSON.stringify({
-                        isToBeSent: isToBeSent,
-                        isPendingSendOnCreate: isPendingSendOnCreate,
-                        isCreatedFromSalesOrder: isCreatedFromSalesOrder,
-                        isApproved: isApproved
-                    }));
-                    if (isToBeSent && isCreatedFromSalesOrder && (
-                            isPendingSendOnCreate || (isPendingSendOnCreate === undefined && isApproved))) {
+                    log.debug(
+                        logTitle,
+                        JSON.stringify({
+                            isToBeSent: isToBeSent,
+                            isPendingSendOnCreate: isPendingSendOnCreate,
+                            isCreatedFromSalesOrder: isCreatedFromSalesOrder,
+                            isApproved: isApproved
+                        })
+                    );
+                    if (
+                        isToBeSent &&
+                        isCreatedFromSalesOrder &&
+                        (isPendingSendOnCreate ||
+                            (isPendingSendOnCreate === undefined && isApproved))
+                    ) {
                         NS_Redirect.toRecord({
                             type: Current.recordType,
                             id: Current.recordId,

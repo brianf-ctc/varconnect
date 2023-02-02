@@ -66,8 +66,7 @@ define([
                     var fldOrig = form.getField({ id: fieldId });
                     log.audit('displayAsInlineTextarea:orig', fldOrig);
 
-                    if (!fldOrig || !fldOrig.defaultValue)
-                        return true;
+                    if (!fldOrig || !fldOrig.defaultValue) return true;
 
                     var fldNew = form.addField({
                         id: ['custpage', fieldId].join('_'),
@@ -265,8 +264,6 @@ define([
                         'custbody_ctc_vcsp_vendor_rcpt'
                     ]);
                 }
-
-
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -413,7 +410,6 @@ define([
                 Helper.displayAsInlineTextarea(scriptContext.form, [
                     'custrecord_ctc_vcsp_fieldmapping'
                 ]);
-
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

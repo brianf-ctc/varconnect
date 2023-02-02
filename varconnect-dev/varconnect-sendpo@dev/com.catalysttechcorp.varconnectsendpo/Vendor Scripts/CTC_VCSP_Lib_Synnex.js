@@ -11,20 +11,14 @@
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  *
-*/
+ */
 
 define([
     'N/search',
     'N/xml',
     '../Library/CTC_VCSP_Constants.js',
     '../Library/CTC_Lib_Utils.js'
-],
-function(
-    ns_search,
-    ns_xml,
-    constants,
-    ctc_util
-) {
+], function (ns_search, ns_xml, constants, ctc_util) {
     var LogTitle = 'WS:Synnex';
 
     function processResponse(option) {
@@ -35,7 +29,11 @@ function(
         });
         var responseNodesArray = xmlDoc.getElementsByTagName({ tagName: 'OrderResponse' });
         var orderStatus = {};
-        if (responseNodesArray && responseNodesArray.length && responseNodesArray[0].hasChildNodes()) {
+        if (
+            responseNodesArray &&
+            responseNodesArray.length &&
+            responseNodesArray[0].hasChildNodes()
+        ) {
             var orderResponseNodes = responseNodesArray[0].childNodes;
             for (var i = 0, len = orderResponseNodes.length, headerCtr = 0; i < len; i += 1) {
                 switch (orderResponseNodes[i].nodeName) {
@@ -74,7 +72,8 @@ function(
                     var itemDetails = {
                         line_number: itemNode.getAttribute({ name: 'lineNumber' }),
                         order_number: 'NA',
-                        order_date: orderDateTime && orderDateTime[0] ? orderDateTime[0].textContent: 'NA',
+                        order_date:
+                            orderDateTime && orderDateTime[0] ? orderDateTime[0].textContent : 'NA',
                         vendorSKU: 'NA',
                         item_number: 'NA',
                         quantity: 'NA',
@@ -142,9 +141,12 @@ function(
                                                 case 'TrackingNumber':
                                                     if (packageChildNodes[yy].textContent) {
                                                         if (!itemDetails.tracking_num) {
-                                                            itemDetails.tracking_num = packageChildNodes[yy].textContent;
+                                                            itemDetails.tracking_num =
+                                                                packageChildNodes[yy].textContent;
                                                         } else {
-                                                            itemDetails.tracking_num += ',' + packageChildNodes[yy].textContent;
+                                                            itemDetails.tracking_num +=
+                                                                ',' +
+                                                                packageChildNodes[yy].textContent;
                                                         }
                                                     }
                                                     break;
@@ -155,7 +157,8 @@ function(
                                                                 packageChildNodes[yy].textContent;
                                                         else
                                                             itemDetails.serial_num +=
-                                                                ',' + packageChildNodes[yy].textContent;
+                                                                ',' +
+                                                                packageChildNodes[yy].textContent;
                                                     }
                                                     break;
                                                 default:
@@ -200,13 +203,15 @@ function(
             if (orderStatus.order_status != 'accepted') {
                 throw 'Send PO Error - ' + orderStatus.order_status + ': ' + orderStatus.note;
             } else {
-                throw 'Send PO Successful but with unexpected reply from Synnex: ' + orderStatus.note;
+                throw (
+                    'Send PO Successful but with unexpected reply from Synnex: ' + orderStatus.note
+                );
             }
         }
         orderStatus.successLines = [];
         orderStatus.errorLines = [];
         orderStatus.lineNotes = [];
-        orderStatus.items.forEach(function(itemDetail) {
+        orderStatus.items.forEach(function (itemDetail) {
             if (itemDetail.order_status == 'accepted') {
                 orderStatus.successLines.push(itemDetail);
             } else {
@@ -215,9 +220,17 @@ function(
             }
         });
         if (orderStatus.errorLines.length) {
-            throw 'Send PO successful with ' + orderStatus.successLines.length + ' line item(s) and ' + orderStatus.errorLines.length + ' failed line(s):<br />' + orderStatus.lineNotes.join('<br />');
+            throw (
+                'Send PO successful with ' +
+                orderStatus.successLines.length +
+                ' line item(s) and ' +
+                orderStatus.errorLines.length +
+                ' failed line(s):<br />' +
+                orderStatus.lineNotes.join('<br />')
+            );
         }
-        returnValue.message = 'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
+        returnValue.message =
+            'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
         returnValue.orderStatus = orderStatus;
         return returnValue;
     }
@@ -231,57 +244,68 @@ function(
             vendorConfig = option.vendorConfig,
             testRequest = option.testRequest,
             credentials = {
-                UserID : vendorConfig.user,
-                Password : vendorConfig.password
+                UserID: vendorConfig.user,
+                Password: vendorConfig.password
             };
 
         var requestDetails = {
-            Credential                : credentials,
-            OrderRequest              : {
-                CustomerNumber        : customerNo,
-                PONumber              : record.tranId,
-                DropShipFlag          : record.dropShipPO ? 'Y' : 'N',
-                EndUserPONumber       : record.tranId,
-                Comment               : record.memo,
-                Shipment              : {
-                    ShipFromWarehouse : record.shipFromSynnexWarehouse || 'ANY',
-                    ShipTo            : {
-                        AddressName1  : record.shipAttention,
-                        AddressName2  : record.shipAddressee,
-                        AddressLine1  : record.shipAddr1,
-                        AddressLine2  : record.shipAddr2,
-                        City          : record.shipCity,
-                        State         : record.shipState,
-                        ZipCode       : record.shipZip,
-                        Country       : record.shipCountry,
+            Credential: credentials,
+            OrderRequest: {
+                CustomerNumber: customerNo,
+                PONumber: record.tranId,
+                DropShipFlag: record.dropShipPO ? 'Y' : 'N',
+                EndUserPONumber: record.tranId,
+                Comment: record.memo,
+                Shipment: {
+                    ShipFromWarehouse: record.shipFromSynnexWarehouse || 'ANY',
+                    ShipTo: {
+                        AddressName1: record.shipAttention,
+                        AddressName2: record.shipAddressee,
+                        AddressLine1: record.shipAddr1,
+                        AddressLine2: record.shipAddr2,
+                        City: record.shipCity,
+                        State: record.shipState,
+                        ZipCode: record.shipZip,
+                        Country: record.shipCountry
                     },
-                    ShipToContact     : {
-                        ContactName   : record.shipAddressee,
-                        PhoneNumber   : record.shipPhone,
-                        EmailAddress  : record.shipEmail,
+                    ShipToContact: {
+                        ContactName: record.shipAddressee,
+                        PhoneNumber: record.shipPhone,
+                        EmailAddress: record.shipEmail
                     },
-                    ShipMethod        : (function(option) {
+                    ShipMethod: (function (option) {
                         var record = option.record,
                             vcid = option.vendorConfigId,
                             shipMethodCode = {
-                                Code : record.synnexShippingCode
+                                Code: record.synnexShippingCode
                             };
                         if (!shipMethodCode.Code) {
                             var shipMethod = record.shipMethod;
                             if (shipMethod) {
-                                var shipMethodCodeResults = ns_search.create({
-                                    type: constants.Records.VENDOR_SHIPMETHOD,
-                                    filters: [
-                                        [ constants.Fields.VendorShipMethod.VENDOR_CONFIG, 'anyof', vcid ],
-                                        'and',
-                                        [ constants.Fields.VendorShipMethod.SHIP_METHOD, 'anyof', shipMethod ]
-                                    ],
-                                    columns: [
-                                        constants.Fields.VendorShipMethod.CODE
-                                    ]
-                                }).run().getRange(0, 1);
+                                var shipMethodCodeResults = ns_search
+                                    .create({
+                                        type: constants.Records.VENDOR_SHIPMETHOD,
+                                        filters: [
+                                            [
+                                                constants.Fields.VendorShipMethod.VENDOR_CONFIG,
+                                                'anyof',
+                                                vcid
+                                            ],
+                                            'and',
+                                            [
+                                                constants.Fields.VendorShipMethod.SHIP_METHOD,
+                                                'anyof',
+                                                shipMethod
+                                            ]
+                                        ],
+                                        columns: [constants.Fields.VendorShipMethod.CODE]
+                                    })
+                                    .run()
+                                    .getRange(0, 1);
                                 if (shipMethodCodeResults && shipMethodCodeResults.length) {
-                                    shipMethodCode.Code = shipMethodCodeResults[0].getValue(constants.Fields.VendorShipMethod.CODE);
+                                    shipMethodCode.Code = shipMethodCodeResults[0].getValue(
+                                        constants.Fields.VendorShipMethod.CODE
+                                    );
                                 }
                             }
                             if (!shipMethod || !shipMethodCode.Code) {
@@ -289,89 +313,92 @@ function(
                             }
                         }
                         return shipMethodCode;
-                    })({ record: record, vendorConfigId : vendorConfig.id }),
+                    })({ record: record, vendorConfigId: vendorConfig.id })
                 },
-                Payment                : {
-                    BillTo             : {
-                        '/attributes'  : {
-                            code : customerNo,
-                        },
-                    },
+                Payment: {
+                    BillTo: {
+                        '/attributes': {
+                            code: customerNo
+                        }
+                    }
                 },
-                Items                  : (function(record) {
+                Items: (function (record) {
                     var items = [];
                     for (var i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
                         var lineItem = {
-                            Item : {
-                                '/attributes' : {
-                                    lineNumber : record.items[i].lineuniquekey
+                            Item: {
+                                '/attributes': {
+                                    lineNumber: record.items[i].lineuniquekey
                                 },
-                                SKU                    : record.items[i].synnexSKU,
-                                ManufacturerPartNumber : record.items[i].item,
-                                UnitPrice              : record.items[i].rate,
-                                OrderQuantity          : record.items[i].quantity,
+                                SKU: record.items[i].synnexSKU,
+                                ManufacturerPartNumber: record.items[i].item,
+                                UnitPrice: record.items[i].rate,
+                                OrderQuantity: record.items[i].quantity
                             }
                         };
                         items.push(lineItem);
                     }
                     return items;
-                })(record),
+                })(record)
             },
-            _toXmlAttributes : function(object) {
+            _toXmlAttributes: function (object) {
                 var xmlBody = '';
                 for (var property in object) {
-                    xmlBody += " " + property + "=\"" + object[property] + "\"";
+                    xmlBody += ' ' + property + '="' + object[property] + '"';
                 }
                 return xmlBody;
             },
-            _toXml : function(object) {
+            _toXml: function (object) {
                 var xmlBody = [];
                 for (var property in object) {
                     if (object[property]) {
                         var propertyIsArray = object[property] instanceof Array;
                         if (propertyIsArray) {
-                            var arrayTag = "<" + property;
+                            var arrayTag = '<' + property;
                             var arrayAttributes = object[property]['/attributes'];
                             arrayTag += this._toXmlAttributes(arrayAttributes);
-                            arrayTag += ">";
+                            arrayTag += '>';
                             xmlBody.push(arrayTag);
                             for (var i = 0, len = object[property].length; i < len; i += 1) {
                                 xmlBody.push(this._toXml(object[property][i]));
                             }
-                            xmlBody.push("</" + property + ">");
-                        } else if (typeof object[property] == "object") {
+                            xmlBody.push('</' + property + '>');
+                        } else if (typeof object[property] == 'object') {
                             var isAttributesObject = property.indexOf('/') == 0;
                             if (!isAttributesObject) {
-                                var objectTag = "<" + property;
+                                var objectTag = '<' + property;
                                 var objectAttributes = object[property]['/attributes'];
                                 objectTag += this._toXmlAttributes(objectAttributes);
-                                objectTag += ">";
+                                objectTag += '>';
                                 xmlBody.push(objectTag);
                                 xmlBody.push(this._toXml(object[property]));
-                                xmlBody.push("</" + property + ">");
+                                xmlBody.push('</' + property + '>');
                             }
                         } else if (object[property] !== undefined) {
-                            xmlBody.push([
-                                "<" + property + ">",
-                                object[property],
-                                "</" + property + ">"
-                            ].join(''));
+                            xmlBody.push(
+                                [
+                                    '<' + property + '>',
+                                    object[property],
+                                    '</' + property + '>'
+                                ].join('')
+                            );
                         }
                     }
                 }
                 return xmlBody.join('\n');
             },
-            toXml : function() {
+            toXml: function () {
                 var xmlBody = [
                     '<?xml version="1.0" encoding="UTF-8" ?>',
                     '<SynnexB2B>',
-                        '<Credential>',
-                            this._toXml(this.Credential),
-                        '</Credential>',
-                        '<OrderRequest>',
-                            this._toXml(this.OrderRequest),
-                        '</OrderRequest>',
-                    '</SynnexB2B>'].join('\n');
+                    '<Credential>',
+                    this._toXml(this.Credential),
+                    '</Credential>',
+                    '<OrderRequest>',
+                    this._toXml(this.OrderRequest),
+                    '</OrderRequest>',
+                    '</SynnexB2B>'
+                ].join('\n');
                 return xmlBody;
             }
         };
@@ -421,7 +448,7 @@ function(
                     headers: {
                         'Content-Type': 'application/xml',
                         'Content-Length': sendPOBody.length,
-                        'Host': url.match(/(?:\w+\.)+\w+/)[0],
+                        Host: url.match(/(?:\w+\.)+\w+/)[0]
                     },
                     body: sendPOBody
                 }
@@ -435,8 +462,8 @@ function(
                 throw 'Send PO Error - ' + sendPOReq.errorMsg;
             } else {
                 returnResponse = processResponse({
-                    responseBody : sendPoResp,
-                    returnResponse : returnResponse
+                    responseBody: sendPoResp,
+                    returnResponse: returnResponse
                 });
             }
         } catch (error) {
@@ -452,5 +479,4 @@ function(
     return {
         process: process
     };
-
 });

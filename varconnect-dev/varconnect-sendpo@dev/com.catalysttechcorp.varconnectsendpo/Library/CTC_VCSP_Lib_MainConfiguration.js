@@ -18,10 +18,7 @@
  * 1.00		Mar 09, 2020	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './CTC_VCSP_Constants.js'], function (
-    search,
-    constants
-) {
+define(['N/search', './CTC_VCSP_Constants.js'], function (search, constants) {
     var mainConfigFields = [
         constants.Fields.MainConfig.ID, //0
         constants.Fields.MainConfig.LICENSE //1

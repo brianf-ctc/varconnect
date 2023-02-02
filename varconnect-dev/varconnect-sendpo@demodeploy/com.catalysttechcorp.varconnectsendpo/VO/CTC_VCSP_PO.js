@@ -168,17 +168,19 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
         this.shipZip = _getFieldValue({ recPO: recPO, field: 'shipzip' });
         this.shipCountry = _getFieldValue({ recPO: recPO, field: 'shipcountry' });
         this.shipMethod = _getFieldValue({ recPO: recPO, field: 'shipmethod' });
-        this.shipMethodCode = _getFieldValue({ recPO: recPO, field: constants.Fields.Transaction.SHIP_CODE });
+        this.shipMethodCode = _getFieldValue({
+            recPO: recPO,
+            field: constants.Fields.Transaction.SHIP_CODE
+        });
 
         this.shipEmail = _getEmail({ entityId: _getFieldValue({ recPO: recPO, field: 'shipto' }) });
-        
+
         var poLookupValues = _getAdditionalLookupValues({
             recPO: recPO,
-            columns: [
-                [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.')
-            ]
+            columns: [['location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE].join('.')]
         });
-        this.shipFromSynnexWarehouse = poLookupValues[ [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.') ];
+        this.shipFromSynnexWarehouse =
+            poLookupValues[['location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE].join('.')];
 
         this.billAttention = _getSubrecordValue({
             recPO: recPO,
@@ -219,10 +221,11 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
         this.createdFrom = _getFieldValue({ recPO: recPO, field: 'createdfrom' });
         // created a more generic custom ship method code field, but not dispensing of specific method code fields in case needed
         this.synnexShippingCode = this.shipMethodCode;
-        this.dellShippingCode = _getFieldValue({
-            recPO: recPO,
-            field: 'custbody_ctc_vcsp_dell_ship_code'
-        }) || this.shipMethodCode;
+        this.dellShippingCode =
+            _getFieldValue({
+                recPO: recPO,
+                field: 'custbody_ctc_vcsp_dell_ship_code'
+            }) || this.shipMethodCode;
 
         this.paymentTerms = _getFieldValue({ recPO: recPO, field: 'terms' });
 
