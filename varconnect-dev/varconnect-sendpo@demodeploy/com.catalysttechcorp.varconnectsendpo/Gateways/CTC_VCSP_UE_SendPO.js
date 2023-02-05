@@ -9,6 +9,7 @@
  * with Catalyst Tech.
  *
  * @NApiVersion 2.x
+ * @NModuleScope Public
  * @NScriptType UserEventScript
  */
 define([

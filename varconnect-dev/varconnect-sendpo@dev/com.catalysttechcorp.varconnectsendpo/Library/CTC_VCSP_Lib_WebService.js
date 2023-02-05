@@ -117,21 +117,20 @@ define([
     }
 
     function process(options) {
-        var logTitle = [LogTitle, 'process'].join('::');
-        var nativePO = options.nativePO,
-            recPO = new PO(nativePO),
+        var recPO = options.nativePO,
+            objPO = new libPO(recPO),
             resp;
 
         try {
             var recVendorConfig = libVendorConfig.getVendorConfiguration({
-                vendor: recPO.entity,
-                subsidiary: recPO.subsidiary
+                vendor: objPO.entity,
+                subsidiary: objPO.subsidiary
             });
 
             if (recVendorConfig) {
                 _updateRecPO({
-                    recPO: recPO,
-                    nativePO: nativePO,
+                    recPO: objPO,
+                    nativePO: recPO,
                     recVendorConfig: recVendorConfig
                 });
 
@@ -139,12 +138,7 @@ define([
                     recVendorConfig: recVendorConfig
                 });
 
-                log.debug(logTitle, 'Lib Vendor: ' + Object.keys(libVendor));
-                if (
-                    !libVendor ||
-                    (Object.keys(libVendor).length === 0 && libVendor.constructor === Object)
-                )
-                    throw 'Missing or invalid vendor configuration';
+                if (!libVendor) throw 'Missing or invalid vendor configuration';
 
                 _validateVendorConfig({
                     recVendorConfig: recVendorConfig
@@ -153,7 +147,8 @@ define([
                 resp = new response(
                     libVendor.process({
                         recVendorConfig: recVendorConfig,
-                        recPO: recPO
+                        recPO: objPO,
+                        nativePO: recPO
                     })
                 );
             }

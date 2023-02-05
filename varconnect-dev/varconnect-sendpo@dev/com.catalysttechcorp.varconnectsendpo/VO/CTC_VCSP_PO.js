@@ -11,7 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, constants) {
+define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, constants) {
     function _getFieldValue(options) {
         var recPO = options.recPO,
             field = options.field;
@@ -73,7 +73,7 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
             email = null;
 
         if (entityId) {
-            var recLookup = search.lookupFields({
+            var recLookup = ns_search.lookupFields({
                 type: 'entity',
                 id: entityId,
                 columns: 'email'
@@ -87,8 +87,8 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
     function _getAdditionalLookupValues(options) {
         var recPO = options.recPO,
             columns = options.columns;
-        var values = search.lookupFields({
-            type: search.Type.PURCHASE_ORDER,
+        var values = ns_search.lookupFields({
+            type: ns_search.Type.PURCHASE_ORDER,
             id: recPO.id,
             columns: columns
         });
@@ -123,7 +123,6 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
         ];
 
         log.emergency('Sub Rec', subRecShipping);
-        log.emergency('Sub Rec', addressFields);
 
         if (subRecShipping) {
             var shipAddr = {};
@@ -131,7 +130,6 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
                 shipAddr[field] = subRecShipping.getValue({ fieldId: field });
                 return true;
             });
-            log.emergency('Sub Rec', shipAddr);
         }
 
         this.shipAttention = _getSubrecordValue({
@@ -175,12 +173,13 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (search, const
 
         this.shipEmail = _getEmail({ entityId: _getFieldValue({ recPO: recPO, field: 'shipto' }) });
 
-        var poLookupValues = _getAdditionalLookupValues({
-            recPO: recPO,
-            columns: [['location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE].join('.')]
-        });
-        this.shipFromSynnexWarehouse =
-            poLookupValues[['location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE].join('.')];
+        // var poLookupValues = _getAdditionalLookupValues({
+        //     recPO: recPO,
+        //     columns: [
+        //         [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.')
+        //     ]
+        // });
+        // this.shipFromSynnexWarehouse = poLookupValues[ [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.') ];
 
         this.billAttention = _getSubrecordValue({
             recPO: recPO,

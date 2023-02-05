@@ -19,9 +19,11 @@
  */
 define([
     'N/record',
-    '../Library/CTC_VCSP_Lib_WebService.js',
+    './CTC_VCSP_Lib_Preferences.js',
+    './CTC_VCSP_Lib_WebService.js',
+    '../VO/CTC_VCSP_PO.js',
     '../Library/CTC_VCSP_Constants.js'
-], function (record, libWebService, constants) {
+], function (ns_record, pref, libWebService, PO, constant) {
     var LogTitle = 'VCSendPO';
     function _updateNativePO(options) {
         var logTitle = [LogTitle, '_updateNativePO'].join('::');
@@ -33,28 +35,21 @@ define([
         if (response) {
             var newHeaderValues = {};
             if (response.transactionNum) {
-                newHeaderValues[constants.Fields.Transaction.VENDOR_PO_NUMBER] =
+                newHeaderValues[constant.Fields.Transaction.VENDOR_PO_NUMBER] =
                     response.transactionNum;
             }
-            newHeaderValues[constants.Fields.Transaction.VCSP_TIMESTAMP] = new Date();
-            newHeaderValues[constants.Fields.Transaction.IS_PO_SENT] = response.isError
+            newHeaderValues[constant.Fields.Transaction.VCSP_TIMESTAMP] = new Date();
+            newHeaderValues[constant.Fields.Transaction.IS_PO_SENT] = response.isError
                 ? false
                 : true;
-            newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
-                {
-                    code: response.responseCode,
-                    message: response.message
-                },
-                null,
-                '\t'
-            );
+            newHeaderValues[constant.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify({
+                code: response.responseCode,
+                message: response.message
+            });
 
             if (response.isError) {
-                newHeaderValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
-                    response,
-                    null,
-                    '\t'
-                );
+                newHeaderValues[constant.Fields.Transaction.VENDOR_RECEIPT] =
+                    JSON.stringify(response);
             }
 
             for (var fieldId in newHeaderValues) {
@@ -66,7 +61,7 @@ define([
             }
 
             if (orderStatus && orderStatus.items) {
-                var vcPOLineFieldsIds = constants.Fields.VarConnectPOLine;
+                var vcPOLineFieldsIds = constant.Fields.VarConnectPOLine;
                 var poLineSublistId = ['recmach', vcPOLineFieldsIds.PURCHASE_ORDER].join('');
                 var mapItemDetailsToSublistFieldId = {
                     line_number: vcPOLineFieldsIds.LINE,
@@ -140,22 +135,17 @@ define([
 
         var recId = options.recId,
             response;
-        var rec = record.load({
-            type: record.Type.PURCHASE_ORDER,
+        var rec = ns_record.load({
+            type: ns_record.Type.PURCHASE_ORDER,
             id: recId,
             isDynamic: true
         });
 
         if (rec) {
-            response = libWebService.process({
-                nativePO: rec
-            });
+            response = libWebService.process({ nativePO: rec });
 
             log.audit(logTitle, '>> send PO response: ' + JSON.stringify(response));
-            _updateNativePO({
-                response: response,
-                purchOrder: rec
-            });
+            _updateNativePO({ response: response, purchOrder: rec });
         }
 
         return response;

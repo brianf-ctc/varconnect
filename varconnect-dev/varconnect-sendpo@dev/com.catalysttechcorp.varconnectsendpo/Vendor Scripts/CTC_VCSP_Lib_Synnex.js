@@ -9,7 +9,7 @@
  * with Catalyst Tech.
  *
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  *
  */
 
