@@ -30,7 +30,7 @@ define([
     libSynnex,
     libIngram,
     response,
-    PO
+    libPO
 ) {
     var LogTitle = 'LibWS';
 

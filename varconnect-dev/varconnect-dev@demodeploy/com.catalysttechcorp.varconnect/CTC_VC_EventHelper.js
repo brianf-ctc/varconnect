@@ -210,6 +210,56 @@ define([
                 if (!mainCfg.overridePONum || !vendorCfg) {
                     Helper.hideFields(scriptContext.form, ['custbody_ctc_vc_override_ponum']);
                 }
+
+                // VENDOR LINE INFO /////
+                var lineCount = currentRecord.getLineCount({ sublistId: 'item' }),
+                    hasVendorInfo = false;
+
+                var fldVendorScr = scriptContext.form.addField({
+                        id: 'custpage_ctc_povendor_scr',
+                        label: 'Clear Vendor Info',
+                        type: 'inlinehtml'
+                    }),
+                    sublistItem = scriptContext.form.getSublist({
+                        id: 'item'
+                    });
+
+                var scriptVendorInfo = [
+                    '<script type="text/javascript">',
+                    'jQuery(document).ready(function () {',
+                    'var jq=jQuery;',
+                    'var fnVENDLINE=function(ln){',
+                    'var tr=jq.find("table#item_splits tr")[ln], ',
+                    'td=jq(tr).find("td[data-ns-tooltip=\'VENDOR LINE INFO\']")[0],',
+                    'sp=jq(td).find("span")[0];',
+                    'jq(sp).text("Details");',
+                    'jq(td).empty().append(sp);',
+                    '};'
+                ];
+
+                for (var line = 0; line < lineCount; line++) {
+                    var vendorInfoJSON = currentRecord.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'custcol_ctc_vc_vendor_info',
+                        line: line
+                    });
+                    if (!vendorInfoJSON) continue;
+                    hasVendorInfo = true;
+                    scriptVendorInfo.push(
+                        'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
+                    );
+                }
+                scriptVendorInfo.push('});</script>');
+                fldVendorScr.defaultValue = scriptVendorInfo.join('');
+
+                try {
+                    if (!hasVendorInfo || Current.eventType == scriptContext.UserEventType.EDIT)
+                        sublistItem
+                            .getField({ id: 'custcol_ctc_vc_vendor_info' })
+                            .updateDisplayType({ displayType: 'HIDDEN' });
+                } catch (eer) {
+                    vc2_util.logError(logTitle, eer);
+                }
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

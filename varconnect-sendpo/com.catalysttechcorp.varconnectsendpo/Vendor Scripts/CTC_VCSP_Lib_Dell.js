@@ -394,6 +394,49 @@ define([
                 // });
 
                 return arr;
+            })(),
+            shippingMethod: (function () {
+                var logTitle = [LogTitle, 'GenerateBody', 'shippingMethod'].join('::'),
+                    returnValue = {};
+
+                //shipmethod
+                var shipMethod = recPO.getValue({ fieldId: 'shipmethod' });
+                log.audit(logTitle, '>> shipmethod' + JSON.stringify(shipMethod));
+                if (!shipMethod) return {};
+
+                var searchShipMethodMap = ns_search.create({
+                    type: 'customrecord_ctc_vcsp_vendor_shipping',
+                    filters: [['custrecord_ctc_vcsp_ship_shipmethodmap', 'anyof', shipMethod]],
+                    columns: [
+                        'name',
+                        'custrecord_ctc_vcsp_ship_vendorconfg',
+                        'custrecord_ctc_vcsp_ship_shipmethod',
+                        'custrecord_ctc_vcsp_ship_shipmethodmap'
+                    ]
+                });
+
+                log.audit(
+                    logTitle,
+                    '>> mapped shipping results: ' +
+                        JSON.stringify(searchShipMethodMap.runPaged().count)
+                );
+
+                if (searchShipMethodMap.runPaged().count) {
+                    var mappedShipMethod;
+                    searchShipMethodMap.run().each(function (result) {
+                        mappedShipMethod = result.getValue({
+                            name: 'custrecord_ctc_vcsp_ship_shipmethod'
+                        });
+                        return true;
+                    });
+
+                    log.audit(logTitle, '>> mapped shipping: ' + JSON.stringify(mappedShipMethod));
+
+                    if (mappedShipMethod) {
+                        returnValue.shippingMethod = mappedShipMethod;
+                    }
+                }
+                return returnValue;
             })()
         };
         returnValue = bodyContentJSON; //JSON.stringify(bodyContentJSON);
@@ -447,6 +490,7 @@ define([
             });
 
             if (!sendPOBody) throw 'Unable to generate PO Body Request';
+
 
             var sendPOReq = ctc_util.sendRequest({
                 header: [LogTitle, 'Send PO'].join(' : '),

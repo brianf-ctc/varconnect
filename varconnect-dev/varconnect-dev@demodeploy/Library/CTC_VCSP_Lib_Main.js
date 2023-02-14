@@ -14,63 +14,58 @@
  *
  * Version	Date            Author		Remarks
  * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
- * 
- *//**
+ *
+ */ /**
  * @NApiVersion 2.x
  * @NModuleScope SameAccount
  */
-define(['N/record',
-        './CTC_VCSP_Lib_Preferences.js',
-        './CTC_VCSP_Lib_WebService.js',
-        '../VO/CTC_VCSP_PO.js'
-        ],
+define([
+    'N/record',
+    './CTC_VCSP_Lib_Preferences.js',
+    './CTC_VCSP_Lib_WebService.js',
+    '../VO/CTC_VCSP_PO.js'
+], function (record, pref, libWebService, PO) {
+    function _setTransactionNum(options) {
+        var response = options.response,
+            rec = options.rec;
 
-function(record,
-		pref,
-		libWebService,
-		PO) {
-	
-	function _setTransactionNum(options) {
-		var response = options.response,
-			rec = options.rec;
-		
-		if (response) {
-			var transactionNum = response.tranasctionNum;
-			
-			if (transactionNum) {
-				record.submitFields({
-					type: rec.type,
-					id: rec.id,
-					values: {
-						custbody_ctc_vcsp_transaction_num: transactionNum
-					}
-				});
-			}
-		}
-	}
-	
-	function sendPO(options) {
-		var recId = options.recId,
-			response;
-		var rec = record.load({
-				type: record.Type.PURCHASE_ORDER,
-				id: recId
-			});
-		
-		if (rec) {
-			response = libWebService.process({
-				nativePO: rec
-			});
-			
-			_setTransactionNum({
-				response: response,
-				rec: rec
-			});
-		}
-		
-		return response;
-	}
-   
+        if (response) {
+            var transactionNum = response.tranasctionNum;
+
+            if (transactionNum) {
+                record.submitFields({
+                    type: rec.type,
+                    id: rec.id,
+                    values: {
+                        custbody_ctc_vcsp_transaction_num: transactionNum
+                    }
+                });
+            }
+        }
+    }
+
+    function sendPO(options) {
+        var recId = options.recId,
+            response;
+        var rec = record.load({
+            type: record.Type.PURCHASE_ORDER,
+            id: recId
+        });
+
+        if (rec) {
+            response = libWebService.process({
+                nativePO: rec
+            });
+
+            _setTransactionNum({
+                response: response,
+                rec: rec
+            });
+        }
+
+        return response;
+    }
+
     return {
         sendPO: sendPO
     };

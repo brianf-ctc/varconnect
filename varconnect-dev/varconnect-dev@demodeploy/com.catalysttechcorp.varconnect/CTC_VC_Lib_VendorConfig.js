@@ -44,7 +44,8 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
         VendorCFG.FIELD.ACCESS_ENDPOINT, //12
         VendorCFG.FIELD.API_KEY, //13
         VendorCFG.FIELD.API_SECRET, //14
-        VendorCFG.FIELD.OATH_SCOPE //15
+        VendorCFG.FIELD.OATH_SCOPE, //15
+        VendorCFG.FIELD.USE_SHIPDATE //16
     ];
 
     function _generateVendorConfig(result) {
@@ -69,6 +70,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             apiKey: result.getValue({ name: vendorConfigFields[13] }),
             apiSecret: result.getValue({ name: vendorConfigFields[14] }),
             oauthScope: result.getValue({ name: vendorConfigFields[15] }),
+            useShipDate: result.getValue({ name: VendorCFG.FIELD.USE_SHIPDATE }),
             country: result.getValue({
                 name: 'country',
                 join: 'custrecord_ctc_vc_vendor_subsidiary'
@@ -145,7 +147,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             config = _generateVendorConfig(result[0]);
         }
 
-        log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(config));
+        // log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(config));
 
         return config;
     }
@@ -206,7 +208,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             }
         }
 
-        log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(arrConfig));
+        // log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(arrConfig));
 
         return arrConfig;
     }
@@ -280,7 +282,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             config = _generateVendorConfig(result[0]);
         }
 
-        log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(config));
+        // log.audit(logTitle, LogPrefix + '>> config: ' + JSON.stringify(config));
 
         return config;
     }

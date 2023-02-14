@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -155,7 +155,7 @@ define(function (require) {
                 LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
 
                 Helper.log(logTitle, '/// PROCESSING ORDER [' + vendorOrderNum + ']');
-                var linesToReceive = [];
+                var LinesToReceive = [];
 
                 try {
                     // skip any existing orders
@@ -165,10 +165,10 @@ define(function (require) {
                     // Build an array with all XML line data with the same order num
                     for (ii = 0; ii < OrderLines.length; ii++) {
                         if (orderNum != OrderLines[ii].order_num) continue;
-                        linesToReceive.push(OrderLines[ii]);
+                        LinesToReceive.push(OrderLines[ii]);
                     }
 
-                    if (!linesToReceive.length) throw 'No items to receive';
+                    if (!LinesToReceive.length) throw 'No items to receive';
 
                     ///////////////////////////////////////////////
                     var record;
@@ -194,7 +194,7 @@ define(function (require) {
                     var lineItemCount = record.getLineCount({ sublistId: 'item' });
 
                     var hasReceivableLine = false,
-                        receivableItems = {},
+                        receivablesLines = [],
                         matchingLine,
                         line,
                         lineRRData;
@@ -247,23 +247,15 @@ define(function (require) {
                             /// REMOVE lines thats not from the list
                             matchingLine = Helper.findMatchingItem({
                                 data: lineRRData,
-                                dataSet: linesToReceive
+                                dataSet: LinesToReceive
                             });
 
                             if (!matchingLine) throw 'Line not found on receivable items';
 
                             Helper.log(logTitle, '...added to item receipt ');
                             Helper.addIRLine({ record: record, line: line });
-                            var receivableItemData = receivableItems[lineRRData.item] || {
-                                lines: [],
-                                item_num: lineRRData.item_num,
-                                totalReceivable: 0,
-                                totalAlreadyReceived: 0
-                            };
-                            lineRRData.quantity = parseInt(lineRRData.quantity || '0', 10);
-                            receivableItemData.lines.push(lineRRData.line);
-                            receivableItemData.totalReceivable += lineRRData.quantity;
-                            receivableItems[lineRRData.item] = receivableItemData;
+                            receivablesLines.push(lineRRData);
+
                             hasReceivableLine = true;
                             recordIsChanged = true;
                         } catch (lineRR_err) {
@@ -280,11 +272,11 @@ define(function (require) {
                     if (!hasReceivableLine) throw ERROR_MSG.NO_RECEIVABLES;
 
                     // Build a list of unique items with their total quantities shipped for this shipment
-                    var uniqueLineItems = [];
-                    Helper.log(logTitle, '**** Collect all items to receive ****', linesToReceive);
+                    var UniqueLineItems = [];
+                    Helper.log(logTitle, '**** Collect all items to receive ****', LinesToReceive);
 
-                    for (ii = 0; ii < linesToReceive.length; ii++) {
-                        var lineToReceive = linesToReceive[ii];
+                    for (ii = 0; ii < LinesToReceive.length; ii++) {
+                        var lineToReceive = LinesToReceive[ii];
 
                         var currentItem = {
                             order_num: orderNum,
@@ -295,7 +287,6 @@ define(function (require) {
                             carrier: lineToReceive.carrier,
                             ship_qty: parseInt(lineToReceive.ship_qty || '0', 10) || 0,
                             totalShipped: parseInt(lineToReceive.ship_qty || '0', 10) || 0,
-                            minimumQuantity: parseInt(lineToFulfill.ship_qty || '0', 10) || 0,
                             all_tracking_nums: Helper.uniqueList({
                                 value: lineToReceive.tracking_num
                             }),
@@ -307,24 +298,21 @@ define(function (require) {
 
                         matchingLine = Helper.findMatchingItem({
                             data: lineToReceive,
-                            dataSet: uniqueLineItems,
+                            dataSet: UniqueLineItems,
                             fieldToTest: 'item_num'
                         });
 
                         if (!matchingLine) {
-                            uniqueLineItems.push(currentItem);
+                            UniqueLineItems.push(currentItem);
                             continue;
                         }
 
-                        for (iii = 0; iii < uniqueLineItems.length; iii++) {
-                            var uniqItem = uniqueLineItems[iii];
+                        for (iii = 0; iii < UniqueLineItems.length; iii++) {
+                            var uniqItem = UniqueLineItems[iii];
                             if (lineToReceive.item_num !== uniqItem.item_num) continue;
 
                             // update total shipped qty
                             uniqItem.totalShipped += lineToReceive.ship_qty * 1;
-                            if (uniqItem.minimumQuantity > lineToFulfill.ship_qty) {
-                                uniqItem.minimumQuantity = lineToFulfill.ship_qty;
-                            }
 
                             // update tracking num list
                             var tmpTrackList = Helper.uniqueList({
@@ -351,24 +339,13 @@ define(function (require) {
                             });
                         }
                     }
-                    Helper.log(logTitle, '// UniqueLineItems', uniqueLineItems);
+                    Helper.log(logTitle, '// UniqueLineItems', UniqueLineItems);
 
                     ///////////////////////////////////////////////////////////////////
                     /// VALIDATE the receipt line items
                     var lineItemRRCount = record.getLineCount({ sublistId: 'item' });
                     var recordLines = [];
                     Helper.log(logTitle, '**** START item receipt lines validation ****');
-                    // get already received quantity per item
-                    for (var item in receivableItems) {
-                        var receivableItemData = receivableItems[item];
-                        receivableItemData.totalAlreadyReceived =
-                            Helper.getReceivedQuantity({
-                                item: receivableItemData.item,
-                                recPurchOrd: Current.PO_REC
-                            }) || 0;
-                        return true;
-                    }
-                    // loop through all items in item receipt and receive
                     for (line = 0; line < lineItemRRCount; line++) {
                         record.selectLine({ sublistId: 'item', line: line });
                         lineRRData = {
@@ -423,8 +400,8 @@ define(function (require) {
                             continue;
                         }
 
-                        for (ii = 0; ii < uniqueLineItems.length; ii++) {
-                            var itemToShip = uniqueLineItems[ii];
+                        for (ii = 0; ii < UniqueLineItems.length; ii++) {
+                            var itemToShip = UniqueLineItems[ii];
                             Helper.log(logTitle, '// item to Ship', itemToShip);
 
                             var isMatchingLine =
@@ -441,17 +418,8 @@ define(function (require) {
                                 continue;
                             }
 
-                            var receivableItemData = fulfillableItems[lineRRData.item];
-                            receivableItemData.runningTotalRequestedShipQuantity =
-                                itemToShip.totalShipped;
-                            receivableItemData.totalRemainingToShip =
-                                receivableItemData.runningTotalRequestedShipQuantity -
-                                receivableItemData.totalAlreadyReceived;
-                            Helper.log(logTitle, '// existing item receipt', receivableItemData);
                             var itemrrValues = {
-                                quantity:
-                                    receivableItemData.totalRemainingToShip ||
-                                    itemToShip.totalShipped,
+                                quantity: itemToShip.totalShipped,
                                 custcol_ctc_xml_dist_order_num: itemToShip.order_num,
                                 custcol_ctc_xml_date_order_placed: itemToShip.order_date,
                                 custcol_ctc_xml_eta: itemToShip.order_eta,
@@ -471,13 +439,8 @@ define(function (require) {
 
                             ////////////////////////////////////////////
                             /// if total Shipped is empty /////
-                            if (itemrrValues.quantity <= 0) {
-                                Helper.log(
-                                    logTitle,
-                                    '... skipped ' +
-                                        itemToShip.item_num +
-                                        ': no more items left to ship.'
-                                );
+                            if (itemToShip.totalShipped == 0) {
+                                Helper.log(logTitle, '...skipped: no more items left to ship.');
                                 Helper.setLineValues({
                                     record: record,
                                     values: { itemreceive: false },
@@ -488,9 +451,34 @@ define(function (require) {
                             }
 
                             ////////////////////////////////////////////
-                            // receive as much as can be received
-                            if (lineRRData.quantity > itemrrValues.quantity) {
-                                lineRRData.quantity = itemrrValues.quantity;
+                            // don't allow receipt if the available quantity is less
+                            if (lineRRData.quantity < itemToShip.ship_qty) {
+                                Helper.log(
+                                    logTitle,
+                                    '... skipped: rem qty is less than required ship qty. '
+                                );
+
+                                Helper.setLineValues({
+                                    record: record,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                recordIsChanged = true;
+                                continue;
+                            }
+
+                            ////////////////////////////////////////////
+                            // don't allow receipt if the available quantity is less
+                            if (lineRRData.quantity < itemToShip.totalShipped) {
+                                itemrrValues.quantity = lineRRData.quantity;
+
+                                Helper.setLineValues({
+                                    record: record,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                recordIsChanged = true;
+                                continue;
                             }
 
                             ///////////////////////////////////////////////
@@ -526,8 +514,7 @@ define(function (require) {
                                 value: arrTrackingNums.join('\n').substr(0, _TEXT_AREA_MAX_LENGTH)
                             });
 
-                            uniqueLineItems[ii].totalShipped -= lineRRData.quantity;
-                            receivableItemData.totalReceivable -= lineFFData.quantity;
+                            UniqueLineItems[ii].totalShipped -= lineRRData.quantity;
                             recordLines.push({
                                 item_num: lineRRData.item,
                                 totalShipped: lineRRData.quantity,
@@ -817,6 +804,7 @@ define(function (require) {
             if (objVar && objVar !== null) content += ' -- ' + JSON.stringify(objVar);
             return log[logtype](title, vc2_util.getUsage() + LogPrefix + content);
         },
+
         logMsg: function (option) {
             option = option || {};
 
@@ -924,36 +912,6 @@ define(function (require) {
 
             return true;
         },
-        getReceivedQuantity: function (option) {
-            var logTitle = [LogTitle, 'getReceivedQuantity'].join('::'),
-                recPurchOrd = option.recPurchOrd,
-                item = option.item,
-                quantityReceived = null;
-            if (recPurchOrd && item) {
-                // v3.01 loop through all items in item fulfillment and get total fulfillable per item
-                for (var line = 0, len = recPurchOrd.getLineCount('item'); line < len; line += 1) {
-                    var linePOData = {
-                        item: recPurchOrd.getSublistValue({
-                            sublistId: 'item',
-                            line: line,
-                            fieldId: vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL
-                        }),
-                        quantityreceived:
-                            parseInt(
-                                record.getSublistValue({
-                                    sublistId: 'item',
-                                    line: line,
-                                    fieldId: 'quantityreceived'
-                                })
-                            ) || 0
-                    };
-                    if (linePOData.item == item) {
-                        quantityReceived += linePOData.quantityreceived;
-                    }
-                }
-            }
-            return quantityReceived;
-        },
         validatePODate: function (option) {
             var logTitle = [LogTitle, 'validateDate'].join('::'),
                 logPrefix = LogPrefix + ' validateDate || ',
@@ -1009,7 +967,7 @@ define(function (require) {
                 var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
                 var hasMatch = false;
 
-                // log.audit(logTitle,  vc2_util.getUsage() + LogPrefix + ' // isMatchingLine: ' + JSON.stringify(option));
+                // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + ' // isMatchingLine: ' + JSON.stringify(option));
 
                 var LineItemCheck = {
                     ingramCheck: function (itemType) {
@@ -1037,7 +995,7 @@ define(function (require) {
                         } catch (check_error) {
                             // log.audit(
                             //     logTitle,
-                            //     _logPrefix + '... skipped: ' + vc2_util.extractError(check_error)
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
                             // );
                         }
                         return returnValue;
@@ -1063,7 +1021,7 @@ define(function (require) {
                         } catch (check_error) {
                             // log.audit(
                             //     logTitle,
-                            //     _logPrefix + '... skipped: ' + vc2_util.extractError(check_error)
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
                             // );
                         }
                         return returnValue;
@@ -1082,7 +1040,7 @@ define(function (require) {
                         } catch (check_error) {
                             // log.audit(
                             //     logTitle,
-                            //     _logPrefix + '... skipped: ' + vc2_util.extractError(check_error)
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
                             // );
                         }
                         return returnValue;
@@ -1150,7 +1108,7 @@ define(function (require) {
                 returnValue = false;
                 throw vc2_util.extractError(error);
             } finally {
-                // log.audit(logTitle,  vc2_util.getUsage() + LogPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
+                // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + '>> returnValue: ' + JSON.stringify(returnValue));
             }
 
             return returnValue;
@@ -1194,7 +1152,7 @@ define(function (require) {
 
                 // log.audit(
                 //     logTitle,
-                //     vc2_util.getUsage() +
+                //     vc_util.getUsage() +
                 //         LogPrefix +
                 //         '>> searchOption: ' +
                 //         JSON.stringify(searchOption)

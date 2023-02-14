@@ -74,6 +74,10 @@ define([], function () {
                     MEAN: 'custrecord_ctc_vcsp_payment_mean',
                     OTHER: 'custrecord_ctc_vcsp_payment_mean_other',
                     TERM: 'custrecord_ctc_vcsp_payment_term'
+                },
+                FIELDMAP: 'custrecord_ctc_vcsp_fieldmapping',
+                MAPPING: {
+                    PONUM: 'custrecord_ctc_vcsp_ponum_field'
                 }
             },
             MainConfig: {

@@ -79,7 +79,8 @@ define(function (require) {
                 ACCESS_ENDPOINT: 'custrecord_ctc_vc_access_endpoint',
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
-                OATH_SCOPE: 'custrecord_ctc_vc_oath_scope'
+                OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
+                USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate'
             }
         },
         VC_LOG: {

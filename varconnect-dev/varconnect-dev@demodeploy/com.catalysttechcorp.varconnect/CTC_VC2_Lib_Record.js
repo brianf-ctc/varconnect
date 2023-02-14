@@ -14,7 +14,8 @@
 define(function (require) {
     var ns_record = require('N/record'),
         ns_error = require('N/error'),
-        vc2_util = require('./CTC_VC2_Lib_Utils.js');
+        vc2_constant = require('./CTC_VC2_Constants'),
+        vc2_util = require('./CTC_VC2_Lib_Utils');
 
     var LogTitle = 'VC_RecordLib';
 
@@ -126,6 +127,8 @@ define(function (require) {
                     lineData[columns[i]] = value;
                     if (textValue !== null && value != textValue)
                         lineData[columns[i] + '_text'] = textValue;
+
+                    // vc2_util.log(logTitle, '>> text/value', [lineOption, value, textValue]);
                 }
 
                 returnValue = lineData;
@@ -240,9 +243,45 @@ define(function (require) {
                     if (fieldId == 'line') continue;
                     if (vc2_util.isEmpty(lineData[fieldId])) continue;
 
-                    record.setCurrentSublistValue(
-                        vc2_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
+                    var hasError = false,
+                        newValue;
+
+                    // store the old value
+                    var currValue = record.getCurrentSublistValue(
+                        vc2_util.extend(lineOption, { fieldId: fieldId })
                     );
+
+                    try {
+                        // set the new value
+                        record.setCurrentSublistValue(
+                            vc2_util.extend(lineOption, {
+                                fieldId: fieldId,
+                                value: lineData[fieldId]
+                            })
+                        );
+                        newValue = record.getCurrentSublistValue(
+                            vc2_util.extend(lineOption, { fieldId: fieldId })
+                        );
+
+                        // if (newValue != lineData[fieldId]) throw 'New value not set properly';
+                    } catch (set_error) {
+                        vc2_util.log(logTitle, '## SET ERROR ##', [
+                            fieldId,
+                            lineData[fieldId],
+                            set_error
+                        ]);
+                        hasError = true;
+                    }
+
+                    if (hasError) {
+                        /// revert back to the original value
+                        record.setCurrentSublistValue(
+                            vc2_util.extend(lineOption, {
+                                fieldId: fieldId,
+                                value: currValue
+                            })
+                        );
+                    }
                 }
 
                 record.commitLine(lineOption);
@@ -295,7 +334,367 @@ define(function (require) {
                 });
             }
             return returnValue;
-        }
+        },
+        findMatchingOrderLine: function (option) {
+            var logTitle = [LogTitle, 'findMatchingOrderLine'].join('::'),
+                returnValue;
+
+            try {
+                var vendorLine = option.vendorLine || option.lineData,
+                    orderLines = option.orderLines,
+                    record = option.record;
+
+                var mainConfig = option.mainConfig,
+                    vendorConfig = option.vendorConfig;
+
+                var VendorList = vc2_constant.LIST.XML_VENDOR,
+                    GlobalVar = vc2_constant.GLOBAL;
+
+                if (vc2_util.isEmpty(orderLines)) {
+                    orderLines = VC_RecordLib.extractRecordLines({ record: record });
+                }
+                if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
+                if (vc2_util.isEmpty(orderLines)) throw 'Order lines is required';
+
+                var isDandH = vendorConfig.xmlVendor == VendorList.DandH,
+                    isIngram = vc2_util.inArray(vendorConfig.xmlVendor, [
+                        VendorList.INGRAM_MICRO_V_ONE,
+                        VendorList.INGRAM_MICRO
+                    ]);
+
+                var matchedLines = vc2_util.findMatching({
+                    list: orderLines,
+                    findAll: true,
+                    filter: {
+                        item_text: function (value) {
+                            var orderLine = this;
+                            var skuValue = orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                                dnhValue = orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN];
+
+                            var matchedValue = null,
+                                returnValue = false;
+
+                            matchedValue = VC_RecordLib.isVendorLineMatched({
+                                orderLine: orderLine,
+                                vendorLine: vendorLine,
+                                mainConfig: mainConfig,
+                                vendorConfig: vendorConfig
+                            });
+                            returnValue = !!matchedValue;
+
+                            return returnValue;
+                        }
+                    }
+                });
+                var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
+                if (!matchedLines || !matchedLines.length) {
+                    // lineValue.LINE_MATCH = false;
+                    vendorLine.ORDER_LINE = null;
+
+                    vc2_util.log(logTitle, '// no matching order line');
+                } else if (matchedLines.length == 1) {
+                } else if (matchedLines.length > 1) {
+                    vc2_util.log(logTitle, '// multiple matches found: ', matchedLines.length);
+                    // more than one matched line
+                    var matching = {
+                        qtyLine: vc2_util.findMatching({
+                            list: matchedLines,
+                            findAll: true,
+                            filter: {
+                                MATCHED: function (value) {
+                                    return value !== true;
+                                },
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty),
+                                line: !vc2_util.isEmpty(vendorLine.line_no)
+                                    ? vendorLine.line_no - 1
+                                    : -1
+                            }
+                        }),
+                        line: vc2_util.findMatching({
+                            list: matchedLines,
+                            findAll: true,
+                            filter: {
+                                MATCHED: function (value) {
+                                    return value !== true;
+                                },
+                                line: !vc2_util.isEmpty(vendorLine.line_no)
+                                    ? vendorLine.line_no - 1
+                                    : -1
+                            }
+                        }),
+                        qty: vc2_util.findMatching({
+                            list: matchedLines,
+                            findAll: true,
+                            filter: {
+                                MATCHED: function (value) {
+                                    return value !== true;
+                                },
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty)
+                            }
+                        })
+                    };
+
+                    vc2_util.log(logTitle, '///...matching: ', matching);
+
+                    orderLineMatch =
+                        matching.qtyLine || matching.line || matching.qty || matchedLines[0];
+                }
+
+                // if it has multiple matches, get the first one
+                if (orderLineMatch && orderLineMatch.length) orderLineMatch = orderLineMatch[0];
+                // vc2_util.log(logTitle, '// orderLineMatch: ', orderLineMatch);
+
+                // mark the order line
+                vendorLine.MATCHED_ORDERLINE = orderLineMatch;
+                vendorLine.ORDER_LINE = orderLineMatch.line;
+                orderLineMatch.MATCHED = true;
+
+                returnValue = orderLineMatch;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
+
+            return returnValue;
+        },
+        isVendorLineMatched: function (option) {
+            var logTitle = [LogTitle, 'isVendorLineMatched'].join('::'),
+                returnValue;
+
+            var VendorList = vc2_constant.LIST.XML_VENDOR,
+                GlobalVar = vc2_constant.GLOBAL;
+
+            var orderLine = option.orderLine,
+                vendorLine = option.vendorLine,
+                mainCfg = option.mainConfig,
+                vendorCfg = option.vendorConfig;
+
+            if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
+            if (vc2_util.isEmpty(orderLine)) throw 'Order line is required';
+
+            var item = {
+                text: option.itemText || orderLine.item_text || orderLine.itemname,
+                altValue: option.itemAlt || orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL],
+                altText:
+                    option.itemAltText ||
+                    orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'],
+                skuValue: option.skuValue || orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                dnhValue: option.dnhValue || orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN]
+            };
+            // vc2_util.log(logTitle, '.. item values: ', item);
+
+            var settings = {
+                isDandH:
+                    option.isDandH || vendorCfg ? vendorCfg.xmlVendor == VendorList.DandH : null,
+                ingramHashSpace: option.ingramHashSpace || mainCfg ? mainCfg.ingramHashSpace : null,
+                isIngram:
+                    option.ingramHashSpace || vendorCfg
+                        ? vc2_util.inArray(vendorCfg.xmlVendor, [
+                              VendorList.INGRAM_MICRO_V_ONE,
+                              VendorList.INGRAM_MICRO
+                          ])
+                        : null
+            };
+            // vc2_util.log(logTitle, '... settings:', settings);
+
+            var matchedValue;
+            try {
+                if (
+                    vc2_util.inArray(vendorLine.item_num, [item.text, item.altValue, item.altText])
+                ) {
+                    matchedValue = 'ItemName';
+                } else if (
+                    vendorLine.vendorSKU &&
+                    item.skuValue &&
+                    vendorLine.vendorSKU == item.skuValue
+                ) {
+                    matchedValue = 'VendorSKU';
+                } else if (
+                    settings.isDandH &&
+                    item.dnhValue &&
+                    vc2_util.inArray(item.dnhValue, [vendorLine.item_num, vendorLine.vendorSKU])
+                ) {
+                    matchedValue = 'D&H item';
+                } else if (settings.isIngram && settings.ingramHashSpace) {
+                    var hashValue = {};
+                    for (var typ in item) {
+                        hashValue[typ] = item[typ].replace('#', ' ') || '';
+                    }
+
+                    if (
+                        vc2_util.inArray(vendorLine.item_num, [
+                            hashValue.text,
+                            hashValue.altValue,
+                            hashValue.altText
+                        ])
+                    )
+                        matchedValue = 'Ingram-Item';
+                    else if (
+                        vendorLine.vendorSKU &&
+                        hashValue.skuValue &&
+                        vendorLine.vendorSKU == hashValue.skuValue
+                    )
+                        matchedValue = 'Ingram-SKU';
+                }
+
+                returnValue = matchedValue;
+
+                if (matchedValue) {
+                    orderLine.MATCHED_VALUE = matchedValue;
+                }
+            } catch (err) {
+                vc2_util.log(logTitle, '[item_num.filter] !! error !!', err);
+                returnValue = false;
+                // } finally {
+                // vc2_util.log(logTitle, ' matched ? ', matchedValue);
+            }
+
+            return returnValue;
+        },
+        findMatchingVendorLine: function (option) {
+            var logTitle = [LogTitle, 'findMatchingVendorLine'].join('::'),
+                returnValue;
+
+            try {
+                var vendorLines = option.vendorLines,
+                    orderLine = option.orderLine,
+                    line = option.line,
+                    quantity = option.quantity,
+                    record = option.record;
+
+                if (!vendorLines) throw 'Vendor Lines are missing';
+                if (!orderLine) {
+                    if (!vc2_util.isEmpty(record) && !vc2_util.isEmpty(line)) {
+                        orderLine = VC_RecordLib.extractLineValues({
+                            record: record,
+                            line: line,
+                            columns: [
+                                'item',
+                                'quantity',
+                                'quantityremaining',
+                                vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                vc2_constant.FIELD.TRANSACTION.DH_MPN
+                            ]
+                        });
+                        Helper.log(logTitle, '*** fulfillment line ***', orderLine);
+                    }
+                }
+                if (!orderLine) throw 'Order Line is missing';
+
+                // first match
+                var matchingVendorLine = vc2_util.findMatching({
+                    list: vendorLines,
+                    findAll: true,
+                    filter: {
+                        item_num: function (value) {
+                            var vendorLine = this;
+
+                            // vc2_util.log(logTitle, '>> vendorLine', vendorLine);
+                            var matchedValue = VC_RecordLib.isVendorLineMatched({
+                                orderLine: orderLine,
+                                vendorLine: vendorLine,
+                                mainConfig: option.mainConfig || option.mainCfg || null,
+                                vendorConfig: option.vendorConfig || option.vendorCfg || null,
+                                isDandH: option.isDandH || null,
+                                isIngram: option.isIngram || null,
+                                ingramHashSpace: option.ingramHashSpace || null
+                            });
+                            if (matchedValue) vendorLine.MATCHEDBY = matchedValue;
+
+                            vendorLine.ship_qty = util.isString(vendorLine.ship_qty)
+                                ? vc2_util.parseFloat(vendorLine.ship_qty)
+                                : vendorLine.ship_qty;
+
+                            if (!vendorLine.hasOwnProperty('AVAILQTY'))
+                                vendorLine.AVAILQTY = vendorLine.ship_qty;
+
+                            if (!vendorLine.hasOwnProperty('APPLIEDLINES'))
+                                vendorLine.APPLIEDLINES = [];
+
+                            return !!matchedValue;
+                        }
+                    }
+                });
+                vc2_util.log(logTitle, '... matchingVendorLine: ', matchingVendorLine);
+                if (!matchingVendorLine) throw 'No items matched!';
+
+                // matches more than once
+                if (matchingVendorLine.length > 1) {
+                    var matched = {
+                        qtyLine: vc2_util.findMatching({
+                            list: matchingVendorLine,
+                            findAll: true,
+                            filter: {
+                                ship_qty: function (value) {
+                                    var shipQty = vc2_util.parseFloat(value),
+                                        qty =
+                                            quantity ||
+                                            orderLine.quantity ||
+                                            orderLine.quantityremaining;
+                                    return shipQty == qty;
+                                },
+                                line_no: function (value) {
+                                    var shipLine = vc2_util.parseFloat(value),
+                                        poLine = orderLine.poline
+                                            ? vc2_util.parseFloat(orderLine.poline)
+                                            : vc2_util.parseFloat(orderLine.line);
+
+                                    return shipLine == poLine;
+                                },
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }),
+                        qtyFull: vc2_util.findMatching({
+                            list: matchingVendorLine,
+                            findAll: true,
+                            filter: {
+                                ship_qty: function (value) {
+                                    var shipQty = vc2_util.parseFloat(value),
+                                        qty =
+                                            quantity ||
+                                            orderLine.quantity ||
+                                            orderLine.quantityremaining;
+                                    return shipQty == qty;
+                                },
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }),
+                        qtyPartial: vc2_util.findMatching({
+                            list: matchingVendorLine,
+                            findAll: true,
+                            filter: {
+                                ship_qty: function (value) {
+                                    var shipQty = vc2_util.parseFloat(value),
+                                        qty =
+                                            quantity ||
+                                            orderLine.quantity ||
+                                            orderLine.quantityremaining;
+                                    return shipQty <= qty;
+                                },
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        })
+                    };
+                    // vc2_util.log(logTitle, '... refine matches: ', matched);
+                    matchingVendorLine = matched.qtyLine || matched.qtyFull || matched.qtyPartial;
+                }
+
+                returnValue = matchingVendorLine;
+            } catch (error) {
+                vc2_util.log(logTitle, '## NO MATCH ## ', error);
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        updateRecord: function (option) {}
     };
 
     return VC_RecordLib;
