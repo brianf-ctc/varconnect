@@ -27,6 +27,7 @@ define(function (require) {
         ns_runtime = require('N/runtime'),
         ns_format = require('N/format'),
         ns_config = require('N/config');
+
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_constant = require('./CTC_VC2_Constants'),
         vc_log = require('./CTC_VC_Lib_Log'),

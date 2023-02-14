@@ -20,7 +20,7 @@ define(function (request) {
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_main = require('./CTC_VC2_Lib_Main'),
         vc_websvc = require('./CTC_VC_Lib_WebService'),
-        vc_record = require('./netsuitelibrary_v2'),
+        vc_record = require('./CTC_VC_Lib_Record'),
         util_record = require('./CTC_VC_Lib_Record'),
         vc_log = require('./CTC_VC_Lib_Log'),
         vc2_constant = require('./CTC_VC2_Constants');

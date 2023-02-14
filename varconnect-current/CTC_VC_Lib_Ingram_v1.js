@@ -294,6 +294,9 @@ define([
                     break;
                 }
             }
+            log.audit(logTitle, LogPrefix + '// itemAvail: ' + JSON.stringify(itemAvail));
+            log.audit(logTitle, LogPrefix + '// itemLocations: ' + JSON.stringify(itemLocations));
+
             if (!itemLocations) return;
 
             var arrDateBackOrderd = [];
@@ -428,6 +431,8 @@ define([
                             status: lineData.status
                         };
                     }
+
+                    log.audit(logTitle, LogPrefix + '//lineData:  ' + JSON.stringify(lineData));
 
                     arrLineData.push(lineData);
                 }

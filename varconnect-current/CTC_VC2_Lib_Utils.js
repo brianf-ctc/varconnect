@@ -18,13 +18,15 @@ define(function (require) {
         ns_format = require('N/format'),
         ns_record = require('N/record'),
         ns_search = require('N/search'),
-        vc2_global = require('./CTC_VC2_Constants.js');
+        vc2_constant = require('./CTC_VC2_Constants.js');
 
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
-    var vc2_util = {
-        CACHE: {},
+    var vc2_util = {};
+
+    //CHECKERS
+    util.extend(vc2_util, {
         isEmpty: function (stValue) {
             return (
                 stValue === '' ||
@@ -45,16 +47,26 @@ define(function (require) {
             for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
+        isUndefined: function (value) {
+            // Obtain `undefined` value that's guaranteed to not have been re-assigned
+            var undefined = void 0;
+            return value === undefined;
+        }
+    });
+
+    // CACHE
+    util.extend(vc2_util, {
+        CACHE: {},
         getCache: function (cacheKey) {
             return vc2_util.CACHE.hasOwnProperty(cacheKey) ? vc2_util.CACHE[cacheKey] : null;
         },
         setCache: function (cacheKey, objVar) {
             vc2_util.CACHE[cacheKey] = objVar;
-        },
-        getUsage: function () {
-            var REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
-            return '[rem-usage:' + REMUSAGE + '] ';
-        },
+        }
+    });
+
+    // UTILS
+    util.extend(vc2_util, {
         uniqueArray: function (arrVar) {
             var arrNew = [];
             for (var i = 0, j = arrVar.length; i < j; i++) {
@@ -83,7 +95,21 @@ define(function (require) {
             return true;
         },
         parseFloat: function (stValue) {
-            return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
+            var returnValue = stValue
+                ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0')
+                : 0;
+
+            // if (returnValue == 0) {
+            //     vc2_util.log('parseFloat', [
+            //         stValue,
+            //         stValue.toString(),
+            //         stValue.toString().replace(/[^0-9.-]+/g, ''),
+            //         stValue.toString().replace(/[^0-9.-]+/g, '') || '0',
+            //         parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0')
+            //     ]);
+            // }
+
+            return returnValue;
         },
         forceInt: function (stValue) {
             var intValue = parseInt(stValue, 10);
@@ -108,6 +134,136 @@ define(function (require) {
             if (!vc2_util.isUndefined(node)) return node.textContent;
             else return null;
         },
+        loadModule: function (mod) {
+            var returnValue = require(mod);
+            return returnValue;
+        },
+        parseDate: function (option) {
+            var logTitle = [LogTitle, 'parseDate'].join('::');
+
+            var dateString = option.dateString || option,
+                dateFormat = vc2_util.CACHE.DATE_FORMAT,
+                date = '';
+
+            if (!dateFormat) {
+                try {
+                    require(['N/config'], function (config) {
+                        var generalPref = config.load({
+                            type: config.Type.COMPANY_PREFERENCES
+                        });
+                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+                        return true;
+                    });
+                } catch (e) {}
+
+                if (!dateFormat) {
+                    try {
+                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+                    } catch (e) {}
+                }
+                vc2_util.CACHE.DATE_FORMAT = dateFormat;
+            }
+
+            if (dateString && dateString.length > 0 && dateString != 'NA') {
+                try {
+                    var stringToProcess = dateString
+                        .replace(/-/g, '/')
+                        .replace(/\n/g, ' ')
+                        .split(' ');
+
+                    for (var i = 0; i < stringToProcess.length; i++) {
+                        var singleString = stringToProcess[i];
+                        if (singleString) {
+                            var stringArr = singleString.split('T'); //handle timestamps with T
+                            singleString = stringArr[0];
+                            var convertedDate = new Date(singleString);
+
+                            if (!date || convertedDate > date) date = convertedDate;
+                        }
+                    }
+                } catch (e) {
+                    log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
+                }
+            }
+
+            //Convert to string
+            if (date) {
+                //set date
+                var year = date.getFullYear();
+                if (year < 2000) {
+                    year += 100;
+                    date.setFullYear(year);
+                }
+
+                date = ns_format.format({
+                    value: date,
+                    type: dateFormat ? dateFormat : ns_format.Type.DATE
+                });
+            }
+
+            // log.audit(
+            //     logTitle,
+            //     JSON.stringify({
+            //         param: option,
+            //         dateString: dateString,
+            //         format: dateFormat,
+            //         dateValue: date
+            //     })
+            // );
+
+            return date;
+        },
+        flatLookup: function (option) {
+            var arrData = null,
+                arrResults = null;
+
+            arrResults = ns_search.lookupFields(option);
+
+            if (arrResults) {
+                arrData = {};
+                for (var fld in arrResults) {
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
+                }
+            }
+            return arrData;
+        },
+        waitRandom: function (max) {
+            var logTitle = [LogTitle, 'waitRandom'].join('::');
+
+            var waitTimeMS = Math.floor(Math.random() * Math.floor(max));
+            max = max || 5000;
+
+            log.audit(logTitle, 'waiting for ' + waitTimeMS);
+            var nowDate = new Date(),
+                isDone = false;
+
+            while (!isDone) {
+                var deltaMs = new Date() - nowDate;
+                isDone = deltaMs >= waitTimeMS;
+                if (deltaMs % 1000 == 0) {
+                    log.audit(logTitle, '...' + deltaMs);
+                }
+            }
+            log.audit(logTitle, '>> Total Wait: ' + (new Date() - nowDate));
+            return true;
+        },
+        randomStr: function (len) {
+            len = len || 5;
+            var str = new Date().getTime().toString();
+            return str.substring(str.length - len, str.length);
+        },
+        roundOff: function (value) {
+            var flValue = util.isNumber(value) ? value : this.forceFloat(value || '0');
+            if (!flValue || isNaN(flValue)) return 0;
+
+            return Math.round(flValue * 100) / 100;
+        }
+    });
+
+    // WEB SERVICES
+    util.extend(vc2_util, {
         generateSerialLink: function (option) {
             var ns_url = vc2_util.loadModule('N/url');
 
@@ -116,28 +272,12 @@ define(function (require) {
                 hostType: ns_url.HostType.APPLICATION
             });
             var linkUrl = ns_url.resolveScript({
-                scriptId: vc2_global.SCRIPT.VIEW_SERIALS_SL,
-                deploymentId: vc2_global.DEPLOYMENT.VIEW_SERIALS_SL,
+                scriptId: vc2_constant.SCRIPT.VIEW_SERIALS_SL,
+                deploymentId: vc2_constant.DEPLOYMENT.VIEW_SERIALS_SL,
                 params: option
             });
 
             return protocol + domain + linkUrl;
-        },
-        isUndefined: function (value) {
-            // Obtain `undefined` value that's guaranteed to not have been re-assigned
-            var undefined = void 0;
-            return value === undefined;
-        },
-        extractError: function (option) {
-            option = option || {};
-            var errorMessage = util.isString(option)
-                ? option
-                : option.message || option.error || JSON.stringify(option);
-
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
-
-            return errorMessage;
         },
         convertToQuery: function (json) {
             if (typeof json !== 'object') return;
@@ -150,110 +290,6 @@ define(function (require) {
             }
 
             return qry.join('&');
-        },
-        vcLog: function (option) {
-            var logTitle = [LogTitle, 'vcLog'].join('::');
-            // log.audit(logTitle, option);
-
-            var VC_LOG = vc2_global.RECORD.VC_LOG,
-                LOG_STATUS = vc2_global.LIST.VC_LOG_STATUS;
-
-            try {
-                var logOption = {},
-                    batchTransaction = option.batch,
-                    isBatched = batchTransaction != null;
-                logOption.APPLICATION = option.appName || vc2_global.LOG_APPLICATION;
-                logOption.HEADER = option.title || logOption.APPLICATION;
-                logOption.BODY =
-                    option.body ||
-                    option.content ||
-                    option.message ||
-                    option.errorMessage ||
-                    option.errorMsg ||
-                    (option.error ? vc2_util.extractError(option.error) : '');
-
-                logOption.BODY = util.isString(logOption.BODY)
-                    ? logOption.BODY
-                    : JSON.stringify(logOption.BODY);
-
-                if (
-                    option.status &&
-                    vc2_util.inArray(option.status, [
-                        LOG_STATUS.ERROR,
-                        LOG_STATUS.INFO,
-                        LOG_STATUS.SUCCESS
-                    ])
-                )
-                    logOption.STATUS = option.status;
-                else if (option.isError || option.error || option.errorMessage || option.errorMsg)
-                    logOption.STATUS = LOG_STATUS.ERROR;
-                else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
-                else logOption.STATUS = LOG_STATUS.INFO;
-
-                logOption.TRANSACTION =
-                    option.recordId || option.transaction || option.id || option.internalid || '';
-
-                logOption.DATE = new Date();
-                // log.audit(logTitle, logOption);
-
-                if (isBatched) {
-                    var VC_LOG_BATCH = vc2_global.RECORD.VC_LOG_BATCH;
-                    var batchOption = {
-                        TRANSACTION: batchTransaction
-                    };
-                    // create the log as an inline item
-                    var recBatch =
-                        this._batchedVCLogs[batchTransaction] ||
-                        ns_record.create({ type: VC_LOG_BATCH.ID });
-                    for (var field in VC_LOG_BATCH.FIELD) {
-                        var fieldName = VC_LOG_BATCH.FIELD[field];
-                        recBatch.setValue({
-                            fieldId: fieldName,
-                            value: batchOption[field] || ''
-                        });
-                    }
-                    var sublistId = ['recmach', VC_LOG.FIELD.BATCH].join(''),
-                        line = recBatch.getLineCount({
-                            sublistId: sublistId
-                        });
-                    for (var column in VC_LOG.FIELD) {
-                        var columnName = VC_LOG.FIELD[column];
-                        recBatch.setSublistValue({
-                            sublistId: sublistId,
-                            fieldId: columnName,
-                            line: line,
-                            value: logOption[column] || ''
-                        });
-                    }
-                    this._batchedVCLogs[batchTransaction] = recBatch;
-                    log.audit(logOption.HEADER, logOption.BODY);
-                } else {
-                    // create the log
-                    var recLog = ns_record.create({ type: VC_LOG.ID });
-                    for (var field in VC_LOG.FIELD) {
-                        var fieldName = VC_LOG.FIELD[field];
-                        // log.audit(
-                        //     logTitle,
-                        //     '>> set log field: ' +
-                        //         JSON.stringify([field, fieldName, logOption[field] || ''])
-                        // );
-
-                        recLog.setValue({
-                            fieldId: fieldName,
-                            value: logOption[field] || ''
-                        });
-                    }
-                    recLog.save();
-                    // log.audit(logOption.HEADER, logOption.BODY);
-                }
-            } catch (error) {
-                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc2_util.extractError(error));
-            }
-            return true;
-        },
-        loadModule: function (mod) {
-            var returnValue = require(mod);
-            return returnValue;
         },
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
@@ -298,7 +334,7 @@ define(function (require) {
             if (option.isXML) param.isJSON = false;
 
             // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
-            var LOG_STATUS = vc2_global.LIST.VC_LOG_STATUS;
+            var LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
             var startTime = new Date();
             try {
                 if (!param.noLogs) {
@@ -412,7 +448,186 @@ define(function (require) {
             }
 
             return returnValue;
+        }
+    });
+
+    // LOGS
+    util.extend(vc2_util, {
+        getUsage: function () {
+            var REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
+            return '[usage:' + REMUSAGE + '] ';
         },
+        extractError: function (option) {
+            option = option || {};
+            var errorMessage = util.isString(option)
+                ? option
+                : option.message || option.error || JSON.stringify(option);
+
+            if (!errorMessage || !util.isString(errorMessage))
+                errorMessage = 'Unexpected Error occurred';
+
+            return errorMessage;
+        },
+        vcLog: function (option) {
+            var logTitle = [LogTitle, 'vcLog'].join('::');
+            // log.audit(logTitle, option);
+
+            var VC_LOG = vc2_constant.RECORD.VC_LOG,
+                LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
+            try {
+                var logOption = {},
+                    batchTransaction = option.batch,
+                    isBatched = batchTransaction != null;
+                logOption.APPLICATION = option.appName || vc2_constant.LOG_APPLICATION;
+                logOption.HEADER = option.title || logOption.APPLICATION;
+                logOption.BODY =
+                    option.body ||
+                    option.content ||
+                    option.message ||
+                    option.errorMessage ||
+                    option.errorMsg ||
+                    (option.error ? vc2_util.extractError(option.error) : '');
+
+                logOption.BODY = util.isString(logOption.BODY)
+                    ? logOption.BODY
+                    : JSON.stringify(logOption.BODY);
+
+                if (
+                    option.status &&
+                    vc2_util.inArray(option.status, [
+                        LOG_STATUS.ERROR,
+                        LOG_STATUS.INFO,
+                        LOG_STATUS.SUCCESS
+                    ])
+                )
+                    logOption.STATUS = option.status;
+                else if (option.isError || option.error || option.errorMessage || option.errorMsg)
+                    logOption.STATUS = LOG_STATUS.ERROR;
+                else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
+                else logOption.STATUS = LOG_STATUS.INFO;
+
+                logOption.TRANSACTION =
+                    option.recordId || option.transaction || option.id || option.internalid || '';
+
+                logOption.DATE = new Date();
+                // log.audit(logTitle, logOption);
+
+                if (isBatched) {
+                    var VC_LOG_BATCH = vc2_constant.RECORD.VC_LOG_BATCH;
+                    var batchOption = {
+                        TRANSACTION: batchTransaction
+                    };
+                    // create the log as an inline item
+                    var recBatch =
+                        this._batchedVCLogs[batchTransaction] ||
+                        ns_record.create({ type: VC_LOG_BATCH.ID });
+                    for (var field in VC_LOG_BATCH.FIELD) {
+                        var fieldName = VC_LOG_BATCH.FIELD[field];
+                        recBatch.setValue({
+                            fieldId: fieldName,
+                            value: batchOption[field] || ''
+                        });
+                    }
+                    var sublistId = ['recmach', VC_LOG.FIELD.BATCH].join(''),
+                        line = recBatch.getLineCount({
+                            sublistId: sublistId
+                        });
+                    for (var column in VC_LOG.FIELD) {
+                        var columnName = VC_LOG.FIELD[column];
+                        recBatch.setSublistValue({
+                            sublistId: sublistId,
+                            fieldId: columnName,
+                            line: line,
+                            value: logOption[column] || ''
+                        });
+                    }
+                    this._batchedVCLogs[batchTransaction] = recBatch;
+                    log.audit(logOption.HEADER, logOption.BODY);
+                } else {
+                    // create the log
+                    var recLog = ns_record.create({ type: VC_LOG.ID });
+                    for (var field in VC_LOG.FIELD) {
+                        var fieldName = VC_LOG.FIELD[field];
+                        // log.audit(
+                        //     logTitle,
+                        //     '>> set log field: ' +
+                        //         JSON.stringify([field, fieldName, logOption[field] || ''])
+                        // );
+
+                        recLog.setValue({
+                            fieldId: fieldName,
+                            value: logOption[field] || ''
+                        });
+                    }
+                    recLog.save();
+                    // log.audit(logOption.HEADER, logOption.BODY);
+                }
+            } catch (error) {
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc2_util.extractError(error));
+            }
+            return true;
+        },
+        _batchedVCLogs: {},
+        submitVCLogBatch: function (batchTransaction) {
+            var logTitle = [LogTitle, 'submitVCLogBatch'].join('::');
+            var recBatch = this._batchedVCLogs[batchTransaction];
+            if (recBatch) {
+                var VC_LOG = vc2_constant.RECORD.VC_LOG,
+                    sublistId = ['recmach', VC_LOG.FIELD.BATCH].join('');
+                var lineCount = recBatch.getLineCount({
+                    sublistId: sublistId
+                });
+                if (lineCount > 0) {
+                    recBatch.save();
+                    log.audit(logTitle, 'VC Logs submitted for batch ' + batchTransaction);
+                } else {
+                    recBatch = null;
+                }
+            }
+            if (!recBatch) {
+                log.debug(logTitle, 'No VC Logs to submit for batch ' + batchTransaction);
+            }
+        },
+        LogPrefix: null,
+        log: function (logTitle, msg, objvar) {
+            var logMsg = msg,
+                logType = 'audit',
+                logPrefx = this.LogPrefix || '';
+
+            try {
+                if (!util.isString(msg)) {
+                    logMsg = msg.msg || msg.text || msg.content || '';
+                    logPrefx = msg.prefix || msg.prfx || msg.pre || logPrefx;
+                    logType = msg.type || 'audit';
+                }
+
+                log[logType || 'audit'](
+                    logTitle,
+                    vc2_util.getUsage() +
+                        (logPrefx ? logPrefx + ' ' : '') +
+                        logMsg +
+                        (!vc2_util.isEmpty(objvar) ? JSON.stringify(objvar) : '')
+                );
+            } catch (error) {}
+
+            return true;
+        },
+        logError: function (logTitle, errorMsg) {
+            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR ###' }, errorMsg);
+            return;
+        },
+        logDebug: function (logTitle, msg, msgVar) {
+            var msgObj = util.isString(msg) ? { msg: msg } : msg;
+            msgObj.type = 'debug';
+
+            vc2_util.log(logTitle, msgObj, msgVar);
+            return;
+        }
+    });
+
+    // NS API
+    util.extend(vc2_util, {
         searchAllPaged: function (option) {
             var objSearch,
                 arrResults = [],
@@ -477,157 +692,17 @@ define(function (require) {
 
             return arrResults;
         },
-        parseDate: function (option) {
-            var logTitle = [LogTitle, 'parseDate'].join('::');
-
-            var dateString = option.dateString || option,
-                dateFormat = vc2_util.CACHE.DATE_FORMAT,
-                date = '';
-
-            if (!dateFormat) {
-                try {
-                    require(['N/config'], function (config) {
-                        var generalPref = config.load({
-                            type: config.Type.COMPANY_PREFERENCES
-                        });
-                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                        return true;
-                    });
-                } catch (e) {}
-
-                if (!dateFormat) {
-                    try {
-                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
-                    } catch (e) {}
-                }
-                vc2_util.CACHE.DATE_FORMAT = dateFormat;
-            }
-
-            if (dateString && dateString.length > 0 && dateString != 'NA') {
-                try {
-                    var stringToProcess = dateString
-                        .replace(/-/g, '/')
-                        .replace(/\n/g, ' ')
-                        .split(' ');
-
-                    for (var i = 0; i < stringToProcess.length; i++) {
-                        var singleString = stringToProcess[i];
-                        if (singleString) {
-                            var stringArr = singleString.split('T'); //handle timestamps with T
-                            singleString = stringArr[0];
-                            var convertedDate = new Date(singleString);
-
-                            if (!date || convertedDate > date) date = convertedDate;
-                        }
-                    }
-                } catch (e) {
-                    log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
-                }
-            }
-
-            //Convert to string
-            if (date) {
-                //set date
-                var year = date.getFullYear();
-                if (year < 2000) {
-                    year += 100;
-                    date.setFullYear(year);
-                }
-
-                date = ns_format.format({
-                    value: date,
-                    type: dateFormat ? dateFormat : ns_format.Type.DATE
-                });
-            }
-
-            log.audit(
-                logTitle,
-                JSON.stringify({
-                    param: option,
-                    dateString: dateString,
-                    format: dateFormat,
-                    dateValue: date
-                })
-            );
-
-            return date;
-        },
-        flatLookup: function (option) {
-            var arrData = null,
-                arrResults = null;
-
-            arrResults = ns_search.lookupFields(option);
-
-            if (arrResults) {
-                arrData = {};
-                for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
-                }
-            }
-            return arrData;
-        },
-        waitRandom: function (max) {
-            var logTitle = [LogTitle, 'waitRandom'].join('::');
-
-            var waitTimeMS = Math.floor(Math.random() * Math.floor(max));
-            max = max || 5000;
-
-            log.audit(logTitle, 'waiting for ' + waitTimeMS);
-            var nowDate = new Date(),
-                isDone = false;
-
-            while (!isDone) {
-                var deltaMs = new Date() - nowDate;
-                isDone = deltaMs >= waitTimeMS;
-                if (deltaMs % 1000 == 0) {
-                    log.audit(logTitle, '...' + deltaMs);
-                }
-            }
-            log.audit(logTitle, '>> Total Wait: ' + (new Date() - nowDate));
-            return true;
-        },
-        randomStr: function (len) {
-            len = len || 5;
-            var str = new Date().getTime().toString();
-            return str.substring(str.length - len, str.length);
-        },
-        roundOff: function (value) {
-            var flValue = util.isNumber(value) ? value : this.forceFloat(value || '0');
-            if (!flValue || isNaN(flValue)) return 0;
-
-            return Math.round(flValue * 100) / 100;
-        },
-        _batchedVCLogs: {},
-        submitVCLogBatch: function (batchTransaction) {
-            var logTitle = [LogTitle, 'submitVCLogBatch'].join('::');
-            var recBatch = this._batchedVCLogs[batchTransaction];
-            if (recBatch) {
-                var VC_LOG = vc2_global.RECORD.VC_LOG,
-                    sublistId = ['recmach', VC_LOG.FIELD.BATCH].join('');
-                var lineCount = recBatch.getLineCount({
-                    sublistId: sublistId
-                });
-                if (lineCount > 0) {
-                    recBatch.save();
-                    log.audit(logTitle, 'VC Logs submitted for batch ' + batchTransaction);
-                } else {
-                    recBatch = null;
-                }
-            }
-            if (!recBatch) {
-                log.debug(logTitle, 'No VC Logs to submit for batch ' + batchTransaction);
-            }
-        },
         isOneWorld: function () {
             return ns_runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
-        },
+        }
+    });
+
+    // object
+    util.extend(vc2_util, {
         extend: function (source, contrib) {
             // do this to preserve the source values
             return util.extend(util.extend({}, source), contrib);
         },
-
         removeNullValues: function (option) {
             var newObj = {};
             if (!option || vc2_util.isEmpty(option) || !util.isObject(option)) return newObj;
@@ -639,7 +714,6 @@ define(function (require) {
 
             return newObj;
         },
-
         copyValues: function (source, contrib, option) {
             option = option || {};
             if (!util.isObject(source) || !util.isObject(contrib)) return false;
@@ -662,47 +736,9 @@ define(function (require) {
 
             return newSource;
         },
-
-        // findMatching: function (option) {
-        //     var logTitle = [LogTitle, 'findMatching'].join('::'),
-        //         returnValue;
-
-        //     var dataSource = option.dataSource || option.dataSet,
-        //         filter = option.filter,
-        //         findAll = option.findAll;
-
-        //     if (vc_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
-
-        //     var arrResults = [],
-        //         arrIndex = [];
-        //     for (var i = 0, j = dataSource.length; i < j; i++) {
-        //         var isFound = true;
-        //         for (var fld in filter) {
-        //             if (dataSource[i][fld] != filter[fld]) {
-        //                 isFound = false;
-        //                 break;
-        //             }
-        //         }
-        //         if (isFound) {
-        //             arrResults.push(dataSource[i]);
-        //             arrIndex.push(i);
-        //             if (!findAll) break;
-        //         }
-        //     }
-
-        //     returnValue = {
-        //         data:
-        //             arrResults && arrResults.length
-        //                 ? findAll
-        //                     ? arrResults
-        //                     : arrResults.shift()
-        //                 : false,
-        //         index: arrIndex && arrIndex.length ? (findAll ? arrIndex : arrIndex.shift()) : false
-        //     };
-
-        //     return returnValue;
-        // },
-
+        clone: function (obj) {
+            return JSON.parse(JSON.stringify(obj));
+        },
         findMatching: function (option) {
             var logTitle = [LogTitle, 'findMatching'].join('::'),
                 returnValue;
@@ -720,6 +756,7 @@ define(function (require) {
                     isFound = util.isFunction(filter[fld])
                         ? filter[fld].call(dataSource[i], dataSource[i][fld])
                         : dataSource[i][fld] == filter[fld];
+
                     if (!isFound) break;
                 }
 
@@ -757,6 +794,80 @@ define(function (require) {
 
             return returnValue;
         },
+        arrayKeys: function (option) {
+            var logTitle = [LogTitle, 'getKeyValues'].join('::'),
+                returnValue = [];
+
+            if (vc2_util.isEmpty(option)) return false;
+
+            for (var fld in option) {
+                if (!vc2_util.inArray(fld, returnValue)) returnValue.push(fld);
+            }
+
+            return returnValue;
+        },
+        getKeysFromValues: function (option) {
+            var logTitle = [LogTitle, 'getKeyValues'].join('::'),
+                returnValue;
+
+            var sourceObj = option.source || option.sourceObj,
+                values = option.value || option.values;
+
+            if (
+                vc2_util.isEmpty(sourceObj) ||
+                vc2_util.isEmpty(values) ||
+                !util.isObject(sourceObj) ||
+                (!util.isArray(values) && !util.isString(values))
+            )
+                return false;
+
+            if (!util.isArray(values)) values = [values];
+
+            returnValue = [];
+            for (var fld in sourceObj) {
+                if (
+                    vc2_util.inArray(sourceObj[fld], values) &&
+                    !vc2_util.inArray(fld, returnValue)
+                ) {
+                    returnValue.push(fld);
+                }
+            }
+
+            return returnValue;
+        },
+        getValuesFromKeys: function (option) {
+            var logTitle = [LogTitle, 'getValuesFromKeys'].join('::'),
+                returnValue;
+
+            var sourceObj = option.source || option.sourceObj,
+                params = option.params || option.keys;
+
+            if (
+                vc2_util.isEmpty(sourceObj) ||
+                vc2_util.isEmpty(params) ||
+                !util.isObject(sourceObj) ||
+                (!util.isArray(params) && !util.isString(params))
+            )
+                return false;
+
+            if (!util.isArray(params)) params = [params];
+
+            returnValue = [];
+            for (var fld in sourceObj) {
+                if (
+                    vc2_util.inArray(fld, params) &&
+                    !vc2_util.inArray(sourceObj[fld], returnValue)
+                ) {
+                    returnValue.push(sourceObj[fld]);
+                }
+            }
+
+            return returnValue;
+        }
+    });
+
+    // files
+    util.extend(vc2_util, {
         getCurrentFolder: function (option) {
             var returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
@@ -907,7 +1018,7 @@ define(function (require) {
 
             return returnValue;
         }
-    };
+    });
 
     return vc2_util;
 });

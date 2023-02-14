@@ -22,7 +22,8 @@ define(function (require) {
         LogPrefix = '',
         Current = {};
 
-    var VC_ItemFF = {};
+    var VC_ItemFF = {        
+    };
 
     return VC_ItemFF;
 });

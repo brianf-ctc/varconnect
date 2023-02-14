@@ -22,7 +22,35 @@ define(function (require) {
         LogPrefix = '',
         Current = {};
 
-    var VC_ItemFF = {};
+    var OrderStatusLib = {
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::');
 
-    return VC_ItemFF;
+            try {
+                Current.Script = ns_runtime.getCurrentScript();
+                Current.Features = {
+                    MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
+                    MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+                };
+                Current.PO_ID = option.poId || option.purchaseOrderId;
+                Current.SO_ID = option.soId || option.salesOrderId;
+
+                LogPrefix = '[purchaseorder:' + Current.PO_ID + ']';
+            } catch (error) {
+                var errorMsg = vc2_util.extractError(error);
+                log.error(
+                    logTitle,
+                    vc2_util.getUsage() +
+                        (LogPrefix + '## ERROR:  ') +
+                        (errorMsg + '| Details: ' + JSON.stringify(error))
+                );
+                Helper.logMsg({ title: logTitle + ':: Error', error: error });
+                throw error;
+                return false;
+            } finally {
+            }
+        }
+    };
+
+    return OrderStatusLib;
 });
