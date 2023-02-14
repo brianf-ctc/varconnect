@@ -299,6 +299,9 @@ define([
                     });
                 });
 
+                // set the createdby field
+                recItemFF.setValue({ fieldId: 'custbody_ctc_vc_createdby_vc', value: true });
+
                 var newRecordId = recItemFF.save();
                 if (newRecordId) {
                     log.audit(

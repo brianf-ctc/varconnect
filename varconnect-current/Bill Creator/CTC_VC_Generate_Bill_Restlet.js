@@ -27,7 +27,7 @@ define([
     ns_search,
     ns_format,
     ns_runtime,
-    vc2_constants,
+    vc2_constant,
     vc2_util,
     vc_recordlib,
     vc_mainCfg,
@@ -54,7 +54,7 @@ define([
             }
         },
         LogPrefix = '',
-        BILL_CREATOR = vc2_constants.Bill_Creator;
+        BILL_CREATOR = vc2_constant.Bill_Creator;
 
     var VARIANCE_DEF = {},
         VARIANCE_TYPE = {
@@ -626,6 +626,12 @@ define([
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
                     return returnObj;
                 }
+
+                // set the createdby field
+                Current.POBILL_REC.setValue({
+                    fieldId: 'custbody_ctc_vc_createdby_vc',
+                    value: true
+                });
 
                 var newRecordId = Current.POBILL_REC.save({
                     enableSourcing: true,
