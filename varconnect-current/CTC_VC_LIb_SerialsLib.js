@@ -15,8 +15,8 @@
  **/
 
 /*
- *@NApiVersion 2.x
- *@NModuleScope Public
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 define(['N/search', 'N/https', 'N/record'], function (search, https, record) {

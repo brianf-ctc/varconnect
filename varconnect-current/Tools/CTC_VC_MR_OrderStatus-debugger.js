@@ -13,25 +13,26 @@
  * @NScriptType MapReduceScript
  */
 
-define([
+var VCFolder = '/SuiteScripts/VCFolder';
+
+require([
     'N/search',
     'N/runtime',
     'N/record',
     'N/https',
-    './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Record',
-    './CTC_Create_Item_Fulfillment',
-    './CTC_Create_Item_Receipt',
+    VCFolder + '/CTC_VC2_Lib_Utils',
+    VCFolder + '/CTC_VC2_Constants.js',
+    VCFolder + '/CTC_VC2_Lib_Record',
+    VCFolder + '/CTC_VC_Lib_Fulfillment',
+    VCFolder + '/CTC_VC_Lib_ItemReceipt',
 
-    './CTC_VC_Lib_Record.js',
+    VCFolder + '/CTC_VC_Lib_Record.js',
 
-    './CTC_VC_Lib_MainConfiguration',
-    './CTC_VC_Lib_VendorConfig',
-    './CTC_VC_Lib_WebService',
+    VCFolder + '/CTC_VC_Lib_MainConfiguration',
+    VCFolder + '/CTC_VC_Lib_VendorConfig',
+    VCFolder + '/CTC_VC_Lib_WebService',
 
-    './CTC_VC_Lib_LicenseValidator',
-    './CTC_VC_Lib_Log.js'
+    VCFolder + '/CTC_VC_Lib_LicenseValidator'
 ], function (
     ns_search,
     ns_runtime,
@@ -46,13 +47,15 @@ define([
     vc_maincfg,
     vc_vendorcfg,
     vc_websvclib,
-    vc_license,
-    vc_log
+    vc_license
 ) {
     var LogTitle = 'MR_OrderStatus';
     var LogPrefix = '';
     var Params = {},
         Current = {};
+
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     /////////////////////////////////////////////////////////
     var MAP_REDUCE = {};
@@ -63,15 +66,18 @@ define([
     MAP_REDUCE.getInputData = function () {
         var logTitle = [LogTitle, 'getInputData'].join('::');
         vc2_util.logDebug(logTitle, '###### START OF SCRIPT ######');
+
         var returnValue;
 
         try {
             Params = {
-                searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                // searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
+                searchId: 'customsearch_ctc_open_po_search',
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_orderstatus_tranid'),
+                internalid: '31842',
+                // internalid: '4433376' ns_runtime
+                //     .getCurrentScript()
+                //     .getParameter('custscript_orderstatus_tranid'),
                 use_fulfill_rl: ns_runtime
                     .getCurrentScript()
                     .getParameter('custscript_fulfillcreate_restlet')
@@ -110,6 +116,12 @@ define([
                 searchNew.columns.push(
                     ns_search.createColumn({
                         name: vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM
+                    })
+                );
+                // add the override column
+                searchNew.columns.push(
+                    ns_search.createColumn({
+                        name: 'custbody_ctc_bypass_vc'
                     })
                 );
             } else {
@@ -179,7 +191,7 @@ define([
 
             returnValue = searchNew;
         } catch (error) {
-            logError(logTitle, error);
+            vc2_util.logError(logTitle, error);
             throw vc2_util.extractError(error);
         }
 
@@ -191,13 +203,12 @@ define([
             totalResults
         );
 
-        vc_log.recordLog({
-            header: 'VAR Connect START',
+        vc2_util.vcLog({
+            title: 'VAR Connect START',
             body:
                 'VAR Connect START' +
                 ('\n\nTotal Orders: ' + totalResults) +
-                ('\n\nParameters: ' + JSON.stringify(Params)),
-            status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                ('\n\nParameters: ' + JSON.stringify(Params))
         });
 
         return returnValue;
@@ -227,7 +238,10 @@ define([
             Current.poId = searchResult.id;
             Current.poNum = searchResult.values.tranid;
             Current.tranDate = searchResult.values.trandate;
-            Current.vendor = searchResult.values.entity.value;
+            Current.vendor = searchResult.values.entity[0].value;
+
+            Current.byPassVC = searchResult.values.custbody_ctc_bypass_vc;
+
             Current.subsidiary = Helper.getSubsidiary(Current.poId);
 
             LogPrefix = 'MAP [purchaseorder:' + Current.poId + '] ';
@@ -236,10 +250,14 @@ define([
 
             vc2_util.log(logTitle, '..current: ', Current);
 
+            if (Current.byPassVC == 'T' || Current.byPassVC === true) {
+                throw 'Bypass VAR Connect is checked on this PO';
+            }
+
             Current.MainCFG = Helper.loadMainConfig();
             Current.VendorCFG = Helper.loadVendorConfig({
                 vendor: Current.vendor,
-                vendorName: searchResult.values.entity.text,
+                vendorName: searchResult.values.entity[0].text,
                 subsidiary: Current.subsidiary
             });
             if (!Current.VendorCFG) return;
@@ -282,7 +300,7 @@ define([
                 countryCode: countryCode
             });
 
-            vc2_util.log(logTitle, '... line values: ', outputObj);
+            vc2_util.log(logTitle, '...  outputObj: ', outputObj);
             ////////////////////////////////////////////////
 
             ////////////////////////////////////////////////
@@ -293,6 +311,8 @@ define([
             ) {
                 throw outputObj.isError ? outputObj.errorMessage : 'No lines to process.';
             }
+
+            // throw '** EXIT **';
 
             ////////////////////////////////////////////////
             /// UPDATE PO //////
@@ -310,12 +330,10 @@ define([
             if (updateStatus) {
                 Current.soId = updateStatus.id;
                 if (updateStatus.error && updateStatus.lineuniquekey) {
-                    vc_log.recordLog({
-                        header: 'PO Update | Error',
-                        body: vc2_util.extractError(updateStatus.error),
-                        transaction: Current.poId,
-                        transactionLineKey: updateStatus.lineuniquekey,
-                        status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                    vc2_util.vcLog({
+                        title: 'PO Update | Error',
+                        error: updateStatus.error,
+                        recordId: Current.poId
                     });
                 }
             }
@@ -458,7 +476,8 @@ define([
                     for (var iii = 0; iii < serialArray.length; iii++) {
                         if (serialArray[iii] == '') continue;
 
-                        mapContext.write(serialArray[iii], {
+                        // mapContext.write(serialArray[iii], {
+                        mapContextWrite(serialArray[iii], {
                             poId: Current.poId,
                             itemnum: lineData.item_num,
                             lineData: lineData,
@@ -476,11 +495,11 @@ define([
         } catch (error) {
             vc2_util.logError(logTitle, error);
 
-            vc_log.recordLog({
-                header: LogTitle + ' | Error',
-                body: vc2_util.extractError(error),
-                transaction: Current.poId,
-                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+            vc2_util.vcLog({
+                title: 'MR Order Status | Error',
+                error: error,
+                recordId: Current.poId,
+                status: LOG_STATUS.ERROR
             });
         } finally {
             vc2_util.logDebug(logTitle, '###### END: MAP ###### ');
@@ -550,7 +569,7 @@ define([
             record: po_record,
             mainConfig: currentData.mainConfig,
             vendorConfig: currentData.vendorConfig,
-            vendorLine: currentData.lineData, 
+            vendorLine: currentData.lineData,
             orderLines: arrOrderLines
         });
 
@@ -656,10 +675,9 @@ define([
         });
         vc2_util.log(logTitle, 'REDUCE keys processed', reduceKeys);
 
-        vc_log.recordLog({
-            header: 'VAR Connect END',
-            body: 'VAR Connect END',
-            status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+        vc2_util.vcLog({
+            title: 'VAR Connect END',
+            message: 'VAR Connect END'
         });
 
         vc2_util.logDebug(logTitle, '###### END OF SCRIPT ###### ');
@@ -1005,27 +1023,25 @@ define([
                             var respdata = respBody[noteId];
 
                             if (respdata.msg) {
-                                vc_log.recordLog({
-                                    header: 'Fulfillment Creation | Notes',
-                                    body:
+                                vc2_util.vcLog({
+                                    title: 'Fulfillment Creation | Notes',
+                                    message:
                                         noteId +
                                         ' - ' +
                                         (util.isArray(respdata.msg)
                                             ? respdata.msg.join('\r\n')
                                             : respdata.msg),
-                                    transaction: Current.poId,
-                                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                                    recordId: Current.poId
                                 });
                             }
                             if (respdata.error) {
-                                vc_log.recordLog({
-                                    header: 'Fulfillment Creation | Error',
-                                    body:
+                                vc2_util.vcLog({
+                                    title: 'Fulfillment Creation | Error',
+                                    message:
                                         noteId + ' - ' + util.isArray(respdata.error)
                                             ? respdata.error.join('\r\n')
                                             : respdata.error,
-                                    transaction: Current.poId,
-                                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                                    recordId: Current.poId
                                 });
                             }
                         }
@@ -1047,11 +1063,10 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
-                vc_log.recordLog({
-                    header: 'Fulfillment Creation | Error',
-                    body: vc2_util.extractError(error),
-                    transaction: Current.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                vc2_util.vcLog({
+                    title: 'Fulfillment Creation | Error',
+                    error: error,
+                    recordId: Current.poId
                 });
             }
 
@@ -1074,11 +1089,10 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
-                vc_log.recordLog({
-                    header: 'Fulfillment Creation | Error',
-                    body: vc2_util.extractError(error),
-                    transaction: Current.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                vc2_util.vcLog({
+                    title: 'Fulfillment Creation | Error',
+                    error: error,
+                    recordId: Current.poId
                 });
             }
 
@@ -1099,11 +1113,10 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
-                vc_log.recordLog({
-                    header: 'Item Receipt Creation | Error',
-                    body: vc2_util.extractError(error),
-                    transaction: Current.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                vc2_util.vcLog({
+                    title: 'Item Receipt Creation | Error',
+                    error: error,
+                    transaction: Current.poId
                 });
             }
 
@@ -1111,5 +1124,114 @@ define([
         }
     };
 
-    return MAP_REDUCE;
+    ///////////////////////
+    //////////////////////
+    var searchResults = MAP_REDUCE.getInputData(),
+        arrReduceData = {};
+
+    searchResults.run().each(function (result, idx) {
+        MAP_REDUCE.map.call(this, { key: idx, value: JSON.stringify(result) });
+        return true;
+    });
+    var mapContextWrite = function (key, value) {
+        if (!arrReduceData[key]) arrReduceData[key] = [];
+        arrReduceData[key].push(JSON.stringify(value));
+    };
+    //////////////////////
+    //////////////////////
+
+    // return MAP_REDUCE;
 });
+
+// if (CURRENT.recordNum == 'POQ4497') {
+//     return [
+//         {
+//             line_num: '001',
+//             item_num: 'QCARERSW',
+//             item_num_alt: '430QQA',
+//             vendorSKU: '430QQA',
+//             order_num: '40-MW400-11',
+//             line_status: 'Shipped',
+//             ship_qty: 1,
+//             line_no: 1,
+//             ship_date: '2023-01-20',
+//             order_date: '2023-01-20',
+//             order_eta: '2023-01-12',
+//             carrier: 'NA',
+//             order_eta_ship: 'NA',
+//             serial_num: 'NA',
+//             tracking_num: 'NA',
+//             order_status: 'SHIPPED',
+//             is_shipped: true,
+//             ns_record: null,
+//             vendorOrderNum: 'IM40-MW400-11',
+//             RESULT: 'ADDED'
+//         },
+//         {
+//             line_num: '002',
+//             item_num: 'QCARE-LAPSE',
+//             item_num_alt: '3881Y',
+//             vendorSKU: '3881Y',
+//             order_num: '40-MW400-11',
+//             line_status: 'Shipped',
+//             ship_qty: 3,
+//             line_no: 2,
+//             ship_date: '2023-01-20',
+//             order_date: '2023-01-20',
+//             order_eta: '2023-01-12',
+//             carrier: 'NA',
+//             order_eta_ship: 'NA',
+//             serial_num: 'NA',
+//             tracking_num: 'NA',
+//             order_status: 'SHIPPED',
+//             is_shipped: true,
+//             ns_record: null,
+//             vendorOrderNum: 'IM40-MW400-11',
+//             RESULT: 'ADDED'
+//         },
+//         {
+//             line_num: '001',
+//             item_num: 'QCARERSW',
+//             item_num_alt: '430QQA',
+//             vendorSKU: '430QQA',
+//             order_num: '40-MW400-11',
+//             line_status: 'Shipped',
+//             ship_qty: 1,
+//             line_no: 1,
+//             ship_date: '2023-01-20',
+//             order_date: '2023-01-20',
+//             order_eta: '2023-01-12',
+//             carrier: 'NA',
+//             order_eta_ship: 'NA',
+//             serial_num: 'NA',
+//             tracking_num: 'NA',
+//             order_status: 'SHIPPED',
+//             is_shipped: true,
+//             ns_record: null,
+//             vendorOrderNum: 'IM40-MW400-11',
+//             RESULT: 'ADDED'
+//         },
+//         {
+//             line_num: '004',
+//             item_num: 'QCARE-LAPSE',
+//             item_num_alt: '3881Y',
+//             vendorSKU: '3881Y',
+//             order_num: '40-MW400-11',
+//             line_status: 'Shipped',
+//             ship_qty: 1,
+//             line_no: 4,
+//             ship_date: '2023-01-20',
+//             order_date: '2023-01-20',
+//             order_eta: '2023-01-12',
+//             carrier: 'NA',
+//             order_eta_ship: 'NA',
+//             serial_num: 'NA',
+//             tracking_num: 'NA',
+//             order_status: 'SHIPPED',
+//             is_shipped: true,
+//             ns_record: null,
+//             vendorOrderNum: 'IM40-MW400-11',
+//             RESULT: 'ADDED'
+//         }
+//     ];
+// }

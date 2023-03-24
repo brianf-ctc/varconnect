@@ -79,7 +79,7 @@ define(function (require) {
                 ACCESS_ENDPOINT: 'custrecord_ctc_vc_access_endpoint',
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
-                OATH_SCOPE: 'custrecord_ctc_vc_oath_scope', 
+                OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
                 USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate'
             }
         },
@@ -175,7 +175,8 @@ define(function (require) {
             SERIAL_NUMBER_UPDATE: 'custcol_ctc_serial_number_update',
             DH_MPN: 'custcol_ctc_vc_dh_mpn',
             SEND_SHIPPING_UPDATE_TO: 'custbody_ctc_vc_email_shipping_info',
-            OVERRIDE_PONUM: 'custbody_ctc_vc_override_ponum'
+            OVERRIDE_PONUM: 'custbody_ctc_vc_override_ponum',
+            DELL_QUOTE_NO: 'custcol_ctc_vcsp_quote_no'
         },
         ENTITY: {
             BILLCONFIG: 'custentity_vc_bill_config'
@@ -203,7 +204,13 @@ define(function (require) {
         VC_LOG_STATUS: {
             SUCCESS: '1',
             ERROR: '2',
-            INFO: '3'
+            INFO: '3',
+            WARN: '4',
+            RECORD_ERROR: '5',
+            API_ERROR: '6',
+            SFTP_ERROR: '7',
+            CONFIG_ERROR: '8',
+            WS_ERROR: '9'
         },
         COUNTRY: {
             US: '1',
@@ -223,6 +230,122 @@ define(function (require) {
         LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customdeploy_ctc_vc_sl_print_serial',
         ITEM_MATCH_RL: 'customdeploy_ctc_vc_fuse_itemmatch'
+    };
+
+    VC2_CONSTANT.ERRORMSG = {
+        INVALID_LICENSE: {
+            message:
+                'License is no longer valid or have expired. ' +
+                'Please contact damon@nscatalyst.com to get a new license. ' +
+                'Your product has been disabled.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        MISSING_CONFIG: {
+            message: 'Missing Main Configuration',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        MISSING_VENDORCFG: {
+            message: 'Missing Vendor Configuration',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        INSUFFICIENT_SERIALS: {
+            message: 'Insufficient Serials quantity',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+
+        FULFILLMENT_NOT_ENABLED: {
+            message: 'Item Fulfillment creation is not enabled',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        ITEMRECEIPT_NOT_ENABLED: {
+            message: 'Item Receipt creation is not enabled',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+
+        MISSING_PO: {
+            message: 'Missing PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        INVALID_PO: {
+            message: 'Invalid PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        MISSING_LINES: {
+            message: 'Missing Order Lines',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        MISSING_VENDOR_LINE: {
+            message: 'Missing Vendor Line',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        INVALID_PODATE: {
+            message: 'Invalid PO Date',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        MISSING_PREFIX: {
+            message: 'Missing Fulfillment Prefix',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        ORDER_EXISTS: {
+            message: 'Order already exists',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        TRANSFORM_ERROR: {
+            message: 'Transform error',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        NO_LINES_TO_PROCESS: {
+            message: 'No lines to process.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        NO_FULFILLABLES: {
+            message: 'No fulfillable lines',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        NO_MATCHINGITEMS_TO_FULFILL: {
+            message: 'No matching items to fulfill.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        LINE_NOT_MATCHED: {
+            message: 'Line item not matched',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        MATCH_NOT_FOUND: {
+            message: 'Could not find matching order line',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        UNABLE_TO_FULFILL: {
+            message: 'Unable to fulfill the following items',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        NO_SHIP_QTY: {
+            message: 'No shipped items',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        MISSING_ORDERNUM: {
+            message: 'Missing Order Num',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        NOT_YET_SHIPPED: {
+            message: 'Not yet shipped.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        NO_ORDERS_TO_FULFILL: {
+            message: 'No orders to fulfill.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        NO_PROCESS_DROPSHIP_SPECIALORD: {
+            message: 'Process DropShips and Process Special Orders is not enabled!',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        MISSING_ORDERSTATUS_SEARCHID: {
+            message: 'Missing Search: Open PO for Order Status processing',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        BYPASS_VARCONNECT: {
+            message: 'Bypass VAR Connect is checked on this PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        }
     };
 
     var Bill_Creator = {};

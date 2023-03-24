@@ -76,6 +76,7 @@ define(function (require) {
 
             return arrNew;
         },
+        // Wait for a certain amount of time.
         waitMs: function (waitms) {
             var logTitle = [LogTitle, 'waitMs'].join('::');
             waitms = waitms || 5000;
@@ -136,6 +137,14 @@ define(function (require) {
         },
         loadModule: function (mod) {
             var returnValue = require(mod);
+            return returnValue;
+        },
+        loadModuleNS: function (mod) {
+            var returnValue;
+            require([mod], function (nsMod) {
+                returnValue = nsMod;
+            });
+
             return returnValue;
         },
         parseDate: function (option) {
@@ -263,9 +272,11 @@ define(function (require) {
     });
 
     // WEB SERVICES
+
     util.extend(vc2_util, {
+        // Generate serial link.
         generateSerialLink: function (option) {
-            var ns_url = vc2_util.loadModule('N/url');
+            var ns_url = vc2_util.loadModuleNS('N/url');
 
             var protocol = 'https://';
             var domain = ns_url.resolveDomain({
@@ -279,6 +290,7 @@ define(function (require) {
 
             return protocol + domain + linkUrl;
         },
+        // Converts a JSON object to a query string.
         convertToQuery: function (json) {
             if (typeof json !== 'object') return;
 
@@ -291,9 +303,12 @@ define(function (require) {
 
             return qry.join('&');
         },
+        // Creates a function to send and parse a request.
         sendRequest: function (option) {
             var logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
+
+            log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
             var VALID_RESP_CODE = [200, 207];
 
@@ -308,6 +323,7 @@ define(function (require) {
             if (!queryOption || vc2_util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
+            log.audit(logTitle, '>> option: ' + JSON.stringify(option));
             var response,
                 responseBody,
                 parsedResponse,
@@ -332,6 +348,7 @@ define(function (require) {
                         : 'get'
                 };
             if (option.isXML) param.isJSON = false;
+            queryOption.method = param.method.toUpperCase();
 
             // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
             var LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
@@ -351,7 +368,9 @@ define(function (require) {
 
                 /////////////////////////////////////////
                 //// SEND THE REQUEST //////
-                response = ns_https[param.method](queryOption);
+                response = ns_https.request(queryOption);
+
+                // ns_https[param.method](queryOption);
                 returnValue.RESPONSE = response;
                 /////////////////////////////////////////
 
@@ -388,28 +407,21 @@ define(function (require) {
                 returnValue.error = error;
                 returnValue.details = parsedResponse || response;
 
-                log.audit(
-                    logTitle,
-                    '>> RESPONSE time: ' +
-                        JSON.stringify({
-                            duration: this.roundOff((new Date() - startTime) / 1000)
-                        })
-                );
-
                 vc2_util.vcLog({
                     title:
-                        [param.logHeader + ': Error', errorMsg].join(' - ') +
+                        param.logHeader +
+                        ': Error' +
                         (param.doRetry
                             ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
                             : ''),
-                    content: { error: errorMsg, details: returnValue.details },
-                    transaction: param.logTranId,
-                    isError: true
+                    error: { message: errorMsg, details: returnValue.details },
+                    transaction: param.logTranId
                 });
 
-                log.error(logTitle, '## ERROR ##' + errorMsg + '\n' + JSON.stringify(error));
+                vc2_util.logError(logTitle, errorMsg);
+
                 if (param.doRetry)
-                    log.audit(
+                    vc2_util.log(
                         logTitle,
                         '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
                     );
@@ -421,6 +433,10 @@ define(function (require) {
                     returnValue = vc2_util.sendRequest(option);
                 }
             } finally {
+                vc2_util.log(logTitle, '>> RESPONSE time: ', {
+                    duration: this.roundOff((new Date() - startTime) / 1000)
+                });
+
                 if (!param.noLogs) {
                     vc2_util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
@@ -435,28 +451,73 @@ define(function (require) {
 
             return returnValue;
         },
+        // Parses the response body into a JSON object.
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
                 returnValue;
-
-            // log.audit(logTitle, response);
             try {
                 returnValue = JSON.parse(response.body || response);
             } catch (error) {
-                log.error(logTitle, '## ERROR ##' + vc2_util.extractError(error));
+                log.audit(logTitle, '## ' + vc2_util.extractError(error));
                 returnValue = null;
             }
 
             return returnValue;
-        }
+        },
+
+        handleResponse: function (request, responseType) {
+            return responseType == 'JSON'
+                ? this.handleJSONResponse(request)
+                : this.handleXMLResponse(request);
+        },
+
+        // handleResponse
+        handleJSONResponse: function (request) {
+            var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
+                returnValue = request;
+
+            // detect the error
+            if (request.isError || request.RESPONSE.code != '200') {
+                var parsedResp = request.PARSED_RESPONSE;
+
+                // initial checking
+                if (!parsedResp) throw 'Unable to parse response';
+
+                // check for faultstring
+                if (parsedResp.fault && parsedResp.fault.faultstring)
+                    throw parsedResp.fault.faultstring;
+
+                // check response.errors
+                if (
+                    parsedResp.errors &&
+                    util.isArray(parsedResp.errors) &&
+                    !vc2_util.isEmpty(parsedResp.errors)
+                ) {
+                    var respErrors = parsedResp.errors
+                        .map(function (err) {
+                            return [err.id, err.message].join(': ');
+                        })
+                        .join(', ');
+                    throw respErrors;
+                }
+
+                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
+            }
+
+            return returnValue;
+        },
+
+        handleXMLResponse: function (request) {}
     });
 
     // LOGS
     util.extend(vc2_util, {
+        handleError: function (error, logTitle) {},
         getUsage: function () {
             var REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
             return '[usage:' + REMUSAGE + '] ';
         },
+        // Creates a function that extracts the error message from the given option.
         extractError: function (option) {
             option = option || {};
             var errorMessage = util.isString(option)
@@ -468,6 +529,7 @@ define(function (require) {
 
             return errorMessage;
         },
+        // Creates a vc2 log function.
         vcLog: function (option) {
             var logTitle = [LogTitle, 'vcLog'].join('::');
             // log.audit(logTitle, option);
@@ -479,39 +541,39 @@ define(function (require) {
                 var logOption = {},
                     batchTransaction = option.batch,
                     isBatched = batchTransaction != null;
+
+                logOption.DATE = new Date();
                 logOption.APPLICATION = option.appName || vc2_constant.LOG_APPLICATION;
                 logOption.HEADER = option.title || logOption.APPLICATION;
-                logOption.BODY =
-                    option.body ||
-                    option.content ||
-                    option.message ||
-                    option.errorMessage ||
-                    option.errorMsg ||
-                    (option.error ? vc2_util.extractError(option.error) : '');
+                logOption.BODY = option.body || option.content || option.message || option.details;
+                logOption.STATUS =
+                    option.logStatus ||
+                    option.status ||
+                    (option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO);
+
+                logOption.TRANSACTION =
+                    option.recordId || option.transaction || option.id || option.internalid || '';
+
+                if (option.error) {
+                    var errorMsg = vc2_util.extractError(option.error);
+                    logOption.BODY = errorMsg;
+
+                    logOption.STATUS = option.error.logStatus || option.status || LOG_STATUS.ERROR;
+                    if ( option.error.details) option.details = option.error.details
+                }
+
+                if (option.details) {
+                    logOption.HEADER = option.title
+                        ? [option.title, logOption.BODY].join(' - ')
+                        : logOption.BODY;
+                    logOption.BODY = option.details;
+                }
 
                 logOption.BODY = util.isString(logOption.BODY)
                     ? logOption.BODY
                     : JSON.stringify(logOption.BODY);
 
-                if (
-                    option.status &&
-                    vc2_util.inArray(option.status, [
-                        LOG_STATUS.ERROR,
-                        LOG_STATUS.INFO,
-                        LOG_STATUS.SUCCESS
-                    ])
-                )
-                    logOption.STATUS = option.status;
-                else if (option.isError || option.error || option.errorMessage || option.errorMsg)
-                    logOption.STATUS = LOG_STATUS.ERROR;
-                else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
-                else logOption.STATUS = LOG_STATUS.INFO;
-
-                logOption.TRANSACTION =
-                    option.recordId || option.transaction || option.id || option.internalid || '';
-
-                logOption.DATE = new Date();
-                // log.audit(logTitle, logOption);
+                vc2_util.log(logOption.HEADER, logOption.STATUS, logOption.BODY);
 
                 if (isBatched) {
                     var VC_LOG_BATCH = vc2_constant.RECORD.VC_LOG_BATCH;
@@ -549,24 +611,37 @@ define(function (require) {
                     var recLog = ns_record.create({ type: VC_LOG.ID });
                     for (var field in VC_LOG.FIELD) {
                         var fieldName = VC_LOG.FIELD[field];
-                        // log.audit(
-                        //     logTitle,
-                        //     '>> set log field: ' +
-                        //         JSON.stringify([field, fieldName, logOption[field] || ''])
-                        // );
-
                         recLog.setValue({
                             fieldId: fieldName,
                             value: logOption[field] || ''
                         });
                     }
                     recLog.save();
-                    // log.audit(logOption.HEADER, logOption.BODY);
                 }
             } catch (error) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + vc2_util.extractError(error));
             }
             return true;
+        },
+
+        vcLogError: function (errorOption) {
+            var logTitle = [LogTitle, ''].join(':'),
+                returnValue = true;
+
+            var logOption = option;
+
+            // check for logStatus, error, title and details
+            // if there are details, move all the error to the title
+            if (option.details) {
+                logOption.body = option.details;
+                logOption.title = [
+                    option.title,
+                    option.errorMsg || option.error || vc2_util.extractError(option.error)
+                ].join(' - ');
+            }
+            logOption.status = option.status || vc2_constant.LIST.VC_LOG_STATUS.ERROR; // common error
+
+            return this.vcLog(logOption);
         },
         _batchedVCLogs: {},
         submitVCLogBatch: function (batchTransaction) {
@@ -628,6 +703,7 @@ define(function (require) {
 
     // NS API
     util.extend(vc2_util, {
+        // Performs a search and returns the results.
         searchAllPaged: function (option) {
             var objSearch,
                 arrResults = [],
@@ -739,33 +815,46 @@ define(function (require) {
         clone: function (obj) {
             return JSON.parse(JSON.stringify(obj));
         },
+        // This function takes an option object as argument
         findMatching: function (option) {
             var logTitle = [LogTitle, 'findMatching'].join('::'),
                 returnValue;
 
+            // Sets dataSource with either option.dataSource or option.dataSet or option.list
             var dataSource = option.dataSource || option.dataSet || option.list,
+                // Set filter to the value of option.filter
                 filter = option.filter,
+                //  If dataSource is empty or not an array, return false
                 findAll = option.findAll;
 
             if (vc2_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
 
+            // Initializes an empty array
             var arrResults = [];
+
+            // Loops throught the dataSource array
             for (var i = 0, j = dataSource.length; i < j; i++) {
                 var isFound = true;
+
+                // Loops through the keys of the filter object
                 for (var fld in filter) {
+                    // If current value is a function, set isFound to the result of calling it with dataSource[i][fld] as an argument, otherwise compare it to filter[fld]
                     isFound = util.isFunction(filter[fld])
                         ? filter[fld].call(dataSource[i], dataSource[i][fld])
                         : dataSource[i][fld] == filter[fld];
 
+                    // If isFound is false, breaks loop
                     if (!isFound) break;
                 }
 
+                // If every key-value pair from the filter object was found on the element being inspected, push that element to arrResults. If findAll is false, break the loop.
                 if (isFound) {
                     arrResults.push(dataSource[i]);
                     if (!findAll) break;
                 }
             }
 
+            //If array of results is not empty, set valueOfReturn to its first element or array itself depending on findAll flag. Otherwise, set it to false
             returnValue =
                 arrResults && arrResults.length
                     ? findAll
@@ -773,6 +862,7 @@ define(function (require) {
                         : arrResults.shift()
                     : false;
 
+            // Return value stored in returnValue variable
             return returnValue;
         },
         extractValues: function (option) {
@@ -868,6 +958,7 @@ define(function (require) {
 
     // files
     util.extend(vc2_util, {
+        // Search for a script in the current folder.
         getCurrentFolder: function (option) {
             var returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
@@ -928,6 +1019,7 @@ define(function (require) {
 
             return returnValue;
         },
+        // Searches for a file in the library.
         searchFile: function (option) {
             var fileName = option.filename || option.name;
             if (!fileName) return false;

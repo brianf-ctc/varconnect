@@ -157,11 +157,6 @@ define([
 
                 returnValue = LibArrowAPI.getOrderStatus();
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Request Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
                 throw vc2_util.extractError(error);
             }
 
@@ -250,12 +245,6 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Process Response',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
-
                 throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
@@ -292,11 +281,11 @@ define([
 
                 returnValue = this.processResponse({ response: responseBody });
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Process Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
+                // vc2_util.vcLog({
+                //     title: LogTitle + ': Process Error',
+                //     error: error,
+                //     recordId: CURRENT.recordId
+                // });                
                 throw vc2_util.extractError(error);
             }
 

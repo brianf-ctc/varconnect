@@ -140,19 +140,20 @@ define([
                 returnValue = orderLines;
             } catch (error) {
                 var errorMsg = vc2_util.extactError(error);
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + errorMsg + '\n>> Details:' + JSON.stringify(error)
-                );
+                throw errorMsg;
+                // log.error(
+                //     logTitle,
+                //     '## ERROR ## ' + errorMsg + '\n>> Details:' + JSON.stringify(error)
+                // );
 
-                vc_log.recordLog({
-                    header: LogTitle + ' Error | ' + errorMsg,
-                    body: JSON.stringify(error),
-                    transaction: option.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
-                    isDebugMode: option.fromDebug
-                });
-                returnValue = null;
+                // vc_log.recordLog({
+                //     header: LogTitle + ' Error | ' + errorMsg,
+                //     body: JSON.stringify(error),
+                //     transaction: option.poId,
+                //     status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
+                //     isDebugMode: option.fromDebug
+                // });
+                // returnValue = null;
             } finally {
                 log.audit(logTitle, '<< ' + JSON.stringify(returnValue));
             }

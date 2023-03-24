@@ -10,18 +10,13 @@
  *
  * @NApiVersion 2.x
  * @NModuleScope Public
- * @NScriptType Suitelet
+ * @NScriptType ClientScript
  */
-define(['N/redirect', 'N/log'], function (redirect, log) {
-    function onRequest(context) {
-        if (context.request.method === 'GET') {
-            redirect.toRecord({
-                id: 1,
-                type: 'customrecord_vc_config'
-            });
-        }
-    }
+
+define([], function () {
     return {
-        onRequest: onRequest
+        pageInit: function (context) {
+            console.log(context);
+        }
     };
 });

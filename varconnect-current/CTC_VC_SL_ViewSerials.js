@@ -24,7 +24,7 @@ define([
     'N/record',
     'N/url',
     './CTC_VC2_Constants.js',
-    './VC_SN_Library'
+    './CTC_VC_LIb_SerialsLib.js'
 ], function (ns_ui, ns_search, ns_record, ns_url, vc2_constant, vc_serial) {
     const SUBLIST_ID = 'custpage_orders';
 
@@ -135,7 +135,7 @@ define([
         });
         maingroup.isSingleColumn = true;
 
-        //            form.clientScriptModulePath = './VC_View_Serials_Library.js';
+        //            form.clientScriptModulePath = './CTC_VC_CS_View_Serials.js';
 
         /*
                         form.addSubmitButton({

@@ -36,7 +36,7 @@ define([
         var form = ui.createForm({
             title: 'PO Manual Add Serial Numbers'
         });
-        form.clientScriptModulePath = './VarConnect_Bulk_Serials_Library.js';
+        form.clientScriptModulePath = './CTC_VC_CS_Bulk_Serials_Lib.js';
 
         form.addSubmitButton({
             label: 'Load PO'

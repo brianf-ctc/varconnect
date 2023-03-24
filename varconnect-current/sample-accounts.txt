@@ -1,0 +1,100 @@
+** Arrow  **
+
+https://ecsoag.arrow.com/ArrowECS/SalesOrder_RS/Status
+https://ecsoag.arrow.com/api/oauth/token
+
+Account: Dyntek
+API KEY: 1eb502a3-b558-4cb4-9936-22c25101a22c
+API SECRET: f96ba3a3-bf35-44ae-b4c4-ec42e7115ba8
+CUSTNO: 1eb502a3-b558-4cb4-9936-22c25101a22c
+
+Sample POs: PO-06847, PO-06889, PO-07067
+
+Doc: https://developers.arrow.com/api/index.php/site/page?view=gettingStarted
+
+
+** D&H **
+
+https://www.dandh.ca/dhXML/xmlDispatch
+
+Account: Quadbridge
+Username: 803667XML 
+Password: bJCMB4RanLzz7348
+
+POs: POQ4756, POQ4756, POU2391
+
+Docs: 
+https://www.dandh.com/docs/us/DH-IS-WEB-XML_US.pdf
+https://www.dandh.com/docs/
+
+
+** Ingram **
+
+https://api.ingrammicro.com:443/resellers/v6.1/orders
+https://api.ingrammicro.com:443/oauth/oauth30/token
+
+Account: Quadbridge
+APIKEY: WyWb8y9EeNYnXzWumZk48cbc8BTkGidX
+SECRET: Kc735MAU0UeGrfFa
+
+Sample POs: POQ3765, POQ3505, POQ4478
+
+https://developer.ingrammicro.com/reseller/api-documentation
+
+** Jenne **
+
+https://webservice.jenne.com/JenneWebService.asmx
+
+Account: HighPoint
+USER: meghan@highpointnetworks.com 
+PASS: BlueDiamond125#
+CUSTNO: HI58078
+
+Sample POs:8930, 13777, 11061
+
+https://www.jenne.com/ws/JenneWebService.asmx
+
+
+** Scansource ** 
+
+https://api.scansource.com/scsc/salesorder/v1
+https://login.microsoftonline.com/scansourceb2c.onmicrosoft.com/oauth2/v2.0/token
+https://scansourceb2c.onmicrosoft.com/a2eccdbd-b208-4e77-a82f-dddd1814309a/.default
+
+Account: Highpoint
+APIKEY: 958ae7d0-b087-4143-b002-e72ffb6a86df
+SECRET: 6k3yRuhD-lTI_OIf73OCno182-.TXlHC4b
+CUSTID: 1000009731
+
+POs: 2653, 2871, 4728
+
+https://az-p-api-apim-eus-01.portal.azure-api.net/docs/services?product=customer
+User: jeff@nscatalyst.com
+Pass: 1Dgj4EK4s2&s
+
+** Synnex **
+https://ec.synnex.com/SynnexXML/POStatus
+
+ACCOUNT: IntegraOne
+USER: mspsupport@integraone.com 
+PASS: Quosal7248!
+CUSTNO: 635558
+
+POs: 212262, 212255, 215760
+
+https://www.synnexcorp.com/esolutions/web-service/
+https://www.synnexcorp.com/esolutions/xml/
+
+
+** TechData **
+
+https://tdxml.techdata.com/xmlservlet
+
+Account: IntegraOne
+User: 454100
+Pass: Quosal7248
+
+
+POs: 213131. 213659, 214300
+
+https://www.techdata.com/Content/XMLGuide/index.htm

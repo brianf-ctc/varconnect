@@ -60,7 +60,7 @@ define([
         var form = ui.createForm({
             title: formTitle
         });
-        form.clientScriptModulePath = './VC_Associate_Serials_pg1_Library.js';
+        form.clientScriptModulePath = './CTC_VC_CS_Associate_Serials_pg1.js';
 
         form.addSubmitButton({
             label: buttonLabel

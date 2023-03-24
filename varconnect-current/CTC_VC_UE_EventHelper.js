@@ -17,7 +17,7 @@ define([
     'N/search',
     'N/record',
     'N/ui/message',
-    './CTC_Lib_EventRouter',
+    './CTC_VC2_Lib_EventRouter',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants',
     './CTC_VC_Lib_MainConfiguration',
@@ -268,6 +268,13 @@ define([
             return true;
         }
     };
+
+    EventRouter.Action['__ALL__'] = {
+        onBeforeLoad: function (scriptContext, Current) {},
+        onBeforeSubmit: function (scriptContext, Current) {},
+        onAfterSubmit: function (scriptContext, Current) {},
+    };
+
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         triggerOrderStatus: function (scriptContext, Current) {

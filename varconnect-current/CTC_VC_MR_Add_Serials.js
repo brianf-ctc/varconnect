@@ -13,20 +13,20 @@
  *@NScriptType MapReduceScript
  */
 
-define(['N/search', 'N/runtime', 'N/record', 'N/file', './SerialsLibrary.js'], function (
-    search,
-    runtime,
-    record,
-    file,
-    serialLib
+define(['N/search', 'N/runtime', 'N/record', 'N/file', './CTC_VC_Lib_Serials.js'], function (
+    ns_search,
+    ns_runtime,
+    ns_record,
+    ns_file,
+    vc_serialLib
 ) {
     function getInputData() {
         log.audit('getInputData');
-        var fileId = runtime.getCurrentScript().getParameter('custscript_serialsFileId');
+        var fileId = ns_runtime.getCurrentScript().getParameter('custscript_serialsFileId');
         log.debug('fileId param', fileId);
 
         var serialArray = [];
-        var fileObj = file.load({
+        var fileObj = ns_file.load({
             id: fileId
         });
 
@@ -64,7 +64,7 @@ define(['N/search', 'N/runtime', 'N/record', 'N/file', './SerialsLibrary.js'], f
         log.debug('reduce poId', poId);
         log.debug('reduce soId', soId);
         log.debug('reduce itemNum', itemNum);
-        serialLib.createSerial(serialNum, poId, itemNum, soId);
+        vc_serialLib.createSerial(serialNum, poId, itemNum, soId);
     }
 
     function summarize(summary) {

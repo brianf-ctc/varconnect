@@ -61,7 +61,8 @@ define([
             MISC: 'miscCharges',
             TAX: 'tax',
             SHIP: 'shipping',
-            OTHER: 'other'
+            OTHER: 'other', 
+            ADJ: 'adjustment'
         };
 
     var RESTLET = {
@@ -512,16 +513,22 @@ define([
                     if (!varianceLine.item) continue;
 
                     lineData = vc2_util.extend(varianceLine, {
-                        applied: 'T',
+                        // applied: 'T',
                         amount: varianceLine.amount || varianceLine.rate,
                         rate: varianceLine.amount || varianceLine.rate
                     });
+
+                    if (lineData.type == 'adjustment') {
+                        Current.varianceParam.applyAdjustment = lineData.applied;
+                    }
 
                     if (lineData.applied == 'F' || lineData.rate == 0) continue;
 
                     log.debug(
                         logTitle,
-                        LogPrefix + '>>> charge line Data: ' + JSON.stringify(lineData)
+                        LogPrefix +
+                            '>>> charge line Data: ' +
+                            JSON.stringify([lineData, varianceLine])
                     );
 
                     var newLine = vc_recordlib.addLine({
@@ -543,7 +550,10 @@ define([
 
                 log.audit(logTitle, LogPrefix + '// TOTALS: ' + JSON.stringify(Current.TOTALS));
 
-                if (!Current.varianceParam.ignoreVariance) {
+                if (
+                    !Current.varianceParam.ignoreVariance &&
+                    Current.varianceParam.applyAdjustment !== 'F'
+                ) {
                     // calculate the adjustment
                     Current.varianceParam.adjustment =
                         Current.JSON_DATA.total -
@@ -555,6 +565,7 @@ define([
 
                     if (Current.varianceParam.adjustment != 0) {
                         Current.varianceParam.hasVariance = true;
+
                         vc_recordlib.addLine({
                             record: Current.POBILL_REC,
                             lineData: vc2_util.extend(VARIANCE_DEF.miscCharges, {

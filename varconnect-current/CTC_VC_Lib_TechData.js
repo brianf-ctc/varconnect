@@ -95,11 +95,11 @@ define([
 
                 returnValue = responseXML;
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ' Orders Status : Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
+                // vc2_util.vcLog({
+                //     title: LogTitle + ' Orders Status : Error',
+                //     error: error,
+                //     recordId: CURRENT.recordId
+                // });
                 returnValue = vc2_util.extractError(error);
                 throw error;
             } finally {
@@ -138,126 +138,14 @@ define([
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-                if (CURRENT.recordNum == '216747') {
-                    vc2_util.log(logTitle, '**** FOR TESTING ONLY *****');
-                    returnValue = [
-                        {
-                            line_num: '000100',
-                            item_num: 'CON-ECMU-VMWVS6FN',
-                            order_num: '8042852039-1',
-                            order_date: '01/09/23',
-                            order_eta: '01/12/23',
-                            order_status: 'SHIPPED',
-                            ship_date: '01/12/23',
-                            ship_qty: '1',
-                            tracking_num: '0000000000',
-                            vendorSKU: '12225647',
-                            carrier: 'VENDOR SUPPLIED',
-                            serial_num: 'TSTSER001',
-                            line_no: 1
-                        },
-                        {
-                            line_num: '000300',
-                            item_num: 'CON-SNTP-ISR4321V',
-                            order_num: '8042852039',
-                            order_date: '01/09/23',
-                            order_eta: '01/12/23',
-                            order_status: 'SHIPPED',
-                            ship_date: '01/12/23',
-                            ship_qty: '3',
-                            tracking_num: '0000000004,0000000006,0000000012',
-                            vendorSKU: '11707781',
-                            carrier: 'VENDOR SUPPLIED',
-                            serial_num: 'TSTSER003,TSTSER004, TSTSER005',
-                            line_no: 3
-                        },
-                        {
-                            line_num: '000200',
-                            item_num: 'CON-ECMU-VMWVS6FN',
-                            order_num: '8042852039',
-                            order_date: '01/09/23',
-                            order_eta: '01/12/23',
-                            order_status: 'SHIPPED',
-                            ship_date: '01/12/23',
-                            ship_qty: '1',
-                            tracking_num: '0000000008',
-                            vendorSKU: '12225647',
-                            carrier: 'VENDOR SUPPLIED',
-                            serial_num: 'TSTSER006',
-                            line_no: 2
-                        },
-                        // {
-                        //     line_num: '000400',
-                        //     item_num: 'CON-SNT-VG45XK14',
-                        //     order_num: '8042852039',
-                        //     order_date: '01/09/23',
-                        //     order_eta: '01/12/23',
-                        //     order_status: 'SHIPPED',
-                        //     ship_date: '01/12/23',
-                        //     ship_qty: '2',
-                        //     tracking_num: '0000000000',
-                        //     vendorSKU: '13510081',
-                        //     carrier: 'VENDOR SUPPLIED',
-                        //     serial_num: 'NA',
-                        //     line_no: 4
-                        // },
-                        // {
-                        //     line_num: '000500',
-                        //     item_num: 'CON-SNTP-BE7MM4K9',
-                        //     order_num: '8042852039',
-                        //     order_date: '01/09/23',
-                        //     order_eta: '01/12/23',
-                        //     order_status: 'SHIPPED',
-                        //     ship_date: '01/12/23',
-                        //     ship_qty: '2',
-                        //     tracking_num: '0000000000',
-                        //     vendorSKU: '11678908',
-                        //     carrier: 'VENDOR SUPPLIED',
-                        //     serial_num: 'NA',
-                        //     line_no: 5
-                        // },
-                        // {
-                        //     line_num: '000600',
-                        //     item_num: 'CON-SNT-VG35014',
-                        //     order_num: '8042852039',
-                        //     order_date: '01/09/23',
-                        //     order_eta: '01/12/23',
-                        //     order_status: 'SHIPPED',
-                        //     ship_date: '01/12/23',
-                        //     ship_qty: '15',
-                        //     tracking_num: '0000000005',
-                        //     vendorSKU: '11032588',
-                        //     carrier: 'VENDOR SUPPLIED',
-                        //     serial_num: 'NA',
-                        //     line_no: 6
-                        // },
-                        // {
-                        //     line_num: '000700',
-                        //     item_num: 'CON-SNT-VG320ICV',
-                        //     order_num: '8042852039',
-                        //     order_date: '01/09/23',
-                        //     order_eta: '01/12/23',
-                        //     order_status: 'SHIPPED',
-                        //     ship_date: '01/12/23',
-                        //     ship_qty: '6',
-                        //     tracking_num: '0000000005',
-                        //     vendorSKU: '11603272',
-                        //     carrier: 'VENDOR SUPPLIED',
-                        //     serial_num: 'NA',
-                        //     line_no: 7
-                        // }
-                    ];
-                } else {
-                    var respOrderStatus = this.processRequest(option);
-                    returnValue = this.processResponse({ xmlResponse: respOrderStatus });
-                    // log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
-                }
+                var respOrderStatus = this.processRequest(option);
+                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ':Process Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
+                // vc2_util.vcLog({
+                //     title: LogTitle + ':Process Error',
+                //     error: error,
+                //     recordId: CURRENT.recordId
+                // });
                 throw vc2_util.extractError(error);
             } finally {
                 vc2_util.vcLog({
@@ -288,11 +176,11 @@ define([
 
                 returnValue = LibTechDataXML.getInvoiceDetail(option);
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ':Request Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
+                // vc2_util.vcLog({
+                //     title: LogTitle + ':Request Error',
+                //     error: error,
+                //     recordId: CURRENT.recordId
+                // });
                 throw vc2_util.extractError(error);
             } finally {
                 vc2_util.log(logTitle, returnValue);
@@ -381,11 +269,11 @@ define([
             } catch (error) {
                 // extract the error
                 var errMsg = LibTechDataXML.responseError(xmlDoc);
-                vc2_util.vcLog({
-                    title: LogTitle + ': Response Error',
-                    error: errMsg || error,
-                    recordId: CURRENT.recordId
-                });
+                // vc2_util.vcLog({
+                //     title: LogTitle + ': Response Error',
+                //     error: errMsg || error,
+                //     recordId: CURRENT.recordId
+                // });
                 throw errMsg || vc2_util.extractError(error);
             }
 

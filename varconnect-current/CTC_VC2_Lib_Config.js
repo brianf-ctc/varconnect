@@ -16,7 +16,7 @@
 define(function (require) {
     var ns_search = require('N/search'),
         ns_runtime = require('N/runtime'),
-        ns_record = requrie('N/record');
+        ns_record = requre('N/record');
 
     var LogTitle = 'LIB_ItemFF',
         LogPrefix = '',

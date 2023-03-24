@@ -18,7 +18,6 @@ define([
     'N/ui/message',
     'N/record',
     'N/redirect',
-    'N/search',
     'N/url',
     'N/runtime',
     'N/task',
@@ -31,7 +30,6 @@ define([
     ns_msg,
     ns_record,
     ns_redirect,
-    ns_search,
     ns_url,
     ns_runtime,
     ns_task,
@@ -63,6 +61,7 @@ define([
             LINE_AMOUNT: 0,
             TAX_AMOUNT: 0,
             SHIPPING_AMT: 0,
+            CHARGE_AMT: 0,
             VARIANCE_AMT: 0
         },
 
@@ -111,7 +110,7 @@ define([
                 FlexScreen_UI.initialize(scriptContext);
                 logTitle = [LogTitle, Current.Method, Current.BillFileId].join('::');
 
-                Current.Task = Current.Task || 'viewForm';
+                Current.Task = Current.Task || 'viewForm'; // default is viewForm
 
                 if (Current.Method == 'GET') {
                     FlexScreen_UI[Current.Task].call(FlexScreen_UI, scriptContext);
@@ -374,13 +373,11 @@ define([
             );
 
             log.audit(logTitle, '//// WRITE BILL LINES //////////');
-
             arrLines.forEach(function (lineData, i) {
                 log.audit(logTitle, '>> line data: ' + JSON.stringify(lineData));
 
                 lineData.nstaxamt = 0;
                 lineData.calcamount = 0;
-                lineData.adjamount = 0;
 
                 (lineData.matchingLines || []).forEach(function (matchedLine, ii) {
                     // for matched lines on the vbill
@@ -431,11 +428,6 @@ define([
                 return true;
             });
 
-            ///////////////////////////////////////////
-            // CALCULATE THE BILL TOTALS
-            if (Current.IS_BILLABLE) Helper.calculateBillTotals(arrLines);
-            ///////////////////////////////////////////
-
             /// SUBLIST: Variance Lines ///////////////
             log.audit(logTitle, '//// PRE PROCESS VARIANCE LINES //////////');
             var arrVarianceLines = Helper.preprocessVarianceLines();
@@ -449,11 +441,9 @@ define([
             var totalVariance = 0;
             for (i = 0, j = arrVarianceLines.length; i < j; i++) {
                 var varianceLine = arrVarianceLines[i];
-
                 if (!varianceLine.item) continue;
 
                 lineData = vc2_util.extend(varianceLine, {
-                    applied: 'T',
                     itemname: Helper.getItemName(varianceLine.item),
                     nsitem: varianceLine.item,
                     amount: varianceLine.amount || varianceLine.rate
@@ -483,12 +473,15 @@ define([
                     if (lineData.applied == 'T') {
                         lineData.amounttax =
                             (lineData.amounttax || 0) + Helper.calculateLineTax(billLineData);
-                        totalVariance += billLineData.amount + lineData.amounttax;
+
+                        if (lineData.amounttax) {
+                            Current.TOTALS_DATA.TAX_AMOUNT += lineData.amounttax;
+                        }
                     }
                 } catch (line_err) {}
-
                 ////////////////////
 
+                lineData.is_active = lineData.enabled ? 'T' : 'F';
                 /// SET THE LINE DATA /////////////
                 FormHelper.setSublistValues({
                     sublist: varianceSublist,
@@ -496,19 +489,22 @@ define([
                     line: i
                 });
             }
+
             ///////////////////////////////////////////
-            if (Current.IS_BILLABLE && Current.IS_ACTIVE_EDIT) {
-                Current.TOTALS_DATA.VARIANCE_AMT = totalVariance;
+            // CALCULATE THE BILL TOTALS
+            if (Current.IS_BILLABLE) Helper.calculateBillTotals(arrLines);
+            ///////////////////////////////////////////
+
+            ///////////////////////////////////////////
+            if (Current.IS_BILLABLE) {
+                // Current.TOTALS_DATA.VARIANCE_AMT = totalVariance;
                 Helper.updateBillTotals();
 
                 // check for adjustments
                 var adjustmentTotal =
-                    // total bill file amount, expected bill total
                     Current.JSON_DATA.total -
-                    // calculated bill total (line amount, applied tax, shipping)
-                    (Current.TOTALS_DATA.AMOUNT +
-                        // calculated variance total (charges on the bill)
-                        Current.TOTALS_DATA.VARIANCE_AMT);
+                    Current.TOTALS_DATA.AMOUNT -
+                    Current.TOTALS_DATA.VARIANCE_AMT;
 
                 adjustmentTotal = vc2_util.roundOff(adjustmentTotal);
 
@@ -656,6 +652,10 @@ define([
                 case FLEXFORM_ACTION.REPROCESS.value:
                 case FLEXFORM_ACTION.RENEW.value:
                     updateValues[BILLFILE_FIELD.STATUS] = BILL_CREATOR.Status.REPROCESS;
+                    // reset on reprocess
+                    updateValues[BILLFILE_FIELD.PROC_VARIANCE] = '';
+                    JSON_DATA.ignoreVariance = '';
+
                     // updateValues[BILLFILE_FIELD.STATUS] = BILL_CREATOR.Status.PENDING;
                     break;
                 case FLEXFORM_ACTION.CLOSE.value:
@@ -997,7 +997,6 @@ define([
 
             return vc2_util.roundOff(taxAmount) || 0;
         },
-
         loadBillingConfig: function () {
             var mainConfig = vc_mainConfig.getMainConfiguration();
             if (!mainConfig) {
@@ -1048,9 +1047,29 @@ define([
                 return true;
             });
 
-            Current.TOTALS_DATA.TAX_AMOUNT = taxTotal;
-            Current.TOTALS_DATA.SHIPPING_AMT = shippingTotal;
-            Current.TOTALS_DATA.LINE_AMOUNT = lineTotal;
+            Current.TOTALS_DATA.TAX_AMOUNT += taxTotal;
+            Current.TOTALS_DATA.SHIPPING_AMT += shippingTotal;
+            Current.TOTALS_DATA.LINE_AMOUNT += lineTotal;
+
+            Current.TOTALS_DATA.AMOUNT =
+                Current.TOTALS_DATA.LINE_AMOUNT +
+                Current.TOTALS_DATA.TAX_AMOUNT +
+                Current.TOTALS_DATA.SHIPPING_AMT;
+
+            var chargesAmount = Current.JSON_DATA.charges || {};
+
+            Current.TOTALS_DATA.VARIANCE_AMT =
+                // tax variance
+                (chargesAmount.tax || 0) -
+                Current.TOTALS_DATA.TAX_AMOUNT +
+                ((chargesAmount.shipping || 0) - Current.TOTALS_DATA.SHIPPING_AMT) +
+                (chargesAmount.other || 0) +
+                (chargesAmount.miscCharges || 0);
+
+            // variance amount is charges - totals
+            // Current.TOTALS_DATA.VARIANCE_AMT =
+
+            // Current.JSON_DATA.total - Current.TOTALS_DATA.AMOUNT;
 
             log.audit(logTitle, '>> totals : ' + JSON.stringify(Current.TOTALS_DATA));
 
@@ -1127,9 +1146,9 @@ define([
                   }) || [];
             // log.audit(logTitle, '>> arrBillLines: ' + JSON.stringify(arrBillLines));
 
-            arrBillLines.forEach(function (matchedLine) {
-                matchedLine.availableqty = matchedLine.quantity;
-                matchedLine.appliedqty = matchedLine.appliedqty;
+            arrBillLines.forEach(function (billLine) {
+                billLine.availableqty = billLine.quantity;
+                billLine.appliedqty = billLine.appliedqty;
                 return true;
             });
             // log.audit(logTitle, logPrefix + '// arrBillLines: ' + JSON.stringify(arrBillLines));
@@ -1260,7 +1279,9 @@ define([
 
                 if (matchingVarianceLine.item) delete matchingVarianceLine.item;
 
-                if (!vc2_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
+                // if (!vc2_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
+                if (vc2_util.isEmpty(varianceInfo)) continue; // skip
+                // if (!varianceInfo.enabled) continue; // skip
                 varianceInfo.type = varType;
 
                 switch (varType) {
@@ -1284,6 +1305,8 @@ define([
                         break;
                     case VARIANCE_TYPE.TAX:
                         // get the diff from TAX TOTAL, and TAX CHARGES
+                        util.extend(varianceInfo);
+
                         arrVarianceLines.push(
                             vc2_util.extend(
                                 varianceInfo,
@@ -1330,6 +1353,8 @@ define([
                         break;
                 }
             }
+
+            log.audit(logTitle, '// arrVarianceLines: ' + JSON.stringify(arrVarianceLines));
 
             return arrVarianceLines;
         }
@@ -1872,6 +1897,15 @@ define([
                 label: 'Variance Lines',
                 type: ns_ui.SublistType.LIST,
                 fields: {
+                    is_active: {
+                        label: 'Enabled',
+                        type: ns_ui.FieldType.CHECKBOX,
+                        displayType: ns_ui.FieldDisplayType.INLINE
+                        // Current.IS_ACTIVE_EDIT ||
+                        // Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
+                        //     ? ns_ui.FieldDisplayType.ENTRY
+                        //     :
+                    },
                     applied: {
                         label: 'Apply',
                         type: ns_ui.FieldType.CHECKBOX,
@@ -2177,6 +2211,11 @@ define([
                     log.audit(logTitle, '## ERROR ## ' + JSON.stringify([field, lineData]));
                 }
             }
+
+            // if (!lineData.enabled) {
+            //     sublistObj.
+
+            // }
             return true;
         },
         extractLineValues: function (option) {
