@@ -72,6 +72,8 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
         var entityId = options.entityId,
             email = null;
 
+        log.audit('_getEmail', options);
+
         if (entityId) {
             var recLookup = ns_search.lookupFields({
                 type: 'entity',
@@ -122,7 +124,7 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
             'countrycode'
         ];
 
-        log.emergency('Sub Rec', subRecShipping);
+        log.audit('Sub Rec', subRecShipping);
 
         if (subRecShipping) {
             var shipAddr = {};

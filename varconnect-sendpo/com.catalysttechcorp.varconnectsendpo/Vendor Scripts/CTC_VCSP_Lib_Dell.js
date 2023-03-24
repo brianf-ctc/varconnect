@@ -206,7 +206,12 @@ define([
                         : contactNames[ContactRoles.ALTERNATE];
                 log.audit(logTitle, '// contactInfo: ' + JSON.stringify(contactInfo));
 
-                if (ctc_util.isEmpty(contactInfo)) {
+                if (ctc_util.isEmpty(contactInfo) && poData.primaryContact) {
+                    log.audit(
+                        logTitle,
+                        '// poData.primaryContact: ' + JSON.stringify(poData.primaryContact)
+                    );
+
                     // try to get data from custbody_ctc_vcsp_primary_contact
                     contactSearchObj = ns_search.create({
                         type: 'contact',
@@ -228,10 +233,18 @@ define([
 
                 var shippingContactObj = {
                     company: addrInfo.addressee.value,
-                    contactName: contactInfo.entityid,
+                    contactName: 
+                    addrInfo.attention && addrInfo.attention.value 
+                    ? addrInfo.attention.value
+                                : contactInfo.entityid,
+                    // contactInfo.entityid, 
                     email: contactInfo.email,
                     telephone: addrInfo.addrphone.value,
                     address: {
+                        attention:
+                            addrInfo.attention && addrInfo.attention.value
+                                ? addrInfo.attention.value
+                                : contactInfo.entityid,
                         address1: addrInfo.addr1.value,
                         address2: addrInfo.addr2.value,
                         city: addrInfo.city.value,
@@ -490,7 +503,6 @@ define([
             });
 
             if (!sendPOBody) throw 'Unable to generate PO Body Request';
-
 
             var sendPOReq = ctc_util.sendRequest({
                 header: [LogTitle, 'Send PO'].join(' : '),
