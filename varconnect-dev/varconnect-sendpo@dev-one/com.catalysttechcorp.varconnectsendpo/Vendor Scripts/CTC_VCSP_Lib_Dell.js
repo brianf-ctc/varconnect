@@ -124,8 +124,6 @@ define([
                     primaryContact: recPO.getValue({ fieldId: 'custbody_ctc_vcsp_primary_contact' })
                 };
                 log.audit(logTitle, '// poData: ' + JSON.stringify(poData));
-                
-                //TODO: Ship-To Attention as Quote Contact (if available)
 
                 var arrAddressFields = [
                     'country',

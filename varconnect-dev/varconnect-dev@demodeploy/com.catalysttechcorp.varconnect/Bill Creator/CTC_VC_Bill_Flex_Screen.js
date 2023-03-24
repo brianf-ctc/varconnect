@@ -18,7 +18,6 @@ define([
     'N/ui/message',
     'N/record',
     'N/redirect',
-    'N/search',
     'N/url',
     'N/runtime',
     'N/task',
@@ -31,7 +30,6 @@ define([
     ns_msg,
     ns_record,
     ns_redirect,
-    ns_search,
     ns_url,
     ns_runtime,
     ns_task,
@@ -111,7 +109,7 @@ define([
                 FlexScreen_UI.initialize(scriptContext);
                 logTitle = [LogTitle, Current.Method, Current.BillFileId].join('::');
 
-                Current.Task = Current.Task || 'viewForm';
+                Current.Task = Current.Task || 'viewForm'; // default is viewForm
 
                 if (Current.Method == 'GET') {
                     FlexScreen_UI[Current.Task].call(FlexScreen_UI, scriptContext);
@@ -453,7 +451,7 @@ define([
                 if (!varianceLine.item) continue;
 
                 lineData = vc2_util.extend(varianceLine, {
-                    applied: 'T',
+                    // applied: 'T',
                     itemname: Helper.getItemName(varianceLine.item),
                     nsitem: varianceLine.item,
                     amount: varianceLine.amount || varianceLine.rate
@@ -497,7 +495,7 @@ define([
                 });
             }
             ///////////////////////////////////////////
-            if (Current.IS_BILLABLE && Current.IS_ACTIVE_EDIT) {
+            if (Current.IS_BILLABLE) {
                 Current.TOTALS_DATA.VARIANCE_AMT = totalVariance;
                 Helper.updateBillTotals();
 
@@ -656,6 +654,10 @@ define([
                 case FLEXFORM_ACTION.REPROCESS.value:
                 case FLEXFORM_ACTION.RENEW.value:
                     updateValues[BILLFILE_FIELD.STATUS] = BILL_CREATOR.Status.REPROCESS;
+                    // reset on reprocess
+                    updateValues[BILLFILE_FIELD.PROC_VARIANCE] = '';
+                    JSON_DATA.ignoreVariance = '';
+
                     // updateValues[BILLFILE_FIELD.STATUS] = BILL_CREATOR.Status.PENDING;
                     break;
                 case FLEXFORM_ACTION.CLOSE.value:
@@ -997,7 +999,6 @@ define([
 
             return vc2_util.roundOff(taxAmount) || 0;
         },
-
         loadBillingConfig: function () {
             var mainConfig = vc_mainConfig.getMainConfiguration();
             if (!mainConfig) {
@@ -1330,6 +1331,8 @@ define([
                         break;
                 }
             }
+
+            log.audit(logTitle, '// arrVarianceLines: ' + JSON.stringify(arrVarianceLines));
 
             return arrVarianceLines;
         }

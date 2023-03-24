@@ -19,6 +19,8 @@ define(function (require) {
 
     var LogTitle = 'VC_RecordLib';
 
+    var LineColField = vc2_constant.FIELD.TRANSACTION;
+
     var VC_RecordLib = {
         transform: function (option) {
             var logTitle = [LogTitle, 'transform'].join('::'),
@@ -369,7 +371,7 @@ define(function (require) {
                         item_text: function (value) {
                             var orderLine = this;
                             var skuValue = orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
-                                dnhValue = orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN];
+                                dnhValue = orderLine[LineColField.DH_MPN];
 
                             var matchedValue = null,
                                 returnValue = false;
@@ -390,7 +392,6 @@ define(function (require) {
                 if (!matchedLines || !matchedLines.length) {
                     // lineValue.LINE_MATCH = false;
                     vendorLine.ORDER_LINE = null;
-
                     vc2_util.log(logTitle, '// no matching order line');
                 } else if (matchedLines.length == 1) {
                 } else if (matchedLines.length > 1) {
@@ -444,10 +445,12 @@ define(function (require) {
                 if (orderLineMatch && orderLineMatch.length) orderLineMatch = orderLineMatch[0];
                 // vc2_util.log(logTitle, '// orderLineMatch: ', orderLineMatch);
 
-                // mark the order line
-                vendorLine.MATCHED_ORDERLINE = orderLineMatch;
-                vendorLine.ORDER_LINE = orderLineMatch.line;
-                orderLineMatch.MATCHED = true;
+                if (orderLineMatch) {
+                    // mark the order line
+                    vendorLine.MATCHED_ORDERLINE = orderLineMatch;
+                    vendorLine.ORDER_LINE = orderLineMatch.line;
+                    orderLineMatch.MATCHED = true;
+                }
 
                 returnValue = orderLineMatch;
             } catch (error) {
@@ -457,6 +460,15 @@ define(function (require) {
 
             return returnValue;
         },
+        /*
+         * @param {*} option
+         *      orderLine - line data from the PO
+         *      vendorLine - line data from the vendor response
+         *      mainConfig - VAR connect mainConfig. ingramHashSpace option
+         *      vendorConfig - vendor config
+         * @returns
+         */
+
         isVendorLineMatched: function (option) {
             var logTitle = [LogTitle, 'isVendorLineMatched'].join('::'),
                 returnValue;
@@ -478,8 +490,10 @@ define(function (require) {
                 altText:
                     option.itemAltText ||
                     orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'],
+                sitemname: orderLine.sitemname,
                 skuValue: option.skuValue || orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
-                dnhValue: option.dnhValue || orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN]
+                dnhValue: option.dnhValue || orderLine[LineColField.DH_MPN],
+                dellQuoteNo: option.dellQuoteNo || orderLine[LineColField.DELL_QUOTE_NO]
             };
             // vc2_util.log(logTitle, '.. item values: ', item);
 
@@ -493,14 +507,20 @@ define(function (require) {
                               VendorList.INGRAM_MICRO_V_ONE,
                               VendorList.INGRAM_MICRO
                           ])
-                        : null
+                        : null,
+                isDell: option.isDell || vendorCfg ? vendorCfg.xmlVendor == VendorList.DELL : null
             };
             // vc2_util.log(logTitle, '... settings:', settings);
 
             var matchedValue;
             try {
                 if (
-                    vc2_util.inArray(vendorLine.item_num, [item.text, item.altValue, item.altText])
+                    vc2_util.inArray(vendorLine.item_num, [
+                        item.text,
+                        item.altValue,
+                        item.altText,
+                        item.sitemname
+                    ])
                 ) {
                     matchedValue = 'ItemName';
                 } else if (
@@ -518,7 +538,7 @@ define(function (require) {
                 } else if (settings.isIngram && settings.ingramHashSpace) {
                     var hashValue = {};
                     for (var typ in item) {
-                        hashValue[typ] = item[typ].replace('#', ' ') || '';
+                        hashValue[typ] = item[typ] ? item[typ].replace('#', ' ') : '';
                     }
 
                     if (
@@ -535,6 +555,8 @@ define(function (require) {
                         vendorLine.vendorSKU == hashValue.skuValue
                     )
                         matchedValue = 'Ingram-SKU';
+                } else if (settings.isDell && vendorLine.vendorSKU == item.dellQuoteNo) {
+                    matchedValue = 'DellQuoteNo';
                 }
 
                 returnValue = matchedValue;
@@ -543,7 +565,7 @@ define(function (require) {
                     orderLine.MATCHED_VALUE = matchedValue;
                 }
             } catch (err) {
-                vc2_util.log(logTitle, '[item_num.filter] !! error !!', err);
+                vc2_util.log(logTitle, '[item_num.filter] !! error !!', [err, item]);
                 returnValue = false;
                 // } finally {
                 // vc2_util.log(logTitle, ' matched ? ', matchedValue);
@@ -574,7 +596,7 @@ define(function (require) {
                                 'quantityremaining',
                                 vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
                                 vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                                vc2_constant.FIELD.TRANSACTION.DH_MPN
+                                LineColField.DH_MPN
                             ]
                         });
                         Helper.log(logTitle, '*** fulfillment line ***', orderLine);
@@ -689,7 +711,7 @@ define(function (require) {
                 returnValue = matchingVendorLine;
             } catch (error) {
                 vc2_util.log(logTitle, '## NO MATCH ## ', error);
-                returnValue = null;
+                returnValue = false;
             }
 
             return returnValue;

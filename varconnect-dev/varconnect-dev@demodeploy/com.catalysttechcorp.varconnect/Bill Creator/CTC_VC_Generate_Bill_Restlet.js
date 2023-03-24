@@ -27,7 +27,7 @@ define([
     ns_search,
     ns_format,
     ns_runtime,
-    vc2_constants,
+    vc2_constant,
     vc2_util,
     vc_recordlib,
     vc_mainCfg,
@@ -54,14 +54,15 @@ define([
             }
         },
         LogPrefix = '',
-        BILL_CREATOR = vc2_constants.Bill_Creator;
+        BILL_CREATOR = vc2_constant.Bill_Creator;
 
     var VARIANCE_DEF = {},
         VARIANCE_TYPE = {
             MISC: 'miscCharges',
             TAX: 'tax',
             SHIP: 'shipping',
-            OTHER: 'other'
+            OTHER: 'other',
+            ADJ: 'adjustment'
         };
 
     var RESTLET = {
@@ -512,16 +513,22 @@ define([
                     if (!varianceLine.item) continue;
 
                     lineData = vc2_util.extend(varianceLine, {
-                        applied: 'T',
+                        // applied: 'T',
                         amount: varianceLine.amount || varianceLine.rate,
                         rate: varianceLine.amount || varianceLine.rate
                     });
+
+                    if (lineData.type == 'adjustment') {
+                        Current.varianceParam.applyAdjustment = lineData.applied;
+                    }
 
                     if (lineData.applied == 'F' || lineData.rate == 0) continue;
 
                     log.debug(
                         logTitle,
-                        LogPrefix + '>>> charge line Data: ' + JSON.stringify(lineData)
+                        LogPrefix +
+                            '>>> charge line Data: ' +
+                            JSON.stringify([lineData, varianceLine])
                     );
 
                     var newLine = vc_recordlib.addLine({
@@ -543,7 +550,10 @@ define([
 
                 log.audit(logTitle, LogPrefix + '// TOTALS: ' + JSON.stringify(Current.TOTALS));
 
-                if (!Current.varianceParam.ignoreVariance) {
+                if (
+                    !Current.varianceParam.ignoreVariance &&
+                    Current.varianceParam.applyAdjustment !== 'F'
+                ) {
                     // calculate the adjustment
                     Current.varianceParam.adjustment =
                         Current.JSON_DATA.total -
@@ -555,6 +565,7 @@ define([
 
                     if (Current.varianceParam.adjustment != 0) {
                         Current.varianceParam.hasVariance = true;
+
                         vc_recordlib.addLine({
                             record: Current.POBILL_REC,
                             lineData: vc2_util.extend(VARIANCE_DEF.miscCharges, {
@@ -626,6 +637,12 @@ define([
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
                     return returnObj;
                 }
+
+                // set the createdby field
+                Current.POBILL_REC.setValue({
+                    fieldId: 'custbody_ctc_vc_createdby_vc',
+                    value: true
+                });
 
                 var newRecordId = Current.POBILL_REC.save({
                     enableSourcing: true,

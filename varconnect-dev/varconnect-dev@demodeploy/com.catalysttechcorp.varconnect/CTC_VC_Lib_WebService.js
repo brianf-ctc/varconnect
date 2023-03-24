@@ -384,12 +384,11 @@ define([
             returnValue.itemArray = outputArray;
         } catch (e) {
             vc2_util.logError(logTitle, e);
-
             vc_log.recordLog({
                 header: 'WebService::process',
                 body: 'Error encountered: ' + vc2_util.extractError(e),
                 transaction: poId,
-                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                status: vc2_constant.LIST.VC_LOG_STATUS.WS_ERROR
             });
 
             returnValue.isError = true;

@@ -124,7 +124,10 @@ define(['N/runtime', 'N/record', 'N/search'], function (ns_runtime, record, sear
                     fieldId: 'custbody_isdropshippo',
                     value: true
                 });
-                newRec.save();
+                newRec.save({
+                    enableSourcing: true,
+                    ignoreMandatoryFields: true
+                });
                 var isDropShip = search.lookupFields({
                     type: newRecord.type,
                     id: newRecord.id,

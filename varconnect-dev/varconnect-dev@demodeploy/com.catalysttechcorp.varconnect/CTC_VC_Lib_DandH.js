@@ -70,13 +70,6 @@ define([
                 returnValue = respOrderStatus;
             } catch (error) {
                 var errorMsg = vc2_util.extractError(error);
-                log.audit(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
-
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Orders Status : Error', errorMsg].join(' - '),
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
@@ -102,11 +95,6 @@ define([
 
                 returnValue = LibDnH.getOrderStatus(option);
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Request Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
                 throw vc2_util.extractError(error);
             }
 
@@ -302,11 +290,6 @@ define([
 
                 returnValue = itemArray;
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Response Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
                 throw vc2_util.extractError(error);
                 returnValue = errorMsg;
             }
@@ -329,11 +312,6 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                vc2_util.vcLog({
-                    title: LogTitle + ': Process Error',
-                    error: error,
-                    recordId: CURRENT.recordId
-                });
                 throw vc2_util.extractError(error);
             } finally {
                 log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));

@@ -18,6 +18,7 @@
  * Version	Date            Author		Remarks
  * 1.00		Jan 1, 2020		paolodl		Initial Build
  * 2.00		May 25, 2021	paolodl		Include line numbers
+ * 3.00     Mar 14, 2023    brianff     updated dell library
  *
  */
 define([
@@ -29,213 +30,236 @@ define([
     'use strict';
     var LogTitle = 'WS:Dellv2';
 
-    var WS_Dell = {
+    var CURRENT = {};
+    var LibDellAPI = {
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
                 returnValue;
-
-            log.audit(logTitle, option);
-
-            var tokenReq = vc2_util.sendRequest({
-                header: [LogTitle, 'GenerateToken'].join(' '),
-                method: 'POST',
-                query: {
-                    url: option.vendorConfig.accessEndPoint,
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: vc2_util.convertToQuery({
-                        client_id: option.vendorConfig.apiKey,
-                        client_secret: option.vendorConfig.apiSecret,
-                        grant_type: 'client_credentials'
-                    })
-                },
-                recordId: option.recordId,
-                doRetry: true,
-                maxRetry: 3
-            });
-
-            if (tokenReq.isError && tokenReq.errorMsg) throw tokenReq.errorMsg;
-            var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
-
-            if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
-            return tokenResp.access_token;
-        },
-
-        process: function (option) {
-            var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue;
-
-            log.audit(logTitle, option);
-
-            var responseBody, orderLines;
-
-            responseBody = this.processRequest({
-                poNum: option.poNum,
-                poId: option.poId,
-                vendorConfig: option.vendorConfig
-            });
-
-            if (responseBody) {
-                orderLines = this.processResponse({
-                    responseBody: responseBody,
-                    poNum: option.poNum,
-                    poId: option.poId,
-                    vendorConfig: option.vendorConfig
-                });
-
-                log.audit(logTitle, '>> orderLines: ' + JSON.stringify(orderLines));
-            }
-
-            if (!orderLines || vc2_util.isEmpty(orderLines)) throw 'No lines to processed';
-            returnValue = orderLines;
-
-            return returnValue;
-        },
-
-        processRequest: function (option) {
-            var logTitle = [LogTitle, 'processRequest'].join('::'),
-                returnValue;
-
-            log.audit(logTitle, option);
-
-            var tokenId,
-                response,
-                queryOption = {};
+            option = option || {};
 
             try {
-                tokenId = this.generateToken({
-                    vendorConfig: option.vendorConfig,
-                    recordId: option.poId
-                });
-                if (!tokenId) throw 'Missing token for authentication';
-
-                var orderStatusReq = vc2_util.sendRequest({
-                    header: [LogTitle, 'Order Status'].join(' '),
-                    method: 'post',
+                var tokenReq = vc2_util.sendRequest({
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'POST',
+                    recordId: CURRENT.recordId,
+                    doRetry: true,
+                    maxRetry: 3,
                     query: {
-                        url: option.vendorConfig.endPoint,
+                        url: CURRENT.vendorConfig.accessEndPoint,
+                        body: vc2_util.convertToQuery({
+                            client_id: CURRENT.vendorConfig.apiKey,
+                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            grant_type: 'client_credentials'
+                        }),
                         headers: {
-                            Authorization: 'Bearer ' + tokenId,
-                            Accept: 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            searchParameter: [
-                                {
-                                    key: 'po_numbers',
-                                    values: [option.poNum]
-                                }
-                            ]
-                        })
-                    },
-                    recordId: option.poId
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    }
                 });
+                var tokenResp = tokenReq.PARSED_RESPONSE;
+                this.handleResponse(tokenReq);
 
-                if (orderStatusReq.isError) throw orderStatusReq.errorMsg;
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
-                var orderStatusResp = vc2_util.safeParse(orderStatusReq.RESPONSE);
-                if (!orderStatusResp) throw 'Unable to fetch Order Status';
-
-                option.responseBody = orderStatusResp;
-                returnValue = orderStatusResp;
+                returnValue = tokenResp.access_token;
+                CURRENT.accessToken = tokenResp.access_token;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-
-                vc_log.recordLog({
-                    header: [LogTitle + ': Error', errorMsg].join(' - '),
-                    body: JSON.stringify(error),
-                    transaction: option.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
-                    isDebugMode: option.fromDebug
-                });
-                if (!returnValue) returnValue = errorMsg;
+                returnValue = false;
+                throw error;
             } finally {
+                vc2_util.log(logTitle, '>> Access Token: ', returnValue);
             }
 
             return returnValue;
         },
-        processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
+        handleResponse: function (request) {
+            var returnValue = true;
+
+            if (request.isError || !request.RESPONSE || request.RESPONSE.code != '200') {
+                var faultStr = request.PARSED_RESPONSE
+                    ? // check fault/faultString
+                      (function (resp) {
+                          return resp.Fault && resp.Fault.faultstring
+                              ? resp.Fault.faultstring
+                              : false;
+                      })(request.PARSED_RESPONSE) ||
+                      // check error/error_description
+                      (function (resp) {
+                          return resp.error && resp.error_description
+                              ? resp.error_description
+                              : false;
+                      })(request.PARSED_RESPONSE) ||
+                      request.errorMsg
+                    : request.errorMsg;
+
+                throw faultStr;
+            }
+
+            return returnValue;
+        },
+        searchPO: function (option) {
+            var logTitle = [LogTitle, 'searchPO'].join('::'),
                 returnValue;
-            log.audit(logTitle, option);
-
-            var validOrderStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-            var validLineStatus = ['SHIPPED', 'PROCESSING', 'DELIVERED', 'BACKORDERED'];
-            var validShippedStatus = ['SHIPPED', 'DELIVERED'];
-
             try {
-                if (vc2_util.isEmpty(option.responseBody)) throw 'Empty or Invalid response body';
-                if (vc2_util.isEmpty(option.responseBody.purchaseOrderDetails))
-                    throw 'Missing Purchase Order Details';
-
-                var arrPODetails = option.responseBody.purchaseOrderDetails;
-
-                var orderLines = [];
-
-                arrPODetails.forEach(function (poDetails) {
-                    if (vc2_util.isEmpty(poDetails.dellOrders)) return false;
-                    poDetails.dellOrders.forEach(function (dellOrder) {
-                        log.audit(logTitle, '>> dell order: ' + JSON.stringify(dellOrder));
-
-                        var orderStatus = dellOrder.orderStatus.toUpperCase();
-                        if (vc2_util.inArray(orderStatus, validShippedStatus)) {
-                            var lineData = {};
-
-                            /// get the lines
-                            dellOrder.productInfo.forEach(function (prodInfo, prodIdx) {
-                                lineData = {
-                                    line_num: prodIdx + 1,
-                                    item_num: prodInfo.skuNumber,
-                                    ship_qty:
-                                        (lineData.ship_qty || 0) + parseInt(prodInfo.itemQuantity),
-                                    serial_num:
-                                        prodInfo.serviceTags && prodInfo.serviceTags.length
-                                            ? prodInfo.serviceTags.join(',')
-                                            : ''
-                                };
-
-                                return true;
-                            });
-
-                            lineData.order_num = dellOrder.orderNumber;
-                            lineData.order_date = poDetails.purchaseOrderDate;
-                            lineData.ship_date = dellOrder.actualShipmentDate;
-                            lineData.order_eta = dellOrder.estimatedDeliveryDate;
-                            lineData.carrier = dellOrder.carrierName;
-                            lineData.serial_num =
-                                dellOrder.waybills && dellOrder.waybills.length
-                                    ? dellOrder.waybills.join(',')
-                                    : '';
-
-                            log.audit(logTitle, '>> lineData: ' + JSON.stringify(lineData));
-                            orderLines.push(lineData);
+                var bodyStr = JSON.stringify({
+                    searchParameter: [
+                        {
+                            key: 'po_numbers',
+                            values: [CURRENT.recordNum]
                         }
-
-                        return true;
-                    });
-
-                    return true;
+                    ]
                 });
 
-                log.audit(logTitle, '>> order lines: ' + JSON.stringify(orderLines));
-                returnValue = orderLines;
+                var reqSearchPO = vc2_util.sendRequest({
+                    header: [LogTitle, 'Orders Search'].join(' : '),
+                    method: 'POST',
+                    query: {
+                        url: CURRENT.vendorConfig.endPoint,
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'Accepts-Version': '2.0'
+                        },
+                        body: bodyStr
+                    },
+                    recordId: CURRENT.recordId
+                });
+
+                this.handleResponse(reqSearchPO);
+
+                returnValue = reqSearchPO.PARSED_RESPONSE;
             } catch (error) {
-                log.error(logTitle, '>> ERROR: ' + JSON.stringify(error));
-
-                vc_log.recordLog({
-                    header: [LogTitle, 'Processing'].join(' | ') + ' - ERROR',
-                    body: vc2_util.extractError(error),
-                    transaction: option.poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
-                    isDebugMode: option.fromDebug
-                });
-            } finally {
+                throw error;
             }
 
             return returnValue;
         }
     };
 
-    return WS_Dell;
+    return {
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum;
+                CURRENT.vendorConfig = option.vendorConfig;
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                var arrLines = [];
+
+                var arrResponse = this.processRequest(option);
+                vc2_util.log(logTitle, '>> arrResponse: ', arrResponse);
+
+                var arrLines = [];
+
+                if (arrResponse.purchaseOrderDetails) {
+                    var orderDetail = arrResponse.purchaseOrderDetails.shift();
+                    if (orderDetail.dellOrders) {
+                        for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
+                            var dellOrder = orderDetail.dellOrders[i],
+                                itemOrder = {
+                                    ship_qty: 0
+                                };
+
+                            if (dellOrder.purchaseOrderLines) {
+                                dellOrder.purchaseOrderLines.forEach(function (lineData) {
+                                    (itemOrder.item_num = lineData.buyerPartNumber),
+                                        (itemOrder.vendorSKU = lineData.buyerPartNumber),
+                                        (itemOrder.ship_qty += parseFloat(
+                                            lineData.quantityOrdered
+                                        ));
+                                    itemOrder.line_status = lineData.lineStatus;
+                                });
+                            }
+
+                            util.extend(itemOrder, {
+                                order_num: dellOrder.orderNumber || 'NA',
+                                ship_date: dellOrder.actualShipmentDate || 'NA',
+                                order_date: orderDetail.orderDetail || 'NA',
+                                order_eta: dellOrder.estimatedDeliveryDate || 'NA',
+                                carrier: dellOrder.carrierName || 'NA',
+
+                                order_status: orderDetail.purchaseOrderStatus,
+
+                                serial_num:
+                                    (function (items) {
+                                        if (!items || !items.length) return false;
+                                        var arrSerials = [];
+                                        items.forEach(function (item) {
+                                            if (vc2_util.isEmpty(item.serviceTags)) return false;
+
+                                            if (util.isArray(item.serviceTags))
+                                                arrSerials = arrSerials.concat(item.serviceTags);
+                                            else arrSerials.push(item.serviceTags);
+
+                                            return true;
+                                        });
+                                        if (vc2_util.isEmpty(arrSerials)) return false;
+                                        return arrSerials.join(',');
+                                    })(dellOrder.productInfo) || 'NA',
+
+                                tracking_num:
+                                    dellOrder.waybills && dellOrder.waybills.length
+                                        ? dellOrder.waybills.join(',')
+                                        : 'NA'
+                            });
+
+                            arrLines.push(itemOrder);
+                        }
+                    }
+                }
+
+                returnValue = arrLines;
+            } catch (error) {
+                throw error;
+            } finally {
+                vc2_util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !vc2_util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                });
+            }
+            return returnValue;
+        },
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum;
+                CURRENT.vendorConfig = option.vendorConfig;
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+
+                LibDellAPI.generateToken();
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
+
+                returnValue = LibDellAPI.searchPO();
+            } catch (error) {
+                throw error;
+            } finally {
+                vc2_util.vcLog({
+                    title: [LogTitle + ' Lines'].join(' - '),
+                    body: !vc2_util.isEmpty(returnValue)
+                        ? JSON.stringify(returnValue)
+                        : '-no lines to process-',
+                    recordId: CURRENT.recordId,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                });
+            }
+
+            return returnValue;
+        }
+    };
 });

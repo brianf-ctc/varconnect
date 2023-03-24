@@ -55,8 +55,8 @@ define([
             if (ns_runtime.executionContext !== ns_runtime.ContextType.USER_INTERFACE) return;
             if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
 
-            var mainConfig = Helper.loadMainConfig(),
-                validLicense = Helper.validateLicense({ mainConfig: mainConfig });
+            var mainConfig = Helper.loadMainConfig();
+            // ,                validLicense = Helper.validateLicense({ mainConfig: mainConfig });
 
             LogPrefix = [
                 scriptContext.type,
@@ -80,7 +80,7 @@ define([
             var form = scriptContext.form,
                 chkSerialSync;
 
-            if (!mainConfig.serialScanUpdate || !validLicense) {
+            if (!mainConfig.serialScanUpdate) {
                 var sublist = form.getSublist({ id: 'item' });
 
                 if (sublist) {
