@@ -13,9 +13,6 @@
  */
 
 define([
-    'N/https',
-    'N/search',
-    'N/format',
     './CTC_VC_Lib_Synnex',
     './CTC_VC_Lib_TechData',
     './CTC_VC_Lib_DandH',
@@ -26,14 +23,10 @@ define([
     './CTC_VC_Lib_Jenne',
     './CTC_VC_Lib_ScanSource',
     './CTC_VC_Lib_WeFi.js',
-    './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Utils',
     './CTC_VC_Lib_VendorConfig',
-    './CTC_VC_Lib_Log.js'
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils'
 ], function (
-    ns_https,
-    ns_search,
-    ns_format,
     lib_synnex,
     lib_techdata,
     lib_dnh,
@@ -44,10 +37,9 @@ define([
     lib_jenne,
     lib_scansource,
     lib_wefi,
-    vc2_constant,
-    vc2_util,
     vc_vendorcfg,
-    vc_log
+    vc2_constant,
+    vc2_util
 ) {
     var LogTitle = 'WebSvcLib',
         LogPrefix = '';
@@ -200,7 +192,6 @@ define([
             outputArray;
 
         LogPrefix = '[purchaseorder:' + poId + '] ';
-        // vc2_util.LogPrefix = LogPrefix;
 
         _validateVendorConfig({ poNum: poNum, vendorConfig: vendorConfig });
 
@@ -218,16 +209,16 @@ define([
         });
 
         if (!dateCheck) {
-            vc_log.recordLog({
-                header: 'WebService',
-                body:
+            vc2_util.vcLog({
+                title: 'WebService | Date Check',
+                error:
                     'Invalid transaction date -- ' +
                     JSON.stringify({
                         'config startdate': startDate,
                         'transaction date': tranDate
                     }),
-                transaction: poId,
-                status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                recordId: poId,
+                status: vc2_constant.LIST.VC_LOG_STATUS.INFO
             });
 
             return false;
@@ -244,27 +235,14 @@ define([
             vendorConfig: vendorConfig
         });
 
-        vc_log.recordLog({
-            header: 'Output Lines',
+        vc2_util.vcLog({
+            recordId: poId,
+            title: 'WebService | Output Lines',
             body: !vc2_util.isEmpty(outputArray)
                 ? JSON.stringify(outputArray)
                 : '-no lines to process-',
-            status: vc2_constant.LIST.VC_LOG_STATUS.INFO,
-            transaction: poId
+            status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
-        // } catch (e) {
-        //     vc2_util.logError(logTitle, e);
-
-        //     vc_log.recordLog({
-        //         header: 'VAR Connect ERROR',
-        //         body: JSON.stringify({
-        //             error: vc2_util.extractError(e),
-        //             details: JSON.stringify(e)
-        //         }),
-        //         status: vc2_constant.LIST.VC_LOG_STATUS.ERROR,
-        //         transaction: poId
-        //     });
-        // }
 
         return outputArray;
     }
@@ -307,16 +285,16 @@ define([
             });
 
             if (!dateCheck) {
-                vc_log.recordLog({
-                    header: 'WebService',
-                    body:
+                vc2_util.vcLog({
+                    title: 'WebService | Date Check',
+                    error:
                         'Invalid transaction date -- ' +
                         JSON.stringify({
                             'config startdate': startDate,
                             'transaction date': tranDate
                         }),
-                    transaction: poId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.ERROR
+                    recordId: poId,
+                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
                 });
 
                 continue;
@@ -352,7 +330,6 @@ define([
             outputArray = null;
 
         LogPrefix = '[purchaseorder:' + poId + '] ';
-        // vc2_util.LogPrefix = LogPrefix;
 
         try {
             if (!vendorConfig) throw 'No Vendor Config available for ' + vendor;
@@ -382,17 +359,19 @@ define([
             }
 
             returnValue.itemArray = outputArray;
-        } catch (e) {
-            vc2_util.logError(logTitle, e);
-            vc_log.recordLog({
-                header: 'WebService::process',
-                body: 'Error encountered: ' + vc2_util.extractError(e),
-                transaction: poId,
-                status: vc2_constant.LIST.VC_LOG_STATUS.WS_ERROR
-            });
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
+            var errorMsg = vc2_util.extractError(error);
+
+            // vc2_util.vcLog({
+            //     recordId: poId,
+            //     title: 'WebService | Error encountered',
+            //     details: errorMsg,
+            //     status: vc2_constant.LIST.VC_LOG_STATUS.WS_ERROR
+            // });
 
             returnValue.isError = true;
-            returnValue.errorMessage = vc2_util.extractError(e);
+            returnValue.errorMessage = errorMsg;
         }
 
         return returnValue;

@@ -25,13 +25,15 @@ define([
     'N/runtime',
     './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (ns_runtime, vc_log, vc2_util, vc2_constant) {
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_runtime, vc_log, vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:Dellv2';
 
     var CURRENT = {};
     var LibDellAPI = {
+        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED'],
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
                 returnValue;
@@ -127,7 +129,6 @@ define([
                 });
 
                 this.handleResponse(reqSearchPO);
-
                 returnValue = reqSearchPO.PARSED_RESPONSE;
             } catch (error) {
                 throw error;
@@ -147,85 +148,123 @@ define([
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
                 CURRENT.vendorConfig = option.vendorConfig;
+
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-                var arrLines = [];
+                var itemArray = [];
 
                 var arrResponse = this.processRequest(option);
-                vc2_util.log(logTitle, '>> arrResponse: ', arrResponse);
 
-                var arrLines = [];
+                if (!arrResponse || !arrResponse.purchaseOrderDetails)
+                    throw 'Missing purchase order details';
 
-                if (arrResponse.purchaseOrderDetails) {
-                    var orderDetail = arrResponse.purchaseOrderDetails.shift();
-                    if (orderDetail.dellOrders) {
-                        for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
-                            var dellOrder = orderDetail.dellOrders[i],
-                                itemOrder = {
-                                    ship_qty: 0
-                                };
+                var orderDetail = arrResponse.purchaseOrderDetails.shift();
+                if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
 
-                            if (dellOrder.purchaseOrderLines) {
-                                dellOrder.purchaseOrderLines.forEach(function (lineData) {
-                                    (itemOrder.item_num = lineData.buyerPartNumber),
-                                        (itemOrder.vendorSKU = lineData.buyerPartNumber),
-                                        (itemOrder.ship_qty += parseFloat(
-                                            lineData.quantityOrdered
-                                        ));
-                                    itemOrder.line_status = lineData.lineStatus;
-                                });
-                            }
+                for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
+                    var dellOrder = orderDetail.dellOrders[i],
+                        orderItem = {
+                            ship_qty: 0
+                        };
 
-                            util.extend(itemOrder, {
-                                order_num: dellOrder.orderNumber || 'NA',
-                                ship_date: dellOrder.actualShipmentDate || 'NA',
-                                order_date: orderDetail.orderDetail || 'NA',
-                                order_eta: dellOrder.estimatedDeliveryDate || 'NA',
-                                carrier: dellOrder.carrierName || 'NA',
+                    if (dellOrder.purchaseOrderLines) {
+                        dellOrder.purchaseOrderLines.forEach(function (lineData) {
+                            (orderItem.item_num = lineData.buyerPartNumber),
+                                (orderItem.vendorSKU = lineData.buyerPartNumber),
+                                (orderItem.ship_qty += parseFloat(lineData.quantityOrdered));
+                            orderItem.line_status = lineData.lineStatus;
+                        });
+                    }
 
-                                order_status: orderDetail.purchaseOrderStatus,
+                    util.extend(orderItem, {
+                        order_num: dellOrder.orderNumber || 'NA',
+                        ship_date: dellOrder.actualShipmentDate || 'NA',
+                        order_date: orderDetail.orderDetail || 'NA',
+                        order_eta: dellOrder.estimatedDeliveryDate || 'NA',
+                        carrier: dellOrder.carrierName || 'NA',
+                        order_status: orderDetail.purchaseOrderStatus,
+                        serial_num: 'NA',
+                        tracking_num: 'NA'
+                    });
 
-                                serial_num:
-                                    (function (items) {
-                                        if (!items || !items.length) return false;
-                                        var arrSerials = [];
-                                        items.forEach(function (item) {
-                                            if (vc2_util.isEmpty(item.serviceTags)) return false;
+                    if (dellOrder.productInfo && util.isArray(dellOrder.productInfo)) {
+                        var arrSerials = [];
 
-                                            if (util.isArray(item.serviceTags))
-                                                arrSerials = arrSerials.concat(item.serviceTags);
-                                            else arrSerials.push(item.serviceTags);
+                        dellOrder.productInfo.forEach(function (productInfo) {
+                            if (util.isArray(productInfo.serviceTags))
+                                arrSerials = arrSerials.concat(productInfo.serviceTags);
+                            else arrSerials.push(productInfo.serviceTags);
 
-                                            return true;
-                                        });
-                                        if (vc2_util.isEmpty(arrSerials)) return false;
-                                        return arrSerials.join(',');
-                                    })(dellOrder.productInfo) || 'NA',
+                            return true;
+                        });
 
-                                tracking_num:
-                                    dellOrder.waybills && dellOrder.waybills.length
-                                        ? dellOrder.waybills.join(',')
-                                        : 'NA'
-                            });
-
-                            arrLines.push(itemOrder);
+                        if (!vc2_util.isEmpty(arrSerials)) {
+                            orderItem.serial_num = arrSerials.join(',');
                         }
                     }
+
+                    if (
+                        dellOrder.trackingInformation &&
+                        util.isArray(dellOrder.trackingInformation)
+                    ) {
+                        var arrTracking = [];
+
+                        dellOrder.trackingInformation.forEach(function (tracking) {
+                            if (vc2_util.isEmpty(tracking.waybill)) return false;
+                            if (!vc2_util.inArray(tracking.waybill, arrTracking))
+                                arrTracking.push(tracking.waybill);
+
+                            if (!orderItem.carrier || orderItem.carrier == 'NA') {
+                                orderItem.carrier = tracking.carrierName;
+                            }
+
+                            return true;
+                        });
+
+                        if (!vc2_util.isEmpty(arrTracking)) {
+                            orderItem.tracking_num = arrTracking.join(',');
+                        }
+                    }
+
+                    // check is_shipped from status
+                    orderItem.is_shipped =
+                        vc2_util.inArray(
+                            orderItem.line_status.toUpperCase(),
+                            LibDellAPI.ValidShippedStatus
+                        ) ||
+                        vc2_util.inArray(
+                            orderItem.order_status.toUpperCase(),
+                            LibDellAPI.ValidShippedStatus
+                        );
+
+                    // check is_shipped from shipped date
+                    if (
+                        !orderItem.is_shipped &&
+                        orderItem.ship_date &&
+                        orderItem.ship_date != 'NA' &&
+                        orderItem.ship_qty &&
+                        orderItem.ship_qty != 0
+                    ) {
+                        var shippedDate = moment(orderItem.ship_date).toDate();
+                        vc2_util.log(logTitle, '**** shipped date: ****', [
+                            shippedDate,
+                            util.isDate(shippedDate),
+                            shippedDate <= new Date()
+                        ]);
+
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                            orderItem.is_shipped = true;
+                    }
+
+                    vc2_util.log(logTitle, '>> line data: ', orderItem);
+                    itemArray.push(orderItem);
                 }
 
-                returnValue = arrLines;
+                returnValue = itemArray;
             } catch (error) {
+                vc2_util.logError(logTitle, error);
                 throw error;
-            } finally {
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
             }
             return returnValue;
         },
@@ -248,15 +287,6 @@ define([
                 returnValue = LibDellAPI.searchPO();
             } catch (error) {
                 throw error;
-            } finally {
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
             }
 
             return returnValue;

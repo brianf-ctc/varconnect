@@ -233,6 +233,7 @@ define(function (require) {
     };
 
     VC2_CONSTANT.ERRORMSG = {
+        /// CONFIG ERRORS ///
         INVALID_LICENSE: {
             message:
                 'License is no longer valid or have expired. ' +
@@ -248,39 +249,45 @@ define(function (require) {
             message: 'Missing Vendor Configuration',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
+        MISSING_PREFIX: {
+            message: 'Missing Fulfillment Prefix',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        NO_PROCESS_DROPSHIP_SPECIALORD: {
+            message: 'Process DropShips and Process Special Orders is not enabled!',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        MISSING_ORDERSTATUS_SEARCHID: {
+            message: 'Missing Search: Open PO for Order Status processing',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        BYPASS_VARCONNECT: {
+            message: 'Bypass VAR Connect is checked on this PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
 
+        /// ORDER STATUS ///
+        LINE_NOT_MATCHED: {
+            message: 'Line item not matched',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        MATCH_NOT_FOUND: {
+            message: 'Could not find matching order line',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        MISSING_ORDERNUM: {
+            message: 'Missing Order Num',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
+        /// FULFILLMENT ///
         FULFILLMENT_NOT_ENABLED: {
             message: 'Item Fulfillment creation is not enabled',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
-        ITEMRECEIPT_NOT_ENABLED: {
-            message: 'Item Receipt creation is not enabled',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
-        },
-
-        MISSING_PO: {
-            message: 'Missing PO',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
-        },
-        INVALID_PO: {
-            message: 'Invalid PO',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
-        },
-        MISSING_LINES: {
-            message: 'Missing Order Lines',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
-        },
-        MISSING_VENDOR_LINE: {
-            message: 'Missing Vendor Line',
+        INSUFFICIENT_SERIALS: {
+            message: 'Insufficient Serials quantity',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
-        },
-        INVALID_PODATE: {
-            message: 'Invalid PO Date',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
-        },
-        MISSING_PREFIX: {
-            message: 'Missing Fulfillment Prefix',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
         ORDER_EXISTS: {
             message: 'Order already exists',
@@ -302,14 +309,6 @@ define(function (require) {
             message: 'No matching items to fulfill.',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-        LINE_NOT_MATCHED: {
-            message: 'Line item not matched',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
-        },
-        MATCH_NOT_FOUND: {
-            message: 'Could not find matching order line',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
-        },
         UNABLE_TO_FULFILL: {
             message: 'Unable to fulfill the following items',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
@@ -318,24 +317,42 @@ define(function (require) {
             message: 'No shipped items',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
-        MISSING_ORDERNUM: {
-            message: 'Missing Order Num',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
-        },
         NOT_YET_SHIPPED: {
             message: 'Not yet shipped.',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
-        NO_PROCESS_DROPSHIP_SPECIALORD: {
-            message: 'Process DropShips and Process Special Orders is not enabled!',
+        NO_ORDERS_TO_FULFILL: {
+            message: 'No orders to fulfill.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
+        /// ITEM RECEIPT ///
+        ITEMRECEIPT_NOT_ENABLED: {
+            message: 'Item Receipt creation is not enabled',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
-        MISSING_ORDERSTATUS_SEARCHID: {
-            message: 'Missing Search: Open PO for Order Status processing',
-            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+
+        /// SERIALS ///
+
+        /// VALIDATION ERRORS ///
+        MISSING_PO: {
+            message: 'Missing PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
         },
-        BYPASS_VARCONNECT: {
-            message: 'Bypass VAR Connect is checked on this PO',
+        INVALID_PO: {
+            message: 'Invalid PO',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        MISSING_LINES: {
+            message: 'Missing Order Lines',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+        MISSING_VENDOR_LINE: {
+            message: 'Missing Vendor Line',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        INVALID_PODATE: {
+            message: 'Invalid PO Date',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         }
     };
@@ -355,63 +372,81 @@ define(function (require) {
         MISSING_PO: {
             code: 'MISSING_PO',
             msg: 'Unable to find the PO record. ',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
-            status: Bill_Creator.Status.PENDING
+            status: Bill_Creator.Status.PENDING,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         NOT_FULLY_PROCESSED: {
             code: 'NOT_FULLY_PROCESSED',
             msg: 'Could not fully process Bill File. ',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
         INSUFFICIENT_QUANTITY: {
             code: 'INSUFFICIENT_QUANTITY',
             msg: 'PO Qty is insufficient for the bill.',
-            status: Bill_Creator.Status.ERROR
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',
             msg: 'Items are already billed',
-            status: Bill_Creator.Status.CLOSED
+            status: Bill_Creator.Status.CLOSED,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
-            status: Bill_Creator.Status.CLOSED
+            status: Bill_Creator.Status.CLOSED,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         HAS_VARIANCE: {
             code: 'HAS_VARIANCE',
             msg: 'One or More Variances in Vendor Bill.',
-            status: Bill_Creator.Status.VARIANCE
+            status: Bill_Creator.Status.VARIANCE,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_CREATED: {
             code: 'BILL_CREATED',
             msg: 'Created Vendor Bill',
-            status: Bill_Creator.Status.PROCESSED
+            status: Bill_Creator.Status.PROCESSED,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.SUCCESS
         },
         FULLY_BILLED: {
             code: 'FULLY_BILLED',
             msg: 'PO is Fully Billed',
-            status: Bill_Creator.Status.CLOSED
+            status: Bill_Creator.Status.CLOSED,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         CLOSED_PO: {
             code: 'CLOSED_PO',
             msg: 'PO is Closed',
-            status: Bill_Creator.Status.CLOSED
+            status: Bill_Creator.Status.CLOSED,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
 
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
-            status: Bill_Creator.Status.PENDING
+            status: Bill_Creator.Status.PENDING,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
         },
         BILL_CREATE_DISABLED: {
             code: 'BILL_CREATE_DISABLED',
             msg: 'Vendor Bill creation is disabled',
-            status: Bill_Creator.Status.PENDING
+            status: Bill_Creator.Status.PENDING,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        UNABLE_TO_ADD_VARIANCE_LINE: {
+            code: 'UNABLE_TO_ADD_VARIANCE_LINE',
+            msg: 'Unable to add variance item',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         }
     };
 

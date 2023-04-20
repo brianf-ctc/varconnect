@@ -32,7 +32,8 @@ require([
     VCFolder + '/CTC_VC_Lib_VendorConfig',
     VCFolder + '/CTC_VC_Lib_WebService',
 
-    VCFolder + '/CTC_VC_Lib_LicenseValidator'
+    VCFolder + '/CTC_VC_Lib_LicenseValidator',
+    VCFolder + '/CTC_VC_Lib_Log.js'
 ], function (
     ns_search,
     ns_runtime,
@@ -47,7 +48,8 @@ require([
     vc_maincfg,
     vc_vendorcfg,
     vc_websvclib,
-    vc_license
+    vc_license,
+    vc_log
 ) {
     var LogTitle = 'MR_OrderStatus';
     var LogPrefix = '';
@@ -90,9 +92,9 @@ require([
             Helper.validateLicense({ mainConfig: Current.MainCFG });
 
             if (!Current.MainCFG.processDropships && !Current.MainCFG.processSpecialOrders)
-                throw 'Process DropShips and Process Special Orders is not enabled!';
+                throw ERROR_MSG.NO_PROCESS_DROPSHIP_SPECIALORD;
 
-            if (!Params.searchId) throw 'Missing Search: Open PO for Order Status processing';
+            if (!Params.searchId) throw ERROR_MSG.MISSING_ORDERSTATUS_SEARCHID;
 
             var searchRec = ns_search.load({ id: Params.searchId }),
                 searchNew;
@@ -250,9 +252,8 @@ require([
 
             vc2_util.log(logTitle, '..current: ', Current);
 
-            if (Current.byPassVC == 'T' || Current.byPassVC === true) {
-                throw 'Bypass VAR Connect is checked on this PO';
-            }
+            if (Current.byPassVC == 'T' || Current.byPassVC === true)
+                throw ERROR_MSG.BYPASS_VARCONNECT;
 
             Current.MainCFG = Helper.loadMainConfig();
             Current.VendorCFG = Helper.loadVendorConfig({
@@ -260,8 +261,9 @@ require([
                 vendorName: searchResult.values.entity[0].text,
                 subsidiary: Current.subsidiary
             });
-            if (!Current.VendorCFG) return;
+            if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
+            ///// OVERRIDE /////
             if (Current.MainCFG.overridePONum) {
                 var tempPONum = searchResult.values[vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM];
                 if (tempPONum) {
@@ -269,6 +271,7 @@ require([
                     vc2_util.log(logTitle, '**** TEMP PO NUM: ' + tempPONum + ' ****');
                 }
             }
+            ////////////////
 
             // looup the country
             var countryCode = Current.VendorCFG.countryCode;
@@ -309,7 +312,11 @@ require([
                 !outputObj.itemArray ||
                 (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
             ) {
-                throw outputObj.isError ? outputObj.errorMessage : 'No lines to process.';
+                throw outputObj.isError && outputObj.errorMessage
+                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
+                    : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
+                          details: outputObj
+                      });
             }
 
             // throw '** EXIT **';
@@ -359,15 +366,17 @@ require([
                 Current.MainCFG.createIR;
 
             if (Current.isDropPO) {
-                if (!Current.allowItemFF) throw 'Item Fulfillment creation is not enabled.';
+                if (!Current.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
 
                 if (Params.use_fulfill_rl === true || Params.use_fulfill_rl == 'T') {
-                    Helper.processItemFulfillment_restlet({ orderLines: outputObj.itemArray });
+                    // Helper.processItemFulfillment_restlet({ orderLines: outputObj.itemArray });
+                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
                 } else {
                     Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
                 }
             } else {
-                if (!Current.allowItemRcpt) throw 'Item Receipt creation is not enabled.';
+                if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
+
                 Helper.processItemReceipt({ orderLines: outputObj.itemArray });
             }
 
@@ -476,8 +485,7 @@ require([
                     for (var iii = 0; iii < serialArray.length; iii++) {
                         if (serialArray[iii] == '') continue;
 
-                        // mapContext.write(serialArray[iii], {
-                        mapContextWrite(serialArray[iii], {
+                        mapContext.write(serialArray[iii], {
                             poId: Current.poId,
                             itemnum: lineData.item_num,
                             lineData: lineData,
@@ -683,10 +691,10 @@ require([
         vc2_util.logDebug(logTitle, '###### END OF SCRIPT ###### ');
     };
 
-    var ERROR_MSG = {
-        ORDER_EXISTS: 'Order already exists',
-        NO_LINES_TO_FULFILL: 'No lines to fulfill'
-    };
+    // var ERROR_MSG = {
+    //     ORDER_EXISTS: 'Order already exists',
+    //     NO_LINES_TO_FULFILL: 'No lines to fulfill'
+    // };
 
     var Helper = {
         getUsage: function () {
@@ -703,10 +711,7 @@ require([
                     external: true
                 });
 
-            if (response == 'invalid')
-                throw new Error(
-                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-                );
+            if (response == 'invalid') throw ERROR_MSG.INVALID_LICENSE;
         },
         fetchActiveVendors: function () {
             var logTitle = [LogTitle, 'fetchActiveVendors'].join('::');
@@ -801,8 +806,8 @@ require([
             option = option || {};
 
             try {
-                if (!Current.poId) throw 'Missing PO ID';
-                if (!Current.VendorCFG) throw 'Missing Vendor Config';
+                if (!Current.poId) throw ERROR_MSG.MISSING_PO;
+                if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
                 var searchObj = ns_search.load({ id: Params.searchId });
 

@@ -45,7 +45,6 @@ define(function (require) {
         ns_config = require('N/config');
 
     var vc2_constant = require('./CTC_VC2_Constants.js'),
-        vc_log = require('./CTC_VC_Lib_Log.js'),
         vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         vc_record = require('./CTC_VC_Lib_Record.js'),
         vc2_record = require('./CTC_VC2_Lib_Record.js');
@@ -158,7 +157,7 @@ define(function (require) {
                     orderLine.RESULT = vc2_util.extractError(order_error);
 
                     vc2_util.vcLog({
-                        title: 'Fulfillment',
+                        title: 'Fulfillment [' + orderLine.order_num + '] ',
                         error: order_error,
                         details: orderLine,
                         recordId: Current.PO_ID
@@ -395,14 +394,6 @@ define(function (require) {
                     updateFFData.custbody_ctc_if_vendor_order_match = vendorOrderNum;
                     updateFFData.custbody_ctc_vc_createdby_vc = true;
 
-                    vc2_util.log(logTitle, ' ///  updateFFData', updateFFData);
-                    if (!vc2_util.isEmpty(updateFFData)) {
-                        for (var fld in updateFFData) {
-                            recItemFF.setValue({ fieldId: fld, value: updateFFData[fld] });
-                        }
-                    }
-                    //////////////////////
-
                     ////////////////////////////////////
                     vc2_util.log(logTitle, '//// UPDATE fulfillment lines from vendor line data');
                     for (line = 0; line < lineItemCount; line++) {
@@ -527,8 +518,11 @@ define(function (require) {
                             }
                             recItemFF.commitLine({ sublistId: 'item' });
 
-                            // re-select line for native data
-                            recItemFF.selectLine({ sublistId: 'item', line: line });
+                            ////////////////////////////////////
+                            vc2_util.log(
+                                logTitle,
+                                '//// UPDATE fulfillment lines for Inventory Details'
+                            );
 
                             // //// SERIALS DETECTION ////////////////
                             var arrSerials = allSerialNums ? allSerialNums.split(/\n/) : [];
@@ -539,24 +533,13 @@ define(function (require) {
                                 arrSerials.length &&
                                 Helper.validateSerials({ serials: arrSerials })
                             ) {
-                                var currentLocation = recItemFF.getCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'location'
-                                });
-
-                                vc2_util.log(logTitle, '.. current location: ', currentLocation);
-
-                                if (!currentLocation)
-                                    Helper.setLineLocation({
-                                        record: recItemFF,
-                                        recSO: Current.SO_REC
-                                    });
-
                                 var resultSerials;
                                 if (arrSerials.length == totalQty) {
                                     resultSerials = Helper.addNativeSerials({
                                         record: recItemFF,
-                                        serials: arrSerials
+                                        serials: arrSerials,
+                                        line: line,
+                                        doCommit: true
                                     });
                                 } else {
                                     throw util.extend(ERROR_MSG.INSUFFICIENT_SERIALS, {
@@ -565,23 +548,22 @@ define(function (require) {
                                             'Serials count: ' + arrSerials.length
                                         ].join(' ')
                                     });
-                                }
 
-                                if (!resultSerials || arrSerials.length != totalQty) {
-                                    // only prevent inventory detail from being required after location changes
-                                    // do not clear location as some fulfillments fail when there is more than one loc
-                                    // blanks are counted as another location
-                                    //
-                                    recItemFF.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'inventorydetailreq',
-                                        value: lineFFData.inventorydetailreq
-                                    });
+                                    // if (!resultSerials || arrSerials.length != totalQty) {
+                                    //     // only prevent inventory detail from being required after location changes
+                                    //     // do not clear location as some fulfillments fail when there is more than one loc
+                                    //     // blanks are counted as another location
+                                    //     //
+                                    //     recItemFF.setCurrentSublistValue({
+                                    //         sublistId: 'item',
+                                    //         fieldId: 'inventorydetailreq',
+                                    //         value: lineFFData.inventorydetailreq
+                                    //     });
+                                    // }
                                 }
                             }
                             recordLines.push(uniqVendorLine);
 
-                            recItemFF.commitLine({ sublistId: 'item' });
                             recordIsChanged = true;
                         } catch (line_error) {
                             vc2_util.logError(logTitle, line_error);
@@ -601,8 +583,12 @@ define(function (require) {
                         }
                     }
 
-                    ////////////////////////////////////
-                    vc2_util.log(logTitle, '//// UPDATE fulfillment lines for Inventory Details');
+                    vc2_util.log(logTitle, ' ///  updateFFData', updateFFData);
+                    if (!vc2_util.isEmpty(updateFFData)) {
+                        for (var fld in updateFFData) {
+                            recItemFF.setValue({ fieldId: fld, value: updateFFData[fld] });
+                        }
+                    }
 
                     ////////////////////
                     vc2_util.log(logTitle, '>> record lines', recordLines);
@@ -901,65 +887,86 @@ define(function (require) {
             var logTitle = [LogTitle, 'addNativeSerials'].join('::'),
                 logPrefix = LogPrefix + '// Set Inventory Details: ';
 
-            var ifRec = option.record;
-            var validSerialList = this.validateSerials(option);
-            if (!validSerialList) return;
+            var record = option.record,
+                line = option.line;
 
-            var inventoryDetailRecord = ifRec.getCurrentSublistSubrecord({
-                sublistId: 'item',
-                fieldId: 'inventorydetail'
-            });
+            try {
+                var validSerialList = this.validateSerials(option);
+                if (!validSerialList) return;
 
-            log.audit(logTitle, logPrefix + ' //setting up serials...');
+                // re-select line for native data
+                if (option.doCommit) record.selectLine({ sublistId: 'item', line: line });
 
-            var addedSerials = [];
-            for (var i = 0; i < validSerialList.length; i++) {
-                if (!validSerialList[i] || validSerialList[i] == 'NA') continue;
+                var currentLocation = record.getCurrentSublistValue({
+                    sublistId: 'item',
+                    fieldId: 'location'
+                });
+                vc2_util.log(logTitle, '.. current location: ', currentLocation);
 
-                try {
-                    inventoryDetailRecord.selectLine({
-                        sublistId: 'inventoryassignment',
-                        line: i
-                    });
+                if (!currentLocation)
+                    Helper.setLineLocation({ record: record, recSO: Current.SO_REC });
 
-                    inventoryDetailRecord.setCurrentSublistValue({
-                        sublistId: 'inventoryassignment',
-                        fieldId: 'receiptinventorynumber',
-                        value: validSerialList[i]
-                    });
+                var inventoryDetailRecord = record.getCurrentSublistSubrecord({
+                    sublistId: 'item',
+                    fieldId: 'inventorydetail'
+                });
 
-                    inventoryDetailRecord.setCurrentSublistValue({
-                        sublistId: 'inventoryassignment',
-                        fieldId: 'quantity',
-                        value: 1
-                    });
+                log.audit(logTitle, logPrefix + ' //setting up serials...');
 
-                    inventoryDetailRecord.commitLine({
-                        sublistId: 'inventoryassignment'
-                    });
-                    log.audit(logTitle, logPrefix + '...added serial no: ' + validSerialList[i]);
+                var addedSerials = [];
+                for (var i = 0; i < validSerialList.length; i++) {
+                    if (!validSerialList[i] || validSerialList[i] == 'NA') continue;
 
-                    addedSerials.push(validSerialList[i]);
-                } catch (serial_error) {
-                    vc2_util.logError(logTitle, serial_error);
-                    vc2_util.vcLog({
-                        title: 'Fulfillment | Inventory Detail Error',
-                        error: serial_error,
-                        status: LOG_STATUS.RECORD_ERROR,
-                        recordId: Current.PO_ID
-                    });
+                    try {
+                        inventoryDetailRecord.selectLine({
+                            sublistId: 'inventoryassignment',
+                            line: i
+                        });
+
+                        inventoryDetailRecord.setCurrentSublistValue({
+                            sublistId: 'inventoryassignment',
+                            fieldId: 'receiptinventorynumber',
+                            value: validSerialList[i]
+                        });
+
+                        inventoryDetailRecord.setCurrentSublistValue({
+                            sublistId: 'inventoryassignment',
+                            fieldId: 'quantity',
+                            value: 1
+                        });
+
+                        inventoryDetailRecord.commitLine({
+                            sublistId: 'inventoryassignment'
+                        });
+                        log.audit(
+                            logTitle,
+                            logPrefix + '...added serial no: ' + validSerialList[i]
+                        );
+
+                        addedSerials.push(validSerialList[i]);
+                    } catch (serial_error) {
+                        vc2_util.logError(logTitle, serial_error);
+                        vc2_util.vcLog({
+                            title: 'Fulfillment | Inventory Detail Error',
+                            error: serial_error,
+                            status: LOG_STATUS.RECORD_ERROR,
+                            recordId: Current.PO_ID
+                        });
+                    }
                 }
-            }
 
-            log.audit(
-                logTitle,
-                LogPrefix +
-                    ' >> done <<' +
-                    JSON.stringify({
-                        length: addedSerials.length,
-                        serials: addedSerials
-                    })
-            );
+                vc2_util.log(logTitle, LogPrefix + '>> done << ', addedSerials);
+
+                if (option.doCommit) record.commitLine({ sublistId: 'item' });
+            } catch (serials_error) {
+                vc2_util.logError(logTitle, serials_error);
+                vc2_util.vcLog({
+                    title: 'Fulfillment | Native Serials',
+                    error: serials_error,
+                    status: LOG_STATUS.WARN,
+                    recordId: Current.PO_ID
+                });
+            }
 
             return true;
         },

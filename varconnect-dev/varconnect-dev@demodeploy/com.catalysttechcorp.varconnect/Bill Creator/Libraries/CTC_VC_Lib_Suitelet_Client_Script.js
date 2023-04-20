@@ -224,6 +224,31 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
 
     function pageInit(context) {
         var currRecord = context.currentRecord;
+
+        var lineCount = currRecord.getLineCount({ sublistId: 'variance' });
+
+        for (var line = 0; line < lineCount; line++) {
+            var isActive = currRecord.getSublistValue({
+                sublistId: 'variance',
+                fieldId: 'is_active',
+                line: line
+            });
+
+            if (!isActive) {
+                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax'].forEach(
+                    function (fld) {
+                        try {
+                            currRecord.getSublistField({
+                                sublistId: 'variance',
+                                fieldId: fld,
+                                line: line
+                            }).isDisabled = true;
+                        } catch (e) {}
+                    }
+                );
+            }
+        }
+
         // console.log('currRecord', currRecord);
 
         // var taxValueField = currRecord.getField('custpage_variance_tax');

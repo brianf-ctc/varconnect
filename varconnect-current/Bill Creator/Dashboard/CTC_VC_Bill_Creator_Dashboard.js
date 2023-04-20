@@ -12,8 +12,14 @@
  * @NModuleScope Public
  * @NScriptType Suitelet
  */
-define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, Mustache) {
+define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'], function (
+    ns_search,
+    ns_file,
+    Mustache,
+    vc2_util
+) {
     function onRequest(context) {
+        var logTitle = 'BillCreator Dashboard';
         var data = {};
 
         // data.block_one_value = '12'
@@ -23,7 +29,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         //var s;
 
-        var s1 = search.create({
+        var s1 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_due_date', 'onorbefore', 'weeksfromnow1'],
@@ -37,7 +43,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         data.alert_due = s1.runPaged().count;
 
-        var s2 = search.create({
+        var s2 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_proc_status', 'anyof', '2'],
@@ -49,7 +55,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         data.alert_error = s2.runPaged().count;
 
-        var s3 = search.create({
+        var s3 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_proc_status', 'noneof', '5'],
@@ -63,7 +69,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         data.no_po_cnt = s3.runPaged().count;
 
-        var s4 = search.create({
+        var s4 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_proc_status', 'anyof', '6'],
@@ -75,7 +81,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         data.on_hold_cnt = s4.runPaged().count;
 
-        var s5 = search.create({
+        var s5 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_linked_po.status', 'anyof', 'PurchOrd:B'],
@@ -89,7 +95,7 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
 
         data.pend_rcpt_cnt = s5.runPaged().count;
 
-        var s6 = search.create({
+        var s6 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
                 ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '7'],
@@ -100,10 +106,38 @@ define(['N/search', 'N/file', '../Libraries/mustache'], function (search, file, 
         });
 
         data.to_be_proc_cnt = s6.runPaged().count;
-        var html = file.load({ id: 'SuiteScripts/dashboard.html' }).getContents();
 
-        // TODO: look for the dashboard file, if not present, copy the sample and move it to SuiteScripts folder
+        //search for the file first
+        var fileSearch = vc2_util.searchFile({
+            name: 'dashboard.html',
+            folder: -15 // Suitescripts folder
+        });
+        vc2_util.log(logTitle, 'fileSearch >> ', fileSearch);
 
+        if (!fileSearch) {
+            var dashboardFile = vc2_util.searchFile({
+                name: 'dashboard-sample.html'
+            });
+            vc2_util.log(logTitle, 'dashboardFile >> ', dashboardFile);
+
+            if (!dashboardFile) throw 'Unable to find dashboard file';
+
+            // create the file
+            var newFileObj = ns_file.create({
+                name: 'dashboard.html',
+                fileType: ns_file.Type.PLAINTEXT,
+                contents: vc2_util.getFileContent({
+                    fileId: dashboardFile.id
+                }),
+                description: 'Bill Creator Dashboard file',
+                encoding: ns_file.Encoding.UTF8,
+                folder: -15 // suitescript folder
+            });
+
+            newFileObj.save();
+        }
+
+        var html = ns_file.load({ id: 'SuiteScripts/dashboard.html' }).getContents();
         context.response.write(Mustache.render(html, data));
     }
 

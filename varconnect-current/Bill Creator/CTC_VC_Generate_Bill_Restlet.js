@@ -56,12 +56,15 @@ define([
         LogPrefix = '',
         BILL_CREATOR = vc2_constant.Bill_Creator;
 
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
     var VARIANCE_DEF = {},
         VARIANCE_TYPE = {
             MISC: 'miscCharges',
             TAX: 'tax',
             SHIP: 'shipping',
-            OTHER: 'other', 
+            OTHER: 'other',
             ADJ: 'adjustment'
         };
 
@@ -71,8 +74,8 @@ define([
                 returnObj = {};
 
             try {
-                log.debug(logTitle, '###########################################');
-                log.audit(logTitle, '//// Request: ' + JSON.stringify(context));
+                vc2_util.log(logTitle, '###########################################');
+                vc2_util.log(logTitle, '//// Request: ', context);
 
                 util.extend(Current, {
                     poId:
@@ -130,6 +133,7 @@ define([
                 }
                 ///////////////////
                 LogPrefix = '[purchaseorder:' + Current.poId + '] ';
+                vc2_util.LogPrefix = LogPrefix;
 
                 Current.PO_REC = vc_recordlib.load({ type: 'purchaseorder', id: Current.poId });
 
@@ -141,10 +145,7 @@ define([
                 Current.PO_DATA.tax2total = parseFloat(Current.PO_DATA.tax2total || 0);
                 Current.PO_DATA.taxTotal = Current.PO_DATA.taxtotal + Current.PO_DATA.tax2total;
 
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> Current.PO_DATA: ' + JSON.stringify(Current.PO_DATA)
-                );
+                vc2_util.log(logTitle, '>> Current.PO_DATA: ', Current.PO_DATA);
                 /////////////////////////////////////////////
 
                 /// STATUS CHECK ////////////////////////////
@@ -156,12 +157,12 @@ define([
                     Current.billInAdvance
                 ) {
                     // continue processing
-                    log.debug(logTitle, LogPrefix + '>> PO is ready for billing: ');
+                    vc2_util.log(logTitle, '>> PO is ready for billing: ');
                 } else if (vc2_util.inArray(Current.PO_DATA.statusRef, ['fullyBilled', 'closed'])) {
                     /// Bill is already closed!
-                    log.debug(
+                    vc2_util.log(
                         logTitle,
-                        LogPrefix + '>>  Skipping poId, Purchase Order is Fully Billed / Closed'
+                        '>>  Skipping poId, Purchase Order is Fully Billed / Closed'
                     );
 
                     if (Current.PO_DATA.statusRef == 'fullyBilled')
@@ -176,10 +177,7 @@ define([
                     return returnObj;
                 } else {
                     /// not ready for billing!
-                    log.debug(
-                        logTitle,
-                        LogPrefix + '>>  Skipping poId, Purchase Order not Ready to Bill'
-                    );
+                    vc2_util.log(logTitle, '>>  Skipping poId, Purchase Order not Ready to Bill');
 
                     util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
                     returnObj.details = [
@@ -198,10 +196,7 @@ define([
                     return true;
                 });
 
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> JSON DATA:' + JSON.stringify(Current.JSON_DATA)
-                );
+                vc2_util.log(logTitle, '>> JSON DATA:', Current.JSON_DATA);
 
                 util.extend(Current.varianceParam, {
                     varianceLines: Current.JSON_DATA.varianceLines || {},
@@ -210,14 +205,10 @@ define([
                         (Current.JSON_DATA.ignoreVariance == 'T' ||
                             Current.JSON_DATA.ignoreVariance === true)
                 });
-
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> Current.varianceParam: ' + JSON.stringify(Current.varianceParam)
-                );
+                vc2_util.log(logTitle, '>> Current.varianceParam: ', Current.varianceParam);
 
                 /// FIND EXISTING BILLS ////////////////////////////
-                log.debug(logTitle, LogPrefix + ' // Checking for existing bills...');
+                vc2_util.log(logTitle, ' // Checking for existing bills...');
 
                 var arrExistingBills = Helper.getExistingBill({
                     entity: Current.PO_DATA.entity,
@@ -277,11 +268,10 @@ define([
                     transformOption.customform = Current.Config.defaultBillForm;
                 }
 
-                log.debug(
+                vc2_util.log(
                     logTitle,
-                    LogPrefix +
-                        '***** Vendor Bill record creation:start *****' +
-                        JSON.stringify(transformOption)
+                    '***** Vendor Bill record creation:start *****',
+                    transformOption
                 );
 
                 Current.POBILL_REC = vc_recordlib.transform(transformOption);
@@ -297,10 +287,7 @@ define([
                 var currentPostingPeriod = Current.POBILL_REC.getValue({
                     fieldId: 'postingperiod'
                 });
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> posting period: ' + JSON.stringify(currentPostingPeriod)
-                );
+                vc2_util.log(logTitle, '>> posting period: ', currentPostingPeriod);
 
                 Current.POBILL_REC.setValue({
                     fieldId: 'trandate',
@@ -330,7 +317,7 @@ define([
                 }
                 ///////////////////////////////////
 
-                log.debug(logTitle, '.. set invoice name: ' + Current.JSON_DATA.invoice);
+                vc2_util.log(logTitle, '.. set invoice name: ', Current.JSON_DATA.invoice);
                 Current.POBILL_REC.setValue({
                     fieldId: 'tranid',
                     value: Current.JSON_DATA.invoice
@@ -339,48 +326,39 @@ define([
                 /// VALIDATE THE LINES /////////////
                 var lineCount = Current.POBILL_REC.getLineCount({ sublistId: 'item' });
 
-                log.debug(
-                    logTitle,
-                    'Matching vb-to-payload lines...line count: ' +
-                        JSON.stringify({
-                            vbLines: lineCount,
-                            payloadLines: Current.JSON_DATA.lines.length
-                        })
-                );
+                vc2_util.log(logTitle, 'Matching vb-to-payload lines...line count: ', {
+                    vbLines: lineCount,
+                    payloadLines: Current.JSON_DATA.lines.length
+                });
 
                 //// LINES PROCESSING //////////////////////////////////////////
-                log.audit(logTitle, LogPrefix + '============================= ');
-                log.debug(logTitle, LogPrefix + '/// LINES PROCESSING...');
+                vc2_util.log(logTitle, '============================= ');
+                vc2_util.log(logTitle, '/// LINES PROCESSING...');
 
                 // run through the billfile lines
                 var arrBillLines = Helper.preprocessBillLines(),
                     unmatchedLines = [],
                     insufficientQty = [];
 
-                log.debug(logTitle, LogPrefix + '>> Bill Lines : ' + JSON.stringify(arrBillLines));
+                vc2_util.log(logTitle, '>> Bill Lines : ', arrBillLines);
 
                 var LinesToBill = {};
 
                 /// APPLY the lines to the Bill Lines
                 arrBillLines.forEach(function (billLine) {
-                    log.audit(logTitle, LogPrefix + '========= new line ========= ');
-                    log.debug(logTitle, LogPrefix + '>>>> bill line:  ' + JSON.stringify(billLine));
+                    vc2_util.log(logTitle, '========= new line ========= ');
+                    vc2_util.log(logTitle, '>>>> bill line:  ', billLine);
+
                     if (!billLine.matchingLines || !billLine.matchingLines.length) {
                         // check if the unmatched as amount
                         if (billLine.BILLRATE <= 0 || billLine.PRICE <= 0 || billLine.QUANTITY <= 0)
-                            log.audit(
-                                logTitle,
-                                LogPrefix + '*** skipping unmatched line: Zero Price/Qty.'
-                            );
+                            vc2_util.log(logTitle, '*** skipping unmatched line: Zero Price/Qty.');
                         else unmatchedLines.push(billLine);
                         return;
                     }
 
                     billLine.matchingLines.forEach(function (matchedLine) {
-                        log.debug(
-                            logTitle,
-                            LogPrefix + ' ...matched item: ' + JSON.stringify(matchedLine)
-                        );
+                        vc2_util.log(logTitle, ' ...matched item: ', matchedLine);
 
                         // variance detected: the rate not the same
                         if (billLine.rate != matchedLine.rate) {
@@ -407,10 +385,7 @@ define([
                             columns: ['item', 'rate', 'quantity', 'amount', 'taxrate1', 'taxrate2']
                         });
 
-                        log.debug(
-                            logTitle,
-                            LogPrefix + '>> billLineData:  ' + JSON.stringify(billLineData)
-                        );
+                        vc2_util.log(logTitle, '>> billLineData:  ', billLineData);
 
                         LinesToBill[matchedLine.line].totalAmount = billLineData.amount;
                         LinesToBill[matchedLine.line].totalTaxAmt =
@@ -428,9 +403,9 @@ define([
                     return true;
                 });
 
-                log.audit(logTitle, LogPrefix + '** Billed Lines: ' + JSON.stringify(LinesToBill));
-                log.audit(logTitle, LogPrefix + '... unmatched: ' + JSON.stringify(unmatchedLines));
-                log.audit(logTitle, LogPrefix + '... missing: ' + JSON.stringify(insufficientQty));
+                vc2_util.log(logTitle, '** Billed Lines: ', LinesToBill);
+                vc2_util.log(logTitle, '... unmatched: ', unmatchedLines);
+                vc2_util.log(logTitle, '... missing: ', insufficientQty);
 
                 /// calculate TOTALS
                 for (var line in LinesToBill) {
@@ -439,7 +414,7 @@ define([
                 }
                 Current.TOTALS.AMOUNT = Current.TOTALS.LINE_AMOUNT + Current.TOTALS.TAX_AMOUNT;
 
-                log.debug(logTitle, LogPrefix + '### Totals:  ' + JSON.stringify(Current.TOTALS));
+                vc2_util.log(logTitle, '### Totals:  ', Current.TOTALS);
 
                 /// UNMATCHED ITEMS DETECTED ///////////
                 if (unmatchedLines && unmatchedLines.length) {
@@ -474,27 +449,19 @@ define([
                 /// REMOVE ALL UNMATCHED LINES ////
                 Helper.removeUnmatchedLines(LinesToBill);
 
-                log.audit(
+                vc2_util.log(
                     logTitle,
-                    LogPrefix +
-                        '>> Bill Lines: ' +
-                        JSON.stringify(
-                            vc_recordlib.extractRecordLines({
-                                record: Current.POBILL_REC,
-                                findAll: true,
-                                columns: ['item', 'rate', 'quantity', 'amount']
-                            })
-                        )
+                    '>> Bill Lines: ',
+                    vc_recordlib.extractRecordLines({
+                        record: Current.POBILL_REC,
+                        findAll: true,
+                        columns: ['item', 'rate', 'quantity', 'amount']
+                    })
                 );
                 ////////////////////////////////////////////////////////////////
 
                 //// VARIANCE LINES PROCESSING /////////////////////////////////
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        '//// Variance Processing... ' +
-                        JSON.stringify(Current.varianceParam)
-                );
+                vc2_util.log(logTitle, '//// Variance Processing... ', Current.varianceParam);
 
                 util.extend(Current.varianceParam, {
                     totalVarianceAmount: 0,
@@ -504,10 +471,8 @@ define([
 
                 var arrVarianceLines = Helper.preprocessVarianceLines(Current.varianceParam);
 
-                log.debug(
-                    logTitle,
-                    LogPrefix + '... variance lines : ' + JSON.stringify(arrVarianceLines)
-                );
+                vc2_util.log(logTitle, '... variance lines : ', arrVarianceLines);
+
                 for (i = 0, j = arrVarianceLines.length; i < j; i++) {
                     var varianceLine = arrVarianceLines[i];
                     if (!varianceLine.item) continue;
@@ -524,19 +489,20 @@ define([
 
                     if (lineData.applied == 'F' || lineData.rate == 0) continue;
 
-                    log.debug(
-                        logTitle,
-                        LogPrefix +
-                            '>>> charge line Data: ' +
-                            JSON.stringify([lineData, varianceLine])
-                    );
+                    vc2_util.log(logTitle, '>>> charge line Data: ', [lineData, varianceLine]);
 
-                    var newLine = vc_recordlib.addLine({
-                        record: Current.POBILL_REC,
-                        lineData: vc2_util.extend(lineData, {
-                            customer: Current.SO_DATA.entity
-                        })
-                    });
+                    var newLine;
+                    try {
+                        newLine = vc_recordlib.addLine({
+                            record: Current.POBILL_REC,
+                            lineData: vc2_util.extend(lineData, {
+                                customer: Current.SO_DATA.entity
+                            })
+                        });
+                    } catch (line_err) {
+                        returnObj.details = varianceLine.name;
+                        throw BILL_CREATOR.Code.UNABLE_TO_ADD_VARIANCE_LINE;
+                    }
 
                     var newLineData = vc_recordlib.extractLineValues({
                         record: Current.POBILL_REC,
@@ -548,11 +514,12 @@ define([
                 }
                 Current.TOTALS.VARIANCE_AMT = Current.varianceParam.totalVarianceAmount;
 
-                log.audit(logTitle, LogPrefix + '// TOTALS: ' + JSON.stringify(Current.TOTALS));
+                vc2_util.log(logTitle, '// TOTALS: ', Current.TOTALS);
+                vc2_util.log(logTitle, '// Current.varianceParam: ', Current.varianceParam);
 
                 if (
                     !Current.varianceParam.ignoreVariance &&
-                    Current.varianceParam.applyAdjustment !== 'F'
+                    Current.varianceParam.applyAdjustment == 'T' //!== 'F'
                 ) {
                     // calculate the adjustment
                     Current.varianceParam.adjustment =
@@ -586,10 +553,7 @@ define([
                     }
                 }
 
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> variance params: ' + JSON.stringify(Current.varianceParam)
-                );
+                vc2_util.log(logTitle, '>> variance params: ', Current.varianceParam);
 
                 /**
                     If variance is detected, check if there's a variance threshold, 
@@ -624,7 +588,7 @@ define([
                 }
                 ////////////////////////////////////////////////////////////////
 
-                log.debug(logTitle, '** Saving the bill record ** ');
+                vc2_util.log(logTitle, '** Saving the bill record ** ');
 
                 // attempt to save the record ////
                 Current.POBILL_REC.setValue({
@@ -650,11 +614,10 @@ define([
                 });
 
                 if (newRecordId) {
-                    log.debug(
-                        logTitle,
-                        '>>> Bill Created succesfully...' +
-                            [Current.PO_DATA.tranid, Current.JSON_DATA.invoice]
-                    );
+                    vc2_util.log(logTitle, '>>> Bill Created succesfully...', [
+                        Current.PO_DATA.tranid,
+                        Current.JSON_DATA.invoice
+                    ]);
 
                     returnObj = JSON.parse(JSON.stringify(Current.POBILL_REC));
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
@@ -682,29 +645,40 @@ define([
                         'Linked to vendor bill ' +
                         JSON.stringify({ id: newRecordId, name: Current.JSON_DATA.invoice });
                 } else {
-                    log.debug(
-                        logTitle,
-                        '// bill creation fail...' +
-                            [Current.PO_DATA.tranid, Current.JSON_DATA.invoice]
-                    );
+                    vc2_util.log(logTitle, '// bill creation fail...', [
+                        Current.PO_DATA.tranid,
+                        Current.JSON_DATA.invoice
+                    ]);
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
-                    return returnObj;
+                    // return returnObj;
                 }
 
                 return returnObj;
             } catch (error) {
+                vc2_util.log(logTitle, '## ERROR ## ', error);
                 returnObj.msg = error.msg || vc2_util.extractError(error);
                 returnObj.details = returnObj.details || vc2_util.extractError(error);
                 returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
                 returnObj.isError = true;
+                if (error.logstatus) returnObj.logstatus = error.logstatus;
                 returnObj.msg = [
                     returnObj.msg,
                     returnObj.details != returnObj.msg ? returnObj.details : ''
                 ].join(' ');
 
-                log.debug(logTitle, '## ERROR ## ' + JSON.stringify(returnObj));
+                vc2_util.log(logTitle, '## ERROR ## ', returnObj);
             } finally {
-                log.debug(logTitle, '## EXIT SCRIPT ## ' + JSON.stringify(returnObj));
+                if (returnObj.logstatus) {
+                    vc2_util.log(logTitle, '**** vc log (finally) ***', returnObj);
+                    vc2_util.vcLog({
+                        title: 'Process Bill' + (returnObj.isError ? '| Error' : ''),
+                        message: returnObj.msg,
+                        logStatus: returnObj.logstatus,
+                        recordId: Current.poId
+                    });
+                }
+
+                vc2_util.log(logTitle, '## EXIT SCRIPT ## ', returnObj);
             }
 
             return returnObj;
@@ -1111,18 +1085,20 @@ define([
                 var logPrefix = LogPrefix + '[' + varType + '] ';
 
                 var varianceInfo = VARIANCE_DEF[varType] || {},
-                    chargeInfo = Current.JSON_DATA.charges[varType],
+                    chargedAmt = Current.JSON_DATA.charges[varType],
                     matchingVarianceLine = vc2_util.findMatching({
                         dataSet: Current.JSON_DATA.varianceLines,
                         filter: { type: varType }
                     });
 
-                if (!vc2_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
+                // if (matchingVarianceLine.item) delete matchingVarianceLine.item;
+                // if (!vc2_util.isEmpty(varianceInfo) && !varianceInfo.enabled) continue; // skip
+                if (vc2_util.isEmpty(varianceInfo)) continue; // skip
                 varianceInfo.type = varType;
 
                 switch (varType) {
                     case VARIANCE_TYPE.MISC:
-                        (chargeInfo || []).forEach(function (miscCharge) {
+                        (chargedAmt || []).forEach(function (miscCharge) {
                             // look for any existing varianceLine
                             var matchingMiscLine = vc2_util.findMatching({
                                 dataSet: Current.JSON_DATA.varianceLines,
@@ -1144,13 +1120,13 @@ define([
                         var taxVariance = vc2_util.extend(
                             varianceInfo,
                             matchingVarianceLine || {
-                                rate: vc2_util.roundOff(chargeInfo - Current.TOTALS.TAX_AMOUNT),
-                                amount: vc2_util.roundOff(chargeInfo - Current.TOTALS.TAX_AMOUNT)
+                                rate: vc2_util.roundOff(chargedAmt - Current.TOTALS.TAX_AMOUNT),
+                                amount: vc2_util.roundOff(chargedAmt - Current.TOTALS.TAX_AMOUNT)
                             }
                         );
                         arrVarianceLines.push(taxVariance);
 
-                        if (chargeInfo != Current.TOTALS.TAX_AMOUNT) {
+                        if (chargedAmt != Current.TOTALS.TAX_AMOUNT) {
                             Current.varianceParam.listVariance.push('Tax');
                         }
 
@@ -1159,13 +1135,13 @@ define([
                         var shipVariance = vc2_util.extend(
                             varianceInfo,
                             matchingVarianceLine || {
-                                rate: vc2_util.roundOff(chargeInfo - Current.TOTALS.SHIP_AMOUNT),
-                                amount: vc2_util.roundOff(chargeInfo - Current.TOTALS.SHIP_AMOUNT)
+                                rate: vc2_util.roundOff(chargedAmt - Current.TOTALS.SHIP_AMOUNT),
+                                amount: vc2_util.roundOff(chargedAmt - Current.TOTALS.SHIP_AMOUNT)
                             }
                         );
                         arrVarianceLines.push(shipVariance);
 
-                        if (chargeInfo != Current.TOTALS.SHIP_AMOUNT) {
+                        if (chargedAmt != Current.TOTALS.SHIP_AMOUNT) {
                             Current.varianceParam.listVariance.push('Shipping');
                         }
 
@@ -1176,8 +1152,8 @@ define([
                             vc2_util.extend(
                                 varianceInfo,
                                 matchingVarianceLine || {
-                                    rate: chargeInfo,
-                                    amount: chargeInfo
+                                    rate: chargedAmt,
+                                    amount: chargedAmt
                                 }
                             )
                         );
@@ -1185,7 +1161,7 @@ define([
                         break;
                 }
 
-                log.audit(logTitle, logPrefix + '// chargeInfo: ' + JSON.stringify(chargeInfo));
+                log.audit(logTitle, logPrefix + '// chargeInfo: ' + JSON.stringify(chargedAmt));
                 log.audit(logTitle, logPrefix + '// varianceInfo: ' + JSON.stringify(varianceInfo));
                 log.audit(
                     logTitle,

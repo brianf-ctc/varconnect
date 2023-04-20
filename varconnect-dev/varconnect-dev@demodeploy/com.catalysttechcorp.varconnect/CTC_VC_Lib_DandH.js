@@ -19,13 +19,11 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
-define([
-    'N/search',
-    'N/xml',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
+define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
+    ns_xml,
+    vc2_util,
+    moment
+) {
     // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
@@ -63,16 +61,15 @@ define([
                     }
                 });
 
+                vc2_util.handleXMLResponse(reqOrderStatus);
+
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
                 if (!respOrderStatus) throw 'Unable to fetch server response';
 
                 returnValue = respOrderStatus;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
                 throw error;
-            } finally {
-                log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
             }
 
             return returnValue;
@@ -89,13 +86,15 @@ define([
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibDnH.getOrderStatus(option);
             } catch (error) {
-                throw vc2_util.extractError(error);
+                throw error;
             }
 
             return returnValue;
@@ -111,6 +110,7 @@ define([
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 var xmlResponse = option.xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
@@ -121,7 +121,7 @@ define([
                 if (!arrItemNodes || !arrItemNodes.length) throw 'XML: Missing Item Details';
 
                 for (var i = 0; i < arrItemNodes.length; i++) {
-                    var xml_items = {
+                    var orderItem = {
                         line_num: 'NA',
                         item_num: 'NA',
                         order_num: 'NA',
@@ -140,7 +140,7 @@ define([
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ITEMNO' })[0]
                     );
                     if (itemNum != null && itemNum.length > 0) {
-                        xml_items.item_num = itemNum;
+                        orderItem.item_num = itemNum;
                     }
 
                     //D&H does not support a separate vendorSKU as of Jan 9 2019
@@ -149,14 +149,14 @@ define([
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'QUANTITY' })[0]
                     );
                     if (shipQty != null && shipQty.length > 0) {
-                        xml_items.ship_qty = shipQty;
+                        orderItem.ship_qty = shipQty;
                     }
 
                     var etaDate = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ETA' })[0]
                     );
                     if (etaDate != null && etaDate.length > 0) {
-                        xml_items.order_eta = etaDate;
+                        orderItem.order_eta = etaDate;
                     }
 
                     var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
@@ -165,7 +165,7 @@ define([
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'ORDERNUM' })[0]
                     );
                     if (orderNum != null && orderNum.length > 0) {
-                        xml_items.order_num = orderNum;
+                        orderItem.order_num = orderNum;
                     }
 
                     var invoice = vc2_util.getNodeTextContent(
@@ -174,12 +174,13 @@ define([
                     var orderStatusMessage = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'MESSAGE' })[0]
                     );
+                    orderItem.order_status = orderStatusMessage;
 
                     var orderDateTime = vc2_util.getNodeTextContent(
                         ns_xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
                     );
                     if (orderDateTime != null && orderDateTime.length > 0) {
-                        xml_items.order_date = orderDateTime;
+                        orderItem.order_date = orderDateTime;
                     }
 
                     var packageNodes = ns_xml.XPath.select({
@@ -209,9 +210,9 @@ define([
                                             })[0]
                                         );
                                         if (serialNum != null && serialNum.length > 0) {
-                                            if (xml_items.serial_num == 'NA')
-                                                xml_items.serial_num = serialNum;
-                                            else xml_items.serial_num += ',' + serialNum;
+                                            if (orderItem.serial_num == 'NA')
+                                                orderItem.serial_num = serialNum;
+                                            else orderItem.serial_num += ',' + serialNum;
                                         }
                                     }
                                 }
@@ -229,14 +230,14 @@ define([
                                         })[0]
                                     );
                                     if (carrierService != null && carrierService.length > 0) {
-                                        if (xml_items.carrier == 'NA')
-                                            xml_items.carrier = carrier + ' - ' + carrierService;
+                                        if (orderItem.carrier == 'NA')
+                                            orderItem.carrier = carrier + ' - ' + carrierService;
                                         else
-                                            xml_items.carrier +=
+                                            orderItem.carrier +=
                                                 ',' + carrier + ' - ' + carrierService;
                                     } else {
-                                        if (xml_items.carrier == 'NA') xml_items.carrier = carrier;
-                                        else xml_items.carrier += ',' + carrier;
+                                        if (orderItem.carrier == 'NA') orderItem.carrier = carrier;
+                                        else orderItem.carrier += ',' + carrier;
                                     }
                                 }
                                 var trackingNum = vc2_util.getNodeTextContent(
@@ -246,9 +247,9 @@ define([
                                     })[0]
                                 );
                                 if (trackingNum != null && trackingNum.length > 0) {
-                                    if (xml_items.tracking_num == 'NA')
-                                        xml_items.tracking_num = trackingNum;
-                                    else xml_items.tracking_num += ',' + trackingNum;
+                                    if (orderItem.tracking_num == 'NA')
+                                        orderItem.tracking_num = trackingNum;
+                                    else orderItem.tracking_num += ',' + trackingNum;
                                 }
 
                                 var dateShipped = vc2_util.getNodeTextContent(
@@ -258,40 +259,58 @@ define([
                                     })[0]
                                 );
                                 if (dateShipped != null && dateShipped.length > 0) {
-                                    if (xml_items.ship_date == 'NA')
-                                        xml_items.ship_date = dateShipped;
-                                    else xml_items.ship_date += ',' + dateShipped;
+                                    if (orderItem.ship_date == 'NA')
+                                        orderItem.ship_date = dateShipped;
+                                    else orderItem.ship_date += ',' + dateShipped;
                                 }
                             }
                         }
 
                         // brianff 12/14
                         // use the same shipdate
-                        if (xml_items.ship_date) {
-                            xml_items.ship_date = xml_items.ship_date.split(/,/g)[0];
+                        if (orderItem.ship_date) {
+                            orderItem.ship_date = orderItem.ship_date.split(/,/g)[0];
                             // assume everything without a shipdate has NOT shipped
-                            xml_items.is_shipped = true;
+                            // orderItem.is_shipped = true;
                         }
                         // else, an order with no PACKAGE node but is invoiced will contain non-inventory items
-                    } else if (
-                        !!invoice &&
-                        invoice.length > 0 &&
-                        invoice.toUpperCase() !== 'IN PROCESS'
-                    ) {
-                        xml_items.is_shipped = true;
-                    }
-                    // if order status message is "IN PROCESS", then package/ship info is being waited on
-                    if (orderStatusMessage && orderStatusMessage.toUpperCase() !== 'IN PROCESS') {
-                        xml_items.is_shipped = false;
                     }
 
-                    itemArray.push(xml_items);
+                    // if (!!invoice && invoice.length > 0 && invoice.toUpperCase() !== 'IN PROCESS') {
+                    //     orderItem.is_shipped = true;
+                    // }
+
+                    // if order status message is "IN PROCESS", then package/ship info is being waited on
+                    if (orderStatusMessage && orderStatusMessage.toUpperCase() !== 'IN PROCESS') {
+                        orderItem.is_shipped = false;
+                    }
+
+                    if (
+                        !orderItem.is_shipped &&
+                        orderItem.ship_date &&
+                        orderItem.ship_date != 'NA' &&
+                        orderItem.ship_qty &&
+                        orderItem.ship_qty != 0
+                    ) {
+                        var shippedDate = moment(orderItem.ship_date, 'MM/DD/YY').toDate();
+                        vc2_util.log(logTitle, '**** shipped date: ****', [
+                            shippedDate,
+                            util.isDate(shippedDate),
+                            shippedDate <= new Date()
+                        ]);
+
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                            orderItem.is_shipped = true;
+                    }
+
+                    vc2_util.log(logTitle, '>> line data: ', orderItem);
+
+                    itemArray.push(orderItem);
                 }
 
                 returnValue = itemArray;
             } catch (error) {
-                throw vc2_util.extractError(error);
-                returnValue = errorMsg;
+                throw error;
             }
 
             return returnValue;
@@ -306,24 +325,15 @@ define([
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                throw vc2_util.extractError(error);
-            } finally {
-                log.audit(logTitle, LogPrefix + '>> Output Lines: ' + JSON.stringify(returnValue));
-
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
+                vc2_util.logError(logTitle, error);
+                throw error;
             }
 
             return returnValue;

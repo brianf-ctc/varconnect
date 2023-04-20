@@ -19,6 +19,8 @@ define([
     'N/config',
     'N/https',
     './../../CTC_VC2_Constants',
+    './../../CTC_VC2_Lib_Utils',
+
     './../../CTC_VC_Lib_MainConfiguration',
     './moment'
 ], function (
@@ -28,11 +30,16 @@ define([
     ns_config,
     ns_https,
     vc2_constant,
+    vc2_util,
     vc_mainCfg,
     moment
 ) {
     var LogTitle = 'LIB::BillFiles',
         LogPrefix;
+
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
     var MainConfig = null;
 
     var Helper = {
@@ -317,10 +324,10 @@ define([
     function process(configObj, myArr, name) {
         var logTitle = [LogTitle, 'process'].join('::');
 
-        log.audit(logTitle, '**** START process ****  ');
-        log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
-        log.audit(logTitle, '>> myArr: ' + JSON.stringify(myArr));
-        log.audit(logTitle, '>> name: ' + JSON.stringify(name));
+        vc2_util.log(logTitle, '**** START process ****  ');
+        vc2_util.log(logTitle, '>> configObj: ', configObj);
+        vc2_util.log(logTitle, '>> myArr: ', myArr);
+        vc2_util.log(logTitle, '>> name: ', name);
 
         if (!MainConfig) {
             MainConfig = vc_mainCfg.getMainConfiguration();
@@ -341,8 +348,9 @@ define([
         for (var i = 0; i < myArr.length; i++) {
             var currentOrder = myArr[i].ordObj;
             LogPrefix = '[bill:' + currentOrder.invoice + '] ';
+            vc2_util.LogPrefix = '[bill:' + currentOrder.invoice + '] ';
 
-            log.audit(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
+            vc2_util.log(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
             log.audit(logTitle, { idx: i, data: myArr[i] });
 
             log.audit(logTitle, LogPrefix + '// Look for existing bills...');
@@ -500,6 +508,14 @@ define([
                 });
             }
             var record_id = objRecord.save();
+
+            vc2_util.vcLog({
+                title: 'Bill File',
+                message: 'Created bill file |' + [record_id, billFileValues.name].join(' - '),
+                details: billFileValues,
+                status: LOG_STATUS.SUCCESS
+            });
+
             log.audit(logTitle, '>> Bill File created: ' + record_id);
         }
 

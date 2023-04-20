@@ -61,6 +61,7 @@ define([
         ],
         SkippedStatus: ['CANCELED', 'CANCELLED'],
         ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED'],
+
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
                 returnValue;
@@ -93,8 +94,6 @@ define([
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
                 throw error;
             } finally {
                 if (LOG_LEVEL == 2) vc2_util.log(logTitle, '>> Access Token: ', returnValue);
@@ -152,9 +151,7 @@ define([
 
                 returnValue = arrOrderDetails;
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                throw vc2_util.extractError(error);
-                returnValue = false;
+                throw error;
             }
 
             return returnValue;
@@ -203,6 +200,8 @@ define([
             var logTitle = [LogTitle, 'getNSRecord'].join('::'),
                 returnValue;
 
+            return false;
+
             var orderNumber = option.ingramOrderNumber;
             orderNumber = orderNumber.replace(/[^a-z0-9]/gi, '');
             orderNumber = [CURRENT.vendorConfig.fulfillmentPrefix, orderNumber].join('');
@@ -237,30 +236,6 @@ define([
             if (LOG_LEVEL == 2) vc2_util.log(logTitle, '/// nsitemff: ', nsItemFF);
             return returnValue;
         },
-        // handleResponse: function (request) {
-        //     var returnValue = true;
-
-        //     // vc2_util.log('RESPONSE', 'request.RESPONSE', request);
-
-        //     if (request.isError || !request.RESPONSE || request.RESPONSE.code != '200') {
-        //         var errorMsg = !request.PARSED_RESPONSE
-        //             ? 'Unable to parse response'
-        //             : request.PARSED_RESPONSE.fault && request.PARSED_RESPONSE.fault.faultstring
-        //             ? request.PARSED_RESPONSE.fault.faultstring
-        //             : request.PARSED_RESPONSE.errors &&
-        //               !vc2_util.isEmpty(request.PARSED_RESPONSE.errors)
-        //             ? request.PARSED_RESPONSE.errors
-        //                   .map(function (err) {
-        //                       return [err.id, err.message].join(': ');
-        //                   })
-        //                   .join(', ')
-        //             : 'Unexpected Error - ' + JSON.stringify(PARSED_RESPONSE);
-
-        //         throw errorMsg;
-        //     }
-
-        //     return returnValue;
-        // },
         extractLineData: function (respLineData) {
             var logTitle = [LogTitle, 'extractLineData'].join('::'),
                 returnValue;
@@ -294,7 +269,8 @@ define([
                 util.extend(lineData, {
                     ship_date: shipmentDetails.ship_date || 'NA',
                     order_date: shipmentDetails.order_date || 'NA',
-                    order_eta: shipmentDetails.order_eta || 'NA',
+                    order_eta:
+                        respLineData.promisedDeliveryDate || shipmentDetails.order_eta || 'NA',
                     carrier: shipmentDetails.carrier || 'NA',
                     order_eta_ship: shipmentDetails.order_eta_ship || 'NA',
                     serial_num:
@@ -310,7 +286,6 @@ define([
                 returnValue = lineData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                returnValue = false;
                 throw error;
             } finally {
                 if (LOG_LEVEL == 2) vc2_util.log(logTitle, '>> Line Data: ', returnValue);
@@ -363,7 +338,6 @@ define([
                 returnValue = shipData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                returnValue = false;
                 throw error;
             } finally {
                 if (LOG_LEVEL == 2) vc2_util.log(logTitle, '// Shipment details: ', returnValue);
@@ -396,8 +370,13 @@ define([
             var serialNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
-                if (trackingDetails[i].serialNumbers) {
-                    trackingDetails[i].serialNumbers.forEach(function (serialNum) {
+                var serialNums =
+                    trackingDetails[i].serialNumbers ||
+                    trackingDetails[i].SerialNumbers ||
+                    trackingDetails[i].serialnumbers;
+
+                if (serialNums) {
+                    serialNums.forEach(function (serialNum) {
                         serialNos.push(serialNum.serialNumber);
                         return true;
                     });
@@ -462,8 +441,6 @@ define([
 
                 returnValue = shipData;
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
                 throw error;
             }
 
@@ -484,7 +461,7 @@ define([
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
-                var arrLines = [];
+                var itemArray = [];
 
                 // detect if v6.1 or v6.0
                 if (
@@ -507,13 +484,10 @@ define([
                 for (var i = 0, j = arrValidOrders.length; i < j; i++) {
                     var validOrder = arrValidOrders[i];
 
-                    vc2_util.LogPrefix =
-                        '' +
-                        ('[purchaseorder:' + CURRENT.recordId + '][') +
-                        (validOrder.ingramOrderNumber + '] ');
+                    var logPrefix = '[' + validOrder.ingramOrderNumber + '] ';
 
                     if (LOG_LEVEL == 1)
-                        vc2_util.log(logTitle, '**** Ingram Order: **** ', validOrder);
+                        vc2_util.log(logTitle, logPrefix + '**** Ingram Order: **** ', validOrder);
 
                     var ingramOrderDate = validOrder.ingramOrderDate;
 
@@ -521,7 +495,8 @@ define([
                         date: moment(ingramOrderDate).add(1, 'day').toDate(),
                         text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
                     };
-                    if (LOG_LEVEL == 2) vc2_util.log(logTitle, '// defaultETA: ', defaultETA);
+                    if (LOG_LEVEL == 2)
+                        vc2_util.log(logTitle, logPrefix + '// defaultETA: ', defaultETA);
 
                     var respOrderDetails = arrResponse.OrderDetails
                         ? arrResponse.OrderDetails[validOrder.ingramOrderNumber]
@@ -533,47 +508,66 @@ define([
                         !respOrderDetails.lines.length
                     )
                         continue;
+
                     if (LOG_LEVEL == 2)
-                        vc2_util.log(logTitle, '// num lines: ', respOrderDetails.lines.length);
+                        vc2_util.log(
+                            logTitle,
+                            logPrefix + '// Order Detail num lines: ',
+                            respOrderDetails.lines.length
+                        );
 
                     for (var ii = 0, jj = respOrderDetails.lines.length; ii < jj; ii++) {
-                        var lineData = LibIngramAPI.extractLineData(respOrderDetails.lines[ii]);
+                        var orderItem = LibIngramAPI.extractLineData(respOrderDetails.lines[ii]);
 
-                        util.extend(lineData, {
+                        util.extend(orderItem, {
                             order_status: validOrder.orderStatus,
                             is_shipped: vc2_util.inArray(
-                                lineData.line_status.toUpperCase(),
+                                orderItem.line_status.toUpperCase(),
                                 LibIngramAPI.ValidShippedStatus
                             ),
-                            ns_record:
-                                LibIngramAPI.getNSRecord({
-                                    ingramOrderNumber: lineData.order_num
-                                }) || null
+                            ns_record: null
+                            // LibIngramAPI.getNSRecord({
+                            //     ingramOrderNumber: lineData.order_num
+                            // }) || null
                         });
 
-                        if (!lineData.order_eta || lineData.order_eta == 'NA') {
-                            lineData.order_eta = defaultETA.text;
+                        if (!orderItem.order_eta || orderItem.order_eta == 'NA') {
+                            orderItem.order_eta = defaultETA.text;
                         }
 
-                        arrLines.push(lineData);
+                        if (
+                            !orderItem.is_shipped &&
+                            orderItem.ship_date &&
+                            orderItem.ship_date != 'NA' &&
+                            orderItem.ship_qty &&
+                            orderItem.ship_qty != 0
+                        ) {
+                            var shippedDate = moment(orderItem.ship_date, 'YYYY-MM-DD').toDate();
+
+                            vc2_util.log(logTitle, '**** shipped date: ****', [
+                                shippedDate,
+                                util.isDate(shippedDate),
+                                shippedDate <= new Date()
+                            ]);
+
+                            if (
+                                shippedDate &&
+                                util.isDate(shippedDate) &&
+                                shippedDate <= new Date()
+                            )
+                                orderItem.is_shipped = true;
+                        }
+
+                        vc2_util.log(logTitle, '>> line data: ', orderItem);
+
+                        itemArray.push(orderItem);
                     }
                 }
 
-                returnValue = arrLines;
-                vc2_util.log(logTitle, '>> output lines: ', returnValue);
+                returnValue = itemArray;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                var errorMsg = vc2_util.extractError(error);
-                throw errorMsg;
-            } finally {
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
+                throw error;
             }
 
             return returnValue;
@@ -613,17 +607,7 @@ define([
                     OrderDetails: arrOrderDetails
                 };
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                throw vc2_util.extractError(error);
-            } finally {
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
+                throw error;
             }
 
             return returnValue;

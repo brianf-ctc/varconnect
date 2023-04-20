@@ -36,13 +36,7 @@ define([
     './CTC_VC2_Lib_Record',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (
-    ns_config,
-    ns_format,
-    vc2_record,
-    vc2_util,
-    vc2_constant
-) {
+], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -712,7 +706,6 @@ define([
                         });
                     }
                 } catch (line_error) {
-
                     vc2_util.logError(logTitle, line_error);
 
                     vc2_util.vcLog({
@@ -735,6 +728,7 @@ define([
 
                 vc2_util.log(logTitle, ' // PO updated successfully');
             }
+            
         } catch (err) {
             vc2_util.logError(logTitle, err);
             vc2_util.vcLog({

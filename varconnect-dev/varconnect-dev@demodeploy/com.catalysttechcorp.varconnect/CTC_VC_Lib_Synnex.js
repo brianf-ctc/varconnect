@@ -22,11 +22,16 @@
 
 define([
     'N/xml',
-    './CTC_VC_Lib_Log.js',
     './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Utils.js'
-], function (ns_xml, vc_log, vc2_constant, vc2_util) {
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_constant, vc2_util, moment) {
     var LogTitle = 'WS:Synnex';
+
+    var LOG_LEVEL = 0;
+    // 0 - main input / output
+    // 1 - function level
+    // 2 - verbose / debug level
 
     var Helper = {
         getNodeValue: function (node, xpath) {
@@ -44,8 +49,6 @@ define([
                 returnValue = nodeValue;
             } catch (error) {
                 returnValue = false;
-            } finally {
-                // log.audit(logTitle, LogPrefix + '>> nodeValue: ' + JSON.stringify(nodeValue));
             }
 
             return returnValue;
@@ -56,6 +59,7 @@ define([
     var LibSynnexAPI = {
         SkippedStatus: ['NOTFOUND', 'NOT FOUND', 'REJECTED', 'DELETED'],
         ShippedStatus: ['SHIPPED', 'INVOICED'],
+        //ACCEPTED, SHIPPED, DELETED, NOT FOUND, REJECTED
 
         getOrderStatus: function (option) {
             var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
@@ -92,13 +96,14 @@ define([
                     recordId: CURRENT.recordId
                 });
 
-                this.handleResponse(reqOrderStatus);
+                // this.handleResponse(reqOrderStatus);
+                vc2_util.handleXMLResponse(reqOrderStatus);
+
                 // if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
                 if (!respOrderStatus) throw 'Unable to fetch server response';
                 returnValue = respOrderStatus;
             } catch (error) {
-                returnValue = false;
                 throw error;
             }
 
@@ -136,22 +141,15 @@ define([
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = LogPrefix;
+
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
-
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : CURRENT.errorMessage,
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
             } catch (error) {
-                CURRENT.errorMessage = vc2_util.extractError(error);
-                throw CURRENT.errorMessage;
+                vc2_util.logError(logTitle, error);
+                throw error;
             }
 
             return returnValue;
@@ -166,12 +164,13 @@ define([
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = LogPrefix;
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {
-                throw vc2_util.extractError(error);
+                throw error;
             }
 
             return returnValue;
@@ -187,13 +186,21 @@ define([
 
                 if (!xmlDoc) throw 'Unable to parse XML';
 
+                // get the initial code
+                var orderCode = vc2_util.getNodeContent(
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' })
+                );
+
+                if (vc2_util.inArray(orderCode.toUpperCase(), LibSynnexAPI.SkippedStatus))
+                    throw 'Order is' + orderCode;
+
                 var arrItemsNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//Item' });
                 if (!arrItemsNode || !arrItemsNode.length) throw 'XML: Missing Item Details';
 
                 for (var i = 0, j = arrItemsNode.length; i < j; i++) {
                     var itemNode = arrItemsNode[i];
 
-                    var itemRow = {
+                    var orderItem = {
                         line_num: itemNode.getAttribute({ name: 'lineNumber' }) || 'NA',
                         item_num: Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
                         vendorSKU: Helper.getNodeValue(itemNode, 'SKU') || 'NA',
@@ -208,74 +215,61 @@ define([
                         ship_date: Helper.getNodeValue(itemNode, 'ShipDatetime') || 'NA',
                         ship_qty: Helper.getNodeValue(itemNode, 'ShipQuantity') || 'NA',
                         carrier: Helper.getNodeValue(itemNode, 'ShipMethodDescription') || 'NA',
+                        is_shipped: false,
                         tracking_num: 'NA',
                         serial_num: 'NA'
                     };
-                    vc2_util.log(logTitle, '// item Row: ', itemRow);
 
+                    // Filter: Order Status
                     if (
-                        !itemRow.order_status ||
+                        !orderItem.order_status ||
                         vc2_util.inArray(
-                            itemRow.order_status.toUpperCase(),
+                            orderItem.order_status.toUpperCase(),
                             LibSynnexAPI.SkippedStatus
                         )
                     ) {
                         // skip this order status
                         vc2_util.log(
                             logTitle,
-                            '** SKIPPED: OrderStatus:' + itemRow.order_status,
-                            itemRow
+                            '** SKIPPED: OrderStatus:' + orderItem.order_status,
+                            orderItem
                         );
 
                         continue;
                     }
 
+                    // Filter: Line Status
                     if (
-                        !itemRow.line_status ||
+                        !orderItem.line_status ||
                         vc2_util.inArray(
-                            itemRow.line_status.toUpperCase(),
+                            orderItem.line_status.toUpperCase(),
                             LibSynnexAPI.SkippedStatus
                         )
                     ) {
                         // skip this order status
                         vc2_util.log(
                             logTitle,
-                            '** SKIPPED: LineStatus:' + itemRow.line_status,
-                            itemRow
+                            '** SKIPPED: LineStatus:' + orderItem.line_status,
+                            orderItem
                         );
                         continue;
                     }
 
-                    var shipQty = parseFloat(itemRow.ship_qty);
-                    if (!shipQty || shipQty < 1) {
-                        // skip this order status
-                        vc2_util.log(logTitle, '** SKIPPED: Ship Qty:' + itemRow.ship_qty, [
-                            parseFloat(itemRow.ship_qty),
-                            vc2_util.parseFloat(itemRow.ship_qty),
-                            vc2_util.forceFloat(itemRow.ship_qty),
-                            shipQty,
-                            !shipQty,
-                            shipQty < 1
-                        ]);
-                        continue;
-                    }
                     // do the Packages
                     var packagesNode = ns_xml.XPath.select({
                         node: itemNode,
                         xpath: 'Packages/Package'
                     });
 
-                    // vc2_util.log(logTitle, '// packagesNode: ', packagesNode);
+                    vc2_util.log(logTitle, '// packagesNode: ', packagesNode);
 
                     var trackingNumList = [],
                         serialNumList = [];
 
                     for (var ii = 0, jj = packagesNode.length; ii < jj; ii++) {
-                        var trackingNo = Helper.getNodeValue(packagesNode[ii], 'TrackingNumber'),
-                            serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
-
-                        // vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
-                        // vc2_util.log(logTitle, '// serialNo: ', serialNo);
+                        var trackingNo = Helper.getNodeValue(packagesNode[ii], 'TrackingNumber');
+                        // serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
+                        vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
 
                         if (
                             trackingNo &&
@@ -284,27 +278,59 @@ define([
                         )
                             trackingNumList.push(trackingNo);
 
-                        if (
-                            serialNo &&
-                            serialNo != 'NA' &&
-                            !vc2_util.inArray(serialNo, serialNumList)
-                        )
+                        var serialNodes = ns_xml.XPath.select({
+                            node: packagesNode[ii],
+                            xpath: 'SerialNo'
+                        });
+
+                        for (var iii = 0, jjj = serialNodes.length; iii < jjj; iii++) {
+                            var serialNo = vc2_util.getNodeTextContent(serialNodes[iii]);
+                            vc2_util.log(logTitle, '// serialNo: ', serialNo);
+
                             serialNumList.push(serialNo);
+                        }
+
+                        // if (
+                        //     serialNo &&
+                        //     serialNo != 'NA' &&
+                        //     !vc2_util.inArray(serialNo, serialNumList)
+                        // )
+                        //     serialNumList.push(serialNo);
                     }
 
                     if (trackingNumList && trackingNumList.length)
-                        itemRow.tracking_num = trackingNumList.join(',');
+                        orderItem.tracking_num = trackingNumList.join(',');
 
                     if (serialNumList && serialNumList.length)
-                        itemRow.serial_num = serialNumList.join(',');
+                        orderItem.serial_num = serialNumList.join(',');
 
-                    vc2_util.log(logTitle, '// item Row: ', itemRow);
-                    itemArray.push(itemRow);
+                    if (
+                        !orderItem.is_shipped &&
+                        orderItem.ship_date &&
+                        orderItem.ship_date != 'NA' &&
+                        orderItem.ship_qty &&
+                        orderItem.ship_qty != 0
+                    ) {
+                        var shippedDate = moment(orderItem.ship_date).toDate();
+
+                        vc2_util.log(logTitle, '**** shipped date: ****', [
+                            shippedDate,
+                            util.isDate(shippedDate),
+                            shippedDate <= new Date()
+                        ]);
+
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                            orderItem.is_shipped = true;
+                    }
+
+                    vc2_util.log(logTitle, '>> line data: ', orderItem);
+
+                    itemArray.push(orderItem);
                 }
 
                 returnValue = itemArray;
             } catch (error) {
-                throw vc2_util.extractError(error);
+                throw error;
             }
 
             return returnValue;

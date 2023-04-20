@@ -30,8 +30,7 @@ define([
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
 
-    './CTC_VC_Lib_LicenseValidator',
-    './CTC_VC_Lib_Log.js'
+    './CTC_VC_Lib_LicenseValidator'
 ], function (
     ns_search,
     ns_runtime,
@@ -46,8 +45,7 @@ define([
     vc_maincfg,
     vc_vendorcfg,
     vc_websvclib,
-    vc_license,
-    vc_log
+    vc_license
 ) {
     var LogTitle = 'MR_OrderStatus';
     var LogPrefix = '';
@@ -276,6 +274,12 @@ define([
                 isDynamic: true
             });
 
+            // vc2_util.log(
+            //     logTitle,
+            //     '*** ADHOC FIELD VALUES ***',
+            //     Current.PO_REC.getValue({ fieldId: 'custbody_ctc_vc_helper_field' })
+            // );
+
             Current.isDropPO =
                 Current.PO_REC.getValue({ fieldId: 'dropshipso' }) ||
                 Current.PO_REC.getValue({
@@ -308,9 +312,13 @@ define([
                 (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
             ) {
                 throw outputObj.isError && outputObj.errorMessage
-                    ? outputObj.errorMessage
-                    : ERROR_MSG.NO_LINES_TO_PROCESS;
+                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
+                    : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
+                          details: outputObj
+                      });
             }
+
+            // throw '** EXIT **';
 
             ////////////////////////////////////////////////
             /// UPDATE PO //////
@@ -682,10 +690,10 @@ define([
         vc2_util.logDebug(logTitle, '###### END OF SCRIPT ###### ');
     };
 
-    var ERROR_MSG = {
-        ORDER_EXISTS: 'Order already exists',
-        NO_LINES_TO_FULFILL: 'No lines to fulfill'
-    };
+    // var ERROR_MSG = {
+    //     ORDER_EXISTS: 'Order already exists',
+    //     NO_LINES_TO_FULFILL: 'No lines to fulfill'
+    // };
 
     var Helper = {
         getUsage: function () {

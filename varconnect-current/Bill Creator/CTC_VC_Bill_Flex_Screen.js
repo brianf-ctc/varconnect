@@ -478,7 +478,14 @@ define([
                             Current.TOTALS_DATA.TAX_AMOUNT += lineData.amounttax;
                         }
                     }
-                } catch (line_err) {}
+                } catch (line_err) {
+                    vc2_util.logError(logTitle, line_err);
+                    Current.WarnMessage.push(
+                        'Unable to add variance item: ' +
+                            varianceLine.name +
+                            ('<br /> <b> Error: </b>' + vc2_util.extractError(line_err))
+                    );
+                }
                 ////////////////////
 
                 lineData.is_active = lineData.enabled ? 'T' : 'F';
@@ -1271,7 +1278,7 @@ define([
                 var varType = VARIANCE_TYPE[varTypeName];
 
                 var varianceInfo = VARIANCE_DEF[varType] || {},
-                    chargeInfo = Current.JSON_DATA.charges[varType],
+                    chargedAmt = Current.JSON_DATA.charges[varType],
                     matchingVarianceLine = vc2_util.findMatching({
                         dataSet: Current.JSON_DATA.varianceLines,
                         filter: { type: varType }
@@ -1286,7 +1293,7 @@ define([
 
                 switch (varType) {
                     case VARIANCE_TYPE.MISC:
-                        (chargeInfo || []).forEach(function (miscCharge) {
+                        (chargedAmt || []).forEach(function (miscCharge) {
                             // look for any existing varianceLine
                             var matchingMiscLine = vc2_util.findMatching({
                                 dataSet: Current.JSON_DATA.varianceLines,
@@ -1312,10 +1319,10 @@ define([
                                 varianceInfo,
                                 matchingVarianceLine || {
                                     rate: vc2_util.roundOff(
-                                        chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT
+                                        chargedAmt - Current.TOTALS_DATA.TAX_AMOUNT
                                     ),
                                     amount: vc2_util.roundOff(
-                                        chargeInfo - Current.TOTALS_DATA.TAX_AMOUNT
+                                        chargedAmt - Current.TOTALS_DATA.TAX_AMOUNT
                                     )
                                 }
                             )
@@ -1328,10 +1335,10 @@ define([
                                 varianceInfo,
                                 matchingVarianceLine || {
                                     rate: vc2_util.roundOff(
-                                        chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT
+                                        chargedAmt - Current.TOTALS_DATA.SHIPPING_AMT
                                     ),
                                     amount: vc2_util.roundOff(
-                                        chargeInfo - Current.TOTALS_DATA.SHIPPING_AMT
+                                        chargedAmt - Current.TOTALS_DATA.SHIPPING_AMT
                                     )
                                 }
                             )
@@ -1344,8 +1351,8 @@ define([
                             vc2_util.extend(
                                 varianceInfo,
                                 matchingVarianceLine || {
-                                    rate: chargeInfo,
-                                    amount: chargeInfo
+                                    rate: chargedAmt,
+                                    amount: chargedAmt
                                 }
                             )
                         );

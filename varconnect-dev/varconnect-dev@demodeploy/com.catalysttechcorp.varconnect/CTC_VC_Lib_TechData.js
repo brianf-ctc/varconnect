@@ -23,10 +23,10 @@
 define([
     'N/search',
     'N/xml',
-    './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (ns_search, ns_xml, vc_log, vc2_util, vc2_constant) {
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_search, ns_xml, vc2_util, vc2_constant, moment) {
     var LogTitle = 'WS:TechData';
     var Helper = {
         getNodeValue: function (node, xpath) {
@@ -85,7 +85,9 @@ define([
                     }
                 });
 
-                if (reqInvoiceDetail.isError) throw reqInvoiceDetail.errorMsg;
+                vc2_util.handleXMLResponse(reqInvoiceDetail);
+
+                // if (reqInvoiceDetail.isError) throw reqInvoiceDetail.errorMsg;
                 var responseXML = reqInvoiceDetail.RESPONSE.body;
 
                 if (!responseXML) throw 'Unable to fetch server response';
@@ -95,12 +97,6 @@ define([
 
                 returnValue = responseXML;
             } catch (error) {
-                // vc2_util.vcLog({
-                //     title: LogTitle + ' Orders Status : Error',
-                //     error: error,
-                //     recordId: CURRENT.recordId
-                // });
-                returnValue = vc2_util.extractError(error);
                 throw error;
             } finally {
                 log.audit(logTitle, LogPrefix + '>> order status: ' + JSON.stringify(returnValue));
@@ -141,21 +137,18 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                // vc2_util.vcLog({
-                //     title: LogTitle + ':Process Error',
-                //     error: error,
-                //     recordId: CURRENT.recordId
-                // });
-                throw vc2_util.extractError(error);
+                vc2_util.logError(logTitle, error);
+                throw error;
             } finally {
-                vc2_util.vcLog({
-                    title: [LogTitle + ' Lines'].join(' - '),
-                    body: !vc2_util.isEmpty(returnValue)
-                        ? JSON.stringify(returnValue)
-                        : '-no lines to process-',
-                    recordId: CURRENT.recordId,
-                    status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                });
+                vc2_util.log(logTitle, '>> OrderValues: ', returnValue);
+                // vc2_util.vcLog({
+                //     title: [LogTitle + ' Lines'].join(' - '),
+                //     body: !vc2_util.isEmpty(returnValue)
+                //         ? JSON.stringify(returnValue)
+                //         : '-no lines to process-',
+                //     recordId: CURRENT.recordId,
+                //     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
+                // });
             }
 
             return returnValue;
@@ -176,14 +169,7 @@ define([
 
                 returnValue = LibTechDataXML.getInvoiceDetail(option);
             } catch (error) {
-                // vc2_util.vcLog({
-                //     title: LogTitle + ':Request Error',
-                //     error: error,
-                //     recordId: CURRENT.recordId
-                // });
-                throw vc2_util.extractError(error);
-            } finally {
-                vc2_util.log(logTitle, returnValue);
+                throw error;
             }
 
             return returnValue;
@@ -207,7 +193,7 @@ define([
                     var orderInfo = arrItemNodes[i].parentNode.parentNode;
                     var containerInfo = arrItemNodes[i].parentNode;
 
-                    var xml_items = {
+                    var orderItem = {
                         line_num: Helper.getNodeValue(arrItemNodes[i], 'OrderLineNbr') || 'NA',
                         item_num: Helper.getNodeValue(arrItemNodes[i], 'MfgItemNbr') || 'NA',
                         order_num: Helper.getNodeValue(orderInfo, 'InvoiceNbr') || 'NA',
@@ -245,36 +231,45 @@ define([
                         }
 
                         if (!vc2_util.isEmpty(arrSerialNum)) {
-                            xml_items.serial_num = arrSerialNum.join(',');
+                            orderItem.serial_num = arrSerialNum.join(',');
                         }
                     }
 
-                    if (!vc2_util.isEmpty(xml_items.line_num)) {
-                        xml_items.line_no = vc2_util.parseFloat(xml_items.line_num);
+                    if (!vc2_util.isEmpty(orderItem.line_num)) {
+                        orderItem.line_no = vc2_util.parseFloat(orderItem.line_num);
 
                         if (
-                            !vc2_util.isEmpty(xml_items.line_no) &&
-                            xml_items.line_no &&
-                            xml_items.line_no % 100 == 0
+                            !vc2_util.isEmpty(orderItem.line_no) &&
+                            orderItem.line_no &&
+                            orderItem.line_no % 100 == 0
                         )
-                            xml_items.line_no = xml_items.line_no / 100;
+                            orderItem.line_no = orderItem.line_no / 100;
                     }
 
-                    log.audit(logTitle, LogPrefix + '... item found: ' + JSON.stringify(xml_items));
+                    if (
+                        !orderItem.is_shipped &&
+                        orderItem.ship_date != 'NA' &&
+                        orderItem.ship_qty &&
+                        orderItem.ship_qty != 0
+                    ) {
+                        var shippedDate = moment(orderItem.ship_date, 'MM/DD/YY').toDate();
+                        vc2_util.log(logTitle, '>> shipped date: ', [
+                            shippedDate,
+                            util.isDate(shippedDate),
+                            shippedDate <= new Date()
+                        ]);
 
-                    itemArray.push(xml_items);
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                            orderItem.is_shipped = true;
+                    }
+
+                    log.audit(logTitle, LogPrefix + '... item found: ' + JSON.stringify(orderItem));
+                    itemArray.push(orderItem);
                 }
 
                 returnValue = itemArray;
             } catch (error) {
-                // extract the error
-                var errMsg = LibTechDataXML.responseError(xmlDoc);
-                // vc2_util.vcLog({
-                //     title: LogTitle + ': Response Error',
-                //     error: errMsg || error,
-                //     recordId: CURRENT.recordId
-                // });
-                throw errMsg || vc2_util.extractError(error);
+                throw error;
             }
 
             return returnValue;

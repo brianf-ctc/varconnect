@@ -132,8 +132,14 @@ define(function (require) {
         },
         getNodeTextContent: function (node) {
             // log.debug('node', node);
-            if (!vc2_util.isUndefined(node)) return node.textContent;
+            if (!vc2_util.isUndefined(node)) return node.textContent || node.shift().textContent;
             else return null;
+        },
+        getNodeContent: function (node) {
+            var returnValue;
+            if (node && node.length) returnValue = node.shift().textContent;
+
+            return returnValue;
         },
         loadModule: function (mod) {
             var returnValue = require(mod);
@@ -191,7 +197,7 @@ define(function (require) {
                         }
                     }
                 } catch (e) {
-                    log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
+                    vc2_util.logError(logTitle, e);
                 }
             }
 
@@ -268,6 +274,21 @@ define(function (require) {
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
+        },
+        getSublistField: function (sublist, fieldId) {
+            var returnField;
+
+            try {
+                returnField = sublist.getField({
+                    id: fieldId
+                });
+                if (!returnField || !returnField.id) throw 'Field is not exposed';
+            } catch (error) {
+                log.audit('getSublistField', error);
+                returnField = false;
+            }
+
+            return returnField;
         }
     });
 
@@ -477,37 +498,84 @@ define(function (require) {
                 returnValue = request;
 
             // detect the error
+            var parsedResp = request.PARSED_RESPONSE;
+            if (!parsedResp) throw 'Unable to parse response';
+
+            // check for faultstring
+            if (parsedResp.fault && parsedResp.fault.faultstring)
+                throw parsedResp.fault.faultstring;
+
+            // check response.errors
+            if (
+                parsedResp.errors &&
+                util.isArray(parsedResp.errors) &&
+                !vc2_util.isEmpty(parsedResp.errors)
+            ) {
+                var respErrors = parsedResp.errors
+                    .map(function (err) {
+                        return [err.id, err.message].join(': ');
+                    })
+                    .join(', ');
+                throw respErrors;
+            }
+
+            // chek for error_description
+            if (parsedResp.error && parsedResp.error_description)
+                throw parsedResp.error_description;
+
+            // ARROW: ResponseHeader
+
             if (request.isError || request.RESPONSE.code != '200') {
-                var parsedResp = request.PARSED_RESPONSE;
-
-                // initial checking
-                if (!parsedResp) throw 'Unable to parse response';
-
-                // check for faultstring
-                if (parsedResp.fault && parsedResp.fault.faultstring)
-                    throw parsedResp.fault.faultstring;
-
-                // check response.errors
-                if (
-                    parsedResp.errors &&
-                    util.isArray(parsedResp.errors) &&
-                    !vc2_util.isEmpty(parsedResp.errors)
-                ) {
-                    var respErrors = parsedResp.errors
-                        .map(function (err) {
-                            return [err.id, err.message].join(': ');
-                        })
-                        .join(', ');
-                    throw respErrors;
-                }
-
                 throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
             }
 
             return returnValue;
         },
 
-        handleXMLResponse: function (request) {}
+        handleXMLResponse: function (request) {
+            var logTitle = [LogTitle, 'handleXMLResponse'].join(':'),
+                returnValue = request;
+
+            if (request.isError && request.errorMsg) throw request.errorMsg;
+
+            if (!request.RESPONSE || !request.RESPONSE.body)
+                throw 'Invalid or missing XML response';
+
+            var ns_xml = vc2_util.loadModuleNS('N/xml');
+
+            var xmlResponse = request.RESPONSE.body,
+                xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });
+            if (!xmlDoc) throw 'Unable to parse XML response';
+
+            // Failure-Message ( D&H )
+            var respStatus = vc2_util.getNodeContent(
+                ns_xml.XPath.select({ node: xmlDoc, xpath: '//STATUS' })
+            );
+
+            if (respStatus && vc2_util.inArray(respStatus.toUpperCase(), ['FAILURE'])) {
+                var respStatusMessage = vc2_util.getNodeContent(
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//MESSAGE' })
+                );
+
+                throw respStatusMessage || 'Unexpected failure';
+            }
+
+            // ERROR DETAIL - Synnex
+            var respErrorDetail = vc2_util.getNodeContent(
+                ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorDetail' })
+            );
+            if (respErrorDetail) throw respErrorDetail;
+
+            //OrderInfo/ErrorMsg - TechData
+            var respErrorInfo =
+                vc2_util.getNodeContent(
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderInfo/ErrorMsg' })
+                ) ||
+                vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' }));
+            if (respErrorInfo) throw respErrorInfo;
+
+            return returnValue;
+        }
     });
 
     // LOGS
@@ -559,7 +627,7 @@ define(function (require) {
                     logOption.BODY = errorMsg;
 
                     logOption.STATUS = option.error.logStatus || option.status || LOG_STATUS.ERROR;
-                    if ( option.error.details) option.details = option.error.details
+                    if (option.error.details) option.details = option.error.details;
                 }
 
                 if (option.details) {
@@ -569,11 +637,16 @@ define(function (require) {
                     logOption.BODY = option.details;
                 }
 
+                vc2_util.log(
+                    logOption.HEADER,
+                    vc2_util.getKeysFromValues({ source: LOG_STATUS, value: logOption.STATUS }) +
+                        ' : ',
+                    logOption.BODY
+                );
+
                 logOption.BODY = util.isString(logOption.BODY)
                     ? logOption.BODY
                     : JSON.stringify(logOption.BODY);
-
-                vc2_util.log(logOption.HEADER, logOption.STATUS, logOption.BODY);
 
                 if (isBatched) {
                     var VC_LOG_BATCH = vc2_constant.RECORD.VC_LOG_BATCH;
@@ -624,7 +697,7 @@ define(function (require) {
             return true;
         },
 
-        vcLogError: function (errorOption) {
+        vcLogError: function (option) {
             var logTitle = [LogTitle, ''].join(':'),
                 returnValue = true;
 
@@ -689,7 +762,7 @@ define(function (require) {
             return true;
         },
         logError: function (logTitle, errorMsg) {
-            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR ###' }, errorMsg);
+            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR: ' }, errorMsg);
             return;
         },
         logDebug: function (logTitle, msg, msgVar) {
