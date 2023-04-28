@@ -27,236 +27,152 @@
 define([
     'N/record',
     'N/runtime',
-    'N/error',
-    'N/config',
     'N/search',
     'N/url',
     './CTC_VC2_Constants',
     './CTC_VC2_Lib_Utils'
-], function (ns_record, ns_runtime, ns_error, ns_config, ns_search, ns_url, vc2_global, vc2_util) {
+], function (ns_record, ns_runtime, ns_search, ns_url, vc2_global, vc2_util) {
     //        vcGlobals.SN_LINE_FIELD_LINK_ID
     var LogTitle = 'SetSerialLink';
 
-    function beforeLoad(context) {
-        var logTitle = 'beforeLoad';
-        var form = context.form;
+    var USER_EVENT = {
+        beforeLoad: function (scriptContext) {
+            var logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
+                returnValue = null;
 
-        try {
-            if (context.type != context.UserEventType.VIEW) return false;
-            if (context.newRecord.type != ns_record.Type.ITEM_FULFILLMENT) return false;
+            vc2_util.log(logTitle, '*** START: ', [
+                scriptContext.type,
+                ns_runtime.executionContext,
+                scriptContext.newRecord ? scriptContext.newRecord.type : ''
+            ]);
 
-            var lineCount = context.newRecord.getLineCount({ sublistId: 'item' });
-            log.debug(logTitle, '>> Total lines: ' + lineCount);
+            try {
+                if (scriptContext.type != scriptContext.UserEventType.VIEW) return false;
 
-            var sublistItem = context.form.getSublist({ id: 'item' });
-            log.debug(logTitle, sublistItem);
+                var currentRecord = scriptContext.newRecord;
+                if (!currentRecord) return;
 
-            sublistItem.addField({
-                id: 'custpage_custom_serial_link',
-                label: 'Serial Link',
-                type: 'text'
-            });
-            for (var line = 0; line < lineCount; line++) {
-                var serialLink = context.newRecord.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'custcol_ctc_xml_serial_num_link',
-                    line: line
+                // generate the link
+                var Current = {
+                    transType: currentRecord.type,
+                    transId: currentRecord.id
+                };
+
+                vc2_util.log(logTitle, '>> Current Record: ', Current);
+
+                var fixSerialLinkJS = [
+                    '<script type="text/javascript">',
+                    'jQuery(document).ready(function () {',
+                    'console.log("**** Code: Serial Link Fix **** ");',
+                    '(function (jq) {',
+                    'var serialLnks = jq("a").filter(function(idx, elem) {return elem.text == "Serial Number Link"});',
+                    'serialLnks.each(function (id, elem) {',
+                    'var url = elem.href.replace("&transId=&", "&");',
+                    'url+="&transId=' + Current.transId + '";',
+                    'elem.href=url;return true;})',
+                    '})(jQuery);',
+                    '})',
+                    '</script>'
+                ];
+
+                var fixSerialLinkFld = scriptContext.form.addField({
+                    id: 'custpage_ctc_fixserial_links',
+                    label: 'Fix Serial Lnks',
+                    type: 'inlinehtml'
                 });
-
-                log.debug(logTitle, JSON.stringify({ line: line, serialLink: serialLink }));
-
-                if (!serialLink) continue;
-                // context.newRecord.setSublistValue({
-                //     sublistId: 'item',
-                //     fieldId: 'custcol_ctc_xml_serial_num_link',
-                //     line: line,
-                //     value: '<a href="' + serialLink + '" target="_blank">Serial Link</a>'
-                // });
-
-                sublistItem.setSublistValue({
-                    id: 'custpage_custom_serial_link',
-                    line: line,
-                    value:
-                        '<span class="uir-field"><a class="dottedlink" href="' +
-                        serialLink +
-                        '" target="_blank">Serial Number Link</a></span>'
-                });
-
-                // context.form.addSub
+                fixSerialLinkFld.defaultValue = fixSerialLinkJS.join('');
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw error;
             }
 
-            var fldLink = sublistItem.getField({
-                id: 'custcol_ctc_xml_serial_num_link'
-            });
-            fldLink.updateDisplayType({
-                displayType: 'HIDDEN'
-            });
-        } catch (error) {
-            log.audit(logTitle, error);
-        }
+            return returnValue;
+        },
+        beforeSubmit: function (scriptContext) {
+            var logTitle = [LogTitle || '', 'onBeforeSubmit'].join('::'),
+                returnValue = null;
 
-        return true;
-    }
+            var LogPrefix = [
+                ns_runtime.executionContext,
+                scriptContext.type,
+                scriptContext.newRecord ? scriptContext.newRecord.type : '',
+                scriptContext.newRecord ? scriptContext.newRecord.id : ''
+            ];
+            vc2_util.log(logTitle, '*** START: ', LogPrefix);
+            vc2_util.LogPrefix = LogPrefix.join(':');
 
-    function beforeSubmit(context) {
-        if (context.type == context.UserEventType.EDIT) {
-            var current_rec = context.newRecord;
-            var currentID = current_rec.id;
-            var currentType = current_rec.type;
-            log.debug({
-                title: 'Running for ' + currentType + ' - ' + currentID
-            });
-            // var companyObj = config.load({
-            //     type: config.Type.COMPANY_INFORMATION
-            // });
-            // var accountId = companyObj.getValue('companyid')
+            try {
+                if (
+                    !vc2_util.inArray(scriptContext.type, [
+                        scriptContext.UserEventType.CREATE,
+                        scriptContext.UserEventType.COPY,
+                        scriptContext.UserEventType.EDIT,
+                        scriptContext.UserEventType.XEDIT
+                    ])
+                )
+                    return;
 
-            var lineCount = current_rec.getLineCount({ sublistId: 'item' });
-            if (lineCount > 900) return;
-            for (var i = 0; i < lineCount; i++) {
-                var itemId = current_rec.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'item',
-                    line: i
-                });
-                var itemType = current_rec.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'itemtype',
-                    line: i
-                });
-                log.debug('itemtype', itemType);
-                if (itemType == 'EndGroup') continue;
+                var currentRecord = scriptContext.newRecord;
+                if (!currentRecord) return;
 
-                /**  OLD Version
-                var itemTxtField = currentType == record.Type.ITEM_FULFILLMENT ? 'itemname' : 'item';
-                var itemName = encodeURIComponent(current_rec.getSublistText({
-                    sublistId: 'item',
-                    fieldId: itemTxtField,
-                    line: i
-                }));
-**/
-                var fieldLookUp = ns_search.lookupFields({
-                    type: ns_search.Type.ITEM,
-                    id: itemId,
-                    columns: ['itemid']
-                });
-                var itemName = encodeURIComponent(fieldLookUp.itemid);
+                var Current = {
+                    transType: currentRecord.type,
+                    transId: currentRecord.id,
+                    createdFrom: currentRecord.getValue('createdfrom')
+                };
 
-                // + '&compid='+accountId
-                //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-                var lineLinkUrl = vc2_util.generateSerialLink({
-                    transType: currentType,
-                    transId: currentID,
-                    itemId: itemId,
-                    itemName: itemName
-                });
+                vc2_util.log(logTitle, '... Current: ', Current);
 
-                log.debug({
-                    title: 'Setting line ' + i,
-                    details: lineLinkUrl
-                });
-                current_rec.setSublistValue({
-                    sublistId: 'item',
-                    fieldId: vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID,
-                    line: i,
-                    value: lineLinkUrl
-                });
-            }
-        } else {
-            return;
-        }
-    }
+                if (!Current.createdFrom) return; // no sales order, we can't handle
 
-    function afterSubmit(context) {
-        if (context.type == context.UserEventType.CREATE) {
-            var currentID = context.newRecord.id;
-            var currentType = context.newRecord.type;
+                // try to update serial record lines
+                var lineCount = currentRecord.getLineCount({ sublistId: 'item' });
+                vc2_util.log(logTitle, '... lineCount: ', lineCount);
 
-            var current_rec = ns_record.load({
-                type: currentType,
-                id: currentID,
-                isDynamic: false
-            });
+                for (var line = 0; line < lineCount; line++) {
+                    util.extend(Current, {
+                        itemId: currentRecord.getSublistValue({
+                            sublistId: 'item',
+                            fieldId: 'item',
+                            line: line
+                        })
+                        // itemName: currentRecord.getSublistText({
+                        //     sublistId: 'item',
+                        //     fieldId: 'item',
+                        //     line: line
+                        // })
+                    });
 
-            log.debug({
-                title: 'Running for ' + currentType + ' - ' + currentID
-            });
-            // var companyObj = config.load({
-            //     type: config.Type.COMPANY_INFORMATION
-            // });
-            // var accountId = companyObj.getValue('companyid')
+                    var itemType = currentRecord.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'itemtype',
+                        line: line
+                    });
+                    Current.itemName = encodeURIComponent(Current.itemName);
+                    vc2_util.log(logTitle, '// Current: ', [Current, itemType]);
 
-            var lineCount = current_rec.getLineCount({ sublistId: 'item' });
-            for (var i = 0; i < lineCount; i++) {
-                var itemId = current_rec.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'item',
-                    line: i
-                });
-                var itemType = current_rec.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'itemtype',
-                    line: i
-                });
-                log.debug('itemtype', itemType);
-                if (itemType == 'EndGroup') continue;
-                var fieldLookUp = ns_search.lookupFields({
-                    type: ns_search.Type.ITEM,
-                    id: itemId,
-                    columns: ['itemid']
-                });
-                var itemName = encodeURIComponent(fieldLookUp.itemid);
+                    if (itemType == 'EndGroup') continue;
 
-                // + '&compid='+accountId
-                //                var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-                var lineLinkUrl = vc2_util.generateSerialLink({
-                    transType: currentType,
-                    transId: currentID,
-                    itemId: itemId,
-                    itemName: itemName
-                });
+                    var serialLinkUrl = vc2_util.generateSerialLink(Current);
+                    vc2_util.log(logTitle, '// SerialLink: ', serialLinkUrl);
 
-                log.debug({
-                    title: 'Setting line ' + i,
-                    details: lineLinkUrl
-                });
-                current_rec.setSublistValue({
-                    sublistId: 'item',
-                    fieldId: vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID,
-                    line: i,
-                    value: lineLinkUrl
-                });
-            }
-            current_rec.save({
-                enableSourcing: false,
-                ignoreMandatoryFields: true
-            });
-        } else {
-            return;
-        }
-    }
-
-    function isEmpty(stValue) {
-        if (stValue == '' || stValue == null || stValue == undefined) {
-            return true;
-        } else {
-            if (typeof stValue == 'string') {
-                if (stValue == '') {
-                    return true;
+                    currentRecord.setSublistValue({
+                        sublistId: 'item',
+                        fieldId: vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID,
+                        line: line,
+                        value: serialLinkUrl
+                    });
                 }
-            } else if (typeof stValue == 'object') {
-                if (stValue.length == 0 || stValue.length == 'undefined') {
-                    return true;
-                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+                throw error;
             }
 
-            return false;
+            return returnValue;
         }
-    }
-
-    return {
-        beforeLoad: beforeLoad,
-        beforeSubmit: beforeSubmit,
-        afterSubmit: afterSubmit
     };
+
+    return USER_EVENT;
 });

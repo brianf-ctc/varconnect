@@ -64,6 +64,7 @@ define([
                 scriptContext.newRecord.id || '_NEW_'
             ].join(':');
             LogPrefix = '[' + LogPrefix + '] ';
+            vc2_util.LogPrefix = LogPrefix;
 
             log.debug(
                 logTitle,
@@ -76,54 +77,63 @@ define([
                     })
             );
 
-            //If Serial Scan and Update feature is disabled, hide the corresponding columns
-            var form = scriptContext.form,
-                chkSerialSync;
+            try {
+                //If Serial Scan and Update feature is disabled, hide the corresponding columns
+                var form = scriptContext.form,
+                    sublist = form.getSublist({ id: 'item' });
 
-            if (!mainConfig.serialScanUpdate) {
-                var sublist = form.getSublist({ id: 'item' });
+                var fieldObj = {
+                    serialUpdate: Helper.getSublistField(
+                        sublist,
+                        vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_UPDATE
+                    ),
+                    serialScan: Helper.getSublistField(
+                        sublist,
+                        vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
+                    ),
+                    serialSync: Helper.getField(form, 'custbody_ctc_vc_serialsync_done')
+                };
+                vc2_util.log(logTitle, '// fieldObj: ', fieldObj);
 
-                if (sublist) {
-                    var fldSerialUpdate = sublist.getField({
-                        id: vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_UPDATE
-                    });
+                if (!mainConfig.serialScanUpdate) {
+                    vc2_util.log(logTitle, '>> sublist: ', sublist);
 
-                    //force check if field exists
-                    if (fldSerialUpdate)
-                        fldSerialUpdate.updateDisplayType({
-                            displayType: ns_ui.FieldDisplayType.HIDDEN
-                        });
+                    if (sublist) {
+                        //force check if field exists
+                        if (fieldObj.serialUpdate)
+                            fieldObj.serialUpdate.updateDisplayType({
+                                displayType: ns_ui.FieldDisplayType.HIDDEN
+                            });
 
-                    var fldSerialScan = sublist.getField({
-                        id: vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
-                    });
+                        //force check if field exists
+                        if (fieldObj.serialScan)
+                            fieldObj.serialScan.updateDisplayType({
+                                displayType: ns_ui.FieldDisplayType.HIDDEN
+                            });
+                    }
 
-                    //force check if field exists
-                    if (fldSerialScan)
-                        fldSerialScan.updateDisplayType({
+                    // serial sync checkbox
+                    if (fieldObj.serialSync.id)
+                        fieldObj.serialSync.updateDisplayType({
                             displayType: ns_ui.FieldDisplayType.HIDDEN
                         });
                 }
 
-                // serial sync checkbox
-                chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
-                if (chkSerialSync)
-                    chkSerialSync.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
-            }
+                // if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
+                var vendorConfig = Helper.searchVendorConfig({
+                    salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
+                });
 
-            // if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
-            var vendorConfig = Helper.searchVendorConfig({
-                salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
-            });
+                if (!vendorConfig) {
+                    // serial sync checkbox
 
-            if (!vendorConfig) {
-                // serial sync checkbox
-                chkSerialSync = form.getField({ id: 'custbody_ctc_vc_serialsync_done' });
-
-                if (chkSerialSync)
-                    chkSerialSync.updateDisplayType({
-                        displayType: ns_ui.FieldDisplayType.HIDDEN
-                    });
+                    if (fieldObj.serialSync.id)
+                        fieldObj.serialSync.updateDisplayType({
+                            displayType: ns_ui.FieldDisplayType.HIDDEN
+                        });
+                }
+            } catch (error) {
+                log.audit(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
             }
 
             return true;
@@ -162,93 +172,99 @@ define([
                     })
             );
 
-            var cols = vc2_constant.FIELD.TRANSACTION,
-                hasSerials = false,
-                hasNoSerials = false,
-                record = scriptContext.newRecord,
-                lineCount = record.getLineCount({ sublistId: 'item' });
+            try {
+                var cols = vc2_constant.FIELD.TRANSACTION,
+                    hasSerials = false,
+                    hasNoSerials = false,
+                    record = scriptContext.newRecord,
+                    lineCount = record.getLineCount({ sublistId: 'item' });
 
-            for (var line = 0; line < lineCount; line++) {
-                var serialString = record.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: cols.SERIAL_NUMBER_SCAN,
-                    line: line
-                });
+                for (var line = 0; line < lineCount; line++) {
+                    var serialString = record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_SCAN,
+                        line: line
+                    });
 
-                var serialStringUpdate = record.getSublistValue({
-                    sublistId: 'item',
-                    fieldId: cols.SERIAL_NUMBER_UPDATE,
-                    line: line
-                });
+                    var serialStringUpdate = record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_UPDATE,
+                        line: line
+                    });
 
-                if (
-                    (serialString && serialString.trim()) ||
-                    (serialStringUpdate && serialStringUpdate.trim())
-                ) {
-                    hasSerials = true;
-                } else if (
-                    (record.type == ns_record.Type.ITEM_FULFILLMENT ||
-                        record.type == ns_record.Type.INVOICE) &&
-                    scriptContext.type == scriptContext.UserEventType.CREATE &&
-                    (!serialStringUpdate || serialStringUpdate.trim().length == 0)
-                ) {
-                    hasNoSerials = true;
+                    if (
+                        (serialString && serialString.trim()) ||
+                        (serialStringUpdate && serialStringUpdate.trim())
+                    ) {
+                        hasSerials = true;
+                    } else if (
+                        (record.type == ns_record.Type.ITEM_FULFILLMENT ||
+                            record.type == ns_record.Type.INVOICE) &&
+                        scriptContext.type == scriptContext.UserEventType.CREATE &&
+                        (!serialStringUpdate || serialStringUpdate.trim().length == 0)
+                    ) {
+                        hasNoSerials = true;
+                    }
+
+                    if (hasSerials && hasNoSerials) break;
                 }
 
-                if (hasSerials && hasNoSerials) break;
+                var tranId = record.getValue({ fieldId: 'tranid' }),
+                    taskOption = {};
+                log.debug(
+                    logTitle,
+                    LogPrefix +
+                        '>> settings: ' +
+                        JSON.stringify({
+                            tranId: tranId,
+                            hasSerials: hasSerials,
+                            hasNoSerials: hasNoSerials,
+                            'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
+                            'mainConfig.copySerialsInv': mainConfig.copySerialsInv
+                        })
+                );
+
+                //Also check if the corresponding features have been enabled before processing
+                var vendorConfig;
+                if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
+                    vendorConfig = Helper.searchVendorConfig({
+                        salesOrder: record.getValue({ fieldId: 'createdfrom' })
+                    });
+
+                    // if (vendorConfig) {
+                    vc2_util.waitRandom(10000);
+
+                    taskOption = {
+                        isMapReduce: true,
+                        scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR,
+                        scriptParams: {}
+                    };
+                    taskOption.scriptParams['custscript_vc_all_type'] = record.type;
+                    taskOption.scriptParams['custscript_vc_all_id'] = record.id;
+                    taskOption.deployId = Helper.forceDeploy(taskOption);
+                    // }
+                }
+
+                if (hasSerials && mainConfig.serialScanUpdate) {
+                    vc2_util.waitRandom(10000);
+
+                    taskOption = {
+                        isMapReduce: true,
+                        scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_MR,
+                        scriptParams: {}
+                    };
+                    taskOption.scriptParams['custscript_vc_type'] = record.type;
+                    taskOption.scriptParams['custscript_vc_id'] = record.id;
+                    taskOption.scriptParams['custscript_vc_sender'] =
+                        ns_runtime.getCurrentUser().id;
+                    taskOption.deployId = Helper.forceDeploy(taskOption);
+                }
+
+                log.audit(logTitle, LogPrefix + '>> Task option:  ' + JSON.stringify(taskOption));
+            } catch (error) {
+                log.audit(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
             }
 
-            var tranId = record.getValue({ fieldId: 'tranid' }),
-                taskOption = {};
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    '>> settings: ' +
-                    JSON.stringify({
-                        tranId: tranId,
-                        hasSerials: hasSerials,
-                        hasNoSerials: hasNoSerials,
-                        'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
-                        'mainConfig.copySerialsInv': mainConfig.copySerialsInv
-                    })
-            );
-
-            //Also check if the corresponding features have been enabled before processing
-            var vendorConfig;
-            if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
-                vendorConfig = Helper.searchVendorConfig({
-                    salesOrder: record.getValue({ fieldId: 'createdfrom' })
-                });
-
-                // if (vendorConfig) {
-                vc2_util.waitRandom(10000);
-
-                taskOption = {
-                    isMapReduce: true,
-                    scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR,
-                    scriptParams: {}
-                };
-                taskOption.scriptParams['custscript_vc_all_type'] = record.type;
-                taskOption.scriptParams['custscript_vc_all_id'] = record.id;
-                taskOption.deployId = Helper.forceDeploy(taskOption);
-                // }
-            }
-
-            if (hasSerials && mainConfig.serialScanUpdate) {
-                vc2_util.waitRandom(10000);
-
-                taskOption = {
-                    isMapReduce: true,
-                    scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_MR,
-                    scriptParams: {}
-                };
-                taskOption.scriptParams['custscript_vc_type'] = record.type;
-                taskOption.scriptParams['custscript_vc_id'] = record.id;
-                taskOption.scriptParams['custscript_vc_sender'] = ns_runtime.getCurrentUser().id;
-                taskOption.deployId = Helper.forceDeploy(taskOption);
-            }
-
-            log.audit(logTitle, LogPrefix + '>> Task option:  ' + JSON.stringify(taskOption));
             log.audit(logTitle, LogPrefix + '***** END SCRIPT *****');
         }
     };
@@ -273,7 +289,6 @@ define([
 
             return result;
         },
-
         loadMainConfig: function () {
             var mainConfig = vc_mainconfig.getMainConfiguration();
 
@@ -281,7 +296,6 @@ define([
                 log.error('No VAR Connect Main Coniguration available');
             } else return mainConfig;
         },
-
         searchSerials: function (option) {
             var logTitle = [LogTitle, 'searchSerials'].join('::');
             var searchOption = {
@@ -343,7 +357,6 @@ define([
 
             return results;
         },
-
         searchVendorConfig: function (option) {
             var logTitle = [LogTitle, 'searchVendorConfig'].join('::');
 
@@ -375,7 +388,6 @@ define([
 
             return param.vendorConfig;
         },
-
         searchVendor: function (option) {
             var logTitle = [LogTitle, 'searchVendor'].join('::');
 
@@ -421,7 +433,6 @@ define([
 
             return param.vendor;
         },
-
         getTaskStatus: function (taskId) {
             return ns_task.checkStatus({ taskId: taskId });
         },
@@ -560,6 +571,30 @@ define([
             ////////////////////////////////////////
 
             return returnValue;
+        },
+        getField: function (form, fieldId) {
+            var returnField;
+
+            try {
+                returnField = form.getField({ id: fieldId });
+                if (!returnField || !returnField.id) throw 'Field is not exposed';
+            } catch (error) {
+                log.audit('getSublistField', error);
+            }
+
+            return returnField;
+        },
+        getSublistField: function (sublist, fieldId) {
+            var returnField;
+
+            try {
+                returnField = sublist.getField({ id: fieldId });
+                if (!returnField || !returnField.id) throw 'Field is not exposed';
+            } catch (error) {
+                log.audit('getSublistField', error);
+            }
+
+            return returnField;
         }
     };
 

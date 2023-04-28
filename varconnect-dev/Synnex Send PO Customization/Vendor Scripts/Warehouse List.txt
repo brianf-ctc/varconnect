@@ -1,0 +1,14 @@
+LOC#    Location City       State   Zip     Character   Geo Zone    Cutoff time
+4       Norcross            GA      30071   DAT         EST         17:30:00
+6       Romeoville          IL      60446   DCH         CST         16:30:00
+9       Chantilly           VA      20151   DDC         EST         17:00:00
+16      Miami               FL      33172   DFL         EST         17:30
+3       Fremont             CA      94538   DFR         PST         17:30:00
+11      City of Industry    CA      91789   DLA         PST         17:00:00
+8       Monroe              NJ      8831    DNJ         EST         17:30:00
+6001    Monroe              NJ      8831    DNJ         EST         17:30:00
+2       North Las Vegas     NV      89030   DNV         PST         16:30:00
+14      Grove City          OH      43123   DOH         EST         
+10      Beaverton           OR      97008   DOR         PST         16:30:00
+7       Olive Branch        MS      38654   DTN         CST         18:30:00
+5       Richardson          TX      75081   DTX         CST         17:30:00
