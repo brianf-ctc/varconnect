@@ -18,6 +18,8 @@ define(function (require) {
         ns_format = require('N/format'),
         ns_record = require('N/record'),
         ns_search = require('N/search'),
+        ns_xml = null,
+        ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
 
     var LogTitle = 'VC2_UTILS',
@@ -146,10 +148,11 @@ define(function (require) {
             return returnValue;
         },
         loadModuleNS: function (mod) {
-            var returnValue;
-            require([mod], function (nsMod) {
-                returnValue = nsMod;
-            });
+            var returnValue = require(mod);
+
+            // require([mod], function (nsMod) {
+            //     returnValue = nsMod;
+            // });
 
             return returnValue;
         },
@@ -282,7 +285,7 @@ define(function (require) {
     util.extend(vc2_util, {
         // Generate serial link.
         generateSerialLink: function (option) {
-            var ns_url = vc2_util.loadModuleNS('N/url');
+            ns_url = ns_url || vc2_util.loadModuleNS('N/url');
 
             var protocol = 'https://';
             var domain = ns_url.resolveDomain({
@@ -526,7 +529,7 @@ define(function (require) {
             if (!request.RESPONSE || !request.RESPONSE.body)
                 throw 'Invalid or missing XML response';
 
-            var ns_xml = vc2_util.loadModuleNS('N/xml');
+            ns_xml = ns_xml || vc2_util.loadModuleNS('N/xml');
 
             var xmlResponse = request.RESPONSE.body,
                 xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });

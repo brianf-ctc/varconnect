@@ -25,13 +25,12 @@
  */
 
 define([
-    'N/record',
     'N/runtime',
-    'N/search',
     'N/url',
     './CTC_VC2_Constants',
-    './CTC_VC2_Lib_Utils'
-], function (ns_record, ns_runtime, ns_search, ns_url, vc2_global, vc2_util) {
+    './CTC_VC2_Lib_Utils',
+    './CTC_VC2_Lib_Record'
+], function (ns_runtime, ns_url, vc2_global, vc2_util, vc2_record) {
     //        vcGlobals.SN_LINE_FIELD_LINK_ID
     var LogTitle = 'SetSerialLink';
 
@@ -40,17 +39,19 @@ define([
             var logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
                 returnValue = null;
 
-            vc2_util.log(logTitle, '*** START: ', [
-                scriptContext.type,
-                ns_runtime.executionContext,
-                scriptContext.newRecord ? scriptContext.newRecord.type : ''
-            ]);
-
             try {
                 if (scriptContext.type != scriptContext.UserEventType.VIEW) return false;
 
                 var currentRecord = scriptContext.newRecord;
                 if (!currentRecord) return;
+
+                vc2_util.LogPrefix = '[' + [currentRecord.type, currentRecord.id].join(':') + '] ';
+
+                vc2_util.log(logTitle, '*** START: ', [
+                    scriptContext.type,
+                    ns_runtime.executionContext,
+                    scriptContext.newRecord ? scriptContext.newRecord.type : ''
+                ]);
 
                 // generate the link
                 var Current = {
@@ -58,28 +59,61 @@ define([
                     transId: currentRecord.id
                 };
 
-                vc2_util.log(logTitle, '>> Current Record: ', Current);
+                var serialLinkUrl = ns_url.resolveScript({
+                    scriptId: 'customscript_vc_view_serials',
+                    deploymentId: 'customdeploy_vc_view_serials',
+                    params: Current
+                });
+                vc2_util.log(logTitle, '>> SerialLink URL: ', serialLinkUrl);
+
+                // try to update serial record lines
+                var lineCount = currentRecord.getLineCount({ sublistId: 'item' });
+                log.audit(logTitle, '... lineCount: ', lineCount);
+
+                var fixSerialLinkFld = scriptContext.form.addField({
+                        id: 'custpage_ctc_fixserial_links',
+                        label: 'Fix Serial Lnks',
+                        type: 'inlinehtml'
+                    }),
+                    lineFixJS = [];
+
+                for (var line = 0; line < lineCount; line++) {
+                    var lineData = vc2_record.extractLineValues({
+                        record: currentRecord,
+                        sublistId: 'item',
+                        columns: ['item', 'itemtype', vc2_global.GLOBAL.SN_LINE_FIELD_LINK_ID],
+                        line: line
+                    });
+                    lineData.itemName = encodeURIComponent(lineData.item_text || '');
+                    vc2_util.log(logTitle, '>> lineData: ', [line, lineData]);
+
+                    if (lineData.itemType == 'EndGroup') continue;
+
+                    var lineSerialLink =
+                        serialLinkUrl +
+                        ('&itemName=' + lineData.itemName) +
+                        ('&itemId=' + lineData.item);
+
+                    lineFixJS.push(
+                        '(function(){',
+                        "var el = jq('div#item_layer tr:eq(" +
+                            (line + 1 + ") a:contains(Serial Number Link)');"),
+                        'if (! el || !el.length) return;',
+                        'el.attr("href", "' + lineSerialLink + '");',
+                        '})();'
+                    );
+                }
 
                 var fixSerialLinkJS = [
                     '<script type="text/javascript">',
                     'jQuery(document).ready(function () {',
-                    'console.log("**** Code: Serial Link Fix **** ");',
                     '(function (jq) {',
-                    'var serialLnks = jq("a").filter(function(idx, elem) {return elem.text == "Serial Number Link"});',
-                    'serialLnks.each(function (id, elem) {',
-                    'var url = elem.href.replace("&transId=&", "&");',
-                    'url+="&transId=' + Current.transId + '";',
-                    'elem.href=url;return true;})',
+                    'console.log("**** Code: Serial Link Fix **** ");',
+                    lineFixJS.join(''),
                     '})(jQuery);',
                     '})',
                     '</script>'
                 ];
-
-                var fixSerialLinkFld = scriptContext.form.addField({
-                    id: 'custpage_ctc_fixserial_links',
-                    label: 'Fix Serial Lnks',
-                    type: 'inlinehtml'
-                });
                 fixSerialLinkFld.defaultValue = fixSerialLinkJS.join('');
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -131,28 +165,23 @@ define([
                 vc2_util.log(logTitle, '... lineCount: ', lineCount);
 
                 for (var line = 0; line < lineCount; line++) {
-                    util.extend(Current, {
+                    var itemData = {
                         itemId: currentRecord.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'item',
                             line: line
+                        }),
+                        itemType: currentRecord.getSublistValue({
+                            sublistId: 'item',
+                            fieldId: 'itemtype',
+                            line: line
                         })
-                        // itemName: currentRecord.getSublistText({
-                        //     sublistId: 'item',
-                        //     fieldId: 'item',
-                        //     line: line
-                        // })
-                    });
+                    };
 
-                    var itemType = currentRecord.getSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'itemtype',
-                        line: line
-                    });
-                    Current.itemName = encodeURIComponent(Current.itemName);
-                    vc2_util.log(logTitle, '// Current: ', [Current, itemType]);
+                    vc2_util.log(logTitle, '// itemData: ', itemData);
+                    if (itemData.itemtype == 'EndGroup') continue;
 
-                    if (itemType == 'EndGroup') continue;
+                    Current.itemId = itemData.item || false;
 
                     var serialLinkUrl = vc2_util.generateSerialLink(Current);
                     vc2_util.log(logTitle, '// SerialLink: ', serialLinkUrl);
