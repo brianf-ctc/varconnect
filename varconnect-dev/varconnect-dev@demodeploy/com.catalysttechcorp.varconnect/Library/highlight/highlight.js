@@ -174,7 +174,9 @@ define(['./languages/xml.min.js'], function () {
                 if (node.sublanguage) {
                     scope = `language-${scope}`;
                 } else {
-                    scope = expandScopeName(scope, { prefix: this.classPrefix });
+                    scope = expandScopeName(scope, {
+                        prefix: this.classPrefix
+                    });
                 }
                 this.span(scope);
             }
@@ -276,7 +278,9 @@ define(['./languages/xml.min.js'], function () {
                     builder.addText(node);
                 } else if (node.children) {
                     builder.openNode(node);
-                    node.children.forEach((child) => this._walk(builder, child));
+                    node.children.forEach((child) =>
+                        this._walk(builder, child)
+                    );
                     builder.closeNode(node);
                 }
                 return builder;
@@ -454,7 +458,10 @@ define(['./languages/xml.min.js'], function () {
             /** @type { object & {capture?: boolean} }  */
             const opts = stripOptionsFromArgs(args);
             const joined =
-                '(' + (opts.capture ? '' : '?:') + args.map((x) => source(x)).join('|') + ')';
+                '(' +
+                (opts.capture ? '' : '?:') +
+                args.map((x) => source(x)).join('|') +
+                ')';
             return joined;
         }
 
@@ -830,7 +837,10 @@ define(['./languages/xml.min.js'], function () {
             // or whitespace - this does no harm in any case since our keyword engine
             // doesn't allow spaces in keywords anyways and we still check for the boundary
             // first
-            mode.begin = '\\b(' + mode.beginKeywords.split(' ').join('|') + ')(?!\\.)(?=\\b|\\s)';
+            mode.begin =
+                '\\b(' +
+                mode.beginKeywords.split(' ').join('|') +
+                ')(?!\\.)(?=\\b|\\s)';
             mode.__beforeBegin = skipIfHasPrecedingDot;
             mode.keywords = mode.keywords || mode.beginKeywords;
             delete mode.beginKeywords;
@@ -857,7 +867,8 @@ define(['./languages/xml.min.js'], function () {
          */
         function compileMatch(mode, _parent) {
             if (!mode.match) return;
-            if (mode.begin || mode.end) throw new Error('begin & end are not supported with match');
+            if (mode.begin || mode.end)
+                throw new Error('begin & end are not supported with match');
 
             mode.begin = mode.match;
             delete mode.match;
@@ -878,7 +889,8 @@ define(['./languages/xml.min.js'], function () {
             if (!mode.beforeMatch) return;
             // starts conflicts with endsParent which we need to make sure the child
             // rule is not matched multiple times
-            if (mode.starts) throw new Error('beforeMatch cannot be used with starts');
+            if (mode.starts)
+                throw new Error('beforeMatch cannot be used with starts');
 
             const originalMode = Object.assign({}, mode);
             Object.keys(mode).forEach((key) => {
@@ -886,7 +898,10 @@ define(['./languages/xml.min.js'], function () {
             });
 
             mode.keywords = originalMode.keywords;
-            mode.begin = concat(originalMode.beforeMatch, lookahead(originalMode.begin));
+            mode.begin = concat(
+                originalMode.beforeMatch,
+                lookahead(originalMode.begin)
+            );
             mode.starts = {
                 relevance: 0,
                 contains: [Object.assign(originalMode, { endsParent: true })]
@@ -919,7 +934,11 @@ define(['./languages/xml.min.js'], function () {
          * @param {string | Record<string,string|string[]> | Array<string>} rawKeywords
          * @param {boolean} caseInsensitive
          */
-        function compileKeywords(rawKeywords, caseInsensitive, scopeName = DEFAULT_KEYWORD_SCOPE) {
+        function compileKeywords(
+            rawKeywords,
+            caseInsensitive,
+            scopeName = DEFAULT_KEYWORD_SCOPE
+        ) {
             /** @type KeywordDict */
             const compiledKeywords = Object.create(null);
 
@@ -934,7 +953,11 @@ define(['./languages/xml.min.js'], function () {
                     // collapse all our objects back into the parent object
                     Object.assign(
                         compiledKeywords,
-                        compileKeywords(rawKeywords[scopeName], caseInsensitive, scopeName)
+                        compileKeywords(
+                            rawKeywords[scopeName],
+                            caseInsensitive,
+                            scopeName
+                        )
                     );
                 });
             }
@@ -956,7 +979,10 @@ define(['./languages/xml.min.js'], function () {
                 }
                 keywordList.forEach(function (keyword) {
                     const pair = keyword.split('|');
-                    compiledKeywords[pair[0]] = [scopeName, scoreForKeyword(pair[0], pair[1])];
+                    compiledKeywords[pair[0]] = [
+                        scopeName,
+                        scoreForKeyword(pair[0], pair[1])
+                    ];
                 });
             }
         }
@@ -1088,11 +1114,16 @@ define(['./languages/xml.min.js'], function () {
             if (!Array.isArray(mode.begin)) return;
 
             if (mode.skip || mode.excludeBegin || mode.returnBegin) {
-                error('skip, excludeBegin, returnBegin not compatible with beginScope: {}');
+                error(
+                    'skip, excludeBegin, returnBegin not compatible with beginScope: {}'
+                );
                 throw MultiClassError;
             }
 
-            if (typeof mode.beginScope !== 'object' || mode.beginScope === null) {
+            if (
+                typeof mode.beginScope !== 'object' ||
+                mode.beginScope === null
+            ) {
                 error('beginScope must be object');
                 throw MultiClassError;
             }
@@ -1108,7 +1139,9 @@ define(['./languages/xml.min.js'], function () {
             if (!Array.isArray(mode.end)) return;
 
             if (mode.skip || mode.excludeEnd || mode.returnEnd) {
-                error('skip, excludeEnd, returnEnd not compatible with endScope: {}');
+                error(
+                    'skip, excludeEnd, returnEnd not compatible with endScope: {}'
+                );
                 throw MultiClassError;
             }
 
@@ -1133,7 +1166,11 @@ define(['./languages/xml.min.js'], function () {
      * @param {CompiledMode} mode
      */
         function scopeSugar(mode) {
-            if (mode.scope && typeof mode.scope === 'object' && mode.scope !== null) {
+            if (
+                mode.scope &&
+                typeof mode.scope === 'object' &&
+                mode.scope !== null
+            ) {
                 mode.beginScope = mode.scope;
                 delete mode.scope;
             }
@@ -1245,7 +1282,9 @@ define(['./languages/xml.min.js'], function () {
                     }
 
                     // eslint-disable-next-line no-undefined
-                    const i = match.findIndex((el, i) => i > 0 && el !== undefined);
+                    const i = match.findIndex(
+                        (el, i) => i > 0 && el !== undefined
+                    );
                     // @ts-ignore
                     const matchData = this.matchIndexes[i];
                     // trim off any earlier non-relevant match groups (ie, the other regex
@@ -1301,10 +1340,13 @@ define(['./languages/xml.min.js'], function () {
 
                 // @ts-ignore
                 getMatcher(index) {
-                    if (this.multiRegexes[index]) return this.multiRegexes[index];
+                    if (this.multiRegexes[index])
+                        return this.multiRegexes[index];
 
                     const matcher = new MultiRegex();
-                    this.rules.slice(index).forEach(([re, opts]) => matcher.addRule(re, opts));
+                    this.rules
+                        .slice(index)
+                        .forEach(([re, opts]) => matcher.addRule(re, opts));
                     matcher.compile();
                     this.multiRegexes[index] = matcher;
                     return matcher;
@@ -1476,7 +1518,10 @@ define(['./languages/xml.min.js'], function () {
                 mode.isCompiled = true;
 
                 let keywordPattern = null;
-                if (typeof mode.keywords === 'object' && mode.keywords.$pattern) {
+                if (
+                    typeof mode.keywords === 'object' &&
+                    mode.keywords.$pattern
+                ) {
                     // we need a copy because keywords might be compiled multiple times
                     // so we can't go deleting $pattern from the original on the first
                     // pass
@@ -1487,7 +1532,10 @@ define(['./languages/xml.min.js'], function () {
                 keywordPattern = keywordPattern || /\w+/;
 
                 if (mode.keywords) {
-                    mode.keywords = compileKeywords(mode.keywords, language.case_insensitive);
+                    mode.keywords = compileKeywords(
+                        mode.keywords,
+                        language.case_insensitive
+                    );
                 }
 
                 cmode.keywordPatternRe = langRe(keywordPattern, true);
@@ -1499,11 +1547,14 @@ define(['./languages/xml.min.js'], function () {
                     if (mode.end) cmode.endRe = langRe(cmode.end);
                     cmode.terminatorEnd = source(cmode.end) || '';
                     if (mode.endsWithParent && parent.terminatorEnd) {
-                        cmode.terminatorEnd += (mode.end ? '|' : '') + parent.terminatorEnd;
+                        cmode.terminatorEnd +=
+                            (mode.end ? '|' : '') + parent.terminatorEnd;
                     }
                 }
                 if (mode.illegal)
-                    cmode.illegalRe = langRe(/** @type {RegExp | string} */ (mode.illegal));
+                    cmode.illegalRe = langRe(
+                        /** @type {RegExp | string} */ (mode.illegal)
+                    );
                 if (!mode.contains) mode.contains = [];
 
                 mode.contains = [].concat(
@@ -1533,7 +1584,9 @@ define(['./languages/xml.min.js'], function () {
             }
 
             // we need a null object, which inherit will guarantee
-            language.classNameAliases = inherit$1(language.classNameAliases || {});
+            language.classNameAliases = inherit$1(
+                language.classNameAliases || {}
+            );
 
             return compileMode(/** @type Mode */ (language));
         }
@@ -1584,7 +1637,9 @@ define(['./languages/xml.min.js'], function () {
             // instance of ourselves, so we can be reused with many
             // different parents without issue
             if (dependencyOnParent(mode)) {
-                return inherit$1(mode, { starts: mode.starts ? inherit$1(mode.starts) : null });
+                return inherit$1(mode, {
+                    starts: mode.starts ? inherit$1(mode.starts) : null
+                });
             }
 
             if (Object.isFrozen(mode)) {
@@ -1701,14 +1756,20 @@ define(['./languages/xml.min.js'], function () {
                     const language = getLanguage(match[1]);
                     if (!language) {
                         warn(LANGUAGE_NOT_FOUND.replace('{}', match[1]));
-                        warn('Falling back to no-highlight mode for this block.', block);
+                        warn(
+                            'Falling back to no-highlight mode for this block.',
+                            block
+                        );
                     }
                     return language ? match[1] : 'no-highlight';
                 }
 
                 return classes
                     .split(/\s+/)
-                    .find((_class) => shouldNotHighlight(_class) || getLanguage(_class));
+                    .find(
+                        (_class) =>
+                            shouldNotHighlight(_class) || getLanguage(_class)
+                    );
             }
 
             /**
@@ -1732,7 +1793,11 @@ define(['./languages/xml.min.js'], function () {
              * @property {CompiledMode} top - top of the current mode stack
              * @property {boolean} illegal - indicates whether any illegal matches were found
              */
-            function highlight(codeOrLanguageName, optionsOrCode, ignoreIllegals) {
+            function highlight(
+                codeOrLanguageName,
+                optionsOrCode,
+                ignoreIllegals
+            ) {
                 let code = '';
                 let languageName = '';
                 if (typeof optionsOrCode === 'object') {
@@ -1741,7 +1806,10 @@ define(['./languages/xml.min.js'], function () {
                     languageName = optionsOrCode.language;
                 } else {
                     // old API
-                    deprecated('10.7.0', 'highlight(lang, code, ...args) has been deprecated.');
+                    deprecated(
+                        '10.7.0',
+                        'highlight(lang, code, ...args) has been deprecated.'
+                    );
                     deprecated(
                         '10.7.0',
                         'Please use highlight(code, options) instead.\nhttps://github.com/highlightjs/highlight.js/issues/2277'
@@ -1769,7 +1837,11 @@ define(['./languages/xml.min.js'], function () {
                 // in which case we don't even need to call highlight
                 const result = context.result
                     ? context.result
-                    : _highlight(context.language, context.code, ignoreIllegals);
+                    : _highlight(
+                          context.language,
+                          context.code,
+                          ignoreIllegals
+                      );
 
                 result.code = context.code;
                 // the plugin can change anything in result to suite it
@@ -1787,7 +1859,12 @@ define(['./languages/xml.min.js'], function () {
              * @param {CompiledMode?} [continuation] - current continuation mode, if any
              * @returns {HighlightResult} - result of the highlight operation
              */
-            function _highlight(languageName, codeToHighlight, ignoreIllegals, continuation) {
+            function _highlight(
+                languageName,
+                codeToHighlight,
+                ignoreIllegals,
+                continuation
+            ) {
                 const keywordHits = Object.create(null);
 
                 /**
@@ -1813,7 +1890,9 @@ define(['./languages/xml.min.js'], function () {
 
                     while (match) {
                         buf += modeBuffer.substring(lastIndex, match.index);
-                        const word = language.case_insensitive ? match[0].toLowerCase() : match[0];
+                        const word = language.case_insensitive
+                            ? match[0].toLowerCase()
+                            : match[0];
                         const data = keywordData(top, word);
                         if (data) {
                             const [kind, keywordRelevance] = data;
@@ -1828,7 +1907,8 @@ define(['./languages/xml.min.js'], function () {
                                 // by applying a class name
                                 buf += match[0];
                             } else {
-                                const cssClass = language.classNameAliases[kind] || kind;
+                                const cssClass =
+                                    language.classNameAliases[kind] || kind;
                                 emitter.addKeyword(match[0], cssClass);
                             }
                         } else {
@@ -1857,7 +1937,8 @@ define(['./languages/xml.min.js'], function () {
                             true,
                             continuations[top.subLanguage]
                         );
-                        continuations[top.subLanguage] = /** @type {CompiledMode} */ (result._top);
+                        continuations[top.subLanguage] =
+                            /** @type {CompiledMode} */ (result._top);
                     } else {
                         result = highlightAuto(
                             modeBuffer,
@@ -1896,7 +1977,8 @@ define(['./languages/xml.min.js'], function () {
                             i++;
                             continue;
                         }
-                        const klass = language.classNameAliases[scope[i]] || scope[i];
+                        const klass =
+                            language.classNameAliases[scope[i]] || scope[i];
                         const text = match[i];
                         if (klass) {
                             emitter.addKeyword(text, klass);
@@ -1915,15 +1997,18 @@ define(['./languages/xml.min.js'], function () {
                  */
                 function startNewMode(mode, match) {
                     if (mode.scope && typeof mode.scope === 'string') {
-                        emitter.openNode(language.classNameAliases[mode.scope] || mode.scope);
+                        emitter.openNode(
+                            language.classNameAliases[mode.scope] || mode.scope
+                        );
                     }
                     if (mode.beginScope) {
                         // beginScope just wraps the begin match itself in a scope
                         if (mode.beginScope._wrap) {
                             emitter.addKeyword(
                                 modeBuffer,
-                                language.classNameAliases[mode.beginScope._wrap] ||
+                                language.classNameAliases[
                                     mode.beginScope._wrap
+                                ] || mode.beginScope._wrap
                             );
                             modeBuffer = '';
                         } else if (mode.beginScope._multi) {
@@ -1963,7 +2048,11 @@ define(['./languages/xml.min.js'], function () {
                     // even if on:end fires an `ignore` it's still possible
                     // that we might trigger the end node because of a parent mode
                     if (mode.endsWithParent) {
-                        return endOfMode(mode.parent, match, matchPlusRemainder);
+                        return endOfMode(
+                            mode.parent,
+                            match,
+                            matchPlusRemainder
+                        );
                     }
                 }
 
@@ -1998,7 +2087,10 @@ define(['./languages/xml.min.js'], function () {
 
                     const resp = new Response(newMode);
                     // first internal before callbacks, then the public ones
-                    const beforeCallbacks = [newMode.__beforeBegin, newMode['on:begin']];
+                    const beforeCallbacks = [
+                        newMode.__beforeBegin,
+                        newMode['on:begin']
+                    ];
                     for (const cb of beforeCallbacks) {
                         if (!cb) continue;
                         cb(match, resp);
@@ -2027,7 +2119,9 @@ define(['./languages/xml.min.js'], function () {
                  */
                 function doEndMatch(match) {
                     const lexeme = match[0];
-                    const matchPlusRemainder = codeToHighlight.substr(match.index);
+                    const matchPlusRemainder = codeToHighlight.substr(
+                        match.index
+                    );
 
                     const endMode = endOfMode(top, match, matchPlusRemainder);
                     if (!endMode) {
@@ -2069,7 +2163,11 @@ define(['./languages/xml.min.js'], function () {
 
                 function processContinuations() {
                     const list = [];
-                    for (let current = top; current !== language; current = current.parent) {
+                    for (
+                        let current = top;
+                        current !== language;
+                        current = current.parent
+                    ) {
                         if (current.scope) {
                             list.unshift(current.scope);
                         }
@@ -2108,10 +2206,15 @@ define(['./languages/xml.min.js'], function () {
                         lexeme === ''
                     ) {
                         // spit the "skipped" character that our regex choked on back into the output sequence
-                        modeBuffer += codeToHighlight.slice(match.index, match.index + 1);
+                        modeBuffer += codeToHighlight.slice(
+                            match.index,
+                            match.index + 1
+                        );
                         if (!SAFE_MODE) {
                             /** @type {AnnotatedError} */
-                            const err = new Error(`0 width match regex (${languageName})`);
+                            const err = new Error(
+                                `0 width match regex (${languageName})`
+                            );
                             err.languageName = languageName;
                             err.badRule = lastMatch.rule;
                             throw err;
@@ -2211,8 +2314,14 @@ define(['./languages/xml.min.js'], function () {
 
                         if (!match) break;
 
-                        const beforeMatch = codeToHighlight.substring(index, match.index);
-                        const processedCount = processLexeme(beforeMatch, match);
+                        const beforeMatch = codeToHighlight.substring(
+                            index,
+                            match.index
+                        );
+                        const processedCount = processLexeme(
+                            beforeMatch,
+                            match
+                        );
                         index = match.index + processedCount;
                     }
                     processLexeme(codeToHighlight.substr(index));
@@ -2238,7 +2347,10 @@ define(['./languages/xml.min.js'], function () {
                             _illegalBy: {
                                 message: err.message,
                                 index: index,
-                                context: codeToHighlight.slice(index - 100, index + 100),
+                                context: codeToHighlight.slice(
+                                    index - 100,
+                                    index + 100
+                                ),
                                 mode: err.mode,
                                 resultSoFar: result
                             },
@@ -2294,7 +2406,10 @@ define(['./languages/xml.min.js'], function () {
         @returns {AutoHighlightResult}
       */
             function highlightAuto(code, languageSubset) {
-                languageSubset = languageSubset || options.languages || Object.keys(languages);
+                languageSubset =
+                    languageSubset ||
+                    options.languages ||
+                    Object.keys(languages);
                 const plaintext = justTextHighlightResult(code);
 
                 const results = languageSubset
@@ -2305,14 +2420,17 @@ define(['./languages/xml.min.js'], function () {
 
                 const sorted = results.sort((a, b) => {
                     // sort base on relevance
-                    if (a.relevance !== b.relevance) return b.relevance - a.relevance;
+                    if (a.relevance !== b.relevance)
+                        return b.relevance - a.relevance;
 
                     // always award the tie to the base language
                     // ie if C++ and Arduino are tied, it's more likely to be C++
                     if (a.language && b.language) {
                         if (getLanguage(a.language).supersetOf === b.language) {
                             return 1;
-                        } else if (getLanguage(b.language).supersetOf === a.language) {
+                        } else if (
+                            getLanguage(b.language).supersetOf === a.language
+                        ) {
                             return -1;
                         }
                     }
@@ -2341,7 +2459,8 @@ define(['./languages/xml.min.js'], function () {
              * @param {string} [resultLang]
              */
             function updateClassName(element, currentLang, resultLang) {
-                const language = (currentLang && aliases[currentLang]) || resultLang;
+                const language =
+                    (currentLang && aliases[currentLang]) || resultLang;
 
                 element.classList.add('hljs');
                 element.classList.add(`language-${language}`);
@@ -2359,7 +2478,10 @@ define(['./languages/xml.min.js'], function () {
 
                 if (shouldNotHighlight(language)) return;
 
-                fire('before:highlightElement', { el: element, language: language });
+                fire('before:highlightElement', {
+                    el: element,
+                    language: language
+                });
 
                 // we should be all text, no child nodes (unescaped HTML) - this is possibly
                 // an HTML injection attack - it's likely too late if this is already in
@@ -2371,7 +2493,9 @@ define(['./languages/xml.min.js'], function () {
                         console.warn(
                             'One of your code blocks includes unescaped HTML. This is a potentially serious security risk.'
                         );
-                        console.warn('https://github.com/highlightjs/highlight.js/wiki/security');
+                        console.warn(
+                            'https://github.com/highlightjs/highlight.js/wiki/security'
+                        );
                         console.warn('The element with unescaped HTML:');
                         console.warn(element);
                     }
@@ -2420,7 +2544,10 @@ define(['./languages/xml.min.js'], function () {
             // TODO: remove v12, deprecated
             const initHighlighting = () => {
                 highlightAll();
-                deprecated('10.6.0', 'initHighlighting() deprecated.  Use highlightAll() now.');
+                deprecated(
+                    '10.6.0',
+                    'initHighlighting() deprecated.  Use highlightAll() now.'
+                );
             };
 
             // TODO: remove v12, deprecated
@@ -2557,14 +2684,24 @@ define(['./languages/xml.min.js'], function () {
              */
             function upgradePluginAPI(plugin) {
                 // TODO: remove with v12
-                if (plugin['before:highlightBlock'] && !plugin['before:highlightElement']) {
+                if (
+                    plugin['before:highlightBlock'] &&
+                    !plugin['before:highlightElement']
+                ) {
                     plugin['before:highlightElement'] = (data) => {
-                        plugin['before:highlightBlock'](Object.assign({ block: data.el }, data));
+                        plugin['before:highlightBlock'](
+                            Object.assign({ block: data.el }, data)
+                        );
                     };
                 }
-                if (plugin['after:highlightBlock'] && !plugin['after:highlightElement']) {
+                if (
+                    plugin['after:highlightBlock'] &&
+                    !plugin['after:highlightElement']
+                ) {
                     plugin['after:highlightElement'] = (data) => {
-                        plugin['after:highlightBlock'](Object.assign({ block: data.el }, data));
+                        plugin['after:highlightBlock'](
+                            Object.assign({ block: data.el }, data)
+                        );
                     };
                 }
             }
@@ -2596,7 +2733,10 @@ define(['./languages/xml.min.js'], function () {
              * @param {HighlightedHTMLElement} el
              */
             function deprecateHighlightBlock(el) {
-                deprecated('10.7.0', 'highlightBlock will be removed entirely in v12.0');
+                deprecated(
+                    '10.7.0',
+                    'highlightBlock will be removed entirely in v12.0'
+                );
                 deprecated('10.7.0', 'Please use highlightElement now.');
 
                 return highlightElement(el);

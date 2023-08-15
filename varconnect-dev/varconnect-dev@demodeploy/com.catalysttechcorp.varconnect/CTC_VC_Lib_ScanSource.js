@@ -19,7 +19,11 @@
  * Author: shawn.blackburn
  */
 
-define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog) {
+define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (
+    log,
+    https,
+    vcLog
+) {
     'use strict';
     /**
      * @memberOf CTC_VC_Lib_ScanSource
@@ -156,7 +160,9 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
                     returnArray.push(d);
                 } else {
                     log.error({
-                        title: 'Error Getting Transaction List for Order ' + order.OrderNumber,
+                        title:
+                            'Error Getting Transaction List for Order ' +
+                            order.OrderNumber,
                         details: listResponse
                     });
                 }
@@ -201,9 +207,14 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
         //   serials: "123,456,789"
         // }
 
-        obj.responseBody.forEach(function (order) {
-            var itemArray = [],
+        for (var i = 0, len = obj.responseBody.length; i < len; i += 1) {
+            var order = obj.responseBody[i],
+                itemArray = [],
                 deliveryArray = [];
+
+            if (order.Status == 'Cancelled') {
+                continue;
+            }
 
             //create original item array which contains correct ship qty
             order.SalesOrderLines.forEach(function (itemLine) {
@@ -238,13 +249,16 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
                     // change date format
                     // from M/D/YYYY H:MM A to M/D/YYYY
                     var odate = order.DateEntered.split('/');
-                    o.order_date = odate[0] + '/' + odate[1] + '/' + odate[2].slice(0, 4);
+                    o.order_date =
+                        odate[0] + '/' + odate[1] + '/' + odate[2].slice(0, 4);
 
                     o.order_date = order.DateEntered;
                     o.order_num = order.SalesOrderNumber;
                     o.line_num =
                         Math.floor(
-                            delivery.DeliveryDocumentNumber + '.' + line.DeliveryDocumentLineNumber
+                            delivery.DeliveryDocumentNumber +
+                                '.' +
+                                line.DeliveryDocumentLineNumber
                         ) * 1;
                     o.vendorSKU = line.ItemNumber;
                     o.ship_qty = parseInt(line.QuantityShipped);
@@ -253,7 +267,11 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
                     // from YYYY-MM-DD to MM/DD/YYYY
                     var sdate = delivery.ShippedDate;
                     o.ship_date =
-                        sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
+                        sdate.slice(5, 7) +
+                        '/' +
+                        sdate.slice(8, 10) +
+                        '/' +
+                        sdate.slice(0, 4);
 
                     o.order_eta = '';
                     o.carrier = p.carrier;
@@ -294,7 +312,7 @@ define(['N/log', 'N/https', './CTC_VC_Lib_Log.js'], function (log, https, vcLog)
 
                 outputArray.push(outputObj);
             });
-        });
+        }
 
         log.audit({
             title: 'outputArray',

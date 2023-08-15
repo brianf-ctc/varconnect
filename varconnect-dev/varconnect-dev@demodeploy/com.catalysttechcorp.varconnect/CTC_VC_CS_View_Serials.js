@@ -69,7 +69,10 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
             ],
             columns: [
                 search.createColumn({ name: 'mainline', label: '*' }),
-                search.createColumn({ name: 'tranid', label: 'Document Number' }),
+                search.createColumn({
+                    name: 'tranid',
+                    label: 'Document Number'
+                }),
                 search.createColumn({ name: 'item', label: 'Item' }),
                 search.createColumn({ name: 'quantity', label: 'Quantity' })
             ]
@@ -140,15 +143,24 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
                 cartInfo.cart = getCart(userID);
                 //					alert ('cart = '+cartInfo.cart)
                 if (!isEmpty(cartInfo.cart)) {
-                    document.getElementById('fnamefield').value = cartInfo.cart.firstName;
-                    document.getElementById('lnamefield').value = cartInfo.cart.lastName;
-                    document.getElementById('addr1field').value = cartInfo.cart.address.addr1;
-                    document.getElementById('addr2field').value = cartInfo.cart.address.addr2;
-                    document.getElementById('cityfield').value = cartInfo.cart.address.city;
-                    document.getElementById('statefield').value = cartInfo.cart.address.state;
-                    document.getElementById('zipfield').value = cartInfo.cart.address.zipcode;
-                    document.getElementById('countryfield').value = cartInfo.cart.address.country;
-                    document.getElementById('phonefield').value = cartInfo.cart.address.addrphone;
+                    document.getElementById('fnamefield').value =
+                        cartInfo.cart.firstName;
+                    document.getElementById('lnamefield').value =
+                        cartInfo.cart.lastName;
+                    document.getElementById('addr1field').value =
+                        cartInfo.cart.address.addr1;
+                    document.getElementById('addr2field').value =
+                        cartInfo.cart.address.addr2;
+                    document.getElementById('cityfield').value =
+                        cartInfo.cart.address.city;
+                    document.getElementById('statefield').value =
+                        cartInfo.cart.address.state;
+                    document.getElementById('zipfield').value =
+                        cartInfo.cart.address.zipcode;
+                    document.getElementById('countryfield').value =
+                        cartInfo.cart.address.country;
+                    document.getElementById('phonefield').value =
+                        cartInfo.cart.address.addrphone;
                     document.getElementById('cartloaded_fs_inp').value = true;
                 }
             }
@@ -182,7 +194,9 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
             /* 				alert ('context.sublistId = '  + context.sublistId);
                                 alert ('context.line = '  + context.line);
                  */
-            var cartJSON = JSON.parse(context.currentRecord.getValue('cartjsonfield'));
+            var cartJSON = JSON.parse(
+                context.currentRecord.getValue('cartjsonfield')
+            );
             console.log('cartJSON = ' + cartJSON.optionalPrices);
 
             var lineValue = context.currentRecord.getCurrentSublistValue({
@@ -211,7 +225,8 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
             jQuery('#tr_fg_donationgroup > :nth-child(2)').show(500);
         } else if (context.fieldId == 'rdoidentify') {
             //               alert ('you selected radio button '+ context.currentRecord.getText('rdodonations') + ' = '  +  context.currentRecord.getValue('rdodonations'))
-            var rdoLabelField = context.currentRecord.getField('donationlabelfield');
+            var rdoLabelField =
+                context.currentRecord.getField('donationlabelfield');
             var rdobehalfField = context.currentRecord.getField('rdoidentify');
             if (context.currentRecord.getValue('rdoidentify') == 'p3') {
                 try {

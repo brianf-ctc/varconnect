@@ -98,7 +98,10 @@ define([
                             'IM-CustomerNumber': option.vendorConfig.customerNo,
                             'IM-CountryCode': option.vendorConfig.country,
                             'IM-CustomerOrderNumber': option.tranId,
-                            'IM-CorrelationID': [option.tranId, option.recordId].join('-')
+                            'IM-CorrelationID': [
+                                option.tranId,
+                                option.recordId
+                            ].join('-')
                         }
                     }
                 });
@@ -110,16 +113,21 @@ define([
             var arrValidOrders = [],
                 ingramOrders = response.orders;
 
-            if (vc2_util.isEmpty(ingramOrders)) throw 'Unable to receive orders';
+            if (vc2_util.isEmpty(ingramOrders))
+                throw 'Unable to receive orders';
 
             for (var i = 0, j = ingramOrders.length; i < j; i++) {
                 var ingramOrder = ingramOrders[i];
-                if (vc2_util.inArray(ingramOrder.orderStatus, ['CANCELLED'])) continue; //skip this
+                if (vc2_util.inArray(ingramOrder.orderStatus, ['CANCELLED']))
+                    continue; //skip this
 
                 arrValidOrders.push(ingramOrder);
             }
 
-            log.audit(logTitle, '>> Valid Orders: ' + JSON.stringify(arrValidOrders));
+            log.audit(
+                logTitle,
+                '>> Valid Orders: ' + JSON.stringify(arrValidOrders)
+            );
 
             return arrValidOrders;
         },
@@ -127,10 +135,15 @@ define([
             var logTitle = [LogTitle, 'getOrderDetails'].join('::');
             var arrLineData = [];
 
-            log.audit(logTitle, '>> orderNum: ' + JSON.stringify(option.orderNum));
+            log.audit(
+                logTitle,
+                '>> orderNum: ' + JSON.stringify(option.orderNum)
+            );
 
             try {
-                var cacheKey = [LogTitle, 'OrderDetails', option.orderNum].join('-');
+                var cacheKey = [LogTitle, 'OrderDetails', option.orderNum].join(
+                    '-'
+                );
                 var orderDetails = vc2_util.getCache(cacheKey);
 
                 if (orderDetails == null) {
@@ -143,9 +156,13 @@ define([
                                 Authorization: 'Bearer ' + token,
                                 Accept: 'application/json',
                                 'Content-Type': 'application/json',
-                                'IM-CustomerNumber': option.vendorConfig.customerNo,
+                                'IM-CustomerNumber':
+                                    option.vendorConfig.customerNo,
                                 'IM-CountryCode': option.vendorConfig.country,
-                                'IM-CorrelationID': [option.tranId, option.recordId].join('-')
+                                'IM-CorrelationID': [
+                                    option.tranId,
+                                    option.recordId
+                                ].join('-')
                             }
                         }
                     });
@@ -157,18 +174,27 @@ define([
                     vc2_util.setCache(cacheKey, orderDetails);
                 }
 
-                if (vc2_util.isEmpty(orderDetails.lines)) throw 'Order has no lines';
+                if (vc2_util.isEmpty(orderDetails.lines))
+                    throw 'Order has no lines';
 
                 var ingramOrderDate = orderDetails.ingramOrderDate;
                 var defaultETA = {
                     date: moment(ingramOrderDate).add(1, 'day').toDate(),
-                    text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
+                    text: moment(ingramOrderDate)
+                        .add(1, 'day')
+                        .format('YYYY-MM-DD')
                 };
-                log.audit(logTitle, 'defaultETA : ' + JSON.stringify(defaultETA));
+                log.audit(
+                    logTitle,
+                    'defaultETA : ' + JSON.stringify(defaultETA)
+                );
 
                 for (var i = 0, j = orderDetails.lines.length; i < j; i++) {
                     var orderLine = orderDetails.lines[i];
-                    log.audit(logTitle, '>> orderLine: ' + JSON.stringify(orderLine));
+                    log.audit(
+                        logTitle,
+                        '>> orderLine: ' + JSON.stringify(orderLine)
+                    );
 
                     // get item availability call
                 }
@@ -196,15 +222,18 @@ define([
                 option.tranId = option.poNum || option.tranId;
 
                 if (!option.vendorConfig) throw 'Vendor Config is missing';
-                if (!option.recordId || !option.tranId) throw 'Missing poId or poNum';
+                if (!option.recordId || !option.tranId)
+                    throw 'Missing poId or poNum';
 
                 // try to login first
                 LibIngramAPI.generateToken(option);
-                if (!LibIngramAPI.ACCESS_TOKEN) throw 'Unable to generate access token';
+                if (!LibIngramAPI.ACCESS_TOKEN)
+                    throw 'Unable to generate access token';
 
                 // get valid orders
                 var validOrders = LibIngramAPI.getOrderStatus(option);
-                if (!vc2_util.isEmpty(validOrders)) throw 'Unable to find valid orders.';
+                if (!vc2_util.isEmpty(validOrders))
+                    throw 'Unable to find valid orders.';
 
                 for (var i = 0, j = validOrders.length; i < j; i++) {
                     var validOrder = validOrders[i];

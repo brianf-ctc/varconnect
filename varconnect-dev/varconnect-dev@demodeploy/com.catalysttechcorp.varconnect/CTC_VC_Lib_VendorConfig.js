@@ -64,13 +64,19 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             password: result.getValue({ name: vendorConfigFields[7] }),
             customerNo: result.getValue({ name: vendorConfigFields[8] }),
             processDropships: result.getValue({ name: vendorConfigFields[9] }),
-            processSpecialOrders: result.getValue({ name: vendorConfigFields[10] }),
-            fulfillmentPrefix: result.getValue({ name: vendorConfigFields[11] }),
+            processSpecialOrders: result.getValue({
+                name: vendorConfigFields[10]
+            }),
+            fulfillmentPrefix: result.getValue({
+                name: vendorConfigFields[11]
+            }),
             accessEndPoint: result.getValue({ name: vendorConfigFields[12] }),
             apiKey: result.getValue({ name: vendorConfigFields[13] }),
             apiSecret: result.getValue({ name: vendorConfigFields[14] }),
             oauthScope: result.getValue({ name: vendorConfigFields[15] }),
-            useShipDate: result.getValue({ name: VendorCFG.FIELD.USE_SHIPDATE }),
+            useShipDate: result.getValue({
+                name: VendorCFG.FIELD.USE_SHIPDATE
+            }),
             country: result.getValue({
                 name: 'country',
                 join: 'custrecord_ctc_vc_vendor_subsidiary'
@@ -140,7 +146,10 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
+            log.error(
+                logTitle,
+                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
+            );
         }
 
         if (result && result[0]) {
@@ -197,7 +206,10 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 5
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
+            log.error(
+                logTitle,
+                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
+            );
         }
 
         if (result && result[0]) {
@@ -275,7 +287,10 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
+            log.error(
+                logTitle,
+                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
+            );
         }
 
         if (result && result[0]) {

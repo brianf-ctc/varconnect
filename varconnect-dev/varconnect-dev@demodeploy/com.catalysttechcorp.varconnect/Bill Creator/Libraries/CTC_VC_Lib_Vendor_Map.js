@@ -22,7 +22,17 @@ define([
     '../Vendors/ingram_api',
     '../Vendors/techdata_api',
     '../Vendors/synnex_sftp'
-], function (vc2_util, vc2_constant, DH, DH2, WELLS, ARROW, INGRAM, TECHDATA, SYNNEX) {
+], function (
+    vc2_util,
+    vc2_constant,
+    DH,
+    DH2,
+    WELLS,
+    ARROW,
+    INGRAM,
+    TECHDATA,
+    SYNNEX
+) {
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 

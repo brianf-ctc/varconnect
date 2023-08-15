@@ -82,7 +82,9 @@ define([
                 });
 
             if (!vendorConfig) {
-                log.debug('No configuration set up for xml vendor ' + xmlVendor);
+                log.debug(
+                    'No configuration set up for xml vendor ' + xmlVendor
+                );
             } else return vendorConfig;
         },
         extractError: function (option) {
@@ -131,7 +133,8 @@ define([
                                     xmlVendor: xmlVendor,
                                     xmlSubsidiary: objPO.subsidiary
                                 });
-                            if (!objPO || !poNum) throw 'Valid PO Number is required';
+                            if (!objPO || !poNum)
+                                throw 'Valid PO Number is required';
 
                             outputObj = vc_websvc.handleRequest({
                                 vendorConfig: vendorConfig,
@@ -153,7 +156,9 @@ define([
                             console.log(
                                 'debug lib: ' +
                                     (processErr.name + '- ') +
-                                    (processErr.message + '==\n' + processErr.stack)
+                                    (processErr.message +
+                                        '==\n' +
+                                        processErr.stack)
                             );
                         }
                         resolve(outputObj);
@@ -167,14 +172,18 @@ define([
                             xmlContent = vkbeautify.json(xmlContent, 4);
 
                             if (hljs) {
-                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
+                                xmlContent = hljs.highlight(xmlContent, {
+                                    language: 'JSON'
+                                }).value;
                                 elementIdToShow = 'custpage_json__viewer';
                                 elementIdToHide = 'custpage_xml__viewer';
                             }
                         } catch (err) {
                             xmlContent = vkbeautify.xml(outputObj, 4);
                             if (hljs) {
-                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
+                                xmlContent = hljs.highlight(xmlContent, {
+                                    language: 'xml'
+                                }).value;
                                 elementIdToShow = 'custpage_xml__viewer';
                                 elementIdToHide = 'custpage_json__viewer';
                             }
@@ -184,16 +193,23 @@ define([
                             xmlViewer.find('#' + elementIdToShow).show();
                             xmlViewer.find('#' + elementIdToHide).hide();
 
-                            xmlViewer.find('#' + [elementIdToHide, '_content'].join('')).hide();
                             xmlViewer
-                                .find('#' + [elementIdToShow, '_content'].join(''))
+                                .find(
+                                    '#' + [elementIdToHide, '_content'].join('')
+                                )
+                                .hide();
+                            xmlViewer
+                                .find(
+                                    '#' + [elementIdToShow, '_content'].join('')
+                                )
                                 .show()
                                 .get(0).innerHTML = xmlContent;
                         } else {
                             xmlViewer.find('#custpage_xml__viewer').hide();
                             xmlViewer.find('#custpage_json__viewer').hide();
 
-                            jQuery('#vcdebugcontent').show().get(0).value = xmlContent;
+                            jQuery('#vcdebugcontent').show().get(0).value =
+                                xmlContent;
                             jQuery('#custpage_xml_viewer_frame').hide();
                         }
 
@@ -299,7 +315,10 @@ define([
                     }
                 }
                 // end comment  or <![CDATA[...]]> //
-                else if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1) {
+                else if (
+                    ar[ix].search(/-->/) > -1 ||
+                    ar[ix].search(/\]>/) > -1
+                ) {
                     str += ar[ix];
                     inComment = false;
                 }
@@ -319,26 +338,40 @@ define([
                     ar[ix].search(/<\//) == -1 &&
                     ar[ix].search(/\/>/) == -1
                 ) {
-                    str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
+                    str = !inComment
+                        ? (str += shift[deep++] + ar[ix])
+                        : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
-                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) > -1) {
-                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
+                else if (
+                    ar[ix].search(/<\w/) > -1 &&
+                    ar[ix].search(/<\//) > -1
+                ) {
+                    str = !inComment
+                        ? (str += shift[deep] + ar[ix])
+                        : (str += ar[ix]);
                 }
                 // </elm> //
                 else if (ar[ix].search(/<\//) > -1) {
-                    str = !inComment ? (str += shift[--deep] + ar[ix]) : (str += ar[ix]);
+                    str = !inComment
+                        ? (str += shift[--deep] + ar[ix])
+                        : (str += ar[ix]);
                 }
                 // <elm/> //
                 else if (ar[ix].search(/\/>/) > -1) {
-                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
+                    str = !inComment
+                        ? (str += shift[deep] + ar[ix])
+                        : (str += ar[ix]);
                 }
                 // <? xml ... ?> //
                 else if (ar[ix].search(/<\?/) > -1) {
                     str += shift[deep] + ar[ix];
                 }
                 // xmlns //
-                else if (ar[ix].search(/xmlns\:/) > -1 || ar[ix].search(/xmlns\=/) > -1) {
+                else if (
+                    ar[ix].search(/xmlns\:/) > -1 ||
+                    ar[ix].search(/xmlns\=/) > -1
+                ) {
                     str += shift[deep] + ar[ix];
                 } else {
                     str += ar[ix];
@@ -353,8 +386,10 @@ define([
 
             if (typeof JSON === 'undefined') return text;
 
-            if (typeof text === 'string') return JSON.stringify(JSON.parse(text), null, step);
-            if (typeof text === 'object') return JSON.stringify(text, null, step);
+            if (typeof text === 'string')
+                return JSON.stringify(JSON.parse(text), null, step);
+            if (typeof text === 'object')
+                return JSON.stringify(text, null, step);
 
             return text; // text is not string nor object
         };
@@ -393,7 +428,8 @@ define([
 
         function isSubquery(str, parenthesisLevel) {
             return (
-                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
+                parenthesisLevel -
+                (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
             );
         }
 
@@ -516,7 +552,10 @@ define([
             var str = preserveComments
                 ? text
                 : text
-                      .replace(/\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g, '')
+                      .replace(
+                          /\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g,
+                          ''
+                      )
                       .replace(/[ \r\n\t]{1,}xmlns/g, ' xmlns');
             return str.replace(/>\s{0,}</g, '><');
         };
@@ -530,7 +569,10 @@ define([
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
             var str = preserveComments
                 ? text
-                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
+                : text.replace(
+                      /\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g,
+                      ''
+                  );
 
             return str
                 .replace(/\s{1,}/g, ' ')

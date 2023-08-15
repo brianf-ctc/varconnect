@@ -134,7 +134,10 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                         values: values
                     });
             } catch (e) {
-                log.error('Error encountered when updating serial ' + serialId, e);
+                log.error(
+                    'Error encountered when updating serial ' + serialId,
+                    e
+                );
             }
         }
     }
@@ -157,7 +160,11 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
 
         //Iterate through serials list, get the necessary fields,
         //then create the serial with the proper fields populate with the correct values
-        for (var serialCount = 0; serialCount < serialsToCreate.length; serialCount++) {
+        for (
+            var serialCount = 0;
+            serialCount < serialsToCreate.length;
+            serialCount++
+        ) {
             try {
                 var serial = serialsToCreate[serialCount];
 
@@ -194,7 +201,9 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
 
                         //Transaction Field Ids on serial record grouped by transaction type
                         if (!allFields[txnType]) {
-                            var fields = _getSerialsTransactionFields({ txnType: txnType });
+                            var fields = _getSerialsTransactionFields({
+                                txnType: txnType
+                            });
                             allFields[txnType] = fields;
                             log.debug('allFields[txnType]', allFields[txnType]);
                         }
@@ -211,7 +220,10 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                                 txnId: txnId,
                                 txnType: txnType
                             });
-                            log.debug('txnLineNumbers[txnType]', txnLineNumbers[txnType]);
+                            log.debug(
+                                'txnLineNumbers[txnType]',
+                                txnLineNumbers[txnType]
+                            );
                         }
                         /* {
                          * 		idList: [list of line ids]
@@ -221,12 +233,13 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
 
                         //Count of existing serials per Line Id grouped per transaction
                         if (!existingSerialCounts[txnType] && item) {
-                            existingSerialCounts[txnType] = _searchSerialsForTransactionItem({
-                                item: item,
-                                txnId: txnId,
-                                txnType: txnType,
-                                fields: allFields[txnType]
-                            });
+                            existingSerialCounts[txnType] =
+                                _searchSerialsForTransactionItem({
+                                    item: item,
+                                    txnId: txnId,
+                                    txnType: txnType,
+                                    fields: allFields[txnType]
+                                });
                             log.debug(
                                 'existingSerialCounts[txnType]',
                                 existingSerialCounts[txnType]
@@ -237,18 +250,27 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                          * }
                          */
 
-                        if (txnLineNumbers[txnType] && txnLineNumbers[txnType].length > 0) {
+                        if (
+                            txnLineNumbers[txnType] &&
+                            txnLineNumbers[txnType].length > 0
+                        ) {
                             //Iterate through transaction lines and check qty vs existing serial count
-                            if (!lineIdCounter[txnType]) lineIdCounter[txnType] = 0;
+                            if (!lineIdCounter[txnType])
+                                lineIdCounter[txnType] = 0;
 
                             lineIdLoop: for (
                                 ;
-                                lineIdCounter[txnType] < txnLineNumbers[txnType].idList.length;
+                                lineIdCounter[txnType] <
+                                txnLineNumbers[txnType].idList.length;
                                 lineIdCounter[txnType]++
                             ) {
-                                var lineId = txnLineNumbers[txnType].idList[lineIdCounter[txnType]],
+                                var lineId =
+                                        txnLineNumbers[txnType].idList[
+                                            lineIdCounter[txnType]
+                                        ],
                                     qty = txnLineNumbers[txnType][lineId],
-                                    count = existingSerialCounts[txnType][lineId];
+                                    count =
+                                        existingSerialCounts[txnType][lineId];
 
                                 //If serial count is met for the line (qty), continue to next line id
                                 if (qty <= count) {
@@ -266,8 +288,15 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                                 });
 
                                 if (logInfo.length > 0) logInfo += ' | ';
-                                logInfo += allFields[txnType].txnField + ' = ' + txnId + ', ';
-                                logInfo += allFields[txnType].txnLineField + ' = ' + lineId;
+                                logInfo +=
+                                    allFields[txnType].txnField +
+                                    ' = ' +
+                                    txnId +
+                                    ', ';
+                                logInfo +=
+                                    allFields[txnType].txnLineField +
+                                    ' = ' +
+                                    lineId;
 
                                 //Increment serial count
                                 existingSerialCounts[txnType][lineId]++;
@@ -286,7 +315,10 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
                     recSerial.save();
                 }
             } catch (e) {
-                log.error('Error encountered when creating serial ' + serial, e);
+                log.error(
+                    'Error encountered when creating serial ' + serial,
+                    e
+                );
             }
         }
     }

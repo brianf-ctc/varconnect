@@ -8,13 +8,12 @@
             href="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/bootstrap-ns.css"
             rel="stylesheet"
         />
-        <!-- change this id after deployment -->
-        <!-- bootstrap-ns.css -->
         <link
             rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-            integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
             crossorigin="anonymous"
+            referrerpolicy="no-referrer"
         />
         <link
             rel="stylesheet"
@@ -27,8 +26,6 @@
             src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.24/datatables.min.js"
         ></script>
         <script src="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/custom.js"></script>
-        <!-- change this id after deployment -->
-        <!-- custom.js -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.7.0"></script>
     </head>
@@ -38,20 +35,35 @@
             <div class="sidebar">
                 <div class="sidey">
                     <div class="sidebar-dropdown">
-                        <a href="#" class="br-red"><i class="fa fa-bars"></i></a>
+                        <a href="#" class="br-red"
+                            ><i class="fa fa-bars"></i
+                        ></a>
                     </div>
                     <div class="side-nav">
                         <div class="side-nav-block">
                             <ul class="list-unstyled">
-                                <h4>Alerts</h4>
+                                <h4 style="text-align: center">Summary</h4>
                                 <li id="due">
                                     <a
                                         href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_not_proc_due_soon"
                                         target="_blank"
                                     >
-                                        <i class="fa fa-hourglass-end"></i> Due Soon
+                                        <i class="fa fa-hourglass-end"></i>Due
+                                        Soon
                                         <span class="badge badge-due pull-right"
                                             >{{alert_due}}</span
+                                        >
+                                    </a>
+                                </li>
+                                <li id="pending_receipt">
+                                    <a
+                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_pending_receipt"
+                                        target="_blank"
+                                    >
+                                        <i class="fa fa-receipt"></i>To Receive
+                                        <span
+                                            class="badge badge-primary pull-right"
+                                            >{{pend_rcpt_cnt}}</span
                                         >
                                     </a>
                                 </li>
@@ -60,240 +72,121 @@
                                         href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link"
                                         target="_blank"
                                     >
-                                        <i class="fa fa-exclamation-triangle"></i> No PO Link
-                                        <span class="badge badge-exclamation pull-right"
+                                        <i
+                                            class="fa fa-exclamation-triangle"
+                                        ></i
+                                        >No PO Link
+                                        <span
+                                            class="badge pull-right"
+                                            style="background-color: orange"
                                             >{{no_po_cnt}}</span
                                         >
                                     </a>
                                 </li>
-                                <li id="errors">
+                                <li id="on_hold">
                                     <a
-                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2"
+                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6"
                                         target="_blank"
                                     >
-                                        <i class="fa fa-bomb"></i> Errors
-                                        <span class="badge badge-error pull-right"
-                                            >{{alert_error}}</span
+                                        <i class="fa fa-pause"></i>On Hold
+                                        <span
+                                            class="badge badge-orange pull-right"
+                                            >{{on_hold_cnt}}</span
                                         >
                                     </a>
                                 </li>
-                                <br />
-                                <h4>Reporting</h4>
-                                <li class="has_submenu"></li>
-                                <li class="has_submenu">
-                                    <a href="#"
-                                        ><i class="fa fa-stopwatch"></i> Not Processed<span
+                                <li id="to_be_processed" class="has_submenu">
+                                    <a href="#">
+                                        <i class="fa fa-flag"></i> To be
+                                        processed
+                                        <span
                                             class="nav-caret fa fa-caret-down"
-                                        ></span
-                                    ></a>
+                                        ></span>
+                                    </a>
                                     <ul class="list-unstyled">
                                         <li>
                                             <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2"
+                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054%057"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-angle-double-right"></i> Error
-                                            </a>
+                                                <i class="fa fa-check"></i>
+                                                All<span
+                                                    class="badge badge-success pull-right"
+                                                    >{{to_be_proc_cnt}}</span
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-angle-double-right"></i> Pending
-                                            </a>
+                                                <i class="fa fa-clock"></i>
+                                                Pending
+                                                <span
+                                                    class="badge pull-right"
+                                                    style="
+                                                        background-color: darkcyan;
+                                                    "
+                                                    >{{pending_cnt}}</span
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=4"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-angle-double-right"></i> Reprocess
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6"
-                                                target="_blank"
+                                                <i class="fa fa-rotate"></i>
+                                                Reprocess
+                                                <span
+                                                    class="badge pull-right"
+                                                    style="
+                                                        background-color: darkcyan;
+                                                    "
+                                                    >{{reprocess_cnt}}</span
+                                                ></a
                                             >
-                                                <i class="fa fa-angle-double-right"></i> On Hold
-                                            </a>
                                         </li>
                                         <li>
                                             <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=7"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-angle-double-right"></i> Variance
-                                            </a>
+                                                <i class="fa fa-not-equal"></i>
+                                                Variance
+                                                <span
+                                                    class="badge badge-black pull-right"
+                                                    >{{variance_cnt}}</span
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link"
-                                                target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> No PO
-                                                Link</a
-                                            >
-                                        </li>
-                                    </ul>
-                                </li>
-                                <li class="has_submenu">
-                                    <a href="#"
-                                        ><i class="fa fa-flag-checkered"></i> Processed
-                                        <span class="nav-caret fa fa-caret-down"></span
-                                    ></a>
-                                    <ul class="list-unstyled">
-                                        <li><i class="fa fa-angle-right"></i> Invoice Generated</li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
+                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-angle-double-right"></i> This Year
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
-                                                target="_blank"
+                                                <i
+                                                    class="fa fa-circle-xmark"
+                                                ></i>
+                                                Errors
+                                                <span
+                                                    class="badge badge-error pull-right"
+                                                    >{{alert_error}}</span
+                                                ></a
                                             >
-                                                <i class="fa fa-angle-double-right"></i> Last Year
-                                            </a>
                                         </li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=3"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> All
-                                            </a>
-                                        </li>
-                                        <li><i class="fa fa-angle-right"></i> Closed</li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=TY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> This Year
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=LY&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> Last Year
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_processed&searchtype=Custom&Custom_CREATEDmodi=WITHIN&Custom_CREATED=ALL&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=5"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> All
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
-                                <li class="has_submenu">
-                                    <a href="#"
-                                        ><i class="fa fa-file-medical-alt"></i> Server Logs
-                                        <span class="nav-caret fa fa-caret-down"></span
-                                    ></a>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=107"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> Retrieve
-                                                API Files
-                                            </a>
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=105"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> Retrieve
-                                                SFTP Files
-                                            </a>
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=104"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> Bill File
-                                                Processor
-                                            </a>
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <!--<li><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=1966" target="_blank"><i class="fa fa-angle-double-right"></i> IF/IR Generator</a></li>-->
-                                        <!-- change this id after deployment -->
-                                        <!--<li><a href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=1967" target="_blank"><i class="fa fa-angle-double-right"></i> Serial Generator</a></li>-->
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_logs&searchtype=ScriptNote&ScriptNote_SCRIPTTYPE=108"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> Bill
-                                                Generator
-                                            </a>
-                                        </li>
-                                        <!-- change this id after deployment -->
                                     </ul>
                                 </li>
                                 <br />
-                                <h4>Configuration</h4>
-                                <li class="has_submenu"></li>
-                                <li class="has_submenu">
-                                    <a href="#"
-                                        ><i class="fa fa-cog"></i>Setup
-                                        <span class="nav-caret fa fa-caret-down"></span
-                                    ></a>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <a
-                                                href="/app/common/custom/custrecordentrylist.nl?rectype=109"
-                                                target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Vendor
-                                                Configs</a
-                                            >
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/common/custom/custlist.nl?id=105&e=T&ord=T"
-                                                target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Bill Hold
-                                                Reasons</a
-                                            >
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/crm/common/crmgroup.nl?id=774669"
-                                                target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Access
-                                                Group</a
-                                            >
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                        <li>
-                                            <a
-                                                href="/app/site/hosting/scriptlet.nl?script=customscript_sftp_helper_tool&deploy=customdeploy_ctc_vc_bc_sftp_helper"
-                                                target="_blank"
-                                            >
-                                                <i class="fa fa-angle-double-right"></i> SFTP Helper
-                                                Tool
-                                            </a>
-                                        </li>
-                                        <!-- change this id after deployment -->
-                                    </ul>
+                                <h4 style="text-align: center">Shortcuts</h4>
+                                <li>
+                                    <a
+                                        href="/app/common/custom/custrecordentrylist.nl?rectype={{vendconfig_rectype_id}}"
+                                        target="_blank"
+                                        ><i class="fa fa-cog"></i>Vendor
+                                        Configs</a
+                                    >
                                 </li>
                             </ul>
                         </div>
@@ -304,23 +197,27 @@
                 <div class="main-content">
                     <div class="container">
                         <div class="row">
-                            <div class="col-md-10">
+                            <div class="col-md-12">
                                 <div class="widget">
                                     <div class="widget-head br-blue">
                                         <h3 class="pull-left">
-                                            <i class="fa fa-clock-o"></i> TO BE PROCESSED
+                                            VAR Connect - Bill Creator Dashboard
                                         </h3>
-                                        <div class="pull-right"></div>
+                                        <div class="pull-right">
+                                            <!-- <a href="https://www.nscatalyst.com/"><img
+                                                src="https://tstdrv1716438.app.netsuite.com/core/media/media.nl?id=73&amp;c=TSTDRV1716438&amp;h=0SWiBnADOHDG9AtbUuNG48Q4IIJs5TUQCo6eQBHZfaM-QrF5"
+                                                alt="NSCatalyst.com"
+                                                style="color: black; width: 100px; filter: invert(1);" /></a> -->
+                                        </div>
                                         <div class="clearfix"></div>
                                     </div>
                                     <table
-                                        id="example"
+                                        id="billcreatordata"
                                         class="compact hover order-column row-border"
                                     >
                                         <thead>
                                             <tr>
                                                 <th>Flex</th>
-                                                <!--<th>ID</th>-->
                                                 <th>Bill</th>
                                                 <th>Status</th>
                                                 <th>Vendor</th>
@@ -328,6 +225,7 @@
                                                 <th>Date</th>
                                                 <th>Due</th>
                                                 <th>PO</th>
+                                                <th>Type</th>
                                                 <th>Status</th>
                                                 <th>Location</th>
                                                 <th>Last Message</th>
@@ -336,7 +234,6 @@
                                         <tfoot>
                                             <tr>
                                                 <th>Flex</th>
-                                                <!--<th>ID</th>-->
                                                 <th>Bill</th>
                                                 <th>Status</th>
                                                 <th>Vendor</th>
@@ -344,6 +241,7 @@
                                                 <th>Date</th>
                                                 <th>Due</th>
                                                 <th>PO</th>
+                                                <th>Type</th>
                                                 <th>Status</th>
                                                 <th>Location</th>
                                                 <th>Last Message</th>
@@ -352,7 +250,7 @@
                                     </table>
                                     <script type="text/javascript">
                                         $(document).ready(function () {
-                                            $('#example').DataTable({
+                                            $('#billcreatordata').DataTable({
                                                 lengthMenu: [25, 50, 100],
                                                 //"pageSize" : 50,
                                                 processing: false,
@@ -366,12 +264,17 @@
                                                         //'targets': [15, 16],
                                                         searchable: false,
                                                         orderable: false,
-                                                        render: function (data, type, full, meta) {
+                                                        render: function (
+                                                            data,
+                                                            type,
+                                                            full,
+                                                            meta
+                                                        ) {
                                                             return (
                                                                 '<a href="/app/site/hosting/scriptlet.nl?script=customscript_ctc_vc_bill_flex_screen&deploy=customdeploy_vc_bill_creator_flex_screen&record_id=' +
                                                                 full.id +
                                                                 '"  target="_blank" rel="noopener noreferrer"><img src="https://tstdrv1716438.app.netsuite.com/c.TSTDRV1716438/site/var-connect-bill-creator-dashboard/flex-screen-icon.png" width="24" height="24"></a>'
-                                                            ); //<!-- change this id after deployment -->
+                                                            );
                                                         }
                                                     },
                                                     {
@@ -392,28 +295,40 @@
                                                         )
                                                     },
                                                     {
-                                                        data: 'billDate'
+                                                        data: 'billDate',
+                                                        render: {
+                                                            _: 'display',
+                                                            sort: 'data'
+                                                        }
                                                     },
                                                     {
-                                                        data: 'billDue'
+                                                        data: 'billDue',
+                                                        render: {
+                                                            _: 'display',
+                                                            sort: 'data'
+                                                        }
                                                     },
                                                     {
                                                         data: 'po',
-                                                        fnCreatedCell: function (
-                                                            nTd,
-                                                            sData,
-                                                            oData,
-                                                            iRow,
-                                                            iCol
-                                                        ) {
-                                                            $(nTd).html(
-                                                                '<a href="/app/accounting/transactions/transaction.nl?id=' +
-                                                                    oData.poId +
-                                                                    '" target="_blank">' +
-                                                                    oData.po +
-                                                                    '</a>'
-                                                            );
-                                                        }
+                                                        fnCreatedCell:
+                                                            function (
+                                                                nTd,
+                                                                sData,
+                                                                oData,
+                                                                iRow,
+                                                                iCol
+                                                            ) {
+                                                                $(nTd).html(
+                                                                    '<a href="/app/accounting/transactions/transaction.nl?id=' +
+                                                                        oData.poId +
+                                                                        '" target="_blank">' +
+                                                                        oData.po +
+                                                                        '</a>'
+                                                                );
+                                                            }
+                                                    },
+                                                    {
+                                                        data: 'poType'
                                                     },
                                                     {
                                                         data: 'poStatus'
@@ -430,298 +345,24 @@
                                                 ],
                                                 columnDefs: [
                                                     {
-                                                        className: 'dt-body-right',
+                                                        className:
+                                                            'dt-body-right',
                                                         targets: [4]
                                                     },
                                                     {
-                                                        className: 'dt-body-left',
+                                                        className:
+                                                            'dt-body-left',
                                                         targets: [0]
                                                     },
                                                     {
                                                         width: '25%',
-                                                        targets: [10]
+                                                        targets: [11]
                                                     }
                                                 ],
                                                 order: [[6, 'asc']]
                                             });
                                         });
                                     </script>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="current-status">
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-4 col-xs-6">
-                                            <div class="current-status-item">
-                                                <h6><span></span> To Be Processed</h6>
-                                                <h3>
-                                                    <a
-                                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054"
-                                                        target="_blank"
-                                                    >
-                                                        {{to_be_proc_cnt}}
-                                                    </a>
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-4 col-xs-6">
-                                            <div class="current-status-item">
-                                                <h6><span></span> Pending Receipt</h6>
-                                                <h3>
-                                                    <a
-                                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_pending_receipt"
-                                                        target="_blank"
-                                                    >
-                                                        {{pend_rcpt_cnt}}
-                                                    </a>
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-4 col-xs-6">
-                                            <div class="current-status-item">
-                                                <h6><span></span> On Hold</h6>
-                                                <h3>
-                                                    <a
-                                                        href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6"
-                                                        target="_blank"
-                                                    >
-                                                        {{on_hold_cnt}}
-                                                    </a>
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-4 col-xs-6">
-                                            <div class="widget projects-widget">
-                                                <div class="widget-head br-blue">
-                                                    <h3>
-                                                        <i class="fa fa-chart-pie"></i> NOT
-                                                        PROCESSED
-                                                    </h3>
-                                                </div>
-                                                <div class="widget-body no-padd scroll">
-                                                    <ul class="list-unstyled">
-                                                        <canvas
-                                                            id="chartNotProcessed"
-                                                            width="400"
-                                                            height="400"
-                                                        ></canvas>
-                                                        <script>
-                                                            $.get(
-                                                                '/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=statusSummary',
-                                                                function (d) {
-                                                                    var ctx = document
-                                                                        .getElementById(
-                                                                            'chartNotProcessed'
-                                                                        )
-                                                                        .getContext('2d');
-                                                                    var myChart = new Chart(ctx, {
-                                                                        type: 'pie',
-                                                                        options: {
-                                                                            tooltips: {
-                                                                                enabled: false
-                                                                            }
-                                                                        },
-                                                                        data: {
-                                                                            labels: [
-                                                                                'Pending',
-                                                                                'Error',
-                                                                                'Reprocess',
-                                                                                'Hold',
-                                                                                'Variance'
-                                                                            ],
-                                                                            datasets: [
-                                                                                {
-                                                                                    data: JSON.parse(
-                                                                                        d
-                                                                                    ),
-                                                                                    backgroundColor:
-                                                                                        [
-                                                                                            'rgba(54, 162, 235, 1)',
-                                                                                            'rgba(255, 99, 132, 1)',
-                                                                                            'rgba(255, 206, 86, 1)',
-                                                                                            'rgba(75, 192, 192, 1)',
-                                                                                            'rgba(153, 5, 255, 1)'
-                                                                                        ],
-                                                                                    datalabels: {
-                                                                                        listeners: {
-                                                                                            click: function (
-                                                                                                context
-                                                                                            ) {
-                                                                                                switch (
-                                                                                                    context.dataIndex
-                                                                                                ) {
-                                                                                                    case 0:
-                                                                                                        window.open(
-                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1'
-                                                                                                        );
-                                                                                                        break;
-                                                                                                    case 1:
-                                                                                                        window.open(
-                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=2'
-                                                                                                        );
-                                                                                                        break;
-                                                                                                    case 2:
-                                                                                                        window.open(
-                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=4'
-                                                                                                        );
-                                                                                                        break;
-                                                                                                    case 3:
-                                                                                                        window.open(
-                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=6'
-                                                                                                        );
-                                                                                                        break;
-                                                                                                    case 4:
-                                                                                                        window.open(
-                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=7'
-                                                                                                        );
-                                                                                                        break;
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            ]
-                                                                        }
-                                                                    });
-                                                                }
-                                                            );
-                                                        </script>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-4 col-xs-6">
-                                            <div class="widget projects-widget">
-                                                <div class="widget-head br-blue">
-                                                    <h3>
-                                                        <i class="fa fa-chart-bar"></i> BY
-                                                        INTEGRATION (30 DAYS)
-                                                    </h3>
-                                                </div>
-                                                <div class="widget-body no-padd scroll">
-                                                    <ul class="list-unstyled">
-                                                        <ul class="list-unstyled">
-                                                            <!--{{graph_two_data}}-->
-                                                            <canvas
-                                                                id="chartIntegrations"
-                                                                width="400"
-                                                                height="400"
-                                                            ></canvas>
-                                                            <script>
-                                                                $.get(
-                                                                    '/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=integrationSummary',
-                                                                    function (d) {
-                                                                        var ctx = document
-                                                                            .getElementById(
-                                                                                'chartIntegrations'
-                                                                            )
-                                                                            .getContext('2d');
-                                                                        var myChart = new Chart(
-                                                                            ctx,
-                                                                            {
-                                                                                type: 'bar',
-                                                                                data: {
-                                                                                    labels: [
-                                                                                        'Arrow',
-                                                                                        'D&H',
-                                                                                        'Ingram Micro',
-                                                                                        'Tech Data',
-                                                                                        'Wells Fargo',
-                                                                                        'Synnex'
-                                                                                    ],
-                                                                                    datasets: [
-                                                                                        {
-                                                                                            data: JSON.parse(
-                                                                                                d
-                                                                                            ),
-                                                                                            backgroundColor:
-                                                                                                [
-                                                                                                    'rgba(255, 99, 132, 1)',
-                                                                                                    'rgba(54, 162, 235, 1)',
-                                                                                                    'rgba(255, 206, 86, 1)',
-                                                                                                    'rgba(75, 192, 192, 1)',
-                                                                                                    'rgba(153, 5, 255, 1)',
-                                                                                                    'rgba(255, 159, 64, 1)'
-                                                                                                ],
-                                                                                            datalabels:
-                                                                                                {
-                                                                                                    listeners:
-                                                                                                        {
-                                                                                                            click: function (
-                                                                                                                context
-                                                                                                            ) {
-                                                                                                                switch (
-                                                                                                                    context.dataIndex
-                                                                                                                ) {
-                                                                                                                    case 0:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=1'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                    case 1:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=2'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                    case 2:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=3'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                    case 3:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=4'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                    case 4:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=5'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                    case 5:
-                                                                                                                        window.open(
-                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=6'
-                                                                                                                        );
-                                                                                                                        break;
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                }
-                                                                                        }
-                                                                                    ]
-                                                                                },
-                                                                                options: {
-                                                                                    scales: {
-                                                                                        y: {
-                                                                                            beginAtZero: true
-                                                                                        }
-                                                                                    },
-                                                                                    tooltips: {
-                                                                                        enabled: false
-                                                                                    },
-                                                                                    legend: {
-                                                                                        display: false
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        );
-                                                                    }
-                                                                );
-                                                            </script>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>

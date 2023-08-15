@@ -10,7 +10,7 @@
  *
  * @NApiVersion 2.x
  * @NModuleScope Public
- * @NScriptType MapReduceScript
+ * @NScriptType Restlet
  */
 define(function (require) {
     var ns_record = require('N/record'),
@@ -20,7 +20,7 @@ define(function (require) {
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_constant = require('./CTC_VC2_Constants'),
         vc_websvclib = require('./CTC_VC_Lib_WebService'),
-        vc_record = require('./netsuitelibrary_v2'),
+        vc_record = require('./CTC_VC_Lib_Record'),
         util_record = require('./CTC_VC_Lib_Record'),
         vc_log = require('./CTC_VC_Lib_Log');
 
@@ -45,8 +45,14 @@ define(function (require) {
                     action: scriptContext.action
                 });
 
-                log.debug(logTitle, '##### START SCRIPT ##### ' + JSON.stringify(CurrentData));
-                LogPrefix = '[' + ['PO', CurrentData.poId, CurrentData.action].join(':') + '] ';
+                log.debug(
+                    logTitle,
+                    '##### START SCRIPT ##### ' + JSON.stringify(CurrentData)
+                );
+                LogPrefix =
+                    '[' +
+                    ['PO', CurrentData.poId, CurrentData.action].join(':') +
+                    '] ';
 
                 Current.MainCFG = Helper.loadMainConfig();
                 if (!Current.MainCFG) throw 'Unable to load Main Configuration';
@@ -72,7 +78,10 @@ define(function (require) {
                     ]
                 });
                 CurrentData.PO = PO_Data;
-                log.debug(logTitle, LogPrefix + '// PO Data: ' + JSON.stringify(PO_Data));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '// PO Data: ' + JSON.stringify(PO_Data)
+                );
 
                 Current.VendorCFG = Helper.loadVendorConfig({
                     vendor: PO_Data.entity,
@@ -88,7 +97,10 @@ define(function (require) {
                     Current.poData.dropshipso ||
                     Current.poData.custbody_ctc_po_link_type == 'Drop Shipment';
 
-                log.debug(logTitle, LogPrefix + '///// Initiating library webservice ....');
+                log.debug(
+                    logTitle,
+                    LogPrefix + '///// Initiating library webservice ....'
+                );
 
                 var outputObj = vc_websvclib.process({
                     mainConfig: Current.MainCFG,
@@ -101,16 +113,21 @@ define(function (require) {
                     subsidiary: PO_Data.subsidiary,
                     countryCode: countryCode
                 });
-                log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj)
+                );
 
                 // if there are no lines.. just exit the script
                 if (
                     !outputObj.itemArray ||
-                    (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
+                    (!outputObj.itemArray.length &&
+                        !outputObj.itemArray.header_info)
                 ) {
                     log.debug(
                         logTitle,
-                        LogPrefix + '>> no line items to process... exiting script: '
+                        LogPrefix +
+                            '>> no line items to process... exiting script: '
                     );
                     return true;
                 }
@@ -136,7 +153,10 @@ define(function (require) {
                     }
                 }
 
-                log.debug(logTitle, LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '>> so_ID: ' + JSON.stringify(Current.soId)
+                );
 
                 if (!vc2_util.isEmpty(Current.soId)) {
                     Current.Record.SO = ns_record.load({
@@ -156,13 +176,17 @@ define(function (require) {
 
                 log.debug(
                     logTitle,
-                    LogPrefix + '>> fulfillmentData: ' + JSON.stringify(fulfillmentData)
+                    LogPrefix +
+                        '>> fulfillmentData: ' +
+                        JSON.stringify(fulfillmentData)
                 );
 
                 //Logic for retrieving information and creating list of serials to be created
                 if (
-                    (CurrentData.isDropPO && Current.MainCFG.createSerialDropship) ||
-                    (!CurrentData.isDropPO && Current.MainCFG.createSerialSpecialOrder)
+                    (CurrentData.isDropPO &&
+                        Current.MainCFG.createSerialDropship) ||
+                    (!CurrentData.isDropPO &&
+                        Current.MainCFG.createSerialSpecialOrder)
                 ) {
                     var numPrefix = Current.VendorCFG.fulfillmentPrefix;
 
@@ -173,7 +197,9 @@ define(function (require) {
 
                     /// IF SEARCH ///////////////
                     var arrFulfillments = [];
-                    var objSearchIF = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+                    var objSearchIF = ns_search.load({
+                        id: 'customsearch_ctc_if_vendor_orders'
+                    });
                     objSearchIF.filters.push(
                         ns_search.createFilter({
                             name: 'custbody_ctc_if_vendor_order_match',
@@ -182,28 +208,38 @@ define(function (require) {
                         })
                     );
 
-                    var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
+                    var ItemFFSearchAll = vc2_util.searchAllPaged({
+                        searchObj: objSearchIF
+                    });
                     log.debug(
                         logTitle,
-                        LogPrefix + '>> Total Results [IF]: ' + ItemFFSearchAll.length
+                        LogPrefix +
+                            '>> Total Results [IF]: ' +
+                            ItemFFSearchAll.length
                     );
 
                     ItemFFSearchAll.forEach(function (result) {
                         arrFulfillments.push({
                             id: result.id,
-                            num: result.getValue('custbody_ctc_if_vendor_order_match')
+                            num: result.getValue(
+                                'custbody_ctc_if_vendor_order_match'
+                            )
                         });
                         return true;
                     });
                     log.debug(
                         logTitle,
-                        LogPrefix + '>> arrFulfillments: ' + JSON.stringify(arrFulfillments.length)
+                        LogPrefix +
+                            '>> arrFulfillments: ' +
+                            JSON.stringify(arrFulfillments.length)
                     );
                     //////////////////////////////////////////////////
 
                     /// IR SEARCH /////////////////
                     var arrReceipts = [];
-                    var objSearchIR = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+                    var objSearchIR = ns_search.load({
+                        id: 'customsearch_ctc_ir_vendor_orders'
+                    });
                     objSearchIR.filters.push(
                         ns_search.createFilter({
                             name: 'custbody_ctc_if_vendor_order_match',
@@ -218,31 +254,42 @@ define(function (require) {
                     ItemRcptSearchAll.forEach(function (result) {
                         arrReceipts.push({
                             id: result.id,
-                            num: result.getValue('custbody_ctc_if_vendor_order_match')
+                            num: result.getValue(
+                                'custbody_ctc_if_vendor_order_match'
+                            )
                         });
                         return true;
                     });
                     log.debug(
                         logTitle,
-                        LogPrefix + '>> arrReceipts: ' + JSON.stringify(arrReceipts.length)
+                        LogPrefix +
+                            '>> arrReceipts: ' +
+                            JSON.stringify(arrReceipts.length)
                     );
                     //////////////////////////////////////////////////
 
-                    log.debug(logTitle, LogPrefix + '>> lineData: ' + lineData.length);
+                    log.debug(
+                        logTitle,
+                        LogPrefix + '>> lineData: ' + lineData.length
+                    );
 
                     if (lineData && lineData.length) {
                         for (var i = 0; i < lineData.length; i++) {
                             if (!lineData[i]) {
                                 log.audit(
                                     logTitle,
-                                    '....empty linedata: ' + JSON.stringify(lineData[i])
+                                    '....empty linedata: ' +
+                                        JSON.stringify(lineData[i])
                                 );
                                 continue;
                             }
 
                             var serialStr = lineData[i].serial_num;
                             var serialArray = serialStr;
-                            if (typeof serialArray == 'string' && serialArray.length > 0)
+                            if (
+                                typeof serialArray == 'string' &&
+                                serialArray.length > 0
+                            )
                                 serialArray = serialStr.split(',');
 
                             // log.debug('xml app v2: serial array', serialArray);
@@ -250,8 +297,15 @@ define(function (require) {
                             var fulfillmentNum = null,
                                 receiptNum = null;
 
-                            if (CurrentData.isDropPO && Current.MainCFG.processDropships) {
-                                for (var x = 0; x < arrFulfillments.length; x++) {
+                            if (
+                                CurrentData.isDropPO &&
+                                Current.MainCFG.processDropships
+                            ) {
+                                for (
+                                    var x = 0;
+                                    x < arrFulfillments.length;
+                                    x++
+                                ) {
                                     if (
                                         arrFulfillments[x].num ==
                                         numPrefix + lineData[i].order_num
@@ -267,7 +321,10 @@ define(function (require) {
                                 Current.MainCFG.processSpecialOrders
                             ) {
                                 for (var x = 0; x < arrReceipts.length; x++) {
-                                    if (arrReceipts[x].num == numPrefix + lineData[i].order_num) {
+                                    if (
+                                        arrReceipts[x].num ==
+                                        numPrefix + lineData[i].order_num
+                                    ) {
                                         receiptNum = arrReceipts[x].id;
                                         break;
                                     }
@@ -280,19 +337,33 @@ define(function (require) {
                                 log.audit(
                                     logTitle,
                                     '.... matching fulfillment: ' +
-                                        JSON.stringify([lineData[i].order_num, fulfillmentNum])
+                                        JSON.stringify([
+                                            lineData[i].order_num,
+                                            fulfillmentNum
+                                        ])
                                 );
 
                             if (receiptNum)
                                 log.audit(
                                     logTitle,
                                     '... matching receipt: ' +
-                                        JSON.stringify([lineData[i].order_num, receiptNum])
+                                        JSON.stringify([
+                                            lineData[i].order_num,
+                                            receiptNum
+                                        ])
                                 );
 
-                            log.audit(logTitle, '... serialArray: ' + JSON.stringify(serialArray));
+                            log.audit(
+                                logTitle,
+                                '... serialArray: ' +
+                                    JSON.stringify(serialArray)
+                            );
                             if (serialArray) {
-                                for (var ii = 0; ii < serialArray.length; ii++) {
+                                for (
+                                    var ii = 0;
+                                    ii < serialArray.length;
+                                    ii++
+                                ) {
                                     if (serialArray[ii] == '') continue;
 
                                     contextM.write(serialArray[ii], {
@@ -314,8 +385,10 @@ define(function (require) {
                         LogPrefix +
                             '>> SKIPPED: ' +
                             JSON.stringify({
-                                createSerialDropship: Current.MainCFG.createSerialDropship,
-                                createSerialSpecialOrder: Current.MainCFG.createSerialSpecialOrder,
+                                createSerialDropship:
+                                    Current.MainCFG.createSerialDropship,
+                                createSerialSpecialOrder:
+                                    Current.MainCFG.createSerialSpecialOrder,
                                 isDropPO: CurrentData.isDropPO
                             })
                     );
@@ -327,9 +400,15 @@ define(function (require) {
                     isError: true
                 });
 
-                log.debug(logTitle, LogPrefix + '!! ERROR !! ' + JSON.stringify(error));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '!! ERROR !! ' + JSON.stringify(error)
+                );
             } finally {
-                log.debug(logTitle, '##### EXIT SCRIPT ##### ' + JSON.stringify(returnObj));
+                log.debug(
+                    logTitle,
+                    '##### EXIT SCRIPT ##### ' + JSON.stringify(returnObj)
+                );
             }
 
             return returnObj;
@@ -378,11 +457,17 @@ define(function (require) {
             if (!vendorConfig) {
                 log.audit(
                     logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                    'No vendor configuration setup - [vendor:' +
+                        vendor +
+                        '] ' +
+                        vendorName
                 );
             }
 
-            log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
+            log.debug(
+                logTitle,
+                LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig)
+            );
             return vendorConfig;
         },
         processOrders: function (option) {
@@ -399,11 +484,14 @@ define(function (require) {
             try {
                 log.audit(
                     logTitle,
-                    LogPrefix + '>>>>  Is Drop PO? ' + JSON.stringify(CurrentData.isDropPO)
+                    LogPrefix +
+                        '>>>>  Is Drop PO? ' +
+                        JSON.stringify(CurrentData.isDropPO)
                 );
                 if (CurrentData.isDropPO) {
                     // lets require the SO record here
-                    if (!CurrentRec.SO) throw 'Unable to fulfill without a valid SO record';
+                    if (!CurrentRec.SO)
+                        throw 'Unable to fulfill without a valid SO record';
 
                     //// FULFILLMENT CREATION  /////////////////
                     log.audit(
@@ -411,8 +499,10 @@ define(function (require) {
                         LogPrefix +
                             '>> Fulfillment Creation Settings << ' +
                             JSON.stringify({
-                                'mainConfig.processDropships': Current.MainCFG.processDropships,
-                                'vendorConfig.processDropships': vendorConfig.processDropships,
+                                'mainConfig.processDropships':
+                                    Current.MainCFG.processDropships,
+                                'vendorConfig.processDropships':
+                                    vendorConfig.processDropships,
                                 'mainConfig.createIF': Current.MainCFG.createIF
                             })
                     );
@@ -432,7 +522,11 @@ define(function (require) {
                             vendor: PO_Data.entity
                         });
                     } else {
-                        log.audit(logTitle, LogPrefix + '*** Fulfillment Creation not allowed ***');
+                        log.audit(
+                            logTitle,
+                            LogPrefix +
+                                '*** Fulfillment Creation not allowed ***'
+                        );
                     }
                     /////////////////////////////////////////////
                 } else {
@@ -465,7 +559,8 @@ define(function (require) {
                     } else {
                         log.audit(
                             logTitle,
-                            LogPrefix + '*** Item Receipt Creation not allowed ***'
+                            LogPrefix +
+                                '*** Item Receipt Creation not allowed ***'
                         );
                     }
                     /////////////////////////////////////////////
@@ -473,7 +568,9 @@ define(function (require) {
             } catch (e) {
                 log.error(
                     logTitle,
-                    LogPrefix + 'Error creating fulfillment/receipt : ' + JSON.stringify(e)
+                    LogPrefix +
+                        'Error creating fulfillment/receipt : ' +
+                        JSON.stringify(e)
                 );
 
                 vc_log.recordLog({

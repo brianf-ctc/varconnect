@@ -47,20 +47,26 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                                 cdataChild = 0,
                                 hasElementChild = false;
                             for (var n = xml.firstChild; n; n = n.nextSibling) {
-                                if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
+                                if (n.nodeType == NodeType.ELEMENT)
+                                    hasElementChild = true;
                                 else if (
                                     n.nodeType == NodeType.TEXT &&
                                     n.nodeValue.match(/[^ \f\n\r\t\v]/)
                                 )
                                     textChild++;
                                 // non-whitespace text
-                                else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
+                                else if (n.nodeType == NodeType.CDATA)
+                                    cdataChild++; // cdata section node
                             }
                             if (hasElementChild) {
                                 if (textChild < 2 && cdataChild < 2) {
                                     // structured element with evtl. a single text or/and cdata node ..
                                     X.removeWhite(xml);
-                                    for (var n = xml.firstChild; n; n = n.nextSibling) {
+                                    for (
+                                        var n = xml.firstChild;
+                                        n;
+                                        n = n.nextSibling
+                                    ) {
                                         if (n.nodeType == NodeType.TEXT)
                                             // text node
                                             o['#text'] = X.escape(n.nodeValue);
@@ -70,25 +76,38 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                                         else if (o[n.nodeName]) {
                                             // multiple occurence of element ..
                                             if (o[n.nodeName] instanceof Array)
-                                                o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
-                                            else o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
+                                                o[n.nodeName][
+                                                    o[n.nodeName].length
+                                                ] = X.toObj(n);
+                                            else
+                                                o[n.nodeName] = [
+                                                    o[n.nodeName],
+                                                    X.toObj(n)
+                                                ];
                                         } // first occurence of element..
                                         else o[n.nodeName] = X.toObj(n);
                                     }
                                 } else {
                                     // mixed content
-                                    if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
+                                    if (!xml.attributes.length)
+                                        o = X.escape(X.innerXml(xml));
                                     else o['#text'] = X.escape(X.innerXml(xml));
                                 }
                             } else if (textChild) {
                                 // pure text
-                                if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
+                                if (!xml.attributes.length)
+                                    o = X.escape(X.innerXml(xml));
                                 else o['#text'] = X.escape(X.innerXml(xml));
                             } else if (cdataChild) {
                                 // cdata
-                                if (cdataChild > 1) o = X.escape(X.innerXml(xml));
+                                if (cdataChild > 1)
+                                    o = X.escape(X.innerXml(xml));
                                 else
-                                    for (var n = xml.firstChild; n; n = n.nextSibling)
+                                    for (
+                                        var n = xml.firstChild;
+                                        n;
+                                        n = n.nextSibling
+                                    )
                                         o['#cdata'] = X.escape(n.nodeValue);
                             }
                         }
@@ -96,7 +115,11 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                     } else if (xml.nodeType == NodeType.DOCUMENT) {
                         // document.node
                         o = X.toObj(xml.documentElement);
-                    } else log.debug('xml2json', 'unhandled node type: ' + xml.nodeType);
+                    } else
+                        log.debug(
+                            'xml2json',
+                            'unhandled node type: ' + xml.nodeType
+                        );
                     return o;
                 },
                 toJson: function (o, name, ind) {
@@ -107,17 +130,28 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                         json +=
                             (name ? ':[' : '[') +
                             (o.length > 1
-                                ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
+                                ? '' +
+                                  ind +
+                                  '' +
+                                  o.join(',' + ind + '') +
+                                  '' +
+                                  ind
                                 : o.join('')) +
                             ']';
                     } else if (o == null) json += (name && ':') + 'null';
                     else if (typeof o == 'object') {
                         var arr = [];
-                        for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
+                        for (var m in o)
+                            arr[arr.length] = X.toJson(o[m], m, ind + '');
                         json +=
                             (name ? ':{' : '{') +
                             (arr.length > 1
-                                ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
+                                ? '' +
+                                  ind +
+                                  '' +
+                                  arr.join(',' + ind + '') +
+                                  '' +
+                                  ind
                                 : arr.join('')) +
                             '}';
                     } else if (typeof o == 'string')
@@ -138,19 +172,28 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                                         ' ' +
                                         n.attributes[i].nodeName +
                                         '="' +
-                                        (n.attributes[i].nodeValue || '').toString() +
+                                        (
+                                            n.attributes[i].nodeValue || ''
+                                        ).toString() +
                                         '"';
                                 if (n.firstChild) {
                                     s += '>';
-                                    for (var c = n.firstChild; c; c = c.nextSibling) s += asXml(c);
+                                    for (
+                                        var c = n.firstChild;
+                                        c;
+                                        c = c.nextSibling
+                                    )
+                                        s += asXml(c);
                                     s += '</' + n.nodeName + '>';
                                 } else s += '/>';
-                            } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
+                            } else if (n.nodeType == NodeType.TEXT)
+                                s += n.nodeValue;
                             else if (n.nodeType == NodeType.CDATA)
                                 s += '<![CDATA[' + n.nodeValue + ']]>';
                             return s;
                         };
-                        for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
+                        for (var c = node.firstChild; c; c = c.nextSibling)
+                            s += asXml(c);
                     }
                     return s;
                 },
@@ -169,7 +212,10 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                     for (var n = e.firstChild; n; ) {
                         if (n.nodeType == NodeType.TEXT) {
                             // text node
-                            if (n.nodeValue && !n.nodeValue.match(/[^ \f\n\r\t\v]/)) {
+                            if (
+                                n.nodeValue &&
+                                !n.nodeValue.match(/[^ \f\n\r\t\v]/)
+                            ) {
                                 // pure whitespace text node
                                 var nxt = n.nextSibling;
                                 e.removeChild(n);
@@ -222,7 +268,11 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
 
             // do children
             if (xmlNode.hasChildNodes()) {
-                for (var i = 0, childLen = xmlNode.childNodes.length; i < childLen; i++) {
+                for (
+                    var i = 0, childLen = xmlNode.childNodes.length;
+                    i < childLen;
+                    i++
+                ) {
                     var childItem = xmlNode.childNodes[i];
                     var nodeName = childItem.nodeName;
                     if (nodeName in obj) {
@@ -296,7 +346,10 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                         var isFound = false;
                         arrNotes.forEach(function (noteIn) {
                             if (isFound) return false;
-                            if (noteOut.date == noteIn.date && noteOut.msg == noteIn.msg) {
+                            if (
+                                noteOut.date == noteIn.date &&
+                                noteOut.msg == noteIn.msg
+                            ) {
                                 isFound = true;
                                 return false;
                             }
@@ -329,20 +382,30 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
 
             var arrNotesList = noteHelper.splitByDate(dataStr);
             context.response.writeLine({ output: '===' });
-            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+            context.response.writeLine({
+                output: JSON.stringify(arrNotesList)
+            });
 
             arrNotesList = noteHelper.removeDuplicates(arrNotesList);
             context.response.writeLine({ output: '===' });
-            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+            context.response.writeLine({
+                output: JSON.stringify(arrNotesList)
+            });
 
             arrNotesList = noteHelper.removeSameSucceedingLogs(arrNotesList);
             context.response.writeLine({ output: '===' });
-            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
+            context.response.writeLine({
+                output: JSON.stringify(arrNotesList)
+            });
 
             arrNotesList = noteHelper.flatten(arrNotesList);
             context.response.writeLine({ output: '===' });
-            context.response.writeLine({ output: JSON.stringify(arrNotesList) });
-            context.response.writeLine({ output: arrNotesList.join('\r\n\r\n') });
+            context.response.writeLine({
+                output: JSON.stringify(arrNotesList)
+            });
+            context.response.writeLine({
+                output: arrNotesList.join('\r\n\r\n')
+            });
 
             return true;
         },
@@ -397,7 +460,8 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
 
             for (var i = 0; i < xmlInvoice.length; i++) {
                 var jsonObj = Helper.xml2json(xmlInvoice[i], '');
-                var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
+                var invoiceData =
+                    jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
 
                 var myObj = {
                     po: invoiceData.CustomerPONumber,
@@ -418,7 +482,11 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                 if (!util.isArray(invoiceData.Items.Item)) {
                     invoiceData.Items.Item = [invoiceData.Items.Item];
                 }
-                for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
+                for (
+                    var ii = 0, jj = invoiceData.Items.Item.length;
+                    ii < jj;
+                    ii++
+                ) {
                     var itemData = invoiceData.Items.Item[ii];
 
                     myObj.lines.push({

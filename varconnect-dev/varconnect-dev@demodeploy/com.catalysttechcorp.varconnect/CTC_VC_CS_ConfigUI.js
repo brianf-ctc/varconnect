@@ -76,15 +76,29 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
                     type: 'customrecord_vc_config',
                     id: results[0].id
                 });
-                creds.synnexUser = credsObj.getValue('custrecord_vc_synnex_user');
-                creds.synnexPass = credsObj.getValue('custrecord_vc_synnex_pass');
-                creds.synnexCustNum = credsObj.getValue('custrecord_vc_synnex_customernum');
+                creds.synnexUser = credsObj.getValue(
+                    'custrecord_vc_synnex_user'
+                );
+                creds.synnexPass = credsObj.getValue(
+                    'custrecord_vc_synnex_pass'
+                );
+                creds.synnexCustNum = credsObj.getValue(
+                    'custrecord_vc_synnex_customernum'
+                );
                 creds.dandhUser = credsObj.getValue('custrecord_vc_dandh_user');
                 creds.dandhPass = credsObj.getValue('custrecord_vc_dandh_pass');
-                creds.techdataUser = credsObj.getValue('custrecord_vc_techdata_user');
-                creds.techdataPass = credsObj.getValue('custrecord_vc_techdata_pass');
-                creds.ingramUser = credsObj.getValue('custrecord_vc_ingrammicro_user');
-                creds.ingramPass = credsObj.getValue('custrecord_vc_ingrammicro_pass');
+                creds.techdataUser = credsObj.getValue(
+                    'custrecord_vc_techdata_user'
+                );
+                creds.techdataPass = credsObj.getValue(
+                    'custrecord_vc_techdata_pass'
+                );
+                creds.ingramUser = credsObj.getValue(
+                    'custrecord_vc_ingrammicro_user'
+                );
+                creds.ingramPass = credsObj.getValue(
+                    'custrecord_vc_ingrammicro_pass'
+                );
             } else {
                 alert(
                     'No existing credentials found for that subsidiary. You may enter a new set of credentials'

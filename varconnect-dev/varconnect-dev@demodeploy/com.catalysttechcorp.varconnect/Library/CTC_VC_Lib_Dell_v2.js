@@ -57,7 +57,10 @@ define([
                 });
                 queryOption.url = option.accessEndPoint;
 
-                log.audit(logTitle, '>> query : ' + JSON.stringify(queryOption));
+                log.audit(
+                    logTitle,
+                    '>> query : ' + JSON.stringify(queryOption)
+                );
 
                 response = ns_https.post(queryOption);
                 if (!response || !response.body) throw 'Empty response!!';
@@ -74,17 +77,26 @@ define([
                         })
                 );
 
-                if (!responseCode || responseCode != 200 || !responseBody.access_token) {
+                if (
+                    !responseCode ||
+                    responseCode != 200 ||
+                    !responseBody.access_token
+                ) {
                     throw 'Unable to retrieve access token';
                 }
 
                 log.audit(
                     logTitle,
-                    '>> Access Token: ' + JSON.stringify(responseBody.access_token)
+                    '>> Access Token: ' +
+                        JSON.stringify(responseBody.access_token)
                 );
             } catch (error) {
                 var retryCount = option.retryCount || 0;
-                if (!Config.AllowRetry || !Config.NumRetries || retryCount >= Config.NumRetries)
+                if (
+                    !Config.AllowRetry ||
+                    !Config.NumRetries ||
+                    retryCount >= Config.NumRetries
+                )
                     throw error;
 
                 option.retryCount = retryCount + 1;
@@ -134,9 +146,13 @@ define([
                     vendorConfig: option.vendorConfig
                 });
 
-                log.audit(logTitle, '>> orderLines: ' + JSON.stringify(orderLines));
+                log.audit(
+                    logTitle,
+                    '>> orderLines: ' + JSON.stringify(orderLines)
+                );
 
-                if (!orderLines || vc2_util.isEmpty(orderLines)) throw 'No lines to processed';
+                if (!orderLines || vc2_util.isEmpty(orderLines))
+                    throw 'No lines to processed';
                 returnValue = orderLines;
             } catch (error) {
                 var errorMsg = vc2_util.extactError(error);
