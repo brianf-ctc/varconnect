@@ -27,8 +27,7 @@ define(function (require) {
                 returnValue;
 
             try {
-                if (!option.fromType)
-                    throw 'Record fromType is required. [fromType]';
+                if (!option.fromType) throw 'Record fromType is required. [fromType]';
                 if (!option.fromId) throw 'Record fromId is required. [fromId]';
                 if (!option.toType) throw 'Record toType is required. [toType]';
 
@@ -83,8 +82,7 @@ define(function (require) {
                     var fieldId = option.fields[fld];
                     var fieldName = util.isArray(option.fields) ? fieldId : fld;
 
-                    var value =
-                            option.record.getValue({ fieldId: fieldId }) || '',
+                    var value = option.record.getValue({ fieldId: fieldId }) || '',
                         textValue = option.record.getText({ fieldId: fieldId });
                     returnValue[fieldName] = value;
 
@@ -240,10 +238,7 @@ define(function (require) {
 
                 var lineOption = { sublistId: sublistId, line: lineData.line };
 
-                log.audit(
-                    logTitle,
-                    '// UPDATE LINE: ' + JSON.stringify(lineData)
-                );
+                log.audit(logTitle, '// UPDATE LINE: ' + JSON.stringify(lineData));
 
                 record.selectLine(lineOption);
                 for (var fieldId in lineData) {
@@ -318,16 +313,14 @@ define(function (require) {
                 var lineOption = { sublistId: sublistId };
 
                 // log.audit(logTitle, '// ADD LINE: ' + JSON.stringify(lineData));
+                vc2_util.log(logTitle, '// ADD LINE: ', lineData);
 
                 record.selectNewLine(lineOption);
                 for (var fieldId in lineData) {
                     if (vc2_util.isEmpty(lineData[fieldId])) continue;
 
                     record.setCurrentSublistValue(
-                        vc2_util.extend(lineOption, {
-                            fieldId: fieldId,
-                            value: lineData[fieldId]
-                        })
+                        vc2_util.extend(lineOption, { fieldId: fieldId, value: lineData[fieldId] })
                     );
                 }
                 record.commitLine(lineOption);
@@ -361,14 +354,10 @@ define(function (require) {
                     GlobalVar = vc2_constant.GLOBAL;
 
                 if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({
-                        record: record
-                    });
+                    orderLines = VC_RecordLib.extractRecordLines({ record: record });
                 }
-                if (vc2_util.isEmpty(vendorLine))
-                    throw 'Vendor line is required';
-                if (vc2_util.isEmpty(orderLines))
-                    throw 'Order lines is required';
+                if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
+                if (vc2_util.isEmpty(orderLines)) throw 'Order lines is required';
 
                 var isDandH = vendorConfig.xmlVendor == VendorList.DandH,
                     isIngram = vc2_util.inArray(vendorConfig.xmlVendor, [
@@ -382,8 +371,7 @@ define(function (require) {
                     filter: {
                         item_text: function (value) {
                             var orderLine = this;
-                            var skuValue =
-                                    orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                            var skuValue = orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
                                 dnhValue = orderLine[LineColField.DH_MPN];
 
                             var matchedValue = null,
@@ -401,19 +389,14 @@ define(function (require) {
                         }
                     }
                 });
-                var orderLineMatch =
-                    matchedLines && matchedLines[0] ? matchedLines[0] : null;
+                var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
                 if (!matchedLines || !matchedLines.length) {
                     // lineValue.LINE_MATCH = false;
                     vendorLine.ORDER_LINE = null;
                     vc2_util.log(logTitle, '// no matching order line');
                 } else if (matchedLines.length == 1) {
                 } else if (matchedLines.length > 1) {
-                    vc2_util.log(
-                        logTitle,
-                        '// multiple matches found: ',
-                        matchedLines.length
-                    );
+                    vc2_util.log(logTitle, '// multiple matches found: ', matchedLines.length);
                     // more than one matched line
                     var matching = {
                         qtyLine: vc2_util.findMatching({
@@ -423,9 +406,7 @@ define(function (require) {
                                 MATCHED: function (value) {
                                     return value !== true;
                                 },
-                                quantity: vc2_util.parseFloat(
-                                    vendorLine.ship_qty
-                                ),
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty),
                                 line: !vc2_util.isEmpty(vendorLine.line_no)
                                     ? vendorLine.line_no - 1
                                     : -1
@@ -450,9 +431,7 @@ define(function (require) {
                                 MATCHED: function (value) {
                                     return value !== true;
                                 },
-                                quantity: vc2_util.parseFloat(
-                                    vendorLine.ship_qty
-                                )
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty)
                             }
                         })
                     };
@@ -460,15 +439,11 @@ define(function (require) {
                     vc2_util.log(logTitle, '///...matching: ', matching);
 
                     orderLineMatch =
-                        matching.qtyLine ||
-                        matching.line ||
-                        matching.qty ||
-                        matchedLines[0];
+                        matching.qtyLine || matching.line || matching.qty || matchedLines[0];
                 }
 
                 // if it has multiple matches, get the first one
-                if (orderLineMatch && orderLineMatch.length)
-                    orderLineMatch = orderLineMatch[0];
+                if (orderLineMatch && orderLineMatch.length) orderLineMatch = orderLineMatch[0];
                 // vc2_util.log(logTitle, '// orderLineMatch: ', orderLineMatch);
 
                 if (orderLineMatch) {
@@ -511,37 +486,22 @@ define(function (require) {
             if (vc2_util.isEmpty(orderLine)) throw 'Order line is required';
 
             var item = {
-                text:
-                    option.itemText ||
-                    orderLine.item_text ||
-                    orderLine.itemname,
-                altValue:
-                    option.itemAlt ||
-                    orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL],
+                text: option.itemText || orderLine.item_text || orderLine.itemname,
+                altValue: option.itemAlt || orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL],
                 altText:
                     option.itemAltText ||
-                    orderLine[
-                        vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'
-                    ],
+                    orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'],
                 sitemname: orderLine.sitemname,
-                skuValue:
-                    option.skuValue ||
-                    orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                skuValue: option.skuValue || orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
                 dnhValue: option.dnhValue || orderLine[LineColField.DH_MPN],
-                dellQuoteNo:
-                    option.dellQuoteNo || orderLine[LineColField.DELL_QUOTE_NO]
+                dellQuoteNo: option.dellQuoteNo || orderLine[LineColField.DELL_QUOTE_NO]
             };
             // vc2_util.log(logTitle, '.. item values: ', item);
 
             var settings = {
                 isDandH:
-                    option.isDandH || vendorCfg
-                        ? vendorCfg.xmlVendor == VendorList.DandH
-                        : null,
-                ingramHashSpace:
-                    option.ingramHashSpace || mainCfg
-                        ? mainCfg.ingramHashSpace
-                        : null,
+                    option.isDandH || vendorCfg ? vendorCfg.xmlVendor == VendorList.DandH : null,
+                ingramHashSpace: option.ingramHashSpace || mainCfg ? mainCfg.ingramHashSpace : null,
                 isIngram:
                     option.ingramHashSpace || vendorCfg
                         ? vc2_util.inArray(vendorCfg.xmlVendor, [
@@ -549,10 +509,7 @@ define(function (require) {
                               VendorList.INGRAM_MICRO
                           ])
                         : null,
-                isDell:
-                    option.isDell || vendorCfg
-                        ? vendorCfg.xmlVendor == VendorList.DELL
-                        : null
+                isDell: option.isDell || vendorCfg ? vendorCfg.xmlVendor == VendorList.DELL : null
             };
             // vc2_util.log(logTitle, '... settings:', settings);
 
@@ -576,18 +533,13 @@ define(function (require) {
                 } else if (
                     settings.isDandH &&
                     item.dnhValue &&
-                    vc2_util.inArray(item.dnhValue, [
-                        vendorLine.item_num,
-                        vendorLine.vendorSKU
-                    ])
+                    vc2_util.inArray(item.dnhValue, [vendorLine.item_num, vendorLine.vendorSKU])
                 ) {
                     matchedValue = 'D&H item';
                 } else if (settings.isIngram && settings.ingramHashSpace) {
                     var hashValue = {};
                     for (var typ in item) {
-                        hashValue[typ] = item[typ]
-                            ? item[typ].replace('#', ' ')
-                            : '';
+                        hashValue[typ] = item[typ] ? item[typ].replace('#', ' ') : '';
                     }
 
                     if (
@@ -604,10 +556,7 @@ define(function (require) {
                         vendorLine.vendorSKU == hashValue.skuValue
                     )
                         matchedValue = 'Ingram-SKU';
-                } else if (
-                    settings.isDell &&
-                    vendorLine.vendorSKU == item.dellQuoteNo
-                ) {
+                } else if (settings.isDell && vendorLine.vendorSKU == item.dellQuoteNo) {
                     matchedValue = 'DellQuoteNo';
                 }
 
@@ -617,10 +566,7 @@ define(function (require) {
                     orderLine.MATCHED_VALUE = matchedValue;
                 }
             } catch (err) {
-                vc2_util.log(logTitle, '[item_num.filter] !! error !!', [
-                    err,
-                    item
-                ]);
+                vc2_util.log(logTitle, '[item_num.filter] !! error !!', [err, item]);
                 returnValue = false;
                 // } finally {
                 // vc2_util.log(logTitle, ' matched ? ', matchedValue);
@@ -654,11 +600,7 @@ define(function (require) {
                                 LineColField.DH_MPN
                             ]
                         });
-                        Helper.log(
-                            logTitle,
-                            '*** fulfillment line ***',
-                            orderLine
-                        );
+                        Helper.log(logTitle, '*** fulfillment line ***', orderLine);
                     }
                 }
                 if (!orderLine) throw 'Order Line is missing';
@@ -672,30 +614,18 @@ define(function (require) {
                             var vendorLine = this;
 
                             // vc2_util.log(logTitle, '>> vendorLine', vendorLine);
-                            var matchedValue = VC_RecordLib.isVendorLineMatched(
-                                {
-                                    orderLine: orderLine,
-                                    vendorLine: vendorLine,
-                                    mainConfig:
-                                        option.mainConfig ||
-                                        option.mainCfg ||
-                                        null,
-                                    vendorConfig:
-                                        option.vendorConfig ||
-                                        option.vendorCfg ||
-                                        null,
-                                    isDandH: option.isDandH || null,
-                                    isIngram: option.isIngram || null,
-                                    ingramHashSpace:
-                                        option.ingramHashSpace || null
-                                }
-                            );
-                            if (matchedValue)
-                                vendorLine.MATCHEDBY = matchedValue;
+                            var matchedValue = VC_RecordLib.isVendorLineMatched({
+                                orderLine: orderLine,
+                                vendorLine: vendorLine,
+                                mainConfig: option.mainConfig || option.mainCfg || null,
+                                vendorConfig: option.vendorConfig || option.vendorCfg || null,
+                                isDandH: option.isDandH || null,
+                                isIngram: option.isIngram || null,
+                                ingramHashSpace: option.ingramHashSpace || null
+                            });
+                            if (matchedValue) vendorLine.MATCHEDBY = matchedValue;
 
-                            vendorLine.ship_qty = util.isString(
-                                vendorLine.ship_qty
-                            )
+                            vendorLine.ship_qty = util.isString(vendorLine.ship_qty)
                                 ? vc2_util.parseFloat(vendorLine.ship_qty)
                                 : vendorLine.ship_qty;
 
@@ -709,11 +639,7 @@ define(function (require) {
                         }
                     }
                 });
-                vc2_util.log(
-                    logTitle,
-                    '... matchingVendorLine: ',
-                    matchingVendorLine
-                );
+                vc2_util.log(logTitle, '... matchingVendorLine: ', matchingVendorLine);
                 if (!matchingVendorLine) throw 'No items matched!';
 
                 // matches more than once
@@ -734,12 +660,8 @@ define(function (require) {
                                 line_no: function (value) {
                                     var shipLine = vc2_util.parseFloat(value),
                                         poLine = orderLine.poline
-                                            ? vc2_util.parseFloat(
-                                                  orderLine.poline
-                                              )
-                                            : vc2_util.parseFloat(
-                                                  orderLine.line
-                                              );
+                                            ? vc2_util.parseFloat(orderLine.poline)
+                                            : vc2_util.parseFloat(orderLine.line);
 
                                     return shipLine == poLine;
                                 },
@@ -784,10 +706,7 @@ define(function (require) {
                         })
                     };
                     // vc2_util.log(logTitle, '... refine matches: ', matched);
-                    matchingVendorLine =
-                        matched.qtyLine ||
-                        matched.qtyFull ||
-                        matched.qtyPartial;
+                    matchingVendorLine = matched.qtyLine || matched.qtyFull || matched.qtyPartial;
                 }
 
                 returnValue = matchingVendorLine;
@@ -800,6 +719,169 @@ define(function (require) {
         },
         updateRecord: function (option) {}
     };
+
+    // line item matching
+    util.extend(VC_RecordLib, {
+        matchOrderLines: function (option) {
+            var logTitle = [LogTitle, 'matchOrderLines'].join('::'),
+                returnValue;
+
+            try {
+                var arrOrderLines = option.orderLines,
+                    arrVendorLines = option.vendorLines,
+                    orderRecord = option.record || option.recOrder;
+
+                if (vc2_util.isEmpty(arrOrderLines)) {
+                    if (!orderRecord) throw 'Missing record or order lines';
+
+                    arrOrderLines = VC_RecordLib.extractRecordLines({
+                        record: orderRecord,
+                        columns: ['item', 'quantity', 'rate'],
+                        findAll: true
+                    });
+                }
+                if (vc2_util.isEmpty(arrOrderLines)) throw 'Missing order lines';
+                if (vc2_util.isEmpty(arrVendorLines)) throw 'Missing vendor lines';
+
+                /// PREP the DATA ///
+                arrOrderLines.forEach(function (orderLine) {
+                    orderLine.quantity = vc2_util.forceInt(orderLine.quantity);
+                    orderLine.rate = vc2_util.forceFloat(orderLine.rate);
+
+                    orderLine.AVAILQTY = orderLine.quantity;
+                    orderLine.APPLIEDQTY = 0;
+                    return true;
+                });
+                arrVendorLines.forEach(function (vendorLine) {
+                    vendorLine.quantity = vc2_util.forceInt(vendorLine.quantity);
+                    vendorLine.rate = vc2_util.forceFloat(vendorLine.rate);
+
+                    vendorLine.AVAILQTY = vendorLine.quantity;
+                    vendorLine.APPLIEDQTY = 0;
+                    return true;
+                });
+
+                /// START the loop
+                var arrOutputLines = [];
+                // vc2_util.log(logTitle, '**** MATCHING ITEMS START **** ', {
+                //     orderLines: arrOrderLines,
+                //     vendorLines: arrVendorLines
+                //     // totalOrderLines: arrOrderLines.length,
+                //     // totalVendorLines: arrVendorLines.length
+                // });
+
+                arrVendorLines.forEach(function (vendorLine) {
+                    try {
+                        // look for required cols
+                        if (!vendorLine.itemId || !vendorLine.quantity) return;
+
+                        vendorLine.MATCHING = [];
+
+                        var matchingOrderLines = {
+                            // fully matched items
+                            fullyMatched:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        itemId: vendorLine.itemId,
+                                        quantity: vendorLine.quantity,
+                                        rate: vendorLine.rate,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) || [],
+                            // item rate match
+                            itemRate:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        itemId: vendorLine.itemId,
+                                        rate: vendorLine.rate,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) || [],
+                            // item qty
+                            itemQty:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        itemId: vendorLine.itemId,
+                                        quantity: vendorLine.quantity,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) || [],
+
+                            // just match the items
+                            itemOnly:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        itemId: vendorLine.itemId,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) || []
+                        };
+
+                        // try to distribute the AVAILQTY
+                        var fnQuantityDist = function (matchedOrderLine) {
+                            try {
+                                // vc2_util.log(logTitle, '.... order line: ', matchedOrderLine);
+                                if (matchedOrderLine.AVAILQTY <= 0) return; // skip if there are no AVAILQTY
+                                if (vendorLine.AVAILQTY <= 0) return; // skip if there are no AVAILQTY
+
+                                // var qtyRemaining÷
+                                var qtyToApply =
+                                    matchedOrderLine.AVAILQTY >= vendorLine.AVAILQTY
+                                        ? vendorLine.AVAILQTY // if the orderline can cover the entire vendorline
+                                        : matchedOrderLine.AVAILQTY; // just use up the orderline
+
+                                matchedOrderLine.AVAILQTY -= qtyToApply;
+                                matchedOrderLine.APPLIEDQTY += qtyToApply;
+
+                                vendorLine.APPLIEDQTY += qtyToApply;
+                                vendorLine.AVAILQTY -= qtyToApply;
+
+                                vendorLine.MATCHING.push(vc2_util.clone(matchedOrderLine));
+                            } catch (err) {
+                                vc2_util.logError(logTitle, err);
+                            }
+
+                            return true;
+                        };
+
+                        matchingOrderLines.fullyMatched.forEach(fnQuantityDist);
+                        matchingOrderLines.itemRate.forEach(fnQuantityDist);
+                        matchingOrderLines.itemQty.forEach(fnQuantityDist);
+                        matchingOrderLines.itemOnly.forEach(fnQuantityDist);
+                    } catch (match_error) {
+                        vc2_util.logError(logTitle, match_error);
+                    } finally {
+                        arrOutputLines.push(vendorLine);
+                    }
+
+                    return true;
+                });
+
+                returnValue = arrOutputLines;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
+
+            return returnValue;
+        }
+    });
 
     return VC_RecordLib;
 });

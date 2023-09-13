@@ -17,11 +17,7 @@
  * Script Name: CTC | PDF Macro Serials (SL)
  * Author: brianf@nscatalyst.com
  */
-define(['N/search', 'N/runtime', 'N/record'], function (
-    ns_search,
-    ns_runtime,
-    ns_record
-) {
+define(['N/search', 'N/runtime', 'N/record'], function (ns_search, ns_runtime, ns_record) {
     'use strict';
     var LogTitle = 'TPLMacro-Serials';
 
@@ -116,10 +112,7 @@ define(['N/search', 'N/runtime', 'N/record'], function (
                 })
             };
 
-            log.debug(
-                logTitle,
-                ' >> requestData:  ' + JSON.stringify(requestData)
-            );
+            log.debug(logTitle, ' >> requestData:  ' + JSON.stringify(requestData));
 
             var macroData = { serials: {} };
 
@@ -143,24 +136,16 @@ define(['N/search', 'N/runtime', 'N/record'], function (
                 var arrItemSerials = [],
                     arrSerials = [];
 
-                if (!arrSerialsResults || !arrSerialsResults.length)
-                    throw 'Empty result set';
+                if (!arrSerialsResults || !arrSerialsResults.length) throw 'Empty result set';
 
                 for (var i = 0, j = arrSerialsResults.length; i < j; i++) {
                     var serialData = {
-                        item: arrSerialsResults[i].getValue({
-                            name: 'custrecordserialitem'
-                        }),
-                        itemName: arrSerialsResults[i].getText({
-                            name: 'custrecordserialitem'
-                        }),
-                        serialno: arrSerialsResults[i].getValue({
-                            name: 'name'
-                        })
+                        item: arrSerialsResults[i].getValue({ name: 'custrecordserialitem' }),
+                        itemName: arrSerialsResults[i].getText({ name: 'custrecordserialitem' }),
+                        serialno: arrSerialsResults[i].getValue({ name: 'name' })
                     };
 
-                    if (Helper.inArray(serialData.serialno, arrSerials))
-                        continue;
+                    if (Helper.inArray(serialData.serialno, arrSerials)) continue;
 
                     arrSerials.push(serialData.serialno);
                     arrItemSerials.push(serialData);
@@ -190,11 +175,7 @@ define(['N/search', 'N/runtime', 'N/record'], function (
                     // value.replace(/&/gm, '&amp;');
                 }
 
-                macroValues.push(
-                    ['<#macro ', macroFld, '>', macroValue, '</#macro>'].join(
-                        ''
-                    )
-                );
+                macroValues.push(['<#macro ', macroFld, '>', macroValue, '</#macro>'].join(''));
             }
             ///////////////////////////////////////////
             // log.debug(logTitle, '>> macroValues: ' + JSON.stringify(macroValues));

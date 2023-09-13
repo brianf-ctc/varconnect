@@ -64,9 +64,7 @@ define([
             filters: [
                 ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.SFTP],
                 'AND',
-                paramConfigID
-                    ? ['internalid', 'anyof', paramConfigID]
-                    : ['isinactive', 'is', 'F']
+                paramConfigID ? ['internalid', 'anyof', paramConfigID] : ['isinactive', 'is', 'F']
                 // ['isinactive', 'is', 'F']
             ],
             columns: ['internalid', 'name', 'custrecord_vc_bc_connect_type']
@@ -85,8 +83,7 @@ define([
 
         log.debug(
             logTitle,
-            '>> Valid SFTP Configs : ' +
-                JSON.stringify([validVendorCfgName, validVendorCfg])
+            '>> Valid SFTP Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
         );
 
         return validVendorCfg;
@@ -101,10 +98,7 @@ define([
         });
 
         //get the vendor config details
-        log.audit(
-            logTitle,
-            '>> context.value: ' + JSON.stringify(context.value)
-        );
+        log.audit(logTitle, '>> context.value: ' + JSON.stringify(context.value));
 
         var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
@@ -171,10 +165,7 @@ define([
             var list = connection.list({
                 sort: ns_sftp.Sort.DATE_DESC
             });
-            log.audit(
-                logTitle,
-                '>> connectionList: ' + JSON.stringify(list.length)
-            );
+            log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));
 
             // create an array of files created in the last 90 days
             // if we already know about the file we'll ignore it in
@@ -183,19 +174,11 @@ define([
             var billFileSearch = ns_search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
-                    [
-                        'custrecord_ctc_vc_bill_integration',
-                        'anyof',
-                        context.value
-                    ],
+                    ['custrecord_ctc_vc_bill_integration', 'anyof', context.value],
                     'AND',
                     ['isinactive', 'is', 'F'],
                     'AND',
-                    [
-                        'formulanumeric: FLOOR({now}-{created})',
-                        'lessthanorequalto',
-                        '90'
-                    ]
+                    ['formulanumeric: FLOOR({now}-{created})', 'lessthanorequalto', '90']
                 ],
                 columns: [
                     ns_search.createColumn({
@@ -214,26 +197,17 @@ define([
                 var currentPage = pagedData.fetch(i);
 
                 currentPage.data.forEach(function (result) {
-                    existingFiles.push(
-                        result.getValue({ name: 'name', summary: 'GROUP' })
-                    );
+                    existingFiles.push(result.getValue({ name: 'name', summary: 'GROUP' }));
                 });
             }
-            log.audit(
-                logTitle,
-                '>> ..existing Files: ' + JSON.stringify(existingFiles.length)
-            );
+            log.audit(logTitle, '>> ..existing Files: ' + JSON.stringify(existingFiles.length));
 
             var currentFile,
                 addedFiles = [];
 
             for (i = 0; i <= list.length; i++) {
                 // log the file
-                if (i > 0)
-                    log.audit(
-                        logTitle,
-                        '******* File: ' + JSON.stringify(currentFile)
-                    );
+                if (i > 0) log.audit(logTitle, '******* File: ' + JSON.stringify(currentFile));
 
                 if (!list[i]) break;
                 currentFile = { data: list[i] };
@@ -247,8 +221,7 @@ define([
                     entry_function: configObj.entry_function,
                     ext: list[i].name.slice(-3),
                     ext_rgx:
-                        list[i].name.split('.') &&
-                        list[i].name.split('.').length > 1
+                        list[i].name.split('.') && list[i].name.split('.').length > 1
                             ? list[i].name.split('.').pop()
                             : '-no-ext-',
                     is90days: moment(list[i].lastModified).isSameOrAfter(
@@ -283,8 +256,7 @@ define([
                     var matchStr = new RegExp(paramBillFileName, 'ig');
 
                     if (!currentFile.data.name.match(matchStr)) {
-                        currentFile.skippedReason =
-                            'Not matching the bill file';
+                        currentFile.skippedReason = 'Not matching the bill file';
                         continue;
                     }
                 } else {
@@ -312,8 +284,7 @@ define([
 
             log.audit(
                 logTitle,
-                '-- added accounts: ' +
-                    JSON.stringify([addedFiles.length, addedFiles])
+                '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles])
             );
         } catch (error) {
             vc2_util.vcLog({
@@ -345,10 +316,7 @@ define([
                     myArr = lib_vendormap.dh_sftp(context.key, configObj);
                     break;
                 case 'wellsfargo_sftp':
-                    myArr = lib_vendormap.wellsfargo_sftp(
-                        context.key,
-                        configObj
-                    );
+                    myArr = lib_vendormap.wellsfargo_sftp(context.key, configObj);
                     break;
                 case 'synnex_sftp':
                     myArr = lib_vendormap.synnex_sftp(context.key, configObj);

@@ -12,13 +12,13 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/xml',
-    'N/search',
-    'N/https',
-    'N/record',
-    '../CTC_VC2_Constants.js'
-], function (ns_xml, ns_search, ns_https, ns_record, vc2_constant) {
+define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], function (
+    ns_xml,
+    ns_search,
+    ns_https,
+    ns_record,
+    vc2_constant
+) {
     function showVendorName() {
         var vendor = document.getElementById('inpt_vendors1').value;
         var ponum = document.getElementById('ponum').value;
@@ -30,18 +30,15 @@ define([
             if (vendor == 'Synnex') {
                 //alert("Starting Synnex")
                 ouputObj = handleSynnex(ponum);
-                msg.value =
-                    'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
+                msg.value = 'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
             } else if (vendor == 'D&H') {
                 //alert("Starting D&H")
                 ouputObj = handleDandH(ponum);
-                msg.value =
-                    'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
+                msg.value = 'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
             } else if (vendor == 'Tech Data') {
                 //alert("Starting Tech Data- TEST")
                 ouputObj = handleTechData(ponum);
-                msg.value =
-                    'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
+                msg.value = 'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
             } else if (vendor == 'Ingram Micro') {
                 //alert("Starting Ingram Micro")
                 ouputObj = handleIngramMicro(ponum);
@@ -53,8 +50,7 @@ define([
             } else if (vendor == 'Westcon') {
                 //alert("Starting Westcon")
                 ouputObj = handleWestcon(ponum);
-                msg.value =
-                    'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
+                msg.value = 'Retrieved XML:\n' + vkbeautify.xml(ouputObj.xmlString, 4);
             }
         } else alert('Please Select a vendor and enter a PO number');
     }
@@ -617,46 +613,32 @@ define([
         }
 
         if (company == 'Synnex') {
-            loginCreds.userName = cred.getValue({
-                fieldId: 'custrecord_vc_synnex_user'
-            });
+            loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_synnex_user' });
             loginCreds.password = cred
                 .getValue({ fieldId: 'custrecord_vc_synnex_pass' })
                 .replace('&', '&amp;');
-            loginCreds.customerNum = cred.getValue({
-                fieldId: 'custrecord_vc_synnex_customernum'
-            });
+            loginCreds.customerNum = cred.getValue({ fieldId: 'custrecord_vc_synnex_customernum' });
             return loginCreds;
         } else if (company == 'DandH') {
-            loginCreds.userName = cred.getValue({
-                fieldId: 'custrecord_vc_dandh_user'
-            });
+            loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_dandh_user' });
             loginCreds.password = cred
                 .getValue({ fieldId: 'custrecord_vc_dandh_pass' })
                 .replace('&', '&amp;');
             return loginCreds;
         } else if (company == 'IngramMicro') {
-            loginCreds.userName = cred.getValue({
-                fieldId: 'custrecord_vc_ingrammicro_user'
-            });
+            loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_ingrammicro_user' });
             loginCreds.password = cred
                 .getValue({ fieldId: 'custrecord_vc_ingrammicro_pass' })
                 .replace('&', '&amp;');
             return loginCreds;
         } else if (company == 'TechData') {
-            loginCreds.userName = cred.getValue({
-                fieldId: 'custrecord_vc_techdata_user'
-            });
+            loginCreds.userName = cred.getValue({ fieldId: 'custrecord_vc_techdata_user' });
             loginCreds.password = cred
                 .getValue({ fieldId: 'custrecord_vc_techdata_pass' })
                 .replace('&', '&amp;');
             log.debug({
                 title: 'TechData info',
-                details:
-                    'user = ' +
-                    loginCreds.userName +
-                    ' pass = ' +
-                    loginCreds.password
+                details: 'user = ' + loginCreds.userName + ' pass = ' + loginCreds.password
             });
 
             return loginCreds;
@@ -820,10 +802,7 @@ define([
                     }
                 }
                 // end comment  or <![CDATA[...]]> //
-                else if (
-                    ar[ix].search(/-->/) > -1 ||
-                    ar[ix].search(/\]>/) > -1
-                ) {
+                else if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1) {
                     str += ar[ix];
                     inComment = false;
                 }
@@ -843,40 +822,26 @@ define([
                     ar[ix].search(/<\//) == -1 &&
                     ar[ix].search(/\/>/) == -1
                 ) {
-                    str = !inComment
-                        ? (str += shift[deep++] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
-                else if (
-                    ar[ix].search(/<\w/) > -1 &&
-                    ar[ix].search(/<\//) > -1
-                ) {
-                    str = !inComment
-                        ? (str += shift[deep] + ar[ix])
-                        : (str += ar[ix]);
+                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) > -1) {
+                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // </elm> //
                 else if (ar[ix].search(/<\//) > -1) {
-                    str = !inComment
-                        ? (str += shift[--deep] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[--deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm/> //
                 else if (ar[ix].search(/\/>/) > -1) {
-                    str = !inComment
-                        ? (str += shift[deep] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // <? xml ... ?> //
                 else if (ar[ix].search(/<\?/) > -1) {
                     str += shift[deep] + ar[ix];
                 }
                 // xmlns //
-                else if (
-                    ar[ix].search(/xmlns\:/) > -1 ||
-                    ar[ix].search(/xmlns\=/) > -1
-                ) {
+                else if (ar[ix].search(/xmlns\:/) > -1 || ar[ix].search(/xmlns\=/) > -1) {
                     str += shift[deep] + ar[ix];
                 } else {
                     str += ar[ix];
@@ -891,10 +856,8 @@ define([
 
             if (typeof JSON === 'undefined') return text;
 
-            if (typeof text === 'string')
-                return JSON.stringify(JSON.parse(text), null, step);
-            if (typeof text === 'object')
-                return JSON.stringify(text, null, step);
+            if (typeof text === 'string') return JSON.stringify(JSON.parse(text), null, step);
+            if (typeof text === 'object') return JSON.stringify(text, null, step);
 
             return text; // text is not string nor object
         };
@@ -933,8 +896,7 @@ define([
 
         function isSubquery(str, parenthesisLevel) {
             return (
-                parenthesisLevel -
-                (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
+                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
             );
         }
 
@@ -1057,10 +1019,7 @@ define([
             var str = preserveComments
                 ? text
                 : text
-                      .replace(
-                          /\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g,
-                          ''
-                      )
+                      .replace(/\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g, '')
                       .replace(/[ \r\n\t]{1,}xmlns/g, ' xmlns');
             return str.replace(/>\s{0,}</g, '><');
         };
@@ -1074,10 +1033,7 @@ define([
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
             var str = preserveComments
                 ? text
-                : text.replace(
-                      /\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g,
-                      ''
-                  );
+                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
             return str
                 .replace(/\s{1,}/g, ' ')

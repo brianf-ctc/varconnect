@@ -17,11 +17,7 @@ define(['N/search', 'N/record'], function (search, record) {
         var rs = search
             .create({
                 type: 'customrecordserialnum',
-                filters: [
-                    ['name', 'is', serial],
-                    'and',
-                    ['custrecordserialitem', 'anyof', itemId]
-                ]
+                filters: [['name', 'is', serial], 'and', ['custrecordserialitem', 'anyof', itemId]]
             })
             .run()
             .getRange(0, 1);

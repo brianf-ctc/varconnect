@@ -18,10 +18,7 @@
     function _typeof(obj) {
         '@babel/helpers - typeof';
 
-        if (
-            typeof Symbol === 'function' &&
-            typeof Symbol.iterator === 'symbol'
-        ) {
+        if (typeof Symbol === 'function' && typeof Symbol.iterator === 'symbol') {
             _typeof = function (obj) {
                 return typeof obj;
             };
@@ -83,10 +80,7 @@
             var symbols = Object.getOwnPropertySymbols(object);
             if (enumerableOnly)
                 symbols = symbols.filter(function (sym) {
-                    return Object.getOwnPropertyDescriptor(
-                        object,
-                        sym
-                    ).enumerable;
+                    return Object.getOwnPropertyDescriptor(object, sym).enumerable;
                 });
             keys.push.apply(keys, symbols);
         }
@@ -103,10 +97,7 @@
                     _defineProperty(target, key, source[key]);
                 });
             } else if (Object.getOwnPropertyDescriptors) {
-                Object.defineProperties(
-                    target,
-                    Object.getOwnPropertyDescriptors(source)
-                );
+                Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
             } else {
                 ownKeys(Object(source)).forEach(function (key) {
                     Object.defineProperty(
@@ -145,10 +136,7 @@
         var n = Object.prototype.toString.call(o).slice(8, -1);
         if (n === 'Object' && o.constructor) n = o.constructor.name;
         if (n === 'Map' || n === 'Set') return Array.from(o);
-        if (
-            n === 'Arguments' ||
-            /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)
-        )
+        if (n === 'Arguments' || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n))
             return _arrayLikeToArray(o, minLen);
     }
 
@@ -167,9 +155,7 @@
     }
 
     function isArray(value) {
-        return !Array.isArray
-            ? getTag(value) === '[object Array]'
-            : Array.isArray(value);
+        return !Array.isArray ? getTag(value) === '[object Array]' : Array.isArray(value);
     } // Adapted from: https://github.com/lodash/lodash/blob/master/.internal/baseToString.js
 
     var INFINITY = 1 / 0;
@@ -225,10 +211,9 @@
     var EXTENDED_SEARCH_UNAVAILABLE = 'Extended search is not available';
     var LOGICAL_SEARCH_UNAVAILABLE = 'Logical search is not available';
     var INCORRECT_INDEX_TYPE = "Incorrect 'index' type";
-    var LOGICAL_SEARCH_INVALID_QUERY_FOR_KEY =
-        function LOGICAL_SEARCH_INVALID_QUERY_FOR_KEY(key) {
-            return 'Invalid value for key '.concat(key);
-        };
+    var LOGICAL_SEARCH_INVALID_QUERY_FOR_KEY = function LOGICAL_SEARCH_INVALID_QUERY_FOR_KEY(key) {
+        return 'Invalid value for key '.concat(key);
+    };
     var PATTERN_LENGTH_TOO_LARGE = function PATTERN_LENGTH_TOO_LARGE(max) {
         return 'Pattern length exceeds max of '.concat(max, '.');
     };
@@ -236,10 +221,7 @@
         return 'Missing '.concat(name, ' property in key');
     };
     var INVALID_KEY_WEIGHT_VALUE = function INVALID_KEY_WEIGHT_VALUE(key) {
-        return "Property 'weight' in key '".concat(
-            key,
-            "' must be a positive integer"
-        );
+        return "Property 'weight' in key '".concat(key, "' must be a positive integer");
     };
 
     var hasOwn = Object.prototype.hasOwnProperty;
@@ -401,13 +383,7 @@
         shouldSort: true,
         // Default sort function: sort by ascending score, ascending index
         sortFn: function sortFn(a, b) {
-            return a.score === b.score
-                ? a.idx < b.idx
-                    ? -1
-                    : 1
-                : a.score < b.score
-                ? -1
-                : 1;
+            return a.score === b.score ? (a.idx < b.idx ? -1 : 1) : a.score < b.score ? -1 : 1;
         }
     };
     var FuzzyOptions = {
@@ -453,10 +429,7 @@
     // Set to 3 decimals to reduce index size.
 
     function norm() {
-        var mantissa =
-            arguments.length > 0 && arguments[0] !== undefined
-                ? arguments[0]
-                : 3;
+        var mantissa = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 3;
         var cache = new Map();
         var m = Math.pow(10, mantissa);
         return {
@@ -481,10 +454,7 @@
 
     var FuseIndex = /*#__PURE__*/ (function () {
         function FuseIndex() {
-            var _ref =
-                    arguments.length > 0 && arguments[0] !== undefined
-                        ? arguments[0]
-                        : {},
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
                 _ref$getFn = _ref.getFn,
                 getFn = _ref$getFn === void 0 ? Config.getFn : _ref$getFn;
 
@@ -501,9 +471,7 @@
                 key: 'setSources',
                 value: function setSources() {
                     var docs =
-                        arguments.length > 0 && arguments[0] !== undefined
-                            ? arguments[0]
-                            : [];
+                        arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
                     this.docs = docs;
                 }
             },
@@ -511,9 +479,7 @@
                 key: 'setIndexRecords',
                 value: function setIndexRecords() {
                     var records =
-                        arguments.length > 0 && arguments[0] !== undefined
-                            ? arguments[0]
-                            : [];
+                        arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
                     this.records = records;
                 }
             },
@@ -523,9 +489,7 @@
                     var _this = this;
 
                     var keys =
-                        arguments.length > 0 && arguments[0] !== undefined
-                            ? arguments[0]
-                            : [];
+                        arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
                     this.keys = keys;
                     this._keysMap = {};
                     keys.forEach(function (key, idx) {
@@ -637,8 +601,7 @@
 
                                 while (stack.length) {
                                     var _stack$pop = stack.pop(),
-                                        nestedArrIndex =
-                                            _stack$pop.nestedArrIndex,
+                                        nestedArrIndex = _stack$pop.nestedArrIndex,
                                         _value = _stack$pop.value;
 
                                     if (!isDefined(_value)) {
@@ -689,10 +652,7 @@
         return FuseIndex;
     })();
     function createIndex(keys, docs) {
-        var _ref2 =
-                arguments.length > 2 && arguments[2] !== undefined
-                    ? arguments[2]
-                    : {},
+        var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
             _ref2$getFn = _ref2.getFn,
             getFn = _ref2$getFn === void 0 ? Config.getFn : _ref2$getFn;
 
@@ -705,10 +665,7 @@
         return myIndex;
     }
     function parseIndex(data) {
-        var _ref3 =
-                arguments.length > 1 && arguments[1] !== undefined
-                    ? arguments[1]
-                    : {},
+        var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             _ref3$getFn = _ref3.getFn,
             getFn = _ref3$getFn === void 0 ? Config.getFn : _ref3$getFn;
 
@@ -723,26 +680,18 @@
     }
 
     function computeScore(pattern) {
-        var _ref =
-                arguments.length > 1 && arguments[1] !== undefined
-                    ? arguments[1]
-                    : {},
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             _ref$errors = _ref.errors,
             errors = _ref$errors === void 0 ? 0 : _ref$errors,
             _ref$currentLocation = _ref.currentLocation,
-            currentLocation =
-                _ref$currentLocation === void 0 ? 0 : _ref$currentLocation,
+            currentLocation = _ref$currentLocation === void 0 ? 0 : _ref$currentLocation,
             _ref$expectedLocation = _ref.expectedLocation,
-            expectedLocation =
-                _ref$expectedLocation === void 0 ? 0 : _ref$expectedLocation,
+            expectedLocation = _ref$expectedLocation === void 0 ? 0 : _ref$expectedLocation,
             _ref$distance = _ref.distance,
-            distance =
-                _ref$distance === void 0 ? Config.distance : _ref$distance,
+            distance = _ref$distance === void 0 ? Config.distance : _ref$distance,
             _ref$ignoreLocation = _ref.ignoreLocation,
             ignoreLocation =
-                _ref$ignoreLocation === void 0
-                    ? Config.ignoreLocation
-                    : _ref$ignoreLocation;
+                _ref$ignoreLocation === void 0 ? Config.ignoreLocation : _ref$ignoreLocation;
 
         var accuracy = errors / pattern.length;
 
@@ -761,10 +710,7 @@
     }
 
     function convertMaskToIndices() {
-        var matchmask =
-            arguments.length > 0 && arguments[0] !== undefined
-                ? arguments[0]
-                : [];
+        var matchmask = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
         var minMatchCharLength =
             arguments.length > 1 && arguments[1] !== undefined
                 ? arguments[1]
@@ -801,24 +747,16 @@
     var MAX_BITS = 32;
 
     function search(text, pattern, patternAlphabet) {
-        var _ref =
-                arguments.length > 3 && arguments[3] !== undefined
-                    ? arguments[3]
-                    : {},
+        var _ref = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {},
             _ref$location = _ref.location,
-            location =
-                _ref$location === void 0 ? Config.location : _ref$location,
+            location = _ref$location === void 0 ? Config.location : _ref$location,
             _ref$distance = _ref.distance,
-            distance =
-                _ref$distance === void 0 ? Config.distance : _ref$distance,
+            distance = _ref$distance === void 0 ? Config.distance : _ref$distance,
             _ref$threshold = _ref.threshold,
-            threshold =
-                _ref$threshold === void 0 ? Config.threshold : _ref$threshold,
+            threshold = _ref$threshold === void 0 ? Config.threshold : _ref$threshold,
             _ref$findAllMatches = _ref.findAllMatches,
             findAllMatches =
-                _ref$findAllMatches === void 0
-                    ? Config.findAllMatches
-                    : _ref$findAllMatches,
+                _ref$findAllMatches === void 0 ? Config.findAllMatches : _ref$findAllMatches,
             _ref$minMatchCharLeng = _ref.minMatchCharLength,
             minMatchCharLength =
                 _ref$minMatchCharLeng === void 0
@@ -826,14 +764,10 @@
                     : _ref$minMatchCharLeng,
             _ref$includeMatches = _ref.includeMatches,
             includeMatches =
-                _ref$includeMatches === void 0
-                    ? Config.includeMatches
-                    : _ref$includeMatches,
+                _ref$includeMatches === void 0 ? Config.includeMatches : _ref$includeMatches,
             _ref$ignoreLocation = _ref.ignoreLocation,
             ignoreLocation =
-                _ref$ignoreLocation === void 0
-                    ? Config.ignoreLocation
-                    : _ref$ignoreLocation;
+                _ref$ignoreLocation === void 0 ? Config.ignoreLocation : _ref$ignoreLocation;
 
         if (pattern.length > MAX_BITS) {
             throw new Error(PATTERN_LENGTH_TOO_LARGE(MAX_BITS));
@@ -927,10 +861,7 @@
                 bitArr[j] = ((bitArr[j + 1] << 1) | 1) & charMatch; // Subsequent passes: fuzzy match
 
                 if (_i) {
-                    bitArr[j] |=
-                        ((lastBitArr[j + 1] | lastBitArr[j]) << 1) |
-                        1 |
-                        lastBitArr[j + 1];
+                    bitArr[j] |= ((lastBitArr[j + 1] | lastBitArr[j]) << 1) | 1 | lastBitArr[j + 1];
                 }
 
                 if (bitArr[j] & mask) {
@@ -952,10 +883,7 @@
                             break;
                         } // When passing `bestLocation`, don't exceed our current distance from `expectedLocation`.
 
-                        start = Math.max(
-                            1,
-                            2 * expectedLocation - bestLocation
-                        );
+                        start = Math.max(1, 2 * expectedLocation - bestLocation);
                     }
                 }
             } // No hope for a (better) match at greater error levels.
@@ -1009,31 +937,19 @@
         function BitapSearch(pattern) {
             var _this = this;
 
-            var _ref =
-                    arguments.length > 1 && arguments[1] !== undefined
-                        ? arguments[1]
-                        : {},
+            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$location = _ref.location,
-                location =
-                    _ref$location === void 0 ? Config.location : _ref$location,
+                location = _ref$location === void 0 ? Config.location : _ref$location,
                 _ref$threshold = _ref.threshold,
-                threshold =
-                    _ref$threshold === void 0
-                        ? Config.threshold
-                        : _ref$threshold,
+                threshold = _ref$threshold === void 0 ? Config.threshold : _ref$threshold,
                 _ref$distance = _ref.distance,
-                distance =
-                    _ref$distance === void 0 ? Config.distance : _ref$distance,
+                distance = _ref$distance === void 0 ? Config.distance : _ref$distance,
                 _ref$includeMatches = _ref.includeMatches,
                 includeMatches =
-                    _ref$includeMatches === void 0
-                        ? Config.includeMatches
-                        : _ref$includeMatches,
+                    _ref$includeMatches === void 0 ? Config.includeMatches : _ref$includeMatches,
                 _ref$findAllMatches = _ref.findAllMatches,
                 findAllMatches =
-                    _ref$findAllMatches === void 0
-                        ? Config.findAllMatches
-                        : _ref$findAllMatches,
+                    _ref$findAllMatches === void 0 ? Config.findAllMatches : _ref$findAllMatches,
                 _ref$minMatchCharLeng = _ref.minMatchCharLength,
                 minMatchCharLength =
                     _ref$minMatchCharLeng === void 0
@@ -1041,14 +957,10 @@
                         : _ref$minMatchCharLeng,
                 _ref$isCaseSensitive = _ref.isCaseSensitive,
                 isCaseSensitive =
-                    _ref$isCaseSensitive === void 0
-                        ? Config.isCaseSensitive
-                        : _ref$isCaseSensitive,
+                    _ref$isCaseSensitive === void 0 ? Config.isCaseSensitive : _ref$isCaseSensitive,
                 _ref$ignoreLocation = _ref.ignoreLocation,
                 ignoreLocation =
-                    _ref$ignoreLocation === void 0
-                        ? Config.ignoreLocation
-                        : _ref$ignoreLocation;
+                    _ref$ignoreLocation === void 0 ? Config.ignoreLocation : _ref$ignoreLocation;
 
             _classCallCheck(this, BitapSearch);
 
@@ -1227,10 +1139,7 @@
     // the appropriate `Searcher` instance
 
     function parse(query, options) {
-        var _ref3 =
-                arguments.length > 2 && arguments[2] !== undefined
-                    ? arguments[2]
-                    : {},
+        var _ref3 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
             _ref3$auto = _ref3.auto,
             auto = _ref3$auto === void 0 ? true : _ref3$auto;
 
@@ -1288,9 +1197,7 @@
     function computeScore$1(results, _ref) {
         var _ref$ignoreFieldNorm = _ref.ignoreFieldNorm,
             ignoreFieldNorm =
-                _ref$ignoreFieldNorm === void 0
-                    ? Config.ignoreFieldNorm
-                    : _ref$ignoreFieldNorm;
+                _ref$ignoreFieldNorm === void 0 ? Config.ignoreFieldNorm : _ref$ignoreFieldNorm;
         results.forEach(function (result) {
             var totalScore = 1;
             result.matches.forEach(function (_ref2) {
@@ -1344,20 +1251,12 @@
     }
 
     function format(results, docs) {
-        var _ref =
-                arguments.length > 2 && arguments[2] !== undefined
-                    ? arguments[2]
-                    : {},
+        var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
             _ref$includeMatches = _ref.includeMatches,
             includeMatches =
-                _ref$includeMatches === void 0
-                    ? Config.includeMatches
-                    : _ref$includeMatches,
+                _ref$includeMatches === void 0 ? Config.includeMatches : _ref$includeMatches,
             _ref$includeScore = _ref.includeScore,
-            includeScore =
-                _ref$includeScore === void 0
-                    ? Config.includeScore
-                    : _ref$includeScore;
+            includeScore = _ref$includeScore === void 0 ? Config.includeScore : _ref$includeScore;
 
         var transformers = [];
         if (includeMatches) transformers.push(transformMatches);
@@ -1381,10 +1280,7 @@
 
     var Fuse = /*#__PURE__*/ (function () {
         function Fuse(docs) {
-            var options =
-                arguments.length > 1 && arguments[1] !== undefined
-                    ? arguments[1]
-                    : {};
+            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
             var index = arguments.length > 2 ? arguments[2] : undefined;
 
             _classCallCheck(this, Fuse);
@@ -1474,9 +1370,7 @@
                 key: 'search',
                 value: function search(query) {
                     var _ref =
-                            arguments.length > 1 && arguments[1] !== undefined
-                                ? arguments[1]
-                                : {},
+                            arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                         _ref$limit = _ref.limit,
                         limit = _ref$limit === void 0 ? -1 : _ref$limit;
 

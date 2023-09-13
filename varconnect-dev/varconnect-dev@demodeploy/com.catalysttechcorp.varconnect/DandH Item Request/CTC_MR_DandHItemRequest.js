@@ -108,10 +108,7 @@ define([
      */
     function map(context) {
         var logTitle = [LogTitle, 'map'].join(':');
-        log.audit(
-            logTitle,
-            'item request: Map key: ' + context.key + '=' + context.value
-        );
+        log.audit(logTitle, 'item request: Map key: ' + context.key + '=' + context.value);
 
         var searchResult = JSON.parse(context.value);
         var subsidiary = searchResult.values.subsidiary.value;
@@ -149,18 +146,11 @@ define([
         // log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
 
         // try to lookup instead
-        var itemData = Helper.flatLookup({
-            type: 'item',
-            id: item,
-            columns: ['recordtype']
-        });
+        var itemData = Helper.flatLookup({ type: 'item', id: item, columns: ['recordtype'] });
         log.audit(logTitle, '>> item info: ' + JSON.stringify(itemData));
         itemRecordType = itemData.recordtype;
 
-        log.audit(
-            logTitle,
-            '>> item record type: ' + JSON.stringify([itemType, itemRecordType])
-        );
+        log.audit(logTitle, '>> item record type: ' + JSON.stringify([itemType, itemRecordType]));
 
         if (!itemRecordType) return;
 
@@ -181,9 +171,7 @@ define([
 
             if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
                 valToSave = itemNumbers.partNum;
-            else if (
-                itemNumbers.partNum.toUpperCase() == itemName.toUpperCase()
-            )
+            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
                 valToSave = itemNumbers.itemNum;
 
             values = {};
@@ -200,10 +188,7 @@ define([
                     });
                     log.debug(
                         logTitle,
-                        '>> updated ' +
-                            (isSerialItem ? 'SERIALIZED_' : '') +
-                            itemType +
-                            item
+                        '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item
                     );
                 } catch (error) {
                     log.error(logTitle, '## ERROR: ' + JSON.stringify(error));
@@ -303,10 +288,7 @@ define([
         if (!vendorConfig) {
             log.debug(
                 logTitle,
-                'No configuration set up for vendor ' +
-                    vendor +
-                    ' and subsidiary ' +
-                    subsidiary
+                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
         } else return vendorConfig;
     }
@@ -333,9 +315,7 @@ define([
             customerNo = vendorConfig.customerNo;
 
         if (!endpoint || !user || !password)
-            throw Error(
-                'Incomplete webservice information for ' + vendorConfig.vendor
-            );
+            throw Error('Incomplete webservice information for ' + vendorConfig.vendor);
     }
 
     function _checkDandHVendorConfig(options) {
@@ -473,22 +453,13 @@ define([
         });
 
         if (xmlDoc != null) {
-            var itemNode = ns_xml.XPath.select({
-                node: xmlDoc,
-                xpath: '//ITEM'
-            });
+            var itemNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
             if (itemNode != null && itemNode.length > 0) {
                 itemNum = vc2_util.getNodeTextContent(
-                    ns_xml.XPath.select({
-                        node: itemNode[0],
-                        xpath: 'VENDORITEMNO'
-                    })[0]
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
                 );
                 partNum = vc2_util.getNodeTextContent(
-                    ns_xml.XPath.select({
-                        node: itemNode[0],
-                        xpath: 'PARTNUM'
-                    })[0]
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
                 );
             }
         }

@@ -35,15 +35,7 @@ define([
     '../CTC_VC2_Lib_Utils',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (
-    ns_record,
-    ns_search,
-    ns_runtime,
-    vc2_constant,
-    vc2_util,
-    vc_maincfg,
-    vc_license
-) {
+], function (ns_record, ns_search, ns_runtime, vc2_constant, vc2_util, vc_maincfg, vc_license) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -57,18 +49,14 @@ define([
             try {
                 var currentScript = ns_runtime.getCurrentScript();
                 PARAM = {
-                    recordType: currentScript.getParameter(
-                        'custscript_vc_all_type'
-                    ),
+                    recordType: currentScript.getParameter('custscript_vc_all_type'),
                     recordId: currentScript.getParameter('custscript_vc_all_id')
                 };
                 vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
-                LogPrefix =
-                    '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+                LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!PARAM.recordType || !PARAM.recordId)
-                    throw 'Missing record details';
+                if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
                 var mainConfig = Helper.loadMainConfig();
                 vc2_util.log(logTitle, '>> mainConfig: ', mainConfig);
@@ -89,10 +77,7 @@ define([
                     }
                 });
 
-                var record = ns_record.load({
-                    type: PARAM.recordType,
-                    id: PARAM.recordId
-                });
+                var record = ns_record.load({ type: PARAM.recordType, id: PARAM.recordId });
                 if (!record) throw 'Invalid record/record type';
 
                 ///// GET RECORD INFO
@@ -113,12 +98,10 @@ define([
                     PARAM.recordType == ns_record.Type.SALES_ORDER
                         ? PARAM.recordId
                         : // creatdfrom is SO
-                        recordData.createdFromData.recordtype ==
-                          ns_record.Type.SALES_ORDER
+                        recordData.createdFromData.recordtype == ns_record.Type.SALES_ORDER
                         ? recordData.createdfrom
                         : // created from PO, and has createdfrom data
-                        recordData.createdFromData.recordtype ==
-                              ns_record.Type.PURCHASE_ORDER &&
+                        recordData.createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
                           recordData.createdFromData.createdfrom
                         ? recordData.createdFromData.createdfrom
                         : null;
@@ -168,17 +151,9 @@ define([
                                 sublistId: 'inventoryassignment'
                             });
 
-                            vc2_util.log(
-                                logTitle,
-                                '....// subLineCount: ',
-                                subLineCount
-                            );
+                            vc2_util.log(logTitle, '....// subLineCount: ', subLineCount);
 
-                            for (
-                                var subline = 0;
-                                subline < subLineCount;
-                                subline++
-                            ) {
+                            for (var subline = 0; subline < subLineCount; subline++) {
                                 var invData = {
                                     numRcpt: subRec.getSublistText({
                                         sublistId: 'inventoryassignment',
@@ -191,14 +166,8 @@ define([
                                         line: subline
                                     })
                                 };
-                                var serialNum =
-                                    invData.numRcpt || invData.numIssue;
-                                if (
-                                    !Helper.inArray(
-                                        serialNum,
-                                        lineData.serialNums
-                                    )
-                                )
+                                var serialNum = invData.numRcpt || invData.numIssue;
+                                if (!Helper.inArray(serialNum, lineData.serialNums))
                                     lineData.serialNums.push(serialNum);
                             }
                         }
@@ -213,10 +182,7 @@ define([
 
                     /////////////////////////
 
-                    if (
-                        !lineData.serialsUpdate ||
-                        !lineData.serialsUpdate.trim().length
-                    ) {
+                    if (!lineData.serialsUpdate || !lineData.serialsUpdate.trim().length) {
                         arrItems.push(lineData.item);
                     }
 
@@ -237,11 +203,7 @@ define([
                     filters: [
                         ['isinactive', 'is', 'F'],
                         'AND',
-                        [
-                            SERIAL_FLD.SALES_ORDER,
-                            'anyof',
-                            recordData.salesOrderId
-                        ],
+                        [SERIAL_FLD.SALES_ORDER, 'anyof', recordData.salesOrderId],
                         'AND',
                         [SERIAL_FLD.ITEM, 'anyof', arrItems]
                     ],
@@ -276,15 +238,9 @@ define([
 
                 var searchObj = ns_search.create(searchOption);
 
-                vc2_util.log(
-                    logTitle,
-                    '// Total Results: ',
-                    searchObj.runPaged().count
-                );
+                vc2_util.log(logTitle, '// Total Results: ', searchObj.runPaged().count);
 
-                var searchResults = Helper.searchAllPaged({
-                    searchObj: searchObj
-                });
+                var searchResults = Helper.searchAllPaged({ searchObj: searchObj });
                 var returnResults = [];
 
                 searchResults.forEach(function (result) {
@@ -293,40 +249,21 @@ define([
                         item: result.getValue({ name: SERIAL_FLD.ITEM }),
                         name: result.getValue({ name: SERIAL_FLD.NAME }),
                         invoice: result.getValue({ name: SERIAL_FLD.INVOICE }),
-                        salesorder: result.getValue({
-                            name: SERIAL_FLD.SALES_ORDER
-                        }),
-                        fulfillment: result.getValue({
-                            name: SERIAL_FLD.ITEM_FULFILLMENT
-                        })
+                        salesorder: result.getValue({ name: SERIAL_FLD.SALES_ORDER }),
+                        fulfillment: result.getValue({ name: SERIAL_FLD.ITEM_FULFILLMENT })
                     };
                     resultData.item = Helper.parseFloat(resultData.item);
                     vc2_util.log(logTitle, '.... results: ', resultData);
 
                     if (itemList[resultData.item]) {
-                        itemList[resultData.item].forEach(function (
-                            serialData
-                        ) {
+                        itemList[resultData.item].forEach(function (serialData) {
                             if (!serialData.quantity) return;
 
-                            if (
-                                serialData.serialNums &&
-                                serialData.serialNums.length
-                            ) {
-                                if (
-                                    !Helper.inArray(
-                                        resultData.name,
-                                        serialData.serialNums
-                                    )
-                                )
-                                    return;
+                            if (serialData.serialNums && serialData.serialNums.length) {
+                                if (!Helper.inArray(resultData.name, serialData.serialNums)) return;
                             }
 
-                            vc2_util.log(
-                                logTitle,
-                                '...// add to serial data: ',
-                                resultData
-                            );
+                            vc2_util.log(logTitle, '...// add to serial data: ', resultData);
 
                             returnResults.push(resultData);
                             serialData.quantity--;
@@ -337,19 +274,11 @@ define([
                     return true;
                 });
 
-                vc2_util.log(
-                    logTitle,
-                    '>> Total serials to update/create: ',
-                    returnResults
-                );
+                vc2_util.log(logTitle, '>> Total serials to update/create: ', returnResults);
 
                 return returnResults;
             } catch (error) {
-                vc2_util.log(
-                    logTitle,
-                    ' ## EXIT SCRIPT ## ',
-                    vc2_util.extractError(error)
-                );
+                vc2_util.log(logTitle, ' ## EXIT SCRIPT ## ', vc2_util.extractError(error));
                 return false;
             }
         },
@@ -361,13 +290,10 @@ define([
             var serialNumID;
             var currentScript = ns_runtime.getCurrentScript();
             PARAM = {
-                recordType: currentScript.getParameter(
-                    'custscript_vc_all_type'
-                ),
+                recordType: currentScript.getParameter('custscript_vc_all_type'),
                 recordId: currentScript.getParameter('custscript_vc_all_id')
             };
-            LogPrefix =
-                '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+            LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
             vc2_util.LogPrefix = LogPrefix;
 
             vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
@@ -401,13 +327,10 @@ define([
 
             var currentScript = ns_runtime.getCurrentScript();
             PARAM = {
-                recordType: currentScript.getParameter(
-                    'custscript_vc_all_type'
-                ),
+                recordType: currentScript.getParameter('custscript_vc_all_type'),
                 recordId: currentScript.getParameter('custscript_vc_all_id')
             };
-            LogPrefix =
-                '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+            LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
             vc2_util.LogPrefix = LogPrefix;
 
             vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
@@ -424,9 +347,7 @@ define([
             // if (reduceKeys && reduceKeys.length > 0) Helper.updateTransaction();
             log.audit(
                 logTitle,
-                LogPrefix +
-                    '// REDUCE keys processed' +
-                    JSON.stringify(reduceKeys)
+                LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys)
             );
 
             // update the sync
@@ -485,8 +406,7 @@ define([
         },
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (var i = arrValue.length - 1; i >= 0; i--)
-                if (stValue == arrValue[i]) break;
+            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
 
@@ -508,11 +428,7 @@ define([
             return arrData;
         },
         parseFloat: function (stValue) {
-            return stValue
-                ? parseFloat(
-                      stValue.toString().replace(/[^0-9.-]+/g, '') || '0'
-                  )
-                : 0;
+            return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
         },
         searchAllPaged: function (option) {
             var objSearch,
@@ -540,20 +456,12 @@ define([
                 if (!objSearch.filters) objSearch.filters = [];
                 if (!objSearch.columns) objSearch.columns = [];
 
-                if (option.filters)
-                    objSearch.filters = objSearch.filters.concat(
-                        option.filters
-                    );
-                if (option.filterExpression)
-                    objSearch.filterExpression = option.filterExpression;
-                if (option.columns)
-                    objSearch.columns = objSearch.columns.concat(
-                        option.columns
-                    );
+                if (option.filters) objSearch.filters = objSearch.filters.concat(option.filters);
+                if (option.filterExpression) objSearch.filterExpression = option.filterExpression;
+                if (option.columns) objSearch.columns = objSearch.columns.concat(option.columns);
 
                 var maxResults = option.maxResults || 0;
-                var pageSize =
-                    maxResults && maxResults <= 1000 ? maxResults : 1000;
+                var pageSize = maxResults && maxResults <= 1000 ? maxResults : 1000;
 
                 // run the search
                 var objPagedResults = objSearch.runPaged({
@@ -562,11 +470,7 @@ define([
                 // set the max results to the search length, if not defined;
                 maxResults = maxResults || objPagedResults.count;
 
-                for (
-                    var i = 0, j = objPagedResults.pageRanges.length;
-                    i < j;
-                    i++
-                ) {
+                for (var i = 0, j = objPagedResults.pageRanges.length; i < j; i++) {
                     var pagedResults = objPagedResults.fetch({
                         index: objPagedResults.pageRanges[i].index
                     });
@@ -584,11 +488,7 @@ define([
                     if (maxResults < 0) break;
                 }
             } catch (e) {
-                vc2_util.log(
-                    logTitle,
-                    ' ## ERROR ##: ',
-                    vc2_util.extractError(e)
-                );
+                vc2_util.log(logTitle, ' ## ERROR ##: ', vc2_util.extractError(e));
                 throw e.message;
             }
 

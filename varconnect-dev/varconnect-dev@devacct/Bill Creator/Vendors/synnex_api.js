@@ -1,5 +1,5 @@
 /**
- *@NApiVersion 2.1
+ *@NApiVersion 2.x
  */
 /**
  * Copyright (c) 2023
@@ -17,26 +17,24 @@
  *
  * Version    Date            Author           Remarks
  * 1.00       05/26/2023      raf               init
- *
+ * 2.0                        Aj                Fixed issues and changed the version
  */
 
 define(function (require) {
     //Native modules
-    const log = require('N/log');
-    const util = require('N/util');
-    const xml = require('N/xml');
-    const search = require('N/search');
+    var log = require('N/log');
+    var util = require('N/util');
+    var xml = require('N/xml');
+    var https = require('N/https');
+    var search = require('N/search');
 
     //Custom modules
-    const vc2_util = require('./../../CTC_VC2_Lib_Utils');
+    var vc2_util = require('./../../CTC_VC2_Lib_Utils');
 
     //Contants
-    const LOG_TITLE = 'synnex_api.js';
+    var LOG_TITLE = 'synnex_api.js';
 
-    //Script parameter definition
-    //Usage: PARAM_DEF = {parameter1:{id:'custcript_etc', optional:true}}
-    const PARAM_DEF = {};
-    const NodeType = {
+    var NodeType = {
         ELEMENT: xml.NodeType.ELEMENT_NODE, //1
         TEXT: xml.NodeType.TEXT_NODE, //3
         CDATA: xml.NodeType.CDATA_SECTION_NODE, //4
@@ -61,8 +59,7 @@ define(function (require) {
                             cdataChild = 0,
                             hasElementChild = false;
                         for (var n = xml.firstChild; n; n = n.nextSibling) {
-                            if (n.nodeType == NodeType.ELEMENT)
-                                hasElementChild = true;
+                            if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
                             else if (
                                 n.nodeType == NodeType.TEXT &&
                                 n.nodeValue.match(/[^ \f\n\r\t\v]/)
@@ -75,11 +72,7 @@ define(function (require) {
                             if (textChild < 2 && cdataChild < 2) {
                                 // structured element with evtl. a single text or/and cdata node ..
                                 X.removeWhite(xml);
-                                for (
-                                    var n = xml.firstChild;
-                                    n;
-                                    n = n.nextSibling
-                                ) {
+                                for (var n = xml.firstChild; n; n = n.nextSibling) {
                                     if (n.nodeType == NodeType.TEXT)
                                         // text node
                                         o['#text'] = X.escape(n.nodeValue);
@@ -89,37 +82,25 @@ define(function (require) {
                                     else if (o[n.nodeName]) {
                                         // multiple occurence of element ..
                                         if (o[n.nodeName] instanceof Array)
-                                            o[n.nodeName][
-                                                o[n.nodeName].length
-                                            ] = X.toObj(n);
-                                        else
-                                            o[n.nodeName] = [
-                                                o[n.nodeName],
-                                                X.toObj(n)
-                                            ];
+                                            o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
+                                        else o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
                                     } // first occurence of element..
                                     else o[n.nodeName] = X.toObj(n);
                                 }
                             } else {
                                 // mixed content
-                                if (!xml.attributes.length)
-                                    o = X.escape(X.innerXml(xml));
+                                if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
                                 else o['#text'] = X.escape(X.innerXml(xml));
                             }
                         } else if (textChild) {
                             // pure text
-                            if (!xml.attributes.length)
-                                o = X.escape(X.innerXml(xml));
+                            if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
                             else o['#text'] = X.escape(X.innerXml(xml));
                         } else if (cdataChild) {
                             // cdata
                             if (cdataChild > 1) o = X.escape(X.innerXml(xml));
                             else
-                                for (
-                                    var n = xml.firstChild;
-                                    n;
-                                    n = n.nextSibling
-                                )
+                                for (var n = xml.firstChild; n; n = n.nextSibling)
                                     o['#cdata'] = X.escape(n.nodeValue);
                         }
                     }
@@ -127,18 +108,13 @@ define(function (require) {
                 } else if (xml.nodeType == NodeType.DOCUMENT) {
                     // document.node
                     o = X.toObj(xml.documentElement);
-                } else
-                    log.debug(
-                        'xml2json',
-                        'unhandled node type: ' + xml.nodeType
-                    );
+                } else log.debug('xml2json', 'unhandled node type: ' + xml.nodeType);
                 return o;
             },
             toJson: function (o, name, ind) {
                 var json = name ? '"' + name + '"' : '';
                 if (o instanceof Array) {
-                    for (var i = 0, n = o.length; i < n; i++)
-                        o[i] = X.toJson(o[i], '', ind + '');
+                    for (var i = 0, n = o.length; i < n; i++) o[i] = X.toJson(o[i], '', ind + '');
                     json +=
                         (name ? ':[' : '[') +
                         (o.length > 1
@@ -148,21 +124,14 @@ define(function (require) {
                 } else if (o == null) json += (name && ':') + 'null';
                 else if (typeof o == 'object') {
                     var arr = [];
-                    for (var m in o)
-                        arr[arr.length] = X.toJson(o[m], m, ind + '');
+                    for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                     json +=
                         (name ? ':{' : '{') +
                         (arr.length > 1
-                            ? '' +
-                              ind +
-                              '' +
-                              arr.join(',' + ind + '') +
-                              '' +
-                              ind
+                            ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
                             : arr.join('')) +
                         '}';
-                } else if (typeof o == 'string')
-                    json += (name && ':') + '"' + o.toString() + '"';
+                } else if (typeof o == 'string') json += (name && ':') + '"' + o.toString() + '"';
                 else json += (name && ':') + o.toString();
                 return json;
             },
@@ -179,24 +148,19 @@ define(function (require) {
                                     ' ' +
                                     n.attributes[i].nodeName +
                                     '="' +
-                                    (
-                                        n.attributes[i].nodeValue || ''
-                                    ).toString() +
+                                    (n.attributes[i].nodeValue || '').toString() +
                                     '"';
                             if (n.firstChild) {
                                 s += '>';
-                                for (var c = n.firstChild; c; c = c.nextSibling)
-                                    s += asXml(c);
+                                for (var c = n.firstChild; c; c = c.nextSibling) s += asXml(c);
                                 s += '</' + n.nodeName + '>';
                             } else s += '/>';
-                        } else if (n.nodeType == NodeType.TEXT)
-                            s += n.nodeValue;
+                        } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
                         else if (n.nodeType == NodeType.CDATA)
                             s += '<![CDATA[' + n.nodeValue + ']]>';
                         return s;
                     };
-                    for (var c = node.firstChild; c; c = c.nextSibling)
-                        s += asXml(c);
+                    for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
                 }
                 return s;
             },
@@ -215,10 +179,7 @@ define(function (require) {
                 for (var n = e.firstChild; n; ) {
                     if (n.nodeType == NodeType.TEXT) {
                         // text node
-                        if (
-                            n.nodeValue &&
-                            !n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                        ) {
+                        if (n.nodeValue && !n.nodeValue.match(/[^ \f\n\r\t\v]/)) {
                             // pure whitespace text node
                             var nxt = n.nextSibling;
                             e.removeChild(n);
@@ -246,58 +207,66 @@ define(function (require) {
         return JSON.parse(jsonText);
     }
     function _getHeader() {
-        const headers = {
+        var headers = {
             Accept: '*/*',
             'Content-Type': 'application/xml'
         };
         return headers;
     }
-    function _getInvoiceDetails(
-        recordId,
-        tranid,
-        { url, user_id, user_pass, partner_id }
-    ) {
-        const headers = _getHeader();
-        const body = `<?xml version="1.0" encoding="UTF-8"?>
-        <SynnexB2B version="2.2">
-        <Credential>
-        <UserID>${user_id}</UserID>
-        <Password>${user_pass}</Password>
-        </Credential>
-        <InvoiceRequest>
-        <CustomerNumber>${partner_id}</CustomerNumber>
-        <PONumber>${tranid}</PONumber>
-        </InvoiceRequest> 
-        </SynnexB2B>`;
-        log.debug('Synnex', body);
-        log.debug('Synnex', url);
-        const response = vc2_util.sendRequest({
-            header: [LogTitle, 'Order Status'].join(' '),
-            recordId: recordId,
-            method: 'POST',
-            doRetry: true,
-            maxRetry: 3,
-            body
-        });
+    function _getInvoiceDetails(recordId, tranid, config) {
+        var url = config.url;
+        var user_id = config.user_id;
+        var user_pass = config.user_pass;
+        var partner_id = config.partner_id;
 
-        return response.body;
+        var headers = _getHeader();
+        var body = '<?xml version="1.0" encoding="UTF-8"?>';
+        body += '<SynnexB2B version="2.2">';
+        body += '<Credential>';
+        body += '<UserID>' + user_id + '</UserID>';
+        body += '<Password>' + user_pass + '</Password>';
+        body += '</Credential>';
+        body += '<InvoiceRequest>';
+        body += '<CustomerNumber>' + partner_id + '</CustomerNumber>';
+        body += '<PONumber>' + tranid + '</PONumber>';
+        body += '</InvoiceRequest>';
+        body += '</SynnexB2B>';
+        var objResponse = https.post({
+            url: url,
+            headers: headers,
+            body: body
+        });
+        log.debug('_getInvoiceDetails | response', objResponse);
+        return objResponse.body;
     }
 
     function _extractInvoicesFromResponse(response) {
-        const returnArr = [];
+        log.debug('_extractInvoicesFromResponse | response', response);
+        var returnArr = [];
 
-        const xmlObj = xml.Parser.fromString(response);
-        const xmlInvoice = xml.XPath.select({
+        var xmlObj = xml.Parser.fromString(response);
+        var xmlInvoice = xml.XPath.select({
             node: xmlObj,
-            xpath: '//SynnexB2B/Invoice'
+            xpath: '//SynnexB2B/InvoiceResponse/Invoice'
         });
 
-        for (let i = 0; i < xmlInvoice.length; i++) {
-            let jsonObj = _xml2json(xmlInvoice[i], '');
-            let invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
+        var xmlInvoiceResponse = xml.XPath.select({
+            node: xmlObj,
+            xpath: '//SynnexB2B/InvoiceResponse'
+        });
 
-            let myObj = {
-                po: invoiceData.CustomerPONumber,
+        var stPoNumber = '';
+        if (Array.isArray(xmlInvoiceResponse) && typeof xmlInvoiceResponse[0] !== 'undefined') {
+            var objInvoiceResponse = _xml2json(xmlInvoiceResponse[0]);
+            stPoNumber = objInvoiceResponse['InvoiceResponse'].CustomerPONumber;
+        }
+
+        for (var i = 0; i < xmlInvoice.length; i++) {
+            var jsonObj = _xml2json(xmlInvoice[i], '');
+            var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
+
+            var myObj = {
+                po: invoiceData.CustomerPONumber || stPoNumber,
                 date: invoiceData.InvoiceDate,
                 invoice: invoiceData.InvoiceNumber,
                 charges: {
@@ -315,12 +284,8 @@ define(function (require) {
             if (!util.isArray(invoiceData.Items.Item)) {
                 invoiceData.Items.Item = [invoiceData.Items.Item];
             }
-            for (
-                var ii = 0, jj = invoiceData.Items.Item.length;
-                ii < jj;
-                ii++
-            ) {
-                let itemData = invoiceData.Items.Item[ii];
+            for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
+                var itemData = invoiceData.Items.Item[ii];
 
                 myObj.lines.push({
                     processed: false,
@@ -340,16 +305,17 @@ define(function (require) {
     function processXml(recordId, config) {
         log.debug(LOG_TITLE, 'processXml');
         log.debug('Synnex', 'getOrderStatus');
-        const [tranid] = vc2_util.flatLookup({
+        var objPoRec = vc2_util.flatLookup({
             type: search.Type.PURCHASE_ORDER,
             id: recordId,
             columns: ['tranid']
         });
-        const response = _getInvoiceDetails(recordId, tranid, config);
+        var tranid = objPoRec.tranid;
+        var response = _getInvoiceDetails(recordId, tranid, config);
         return _extractInvoicesFromResponse(response);
     }
 
     return {
-        processXml
+        processXml: processXml
     };
 });

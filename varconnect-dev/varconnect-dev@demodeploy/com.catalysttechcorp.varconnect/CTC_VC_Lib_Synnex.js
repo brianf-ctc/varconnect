@@ -78,12 +78,8 @@ define([
                             '<?xml version="1.0" encoding="UTF-8" ?>' +
                             '<SynnexB2B version="2.2">' +
                             '<Credential>' +
-                            ('<UserID>' +
-                                CURRENT.vendorConfig.user +
-                                '</UserID>') +
-                            ('<Password>' +
-                                CURRENT.vendorConfig.password +
-                                '</Password>') +
+                            ('<UserID>' + CURRENT.vendorConfig.user + '</UserID>') +
+                            ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
                             '</Credential>' +
                             '<OrderStatusRequest>' +
                             ('<CustomerNumber>' +
@@ -126,13 +122,8 @@ define([
             )
                 throw 'Unable to fetch server response';
 
-            var xmlDoc = ns_xml.Parser.fromString({
-                text: request.RESPONSE.body
-            });
-            var errMsgNode = ns_xml.XPath.select({
-                node: xmlDoc,
-                xpath: '//ErrorDetail'
-            });
+            var xmlDoc = ns_xml.Parser.fromString({ text: request.RESPONSE.body });
+            var errMsgNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorDetail' });
             if (!vc2_util.isEmpty(errMsgNode)) throw errMsgNode[0].textContent;
 
             return returnValue;
@@ -146,22 +137,16 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
-                returnValue = this.processResponse({
-                    xmlResponse: respOrderStatus
-                });
+                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;
@@ -175,17 +160,13 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {
@@ -210,59 +191,30 @@ define([
                     ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' })
                 );
 
-                if (
-                    vc2_util.inArray(
-                        orderCode.toUpperCase(),
-                        LibSynnexAPI.SkippedStatus
-                    )
-                )
+                if (vc2_util.inArray(orderCode.toUpperCase(), LibSynnexAPI.SkippedStatus))
                     throw 'Order is' + orderCode;
 
-                var arrItemsNode = ns_xml.XPath.select({
-                    node: xmlDoc,
-                    xpath: '//Item'
-                });
-                if (!arrItemsNode || !arrItemsNode.length)
-                    throw 'XML: Missing Item Details';
+                var arrItemsNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//Item' });
+                if (!arrItemsNode || !arrItemsNode.length) throw 'XML: Missing Item Details';
 
                 for (var i = 0, j = arrItemsNode.length; i < j; i++) {
                     var itemNode = arrItemsNode[i];
 
                     var orderItem = {
-                        line_num:
-                            itemNode.getAttribute({ name: 'lineNumber' }) ||
-                            'NA',
-                        item_num:
-                            Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
+                        line_num: itemNode.getAttribute({ name: 'lineNumber' }) || 'NA',
+                        item_num: Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
                         vendorSKU: Helper.getNodeValue(itemNode, 'SKU') || 'NA',
-                        order_num:
-                            Helper.getNodeValue(itemNode, 'OrderNumber') ||
-                            'NA',
+                        order_num: Helper.getNodeValue(itemNode, 'OrderNumber') || 'NA',
                         order_status:
-                            Helper.getNodeValue(
-                                itemNode.parentNode.parentNode,
-                                'Code'
-                            ) || 'NA',
-                        line_status:
-                            Helper.getNodeValue(itemNode, 'Code') || 'NA',
+                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'Code') || 'NA',
+                        line_status: Helper.getNodeValue(itemNode, 'Code') || 'NA',
                         order_date:
-                            Helper.getNodeValue(
-                                itemNode.parentNode.parentNode,
-                                'PODatetime'
-                            ) || 'NA',
-                        order_eta:
-                            Helper.getNodeValue(itemNode, 'ETADate') || 'NA',
-                        ship_date:
-                            Helper.getNodeValue(itemNode, 'ShipDatetime') ||
+                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') ||
                             'NA',
-                        ship_qty:
-                            Helper.getNodeValue(itemNode, 'ShipQuantity') ||
-                            'NA',
-                        carrier:
-                            Helper.getNodeValue(
-                                itemNode,
-                                'ShipMethodDescription'
-                            ) || 'NA',
+                        order_eta: Helper.getNodeValue(itemNode, 'ETADate') || 'NA',
+                        ship_date: Helper.getNodeValue(itemNode, 'ShipDatetime') || 'NA',
+                        ship_qty: Helper.getNodeValue(itemNode, 'ShipQuantity') || 'NA',
+                        carrier: Helper.getNodeValue(itemNode, 'ShipMethodDescription') || 'NA',
                         is_shipped: false,
                         tracking_num: 'NA',
                         serial_num: 'NA'
@@ -315,10 +267,7 @@ define([
                         serialNumList = [];
 
                     for (var ii = 0, jj = packagesNode.length; ii < jj; ii++) {
-                        var trackingNo = Helper.getNodeValue(
-                            packagesNode[ii],
-                            'TrackingNumber'
-                        );
+                        var trackingNo = Helper.getNodeValue(packagesNode[ii], 'TrackingNumber');
                         // serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
                         vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
 
@@ -334,14 +283,8 @@ define([
                             xpath: 'SerialNo'
                         });
 
-                        for (
-                            var iii = 0, jjj = serialNodes.length;
-                            iii < jjj;
-                            iii++
-                        ) {
-                            var serialNo = vc2_util.getNodeTextContent(
-                                serialNodes[iii]
-                            );
+                        for (var iii = 0, jjj = serialNodes.length; iii < jjj; iii++) {
+                            var serialNo = vc2_util.getNodeTextContent(serialNodes[iii]);
                             vc2_util.log(logTitle, '// serialNo: ', serialNo);
 
                             serialNumList.push(serialNo);
@@ -376,11 +319,7 @@ define([
                             shippedDate <= new Date()
                         ]);
 
-                        if (
-                            shippedDate &&
-                            util.isDate(shippedDate) &&
-                            shippedDate <= new Date()
-                        )
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
                             orderItem.is_shipped = true;
                     }
 

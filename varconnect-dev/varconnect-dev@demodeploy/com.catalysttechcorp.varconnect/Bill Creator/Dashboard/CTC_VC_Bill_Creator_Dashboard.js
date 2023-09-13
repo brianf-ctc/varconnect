@@ -12,16 +12,14 @@
  * @NModuleScope Public
  * @NScriptType Suitelet
  */
-define([
-    'N/search',
-    'N/file',
-    '../Libraries/mustache',
-    '../../CTC_VC2_Lib_Utils'
-], function (ns_search, ns_file, Mustache, vc2_util) {
+define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'], function (
+    ns_search,
+    ns_file,
+    Mustache,
+    vc2_util
+) {
     var dashboardVersion = '-whit', // v20230709
-        dashboardHtmlFilename = ['dashboard', dashboardVersion, '.html'].join(
-            ''
-        ); // dashboard-whit.html
+        dashboardHtmlFilename = ['dashboard', dashboardVersion, '.html'].join(''); // dashboard-whit.html
     function onRequest(context) {
         var logTitle = 'BillCreator Dashboard';
         var data = {};
@@ -36,21 +34,9 @@ define([
         var s1 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
-                [
-                    'custrecord_ctc_vc_bill_due_date',
-                    'onorbefore',
-                    'weeksfromnow1'
-                ],
+                ['custrecord_ctc_vc_bill_due_date', 'onorbefore', 'weeksfromnow1'],
                 'AND',
-                [
-                    'custrecord_ctc_vc_bill_proc_status',
-                    'anyof',
-                    '1',
-                    '2',
-                    '4',
-                    '6',
-                    '7'
-                ],
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '6', '7'],
                 'AND',
                 ['isinactive', 'is', 'F']
             ],
@@ -100,11 +86,7 @@ define([
         var s5 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
-                [
-                    'custrecord_ctc_vc_bill_linked_po.status',
-                    'anyof',
-                    'PurchOrd:B'
-                ],
+                ['custrecord_ctc_vc_bill_linked_po.status', 'anyof', 'PurchOrd:B'],
                 'AND',
                 ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T'],
                 'AND',
@@ -118,14 +100,7 @@ define([
         var s6 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
-                [
-                    'custrecord_ctc_vc_bill_proc_status',
-                    'anyof',
-                    '1',
-                    '2',
-                    '4',
-                    '7'
-                ],
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '7'],
                 'AND',
                 ['isinactive', 'is', 'F']
             ],

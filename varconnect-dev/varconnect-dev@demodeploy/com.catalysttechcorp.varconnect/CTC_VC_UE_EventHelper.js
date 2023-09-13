@@ -59,11 +59,7 @@ define([
 
                 try {
                     var fldOrig = form.getField({ id: fieldId });
-                    if (
-                        !fldOrig ||
-                        !fldOrig.defaultValue ||
-                        fldOrig.defaultValue.length < 200
-                    )
+                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200)
                         return true;
 
                     var fldNew = form.addField({
@@ -117,10 +113,8 @@ define([
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
-                if (Current.eventType !== scriptContext.UserEventType.VIEW)
-                    return;
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE)
-                    return;
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, [
                     'custrecord_ctc_vc_bill_src',
@@ -153,17 +147,11 @@ define([
 
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE)
-                    return;
-                Helper.hideFields(scriptContext.form, [
-                    'custrecord_vc_bc_maincfg'
-                ]);
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                Helper.hideFields(scriptContext.form, ['custrecord_vc_bc_maincfg']);
 
-                if (Current.eventType !== scriptContext.UserEventType.VIEW)
-                    return;
-                Helper.displayAsInlineTextarea(scriptContext.form, [
-                    'custrecord_vc_bc_host_key'
-                ]);
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_vc_bc_host_key']);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -178,10 +166,8 @@ define([
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
-                if (Current.eventType !== scriptContext.UserEventType.VIEW)
-                    return;
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE)
-                    return;
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, [
                     'custrecord_ctc_vcsp_log_body'
@@ -198,8 +184,7 @@ define([
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE)
-                    return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
                 if (
                     !vc2_util.inArray(Current.eventType, [
                         scriptContext.UserEventType.VIEW,
@@ -211,10 +196,7 @@ define([
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 var mainCfg = vc_maincfg.getMainConfiguration();
-                log.audit(
-                    logTitle,
-                    '// Main Confg: ' + JSON.stringify(mainCfg)
-                );
+                log.audit(logTitle, '// Main Confg: ' + JSON.stringify(mainCfg));
                 if (!mainCfg) return;
 
                 var currentRecord = scriptContext.newRecord;
@@ -225,15 +207,10 @@ define([
                         fieldId: 'subsidiary'
                     })
                 });
-                log.audit(
-                    logTitle,
-                    '// vendorCfg:  ' + JSON.stringify(vendorCfg)
-                );
+                log.audit(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
 
                 if (!mainCfg.overridePONum) {
-                    Helper.hideFields(scriptContext.form, [
-                        'custbody_ctc_vc_override_ponum'
-                    ]);
+                    Helper.hideFields(scriptContext.form, ['custbody_ctc_vc_override_ponum']);
                 }
 
                 // VENDOR LINE INFO /////
@@ -273,19 +250,14 @@ define([
                     if (!vendorInfoJSON) continue;
                     hasVendorInfo = true;
                     scriptVendorInfo.push(
-                        'try{ fnVENDLINE("' +
-                            (line + 1) +
-                            '"); } catch(e){console.log(e);}'
+                        'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
                     );
                 }
                 scriptVendorInfo.push('});</script>');
                 fldVendorScr.defaultValue = scriptVendorInfo.join('');
 
                 try {
-                    if (
-                        !hasVendorInfo ||
-                        Current.eventType == scriptContext.UserEventType.EDIT
-                    )
+                    if (!hasVendorInfo || Current.eventType == scriptContext.UserEventType.EDIT)
                         sublistItem
                             .getField({ id: 'custcol_ctc_vc_vendor_info' })
                             .updateDisplayType({ displayType: 'HIDDEN' });

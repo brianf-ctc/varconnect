@@ -6,11 +6,7 @@
 /*global define: false Mustache: true*/
 
 (function defineMustache(global, factory) {
-    if (
-        typeof exports === 'object' &&
-        exports &&
-        typeof exports.nodeName !== 'string'
-    ) {
+    if (typeof exports === 'object' && exports && typeof exports.nodeName !== 'string') {
         factory(exports); // CommonJS
     } else if (typeof define === 'function' && define.amd) {
         define(['exports'], factory); // AMD
@@ -87,12 +83,9 @@
     };
 
     function escapeHtml(string) {
-        return String(string).replace(
-            /[&<>"'`=\/]/g,
-            function fromEntityMap(s) {
-                return entityMap[s];
-            }
-        );
+        return String(string).replace(/[&<>"'`=\/]/g, function fromEntityMap(s) {
+            return entityMap[s];
+        });
     }
 
     var whiteRe = /\s*/;
@@ -147,17 +140,14 @@
 
         var openingTagRe, closingTagRe, closingCurlyRe;
         function compileTags(tagsToCompile) {
-            if (typeof tagsToCompile === 'string')
-                tagsToCompile = tagsToCompile.split(spaceRe, 2);
+            if (typeof tagsToCompile === 'string') tagsToCompile = tagsToCompile.split(spaceRe, 2);
 
             if (!isArray(tagsToCompile) || tagsToCompile.length !== 2)
                 throw new Error('Invalid tags: ' + tagsToCompile);
 
             openingTagRe = new RegExp(escapeRegExp(tagsToCompile[0]) + '\\s*');
             closingTagRe = new RegExp('\\s*' + escapeRegExp(tagsToCompile[1]));
-            closingCurlyRe = new RegExp(
-                '\\s*' + escapeRegExp('}' + tagsToCompile[1])
-            );
+            closingCurlyRe = new RegExp('\\s*' + escapeRegExp('}' + tagsToCompile[1]));
         }
 
         compileTags(tags || mustache.tags);
@@ -172,11 +162,7 @@
             value = scanner.scanUntil(openingTagRe);
 
             if (value) {
-                for (
-                    var i = 0, valueLength = value.length;
-                    i < valueLength;
-                    ++i
-                ) {
+                for (var i = 0, valueLength = value.length; i < valueLength; ++i) {
                     chr = value.charAt(i);
 
                     if (isWhitespace(chr)) {
@@ -217,8 +203,7 @@
             }
 
             // Match the closing tag.
-            if (!scanner.scan(closingTagRe))
-                throw new Error('Unclosed tag at ' + scanner.pos);
+            if (!scanner.scan(closingTagRe)) throw new Error('Unclosed tag at ' + scanner.pos);
 
             token = [type, value, start, scanner.pos];
             tokens.push(token);
@@ -229,15 +214,10 @@
                 // Check section nesting.
                 openSection = sections.pop();
 
-                if (!openSection)
-                    throw new Error(
-                        'Unopened section "' + value + '" at ' + start
-                    );
+                if (!openSection) throw new Error('Unopened section "' + value + '" at ' + start);
 
                 if (openSection[1] !== value)
-                    throw new Error(
-                        'Unclosed section "' + openSection[1] + '" at ' + start
-                    );
+                    throw new Error('Unclosed section "' + openSection[1] + '" at ' + start);
             } else if (type === 'name' || type === '{' || type === '&') {
                 nonSpace = true;
             } else if (type === '=') {
@@ -250,9 +230,7 @@
         openSection = sections.pop();
 
         if (openSection)
-            throw new Error(
-                'Unclosed section "' + openSection[1] + '" at ' + scanner.pos
-            );
+            throw new Error('Unclosed section "' + openSection[1] + '" at ' + scanner.pos);
 
         return nestTokens(squashTokens(tokens));
     }
@@ -269,11 +247,7 @@
             token = tokens[i];
 
             if (token) {
-                if (
-                    token[0] === 'text' &&
-                    lastToken &&
-                    lastToken[0] === 'text'
-                ) {
+                if (token[0] === 'text' && lastToken && lastToken[0] === 'text') {
                     lastToken[1] += token[1];
                     lastToken[3] = token[3];
                 } else {
@@ -312,9 +286,7 @@
                     section = sections.pop();
                     section[5] = token[2];
                     collector =
-                        sections.length > 0
-                            ? sections[sections.length - 1][4]
-                            : nestedTokens;
+                        sections.length > 0 ? sections[sections.length - 1][4] : nestedTokens;
                     break;
                 default:
                     collector.push(token);
@@ -446,10 +418,7 @@
                         if (index === names.length - 1)
                             lookupHit =
                                 hasProperty(intermediateValue, names[index]) ||
-                                primitiveHasOwnProperty(
-                                    intermediateValue,
-                                    names[index]
-                                );
+                                primitiveHasOwnProperty(intermediateValue, names[index]);
 
                         intermediateValue = intermediateValue[names[index++]];
                     }
@@ -520,8 +489,7 @@
         var cacheKey = template + ':' + (tags || mustache.tags).join(':');
         var tokens = cache[cacheKey];
 
-        if (tokens == null)
-            tokens = cache[cacheKey] = parseTemplate(template, tags);
+        if (tokens == null) tokens = cache[cacheKey] = parseTemplate(template, tags);
 
         return tokens;
     };
@@ -570,25 +538,12 @@
             symbol = token[0];
 
             if (symbol === '#')
-                value = this.renderSection(
-                    token,
-                    context,
-                    partials,
-                    originalTemplate
-                );
+                value = this.renderSection(token, context, partials, originalTemplate);
             else if (symbol === '^')
-                value = this.renderInverted(
-                    token,
-                    context,
-                    partials,
-                    originalTemplate
-                );
-            else if (symbol === '>')
-                value = this.renderPartial(token, context, partials, tags);
-            else if (symbol === '&')
-                value = this.unescapedValue(token, context);
-            else if (symbol === 'name')
-                value = this.escapedValue(token, context);
+                value = this.renderInverted(token, context, partials, originalTemplate);
+            else if (symbol === '>') value = this.renderPartial(token, context, partials, tags);
+            else if (symbol === '&') value = this.unescapedValue(token, context);
+            else if (symbol === 'name') value = this.escapedValue(token, context);
             else if (symbol === 'text') value = this.rawValue(token);
 
             if (value !== undefined) buffer += value;
@@ -629,33 +584,17 @@
             typeof value === 'string' ||
             typeof value === 'number'
         ) {
-            buffer += this.renderTokens(
-                token[4],
-                context.push(value),
-                partials,
-                originalTemplate
-            );
+            buffer += this.renderTokens(token[4], context.push(value), partials, originalTemplate);
         } else if (isFunction(value)) {
             if (typeof originalTemplate !== 'string')
-                throw new Error(
-                    'Cannot use higher-order sections without the original template'
-                );
+                throw new Error('Cannot use higher-order sections without the original template');
 
             // Extract the portion of the original template that the section contains.
-            value = value.call(
-                context.view,
-                originalTemplate.slice(token[3], token[5]),
-                subRender
-            );
+            value = value.call(context.view, originalTemplate.slice(token[3], token[5]), subRender);
 
             if (value != null) buffer += value;
         } else {
-            buffer += this.renderTokens(
-                token[4],
-                context,
-                partials,
-                originalTemplate
-            );
+            buffer += this.renderTokens(token[4], context, partials, originalTemplate);
         }
         return buffer;
     };
@@ -671,32 +610,15 @@
         // Use JavaScript's definition of falsy. Include empty arrays.
         // See https://github.com/janl/mustache.js/issues/186
         if (!value || (isArray(value) && value.length === 0))
-            return this.renderTokens(
-                token[4],
-                context,
-                partials,
-                originalTemplate
-            );
+            return this.renderTokens(token[4], context, partials, originalTemplate);
     };
 
-    Writer.prototype.renderPartial = function renderPartial(
-        token,
-        context,
-        partials,
-        tags
-    ) {
+    Writer.prototype.renderPartial = function renderPartial(token, context, partials, tags) {
         if (!partials) return;
 
-        var value = isFunction(partials)
-            ? partials(token[1])
-            : partials[token[1]];
+        var value = isFunction(partials) ? partials(token[1]) : partials[token[1]];
         if (value != null)
-            return this.renderTokens(
-                this.parse(value, tags),
-                context,
-                partials,
-                value
-            );
+            return this.renderTokens(this.parse(value, tags), context, partials, value);
     };
 
     Writer.prototype.unescapedValue = function unescapedValue(token, context) {

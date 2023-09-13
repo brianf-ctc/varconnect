@@ -71,21 +71,16 @@ define(['./CTC_VC2_Constants'], function (vc2_constant) {
         switch (fieldId) {
             case vc2_constant.RECORD.MAIN_CONFIG.FIELD.PROCESS_DROPSHIPS:
                 fields = [
-                    vc2_constant.RECORD.MAIN_CONFIG.FIELD
-                        .CREATE_ITEM_FULFILLMENTS,
-                    vc2_constant.RECORD.MAIN_CONFIG.FIELD
-                        .IGNORE_DIRECT_SHIPS_DROPSHIPS,
-                    vc2_constant.RECORD.MAIN_CONFIG.FIELD
-                        .CREATE_SERIAL_DROPSHIPS
+                    vc2_constant.RECORD.MAIN_CONFIG.FIELD.CREATE_ITEM_FULFILLMENTS,
+                    vc2_constant.RECORD.MAIN_CONFIG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS,
+                    vc2_constant.RECORD.MAIN_CONFIG.FIELD.CREATE_SERIAL_DROPSHIPS
                 ];
                 break;
             case vc2_constant.RECORD.MAIN_CONFIG.FIELD.PROCESS_SPECIAL_ORDERS:
                 fields = [
                     vc2_constant.RECORD.MAIN_CONFIG.FIELD.CREATE_ITEM_RECEIPTS,
-                    vc2_constant.RECORD.MAIN_CONFIG.FIELD
-                        .IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS,
-                    vc2_constant.RECORD.MAIN_CONFIG.FIELD
-                        .CREATE_SERIAL_SPECIAL_ORDERS
+                    vc2_constant.RECORD.MAIN_CONFIG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS,
+                    vc2_constant.RECORD.MAIN_CONFIG.FIELD.CREATE_SERIAL_SPECIAL_ORDERS
                 ];
                 break;
         }

@@ -42,29 +42,20 @@ define(['./Bill Creator/Libraries/fuse.js'], function (Fuse) {
                 var arrItemList = scriptContext.list,
                     fieldKeys = scriptContext.keys,
                     searchValue = scriptContext.searchValue;
-                log.audit(
-                    logTitle,
-                    '>> scriptContext:  ' + JSON.stringify(scriptContext)
-                );
+                log.audit(logTitle, '>> scriptContext:  ' + JSON.stringify(scriptContext));
 
                 const fuseOption = {
                     includeScore: true,
                     threshold: 0.4,
                     keys: fieldKeys
                 };
-                log.audit(
-                    logTitle,
-                    '... fuseOption:  ' + JSON.stringify(fuseOption)
-                );
+                log.audit(logTitle, '... fuseOption:  ' + JSON.stringify(fuseOption));
 
                 const fuseObj = new Fuse(arrItemList, fuseOption);
                 log.audit(logTitle, '... fuseObj:  ' + JSON.stringify(fuseObj));
 
                 var fuseOutput = fuseObj.search(searchValue);
-                log.audit(
-                    logTitle,
-                    '... fuseOutput:  ' + JSON.stringify(fuseOutput)
-                );
+                log.audit(logTitle, '... fuseOutput:  ' + JSON.stringify(fuseOutput));
 
                 if (!fuseOutput.length) throw 'Empty search';
                 returnObj.match = fuseOutput[0].item;
@@ -73,10 +64,7 @@ define(['./Bill Creator/Libraries/fuse.js'], function (Fuse) {
                 log.error(logTitle, error);
                 returnObj = { status: 'error', message: error };
             } finally {
-                log.audit(
-                    logTitle,
-                    '/// returnObj:  ' + JSON.stringify(returnObj)
-                );
+                log.audit(logTitle, '/// returnObj:  ' + JSON.stringify(returnObj));
             }
 
             return returnObj;

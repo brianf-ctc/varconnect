@@ -63,16 +63,12 @@ define([
                 var generalPref = ns_config.load({
                     type: ns_config.Type.COMPANY_PREFERENCES
                 });
-                Current.dateFormat = generalPref.getValue({
-                    fieldId: 'DATEFORMAT'
-                });
+                Current.dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
             }
             return Current.dateFormat;
         },
         formatDate: function (date) {
-            return date
-                ? ns_format.format({ value: date, type: ns_format.Type.DATE })
-                : null;
+            return date ? ns_format.format({ value: date, type: ns_format.Type.DATE }) : null;
         },
         findMatchingOrderLine: function (option) {
             var logTitle = [LogTitle, 'findMatchingOrderLine'].join('::'),
@@ -90,12 +86,9 @@ define([
                     GlobalVar = vc2_constant.GLOBAL;
 
                 if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({
-                        record: record
-                    });
+                    orderLines = VC_RecordLib.extractRecordLines({ record: record });
                 }
-                if (vc2_util.isEmpty(vendorLine))
-                    throw ERROR_MSG.MISSING_VENDOR_LINE;
+                if (vc2_util.isEmpty(vendorLine)) throw ERROR_MSG.MISSING_VENDOR_LINE;
                 if (vc2_util.isEmpty(orderLines)) throw ERROR_MSG.MISSING_LINES;
 
                 var matchedLines = vc2_util.findMatching({
@@ -104,12 +97,8 @@ define([
                     filter: {
                         item_text: function (value) {
                             var orderLine = this;
-                            var skuValue =
-                                    orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
-                                dnhValue =
-                                    orderLine[
-                                        vc2_constant.FIELD.TRANSACTION.DH_MPN
-                                    ];
+                            var skuValue = orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                                dnhValue = orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN];
 
                             var matchedValue = null,
                                 returnValue = false;
@@ -127,19 +116,14 @@ define([
                     }
                 });
 
-                var orderLineMatch =
-                    matchedLines && matchedLines[0] ? matchedLines[0] : null;
+                var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
 
                 if (!matchedLines || !matchedLines.length) {
                     // lineValue.LINE_MATCH = false;
                     vendorLine.ORDER_LINE = null;
                     vc2_util.log(logTitle, '// no matching order line');
                 } else if (matchedLines.length > 1) {
-                    vc2_util.log(
-                        logTitle,
-                        '// multiple matches found: ',
-                        matchedLines.length
-                    );
+                    vc2_util.log(logTitle, '// multiple matches found: ', matchedLines.length);
                     // more than one matched line
                     var matching = {
                         qtyLine: vc2_util.findMatching({
@@ -149,9 +133,7 @@ define([
                                 // MATCHED: function (value) {
                                 //     return value !== true;
                                 // },
-                                quantity: vc2_util.parseFloat(
-                                    vendorLine.ship_qty
-                                ),
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty),
                                 line: !vc2_util.isEmpty(vendorLine.line_no)
                                     ? vendorLine.line_no - 1
                                     : -1
@@ -176,9 +158,7 @@ define([
                                 // MATCHED: function (value) {
                                 //     return value !== true;
                                 // },
-                                quantity: vc2_util.parseFloat(
-                                    vendorLine.ship_qty
-                                )
+                                quantity: vc2_util.parseFloat(vendorLine.ship_qty)
                             }
                         })
                     };
@@ -201,11 +181,9 @@ define([
             if (vendorLine.order_status && vendorLine.order_status != 'NA')
                 vendorStatus.push(vendorLine.order_status);
 
-            if (vendorLine.line_num)
-                vendorStatus.push('#' + vendorLine.line_num);
+            if (vendorLine.line_num) vendorStatus.push('#' + vendorLine.line_num);
             if (vendorLine.item_num) vendorStatus.push(vendorLine.item_num);
-            if (vendorLine.ship_qty)
-                vendorStatus.push('Qty:' + vendorLine.ship_qty);
+            if (vendorLine.ship_qty) vendorStatus.push('Qty:' + vendorLine.ship_qty);
 
             if (vendorLine.line_status && vendorLine.line_status != 'NA')
                 vendorStatus.push(vendorLine.line_status);
@@ -286,19 +264,14 @@ define([
                 }
             };
 
-            return (fnSetContent[type] || fnSetContent['TEXT']).call(
-                this,
-                value
-            );
+            return (fnSetContent[type] || fnSetContent['TEXT']).call(this, value);
         },
         cleanupOrderLines: function (option) {
             var logTitle = [LogTitle, 'cleanupOrderLines'].join('::'),
                 returnValue;
 
             try {
-                var lineCount = Current.PO_REC.getLineCount({
-                        sublistId: 'item'
-                    }),
+                var lineCount = Current.PO_REC.getLineCount({ sublistId: 'item' }),
                     hasLineUpdates = false;
 
                 for (line = 0; line < lineCount; line++) {
@@ -310,16 +283,14 @@ define([
                         updateLineValues = {};
 
                     for (var fld in orderLineData) {
-                        if (orderLineData[fld] == 'Duplicate Item')
-                            updateLineValues[fld] = ' ';
+                        if (orderLineData[fld] == 'Duplicate Item') updateLineValues[fld] = ' ';
                     }
 
                     if (!vc2_util.isEmpty(updateLineValues)) {
-                        vc2_util.log(
-                            logTitle,
-                            '// cleanup needed line data: ',
-                            [orderLineData, updateLineValues]
-                        );
+                        vc2_util.log(logTitle, '// cleanup needed line data: ', [
+                            orderLineData,
+                            updateLineValues
+                        ]);
 
                         updateLineValues.line = line;
                         vc2_record.updateLine({
@@ -393,8 +364,8 @@ define([
             LIST: [
                 'custcol_ctc_xml_dist_order_num',
                 'custcol_ctc_xml_date_order_placed',
-                'custcol_ctc_xml_ship_date',
-                'custcol_ctc_xml_carrier'
+                'custcol_ctc_xml_ship_date'
+                // 'custcol_ctc_xml_carrier'
                 // 'custcol_ctc_xml_tracking_num',
                 // 'custcol_ctc_xml_inb_tracking_num'
             ]
@@ -416,13 +387,7 @@ define([
         Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
 
-        LogPrefix = [
-            '[',
-            Current.PO_REC.type,
-            ':',
-            Current.PO_REC.id,
-            '] '
-        ].join('');
+        LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
         vc2_util.LogPrefix = LogPrefix;
 
         var isUpdatedPO = false,
@@ -430,19 +395,12 @@ define([
             mapLineOrderStatus = {};
 
         try {
-            if (!Current.PO_REC || Current.PO_REC == null)
-                throw ERROR_MSG.MISSING_PO;
+            if (!Current.PO_REC || Current.PO_REC == null) throw ERROR_MSG.MISSING_PO;
 
             var POData = {
-                bypassVC: Current.PO_REC.getValue({
-                    fieldId: 'custbody_ctc_bypass_vc'
-                }),
-                createdFromID: Current.PO_REC.getValue({
-                    fieldId: 'createdfrom'
-                }),
-                isDropPO: Current.PO_REC.getValue({
-                    fieldId: 'custbody_isdropshippo'
-                }),
+                bypassVC: Current.PO_REC.getValue({ fieldId: 'custbody_ctc_bypass_vc' }),
+                createdFromID: Current.PO_REC.getValue({ fieldId: 'createdfrom' }),
+                isDropPO: Current.PO_REC.getValue({ fieldId: 'custbody_isdropshippo' }),
                 DocNum: Current.PO_REC.getValue({ fieldId: 'tranid' })
             };
             var specialOrder = false;
@@ -451,7 +409,6 @@ define([
             returnValue.id = POData.createdFromID;
             if (POData.bypassVC) return returnValue;
 
-            // checkForDuplicateItems(po_record);
             Helper.getDateFormat();
 
             // extract lines from the PO
@@ -491,10 +448,7 @@ define([
 
                     if (!orderLineMatch) {
                         throw util.extend(ERROR_MSG.MATCH_NOT_FOUND, {
-                            details: [
-                                vendorLine.item_num,
-                                vendorLine.vendorSKU
-                            ].join(':')
+                            details: [vendorLine.item_num, vendorLine.vendorSKU].join(':')
                         });
                     }
 
@@ -517,33 +471,20 @@ define([
                         orderLineData: orderLineData
                     });
 
-                    var SHIP_FIELDS = [
-                        'ship_date',
-                        'tracking_num',
-                        'carrier',
-                        'serial_num'
-                    ];
+                    // var SHIP_FIELDS = ['ship_date', 'tracking_num', 'carrier', 'serial_num'];
+                    var SHIP_FIELDS = ['ship_date', 'tracking_num', 'serial_num'];
 
                     // loop thru the vendor columns
-                    for (
-                        var ii = 0, jj = MAPPING.vendorColumns.length;
-                        ii < jj;
-                        ii++
-                    ) {
+                    for (var ii = 0, jj = MAPPING.vendorColumns.length; ii < jj; ii++) {
                         var vendorCol = MAPPING.vendorColumns[ii];
 
                         if (vc2_util.inArray(vendorCol, SHIP_FIELDS)) {
                             // If DropShip and fulfillment is not enabled
                             if (
                                 Current.isDropPO &&
-                                (!Current.MainCFG.createIF ||
-                                    !Current.VendorCFG.processDropships)
+                                (!Current.MainCFG.createIF || !Current.VendorCFG.processDropships)
                             ) {
-                                vc2_util.log(
-                                    logTitle,
-                                    '..  skipping ship fields',
-                                    vendorCol
-                                );
+                                vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
                             }
 
@@ -552,11 +493,7 @@ define([
                                 (!Current.MainCFG.createIR ||
                                     !Current.VendorCFG.processSpecialOrders)
                             ) {
-                                vc2_util.log(
-                                    logTitle,
-                                    '..  skipping ship fields',
-                                    vendorCol
-                                );
+                                vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
                             }
                         }
@@ -567,24 +504,16 @@ define([
                             }),
                             vendorValue = vendorLine[vendorCol];
 
-                        for (
-                            var iii = 0, jjj = orderCols.length;
-                            iii < jjj;
-                            iii++
-                        ) {
+                        for (var iii = 0, jjj = orderCols.length; iii < jjj; iii++) {
                             var currLineCol = orderCols[iii],
                                 currLineVal = orderLineData[currLineCol],
-                                currLineText =
-                                    orderLineData[currLineCol + '_text'],
+                                currLineText = orderLineData[currLineCol + '_text'],
                                 vendorListValue,
                                 currListValue;
 
                             // undefined fix
                             if (currLineVal && util.isString(currLineVal))
-                                currLineVal = currLineVal.replace(
-                                    /undefined/gi,
-                                    '\n'
-                                );
+                                currLineVal = currLineVal.replace(/undefined/gi, '\n');
 
                             // set the new
                             var newValue = vendorValue;
@@ -596,12 +525,7 @@ define([
                             // }
 
                             /// LIST TYPE //////////////
-                            if (
-                                vc2_util.inArray(
-                                    currLineCol,
-                                    MAPPING.columnType.LIST
-                                )
-                            ) {
+                            if (vc2_util.inArray(currLineCol, MAPPING.columnType.LIST)) {
                                 // If currLineVal exists, is not equal to 'NA' or 'Duplicate Item',
                                 //      split it by new lines to create an array
                                 //      otherwise, set an empty array to currListValue
@@ -613,20 +537,13 @@ define([
                                         : [];
 
                                 // no change at all, if empty
-                                if (
-                                    vc2_util.isEmpty(newValue) ||
-                                    newValue == 'NA'
-                                )
-                                    continue;
+                                if (vc2_util.isEmpty(newValue) || newValue == 'NA') continue;
 
                                 // make the list unique
-                                currListValue =
-                                    vc2_util.uniqueArray(currListValue);
+                                currListValue = vc2_util.uniqueArray(currListValue);
 
                                 // if the new value is not yet, add it
-                                if (
-                                    !vc2_util.inArray(newValue, currListValue)
-                                ) {
+                                if (!vc2_util.inArray(newValue, currListValue)) {
                                     if (currLineCol == 'custcol_ctc_xml_eta') {
                                         currListValue.unshift(newValue); // custcol_ctc_xml_eta is a stack, place it on top
                                     } else {
@@ -634,9 +551,7 @@ define([
                                     }
                                 }
 
-                                newValue =
-                                    Helper.setContent(currListValue, 'TEXT') ||
-                                    'NA';
+                                newValue = Helper.setContent(currListValue, 'TEXT') || 'NA';
 
                                 // Check if the current line value is different from the new value
                                 if (orderLineData[currLineCol] != newValue) {
@@ -647,12 +562,7 @@ define([
                             /// BIG LIST TYPE //////////////
                             //   -  newValues can be comma-separated values
                             //   -  currentValues can be multiple entries
-                            else if (
-                                vc2_util.inArray(
-                                    currLineCol,
-                                    MAPPING.columnType.BIGLIST
-                                )
-                            ) {
+                            else if (vc2_util.inArray(currLineCol, MAPPING.columnType.BIGLIST)) {
                                 // create list for current value
                                 currListValue =
                                     currLineVal && currLineVal !== 'NA'
@@ -667,50 +577,35 @@ define([
 
                                 var newListValue = [],
                                     hasExceededLength = false;
-                                currListValue
-                                    .concat(vendorListValue)
-                                    .forEach(function (entree) {
-                                        if (hasExceededLength) return false;
+                                currListValue.concat(vendorListValue).forEach(function (entree) {
+                                    if (hasExceededLength) return false;
 
-                                        // do not include NA or Duplicate Item entrees
-                                        if (
-                                            vc2_util.inArray(entree, [
-                                                'NA',
-                                                'Duplicate Item',
-                                                MAXLEN.ERRORMSG
-                                            ])
-                                        )
-                                            return false;
+                                    // do not include NA or Duplicate Item entrees
+                                    if (
+                                        vc2_util.inArray(entree, [
+                                            'NA',
+                                            'Duplicate Item',
+                                            MAXLEN.ERRORMSG
+                                        ])
+                                    )
+                                        return false;
 
-                                        // do not include duplicates
-                                        if (
-                                            vc2_util.inArray(
-                                                entree,
-                                                newListValue
-                                            )
-                                        )
-                                            return false;
+                                    // do not include duplicates
+                                    if (vc2_util.inArray(entree, newListValue)) return false;
 
-                                        newListValue.push(entree);
+                                    newListValue.push(entree);
 
-                                        // if it already exceeded, add our error msg
-                                        if (
-                                            newListValue.join('\n').length >
-                                            MAXLEN.TEXTAREA - 50
-                                        ) {
-                                            hasExceededLength = true;
-                                            newListValue.pop();
-                                            newListValue.push(MAXLEN.ERRORMSG);
-                                        }
+                                    // if it already exceeded, add our error msg
+                                    if (newListValue.join('\n').length > MAXLEN.TEXTAREA - 50) {
+                                        hasExceededLength = true;
+                                        newListValue.pop();
+                                        newListValue.push(MAXLEN.ERRORMSG);
+                                    }
 
-                                        return true;
-                                    });
+                                    return true;
+                                });
 
-                                newValue =
-                                    Helper.setContent(
-                                        newListValue,
-                                        'TEXTAREA'
-                                    ) || 'NA';
+                                newValue = Helper.setContent(newListValue, 'TEXTAREA') || 'NA';
 
                                 // Check if the current line value is different from the new value
                                 if (orderLineData[currLineCol] != newValue) {
@@ -722,10 +617,7 @@ define([
                             //   -  newValues can be comma-separated values
                             //   -  currentValues can be multiple entries
                             else if (
-                                vc2_util.inArray(
-                                    currLineCol,
-                                    MAPPING.columnType.ORDERSTATUS
-                                )
+                                vc2_util.inArray(currLineCol, MAPPING.columnType.ORDERSTATUS)
                             ) {
                                 // create list for current value
                                 currListValue =
@@ -734,18 +626,12 @@ define([
                                         : [];
 
                                 // create list for vendor value
-                                vendorValue =
-                                    vendorValue && vendorValue != 'NA'
-                                        ? vendorValue
-                                        : '';
+                                vendorValue = vendorValue && vendorValue != 'NA' ? vendorValue : '';
 
                                 if (
                                     vendorValue &&
                                     vendorValue != 'NA' &&
-                                    !vc2_util.inArray(
-                                        vendorValue,
-                                        currListValue
-                                    )
+                                    !vc2_util.inArray(vendorValue, currListValue)
                                 ) {
                                     currListValue.push(vendorValue);
                                 }
@@ -767,16 +653,12 @@ define([
                                         return false;
 
                                     // do not include duplicates
-                                    if (vc2_util.inArray(value, newListValue))
-                                        return false;
+                                    if (vc2_util.inArray(value, newListValue)) return false;
 
                                     newListValue.push(value);
 
                                     // if it already exceeded, add our error msg
-                                    if (
-                                        newListValue.join('\n').length >
-                                        MAXLEN.TEXTAREA - 50
-                                    ) {
+                                    if (newListValue.join('\n').length > MAXLEN.TEXTAREA - 50) {
                                         hasExceededLength = true;
                                         newListValue.pop();
                                         newListValue.push(MAXLEN.ERRORMSG);
@@ -785,10 +667,7 @@ define([
                                     return true;
                                 });
 
-                                newValue = Helper.setContent(
-                                    newListValue,
-                                    'TEXTAREA'
-                                );
+                                newValue = Helper.setContent(newListValue, 'TEXTAREA');
 
                                 // Check if the current line value is different from the new value
                                 if (orderLineData[currLineCol] != newValue) {
@@ -797,18 +676,9 @@ define([
                             }
 
                             /// DATE COLUMN TYPE //////////////
-                            else if (
-                                vc2_util.inArray(
-                                    currLineCol,
-                                    MAPPING.columnType.DATE
-                                )
-                            ) {
+                            else if (vc2_util.inArray(currLineCol, MAPPING.columnType.DATE)) {
                                 // no change at all, if empty
-                                if (
-                                    vc2_util.isEmpty(newValue) ||
-                                    newValue == 'NA'
-                                )
-                                    continue;
+                                if (vc2_util.isEmpty(newValue) || newValue == 'NA') continue;
 
                                 newValue =
                                     vendorCol == 'order_eta'
@@ -820,10 +690,7 @@ define([
                                               dateString: vendorValue
                                           });
 
-                                if (
-                                    Helper.formatDate(currLineVal) !=
-                                    Helper.formatDate(newValue)
-                                )
+                                if (Helper.formatDate(currLineVal) != Helper.formatDate(newValue))
                                     updateLineValues[currLineCol] = newValue;
                             } else {
                                 currLineVal =
@@ -833,10 +700,7 @@ define([
                                         ? currLineVal
                                         : 'NA';
 
-                                newValue =
-                                    vendorValue && vendorValue !== 'NA'
-                                        ? vendorValue
-                                        : 'NA';
+                                newValue = vendorValue && vendorValue !== 'NA' ? vendorValue : 'NA';
 
                                 // for everything else, just overwrite if not the same value already
                                 if (orderLineData[currLineCol] != newValue)
@@ -844,11 +708,7 @@ define([
                             }
                         }
                     }
-                    vc2_util.log(
-                        logTitle,
-                        '...updateLineValues',
-                        updateLineValues
-                    );
+                    vc2_util.log(logTitle, '...updateLineValues', updateLineValues);
 
                     if (
                         !vc2_util.isEmpty(updateLineValues) ||
@@ -857,14 +717,13 @@ define([
                         // set the line to update
                         updateLineValues.line = orderLineMatch.line;
 
-                        updateLineValues[MAPPING.colVendorInfo] =
-                            Helper.setContent(
-                                Helper.buildLineVendorInfo(
-                                    orderLineData[MAPPING.colVendorInfo],
-                                    vendorLine
-                                ),
-                                'TEXTAREA'
-                            );
+                        updateLineValues[MAPPING.colVendorInfo] = Helper.setContent(
+                            Helper.buildLineVendorInfo(
+                                orderLineData[MAPPING.colVendorInfo],
+                                vendorLine
+                            ),
+                            'TEXTAREA'
+                        );
 
                         isUpdatedPO = true;
 
@@ -909,11 +768,7 @@ define([
             returnValue.id = null;
             returnValue.error = err;
         } finally {
-            vc2_util.log(
-                logTitle,
-                '###### UPDATE PO LINES: END ######',
-                returnValue
-            );
+            vc2_util.log(logTitle, '###### UPDATE PO LINES: END ######', returnValue);
         }
 
         return returnValue;
@@ -934,13 +789,8 @@ define([
         var lineData = option.lineData,
             orderLines = option.orderLines || Current.OrderLines,
             hashSpace =
-                option.ingramHashSpace || Current.MainCFG
-                    ? Current.MainCFG.ingramHashSpace
-                    : null,
-            xmlVendor =
-                option.xmlVendor || Current.VendorCFG
-                    ? Current.VendorCFG.xmlVendor
-                    : null;
+                option.ingramHashSpace || Current.MainCFG ? Current.MainCFG.ingramHashSpace : null,
+            xmlVendor = option.xmlVendor || Current.VendorCFG ? Current.VendorCFG.xmlVendor : null;
 
         Current.PO_REC = option.po_record || Current.PO_REC;
         lineData.vendorSKU = lineData.vendorSKU || lineData.item_num_alt;
@@ -950,10 +800,7 @@ define([
             GlobalVar = vc2_constant.GLOBAL;
 
         try {
-            if (
-                vc2_util.isEmpty(lineData.item_num) ||
-                lineData.item_num == 'NA'
-            )
+            if (vc2_util.isEmpty(lineData.item_num) || lineData.item_num == 'NA')
                 throw 'Item number is missing';
 
             var lineNotFound = false,
@@ -979,8 +826,7 @@ define([
                     // check for itemNum
                     lineData.item_num == lineItemValues.itemNum ||
                     // check for vendorSKU
-                    (lineData.vendorSKU &&
-                        lineData.vendorSKU == lineItemValues.skuName) ||
+                    (lineData.vendorSKU && lineData.vendorSKU == lineItemValues.skuName) ||
                     // check for dnh
                     (xmlVendor == VendorList.DandH &&
                         vc2_util.inArray(lineItemValues.dnhName, [
@@ -1002,11 +848,7 @@ define([
                     ])
                 ) {
                     // check for itemNum
-                    if (
-                        lineItemValues.itemNum.replace('#', ' ') ==
-                        lineData.item_num
-                    )
-                        break;
+                    if (lineItemValues.itemNum.replace('#', ' ') == lineData.item_num) break;
                     // check vendor SKUI
                     if (
                         lineData.vendorSKU &&
@@ -1034,8 +876,7 @@ define([
                     skuName: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL
                         ? Current.PO_REC.getSublistText({
                               sublistId: 'item',
-                              fieldId:
-                                  vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                              fieldId: vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                               line: i
                           })
                         : null,
@@ -1053,8 +894,7 @@ define([
                     // check for itemNum
                     lineData.item_num == lineItemValues.itemNum ||
                     // check for vendorSKU
-                    (lineData.vendorSKU &&
-                        lineData.vendorSKU == lineItemValues.skuName) ||
+                    (lineData.vendorSKU && lineData.vendorSKU == lineItemValues.skuName) ||
                     // check for dnh
                     (xmlVendor == VendorList.DandH &&
                         vc2_util.inArray(lineItemValues.dnhName, [
@@ -1076,11 +916,7 @@ define([
                     ])
                 ) {
                     // check for itemNum
-                    if (
-                        lineItemValues.itemNum.replace('#', ' ') ==
-                        lineData.item_num
-                    )
-                        break;
+                    if (lineItemValues.itemNum.replace('#', ' ') == lineData.item_num) break;
                     // check vendor SKUI
                     if (
                         lineData.vendorSKU &&
@@ -1108,23 +944,17 @@ define([
                 if (tempItemNum == lineData.item_num) break;
 
                 // check for vendorSKU
-                if (
-                    lineData.vendorSKU &&
-                    tempVendorSKU &&
-                    tempVendorSKU == lineData.vendorSKU
-                )
+                if (lineData.vendorSKU && tempVendorSKU && tempVendorSKU == lineData.vendorSKU)
                     break;
 
                 //Ingram Hash replacement
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    (Current.VendorCFG.xmlVendor ==
-                        VendorList.INGRAM_MICRO_V_ONE ||
+                    (Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO_V_ONE ||
                         Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO)
                 ) {
                     // check for itemNum
-                    if (lineData.item_num.replace('#', ' ') == tempItemNum)
-                        break;
+                    if (lineData.item_num.replace('#', ' ') == tempItemNum) break;
 
                     // check vendor SKUI
                     if (
@@ -1161,394 +991,6 @@ define([
         return returnValue;
     }
 
-    /**
-     * Sets column field value, appending if already set and not equal
-     * @param {obj} po_record the opened PO record
-     * @param {str} fieldID the internal id of the field to be updated
-     * @param {str} xmlVal the value to be set in the field
-     * @returns {*} void
-     */
-    function updateField(option) {
-        // po_record, fieldID, xmlVal) {
-        var po_record = option.po_record || Current.PO_REC,
-            fieldID = option.fieldID,
-            xmlVal = option.xmlVal;
-
-        var logTitle = [LogTitle, 'updateField'].join('::');
-        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        vc2_util.LogPrefix = LogPrefix;
-
-        var maxFieldLength = 290; // free form text fields have max length of 300 chars
-
-        var currentFieldValue = po_record.getCurrentSublistValue({
-            sublistId: 'item',
-            fieldId: fieldID
-        });
-
-        if (
-            currentFieldValue != null &&
-            currentFieldValue.length > 0 &&
-            currentFieldValue != 'NA'
-        ) {
-            if (
-                // fieldid is custcol_ctc_xml_carrier || custcol_ctc_vc_order_status OR
-                [
-                    'custcol_ctc_xml_carrier',
-                    'custcol_ctc_vc_order_status'
-                ].indexOf(fieldID) >= 0 ||
-                // newValue is not currentValue, and newValue is not NA
-                (currentFieldValue.indexOf(xmlVal) < 0 && xmlVal != 'NA')
-            ) {
-                var newFieldValue = null;
-                // some fields should just be overwritten
-                if (
-                    [
-                        'custcol_ctc_xml_carrier',
-                        'custcol_ctc_vc_order_status'
-                    ].indexOf(fieldID) >= 0
-                ) {
-                    // some fields should just be overwritten
-                    newFieldValue = xmlVal;
-                } else if (
-                    // some field values should stack instead of appending
-                    ['custcol_ctc_xml_eta'].indexOf(fieldID) >= 0
-                ) {
-                    newFieldValue = xmlVal + '\n' + currentFieldValue;
-                } else {
-                    newFieldValue = currentFieldValue + '\n' + xmlVal;
-                }
-
-                // if it exceeded 300
-                if (newFieldValue && newFieldValue.length > 300) {
-                    newFieldValue = newFieldValue.substr(0, maxFieldLength);
-                }
-
-                if (newFieldValue != currentFieldValue) {
-                    po_record.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: fieldID,
-                        value: newFieldValue
-                    });
-
-                    var returnedNewFieldValue =
-                        po_record.getCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: fieldID
-                        });
-
-                    if (
-                        !returnedNewFieldValue ||
-                        (returnedNewFieldValue != newFieldValue &&
-                            newFieldValue != xmlVal)
-                    ) {
-                        po_record.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: fieldID,
-                            value: xmlVal
-                        });
-                    }
-                }
-            }
-        } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
-            po_record.setCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: fieldID,
-                value: xmlVal
-            });
-        }
-    }
-
-    /**
-     * Sets column field list value, appending if already set and not equal
-     * @param {str} xmlVal the comma separated values to be set in the field
-     * @param {obj} po_record the opened PO record
-     * @param {str} fieldID the internal id of the field to be updated
-     * @returns {*} void
-     */
-    function updateFieldList(option) {
-        //(xmlNumbers, po_record, fieldID) {
-
-        var po_record = option.po_record || Current.PO_REC,
-            xmlNumbers = option.xmlNumbers || option.xmlnum,
-            fieldID = option.fieldID;
-
-        var logTitle = [LogTitle, 'updateFieldList'].join('::');
-        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        vc2_util.LogPrefix = LogPrefix;
-
-        var errorMsg = 'Maximum Field Length Exceeded';
-        var errorFound = false;
-        var maxFieldLength = 3950;
-
-        // split up the comma delimited line data into arrays for easier processing
-        if (xmlNumbers && xmlNumbers != null && xmlNumbers != undefined) {
-            var scannedNums = new Array();
-            if (typeof xmlNumbers == 'string')
-                scannedNums = xmlNumbers.split(',');
-            else scannedNums = xmlNumbers;
-            try {
-                var currentNumbers = po_record.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID
-                });
-
-                if (currentNumbers != null) {
-                    if (currentNumbers == 'NA' || (currentNumbers.length = 0)) {
-                        var newValue = xmlNumbers.replace(/[","]+/g, '\n');
-
-                        if (
-                            newValue &&
-                            newValue != null &&
-                            newValue != undefined
-                        )
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: newValue
-                            });
-
-                        if (fieldID == 'custcol_ctc_xml_ship_date') {
-                            var newDate = parseDate({ dateString: newValue });
-                            if (
-                                newDate &&
-                                newDate != null &&
-                                newDate != undefined
-                            )
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'custcol_ctc_vc_shipped_date',
-                                    value: newDate
-                                });
-                        }
-                    } else {
-                        /* remove \r chars */
-                        var newCurrent = currentNumbers.split('\r').join('');
-
-                        var newNumAdded = false;
-
-                        var currentNumbersList = Array();
-                        currentNumbersList = newCurrent.split('\n');
-
-                        /** check to see if the field already exceeds the max length **/
-                        if (
-                            currentNumbersList[
-                                currentNumbersList.length - 1
-                            ] === errorMsg
-                        )
-                            errorFound = true;
-
-                        if (!errorFound) {
-                            for (var j = 0; j < scannedNums.length; j++) {
-                                var numFound = false;
-                                for (
-                                    var x = 0;
-                                    x < currentNumbersList.length;
-                                    x++
-                                ) {
-                                    if (
-                                        currentNumbersList[x] == scannedNums[j]
-                                    ) {
-                                        numFound = true;
-                                        break;
-                                    }
-                                }
-                                if (!numFound && scannedNums[j] != 'NA') {
-                                    /* OLD  newCurrent += ',' + scannedNums[j]; */
-                                    newNumAdded = true;
-                                    if (
-                                        newCurrent.length +
-                                            scannedNums[j].length <
-                                        maxFieldLength
-                                    ) {
-                                        newCurrent += '\n' + scannedNums[j];
-                                        currentNumbersList.push(scannedNums[j]);
-                                    } else {
-                                        newCurrent += '\n' + errorMsg;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (
-                                newNumAdded &&
-                                newCurrent &&
-                                newCurrent != null &&
-                                newCurrent != undefined
-                            ) {
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: fieldID,
-                                    value: newCurrent
-                                });
-                                if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                    var newDate = parseDate({
-                                        dateString: newCurrent
-                                    });
-                                    if (
-                                        newDate &&
-                                        newDate != null &&
-                                        newDate != undefined
-                                    )
-                                        po_record.setCurrentSublistValue({
-                                            sublistId: 'item',
-                                            fieldId:
-                                                'custcol_ctc_vc_shipped_date',
-                                            value: newDate
-                                        });
-                                }
-                            } else if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                var newDate = parseDate({
-                                    dateString: currentNumbers
-                                        .split('\r')
-                                        .join('')
-                                });
-                                if (
-                                    newDate &&
-                                    newDate != null &&
-                                    newDate != undefined
-                                )
-                                    po_record.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'custcol_ctc_vc_shipped_date',
-                                        value: newDate
-                                    });
-                            }
-                        }
-                    }
-                } else {
-                    if (
-                        xmlNumbers.length <= maxFieldLength &&
-                        xmlNumbers != null &&
-                        xmlNumbers != undefined
-                    ) {
-                        po_record.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: fieldID,
-                            value: xmlNumbers.replace(/[","]+/g, '\n')
-                        });
-                        if (fieldID == 'custcol_ctc_xml_ship_date') {
-                            var newDate = parseDate({
-                                dateString: xmlNumbers.replace(/[","]+/g, '\n')
-                            });
-                            if (
-                                newDate &&
-                                newDate != null &&
-                                newDate != undefined
-                            )
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'custcol_ctc_vc_shipped_date',
-                                    value: newDate
-                                });
-                        }
-                    } else {
-                        var newCurrent = '';
-                        for (var i = 0; i < scannedNums.length; i++) {
-                            if (
-                                newCurrent.length + scannedNums[i].length >
-                                maxFieldLength
-                            ) {
-                                newCurrent += errorMsg;
-                                break;
-                            } else newCurrent += scannedNums[i] + '\n';
-                        }
-                        if (
-                            newCurrent &&
-                            newCurrent != null &&
-                            newCurrent != undefined
-                        ) {
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: newCurrent
-                            });
-                            if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                var newDate = parseDate({
-                                    dateString: newCurrent
-                                });
-                                if (
-                                    newDate &&
-                                    newDate != null &&
-                                    newDate != undefined
-                                )
-                                    po_record.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'custcol_ctc_vc_shipped_date',
-                                        value: newDate
-                                    });
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                vc2_util.logError(logTitle, err);
-            }
-        }
-    }
-
-    /**
-     * Checks for lines with duplicate items and sets the ctc fields in the duplicate lines to "Duplicate Item"
-     * @param {obj} po_record the opened PO record
-     * @returns {*} void
-     */
-    function checkForDuplicateItems(po_record) {
-        var logTitle = [LogTitle, 'checkForDuplicateItems'].join('::');
-
-        var lineItemCount = po_record.getLineCount({ sublistId: 'item' });
-        if (!lineItemCount || lineItemCount <= 0) return;
-
-        var a = [
-            'custcol_ctc_xml_dist_order_num',
-            'custcol_ctc_xml_date_order_placed',
-            'custcol_ctc_xml_eta',
-            'custcol_ctc_xml_serial_num',
-            'custcol_ctc_xml_carrier',
-            'custcol_ctc_xml_tracking_num',
-            'custcol_ctc_xml_ship_date'
-        ];
-
-        for (var line = 0; line < lineItemCount; line++) {
-            var tempItem = po_record.getSublistText({
-                sublistId: 'item',
-                fieldId: 'item',
-                line: line
-            });
-
-            for (var x = line + 1; x < lineItemCount; x++) {
-                var tempSubItem = po_record.getSublistText({
-                    sublistId: 'item',
-                    fieldId: vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
-                    line: x
-                });
-
-                if (tempItem == tempSubItem) {
-                    //Update XML fields with word DUPLICATE
-                    var tempItemDupeTest = po_record.getSublistText({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_xml_eta',
-                        line: x
-                    });
-
-                    if (tempItemDupeTest !== 'Duplicate Item') {
-                        var lineNum = po_record.selectLine({
-                            sublistId: 'item',
-                            line: x
-                        });
-                        a.forEach(function (fieldID) {
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: 'Duplicate Item'
-                            });
-                        });
-                        po_record.commitLine({
-                            sublistId: 'item'
-                        });
-                    }
-                }
-            }
-        }
-    }
-
     function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
 
@@ -1557,10 +999,7 @@ define([
 
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
-                var stringToProcess = dateString
-                    .replace(/-/g, '/')
-                    .replace(/\n/g, ' ')
-                    .split(' ');
+                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
                 var currentDate = new Date();
 
                 for (var i = 0; i < stringToProcess.length; i++) {
@@ -1574,16 +1013,11 @@ define([
                         // returnClosestDate gets date nearest current date vs default latest date
                         if (
                             option.returnClosestDate &&
-                            ((convertedDate >= currentDate &&
-                                convertedDate < date) ||
-                                (convertedDate < currentDate &&
-                                    convertedDate > date))
+                            ((convertedDate >= currentDate && convertedDate < date) ||
+                                (convertedDate < currentDate && convertedDate > date))
                         ) {
                             date = convertedDate;
-                        } else if (
-                            !option.returnClosestDate &&
-                            convertedDate > date
-                        ) {
+                        } else if (!option.returnClosestDate && convertedDate > date) {
                             date = convertedDate;
                         }
                     }
@@ -1604,9 +1038,7 @@ define([
 
             date = ns_format.format({
                 value: date,
-                type: Current.dateFormat
-                    ? Current.dateFormat
-                    : ns_format.Type.DATE
+                type: Current.dateFormat ? Current.dateFormat : ns_format.Type.DATE
             });
         }
 

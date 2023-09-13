@@ -108,17 +108,11 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
                     label: 'Name'
                 }),
                 search.createColumn({ name: 'scriptid', label: 'Script ID' }),
-                search.createColumn({
-                    name: 'custrecordserialitem',
-                    label: 'ItemNum'
-                })
+                search.createColumn({ name: 'custrecordserialitem', label: 'ItemNum' })
             ]
         });
         var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        log.debug(
-            'customrecordserialnumSearchObj result count',
-            searchResultCount
-        );
+        log.debug('customrecordserialnumSearchObj result count', searchResultCount);
 
         for (var x = 0; x < searchResultCount; x += 1000) {
             var rangeStart = x;

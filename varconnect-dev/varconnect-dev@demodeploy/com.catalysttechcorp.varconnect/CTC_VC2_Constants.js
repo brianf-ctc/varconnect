@@ -24,40 +24,32 @@ define(function (require) {
             ID: 'customrecord_ctc_vc_main_config',
             FIELD: {
                 ID: 'internalid',
-                SCHEDULED_FULFILLMENT_TEMPLATE:
-                    'custrecord_ctc_vc_sch_if_email_template',
-                SCHEDULED_FULFILLMENT_SENDER:
-                    'custrecord_ctc_vc_sch_if_email_sender',
+                SCHEDULED_FULFILLMENT_TEMPLATE: 'custrecord_ctc_vc_sch_if_email_template',
+                SCHEDULED_FULFILLMENT_SENDER: 'custrecord_ctc_vc_sch_if_email_sender',
                 SCHEDULED_FULFILLMENT_SEARCH: 'custrecord_ctc_vc_sch_if_search',
                 SERIAL_NO_FOLDER_ID: 'custrecord_ctc_vc_serial_folder_id',
                 PROCESS_DROPSHIPS: 'custrecord_ctc_vc_process_dropship',
-                PROCESS_SPECIAL_ORDERS:
-                    'custrecord_ctc_vc_process_special_order',
+                PROCESS_SPECIAL_ORDERS: 'custrecord_ctc_vc_process_special_order',
                 CREATE_ITEM_FULFILLMENTS: 'custrecord_ctc_vc_ds_create_if',
                 CREATE_ITEM_RECEIPTS: 'custrecord_ctc_vc_specord_create_ir',
-                IGNORE_DIRECT_SHIPS_DROPSHIPS:
-                    'custrecord_ctc_vc_ds_ignore_direct_ship',
-                IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS:
-                    'custrecord_ctc_vc_spo_ignore_direct_ship',
+                IGNORE_DIRECT_SHIPS_DROPSHIPS: 'custrecord_ctc_vc_ds_ignore_direct_ship',
+                IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS: 'custrecord_ctc_vc_spo_ignore_direct_ship',
                 CREATE_SERIAL_DROPSHIPS: 'custrecord_ctc_vc_ds_create_serial',
-                CREATE_SERIAL_SPECIAL_ORDERS:
-                    'custrecord_ctc_vc_spo_create_serial',
-                USE_INB_TRACKING_SPECIAL_ORDERS:
-                    'custrecord_ctc_vc_specord_inb_track_num',
+                CREATE_SERIAL_SPECIAL_ORDERS: 'custrecord_ctc_vc_spo_create_serial',
+                USE_INB_TRACKING_SPECIAL_ORDERS: 'custrecord_ctc_vc_specord_inb_track_num',
                 LICENSE: 'custrecord_ctc_vc_license',
                 LICENSE_TEXT: 'custrecord_ctc_vc_license_text',
                 COPY_SERIALS_INV: 'custrecord_ctc_vc_copy_serials_inv',
                 SERIAL_SCAN_UPDATE: 'custrecord_ctc_vc_serial_scan_update',
-                PRINT_SERIALS_TEMPLATE:
-                    'custrecord_ctc_vc_print_serial_template',
+                PRINT_SERIALS_TEMPLATE: 'custrecord_ctc_vc_print_serial_template',
                 INV_PRINT_SERIALS: 'custrecord_ctc_vc_print_serials',
                 MULTIPLE_INGRAM: 'custrecord_ctc_vc_multiple_ingram',
                 INGRAM_HASH_TO_SPACE: 'custrecord_ctc_vc_ingram_hash_to_space',
                 FULFILMENT_SEARCH: 'custrecord_ctc_vc_sch_if_search',
                 DEFAULT_BILL_FORM: 'custrecord_ctc_vc_bill_form',
                 DEFAULT_VENDOR_BILL_STATUS: 'custrecord_ctc_vc_bill_status',
-                ALLOWED_VARIANCE_AMOUNT_THRESHOLD:
-                    'custrecord_ctc_vc_bill_var_threshold',
+                ALLOWED_VARIANCE_AMOUNT_THRESHOLD: 'custrecord_ctc_vc_bill_var_threshold',
+                ALLOW_ADJUSTLINE: 'custrecord_ctc_vc_bill_var_allow_adjline',
                 VARIANCE_ON_TAX: 'custrecord_ctc_vc_bill_tax_var',
                 DEFAULT_TAX_ITEM: 'custrecord_ctc_vc_bill_tax_item',
                 DEFAULT_TAX_ITEM2: 'custrecord_ctc_vc_bill_tax_item2',
@@ -65,8 +57,7 @@ define(function (require) {
                 DEFAULT_SHIPPING_ITEM: 'custrecord_ctc_vc_bill_ship_item',
                 VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
                 DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
-                DISABLE_VENDOR_BILL_CREATION:
-                    'custrecord_ctc_vc_bill_is_disabled',
+                DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled',
                 OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num'
             }
         },
@@ -84,8 +75,7 @@ define(function (require) {
                 CUSTOMER_NO: 'custrecord_ctc_vc_customer_number',
                 XML_REQUEST: 'custrecord_ctc_vc_xml_req',
                 PROCESS_DROPSHIPS: 'custrecord_ctc_vc_process_dropship_vend',
-                PROCESS_SPECIAL_ORDERS:
-                    'custrecord_ctc_vc_process_spec_ord_vend',
+                PROCESS_SPECIAL_ORDERS: 'custrecord_ctc_vc_process_spec_ord_vend',
                 FULFILLMENT_PREFIX: 'custrecord_ctc_vc_prefix',
                 ACCESS_ENDPOINT: 'custrecord_ctc_vc_access_endpoint',
                 API_KEY: 'custrecord_ctc_vc_api_key',
@@ -265,8 +255,7 @@ define(function (require) {
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
         NO_PROCESS_DROPSHIP_SPECIALORD: {
-            message:
-                'Process DropShips and Process Special Orders is not enabled!',
+            message: 'Process DropShips and Process Special Orders is not enabled!',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
         MISSING_ORDERSTATUS_SEARCHID: {
@@ -446,6 +435,12 @@ define(function (require) {
             msg: 'PO is Closed',
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        EXCEED_THRESHOLD: {
+            code: 'EXCEED_THRESHOLD',
+            msg: 'Variance Total exceeded threshold',
+            status: Bill_Creator.Status.VARIANCE,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',

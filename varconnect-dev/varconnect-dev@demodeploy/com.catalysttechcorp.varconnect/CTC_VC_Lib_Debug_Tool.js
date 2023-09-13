@@ -87,23 +87,16 @@ define(function (require) {
 
         if (!vendorConfig) {
             log.debug(
-                'No configuration set up for vendor ' +
-                    vendor +
-                    ' and subsidiary ' +
-                    subsidiary
+                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
         } else return vendorConfig;
     }
 
     function showVendorName() {
         var xmlViewer = document.getElementById('custpage_xml_viewer_frame');
-        var xmlViewerDocument =
-            xmlViewer.contentDocument || xmlViewer.contentWindow.document;
-        xmlViewerDocument.getElementById('custpage_xml__viewer').style.display =
-            'none';
-        xmlViewerDocument.getElementById(
-            'custpage_json__viewer'
-        ).style.display = 'none';
+        var xmlViewerDocument = xmlViewer.contentDocument || xmlViewer.contentWindow.document;
+        xmlViewerDocument.getElementById('custpage_xml__viewer').style.display = 'none';
+        xmlViewerDocument.getElementById('custpage_json__viewer').style.display = 'none';
         var thisRecord = currentRecord.get();
         var xmlVendor = thisRecord.getValue({ fieldId: 'vendors' });
 
@@ -120,9 +113,7 @@ define(function (require) {
             });
             var elementIdToShow, elementIdToHide;
             if (!vendorConfig) {
-                alert(
-                    'Please Select a valid PO with vendor properly configured'
-                );
+                alert('Please Select a valid PO with vendor properly configured');
             } else {
                 jQuery('#custpage_xml__loader').show();
                 setTimeout(function () {
@@ -149,17 +140,14 @@ define(function (require) {
                                 console.log(
                                     'debug lib: ' +
                                         (processErr.name + '- ') +
-                                        (processErr.message +
-                                            '==\n' +
-                                            processErr.stack)
+                                        (processErr.message + '==\n' + processErr.stack)
                                 );
                             }
                             resolve(outputObj);
                         });
                         promiseResponse.then(function (outputObj) {
                             console.log(
-                                'debug lib: webservice return ' +
-                                    JSON.stringify(outputObj)
+                                'debug lib: webservice return ' + JSON.stringify(outputObj)
                             );
                             if (outputObj) {
                                 if (
@@ -172,195 +160,108 @@ define(function (require) {
                                         '\n<!--Tracking XML-->\n' +
                                         outputObj.trackxml;
                                     try {
-                                        xmlContent = vkbeautify.xml(
-                                            xmlContent,
-                                            4
-                                        );
+                                        xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(
-                                                xmlContent,
-                                                {
-                                                    language: 'xml'
-                                                }
-                                            ).value;
-                                        elementIdToShow =
-                                            'custpage_xml__viewer';
-                                        elementIdToHide =
-                                            'custpage_json__viewer';
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
+                                        elementIdToShow = 'custpage_xml__viewer';
+                                        elementIdToHide = 'custpage_json__viewer';
                                     } catch (parseErr) {
                                         xmlContent = JSON.stringify(outputObj);
-                                        xmlContent = vkbeautify.json(
-                                            xmlContent,
-                                            4
-                                        );
+                                        xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(
-                                                xmlContent,
-                                                {
-                                                    language: 'JSON'
-                                                }
-                                            ).value;
-                                        elementIdToShow =
-                                            'custpage_json__viewer';
-                                        elementIdToHide =
-                                            'custpage_xml__viewer';
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
+                                        elementIdToShow = 'custpage_json__viewer';
+                                        elementIdToHide = 'custpage_xml__viewer';
                                     }
                                 } else if (
+                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
+                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
                                     vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.ARROW ||
+                                        vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
                                     vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.DELL ||
+                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_API ||
                                     vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR
-                                            .SYNNEX_API ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR
-                                            .INGRAM_MICRO_API ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR
-                                            .INGRAM_MICRO_V_ONE
+                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_V_ONE
                                 ) {
                                     xmlContent = JSON.stringify(outputObj);
                                     try {
-                                        xmlContent = vkbeautify.json(
-                                            xmlContent,
-                                            4
-                                        );
+                                        xmlContent = vkbeautify.json(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(
-                                                xmlContent,
-                                                {
-                                                    language: 'JSON'
-                                                }
-                                            ).value;
-                                        else
-                                            xmlContent =
-                                                '<pre>' + xmlContent + '</pre>';
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'JSON'
+                                            }).value;
+                                        else xmlContent = '<pre>' + xmlContent + '</pre>';
 
-                                        elementIdToShow =
-                                            'custpage_json__viewer';
-                                        elementIdToHide =
-                                            'custpage_xml__viewer';
+                                        elementIdToShow = 'custpage_json__viewer';
+                                        elementIdToHide = 'custpage_xml__viewer';
                                     } catch (parseErr) {
-                                        xmlContent = vkbeautify.xml(
-                                            xmlContent,
-                                            4
-                                        );
+                                        xmlContent = vkbeautify.xml(xmlContent, 4);
                                         if (hljs)
-                                            xmlContent = hljs.highlight(
-                                                xmlContent,
-                                                {
-                                                    language: 'xml'
-                                                }
-                                            ).value;
-                                        else
-                                            xmlContent =
-                                                '<pre>' + xmlContent + '</pre>';
-                                        elementIdToShow =
-                                            'custpage_xml__viewer';
-                                        elementIdToHide =
-                                            'custpage_json__viewer';
+                                            xmlContent = hljs.highlight(xmlContent, {
+                                                language: 'xml'
+                                            }).value;
+                                        else xmlContent = '<pre>' + xmlContent + '</pre>';
+                                        elementIdToShow = 'custpage_xml__viewer';
+                                        elementIdToHide = 'custpage_json__viewer';
                                     }
                                 } else {
                                     xmlContent = outputObj;
                                     if (typeof xmlContent == 'string') {
                                         try {
-                                            xmlContent = vkbeautify.xml(
-                                                xmlContent,
-                                                4
-                                            );
+                                            xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(
-                                                    xmlContent,
-                                                    {
-                                                        language: 'xml'
-                                                    }
-                                                ).value;
-                                            else
-                                                xmlContent =
-                                                    '<pre>' +
-                                                    xmlContent +
-                                                    '</pre>';
-                                            elementIdToShow =
-                                                'custpage_xml__viewer';
-                                            elementIdToHide =
-                                                'custpage_json__viewer';
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
+                                            else xmlContent = '<pre>' + xmlContent + '</pre>';
+                                            elementIdToShow = 'custpage_xml__viewer';
+                                            elementIdToHide = 'custpage_json__viewer';
                                         } catch (parseErr) {
-                                            xmlContent =
-                                                JSON.stringify(outputObj);
-                                            xmlContent = vkbeautify.json(
-                                                xmlContent,
-                                                4
-                                            );
+                                            xmlContent = JSON.stringify(outputObj);
+                                            xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(
-                                                    xmlContent,
-                                                    {
-                                                        language: 'JSON'
-                                                    }
-                                                ).value;
-                                            else
-                                                xmlContent =
-                                                    '<pre>' +
-                                                    xmlContent +
-                                                    '</pre>';
-                                            elementIdToShow =
-                                                'custpage_json__viewer';
-                                            elementIdToHide =
-                                                'custpage_xml__viewer';
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
+                                            else xmlContent = '<pre>' + xmlContent + '</pre>';
+                                            elementIdToShow = 'custpage_json__viewer';
+                                            elementIdToHide = 'custpage_xml__viewer';
                                         }
                                     } else {
                                         xmlContent = JSON.stringify(outputObj);
                                         try {
-                                            xmlContent = vkbeautify.json(
-                                                xmlContent,
-                                                4
-                                            );
+                                            xmlContent = vkbeautify.json(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(
-                                                    xmlContent,
-                                                    {
-                                                        language: 'JSON'
-                                                    }
-                                                ).value;
-                                            elementIdToShow =
-                                                'custpage_json__viewer';
-                                            elementIdToHide =
-                                                'custpage_xml__viewer';
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'JSON'
+                                                }).value;
+                                            elementIdToShow = 'custpage_json__viewer';
+                                            elementIdToHide = 'custpage_xml__viewer';
                                         } catch (parseErr) {
-                                            xmlContent = vkbeautify.xml(
-                                                xmlContent,
-                                                4
-                                            );
+                                            xmlContent = vkbeautify.xml(xmlContent, 4);
                                             if (hljs)
-                                                xmlContent = hljs.highlight(
-                                                    xmlContent,
-                                                    {
-                                                        language: 'xml'
-                                                    }
-                                                ).value;
-                                            elementIdToShow =
-                                                'custpage_xml__viewer';
-                                            elementIdToHide =
-                                                'custpage_json__viewer';
+                                                xmlContent = hljs.highlight(xmlContent, {
+                                                    language: 'xml'
+                                                }).value;
+                                            elementIdToShow = 'custpage_xml__viewer';
+                                            elementIdToHide = 'custpage_json__viewer';
                                         }
                                     }
                                 }
-                                xmlViewerDocument.getElementById(
-                                    elementIdToShow
-                                ).style.display = '';
-                                xmlViewerDocument.getElementById(
-                                    elementIdToHide
-                                ).style.display = 'none';
+                                xmlViewerDocument.getElementById(elementIdToShow).style.display =
+                                    '';
+                                xmlViewerDocument.getElementById(elementIdToHide).style.display =
+                                    'none';
                             }
                             xmlViewerDocument.getElementById(
                                 elementIdToShow || 'custpage_xml__viewer'
                             ).style.display = '';
                             xmlViewerDocument.getElementById(
-                                [
-                                    elementIdToShow || 'custpage_xml__viewer',
-                                    '_content'
-                                ].join('')
+                                [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
                             ).innerHTML = xmlContent;
                         });
                     } finally {
@@ -459,10 +360,7 @@ define(function (require) {
         var QTask = function (task) {
             this.isDone = false;
             this.name =
-                task.name ||
-                ['taskName', queueList.length + 1, new Date().getTime()].join(
-                    '_'
-                );
+                task.name || ['taskName', queueList.length + 1, new Date().getTime()].join('_');
 
             this.markDone = function () {
                 this.isDone = true;
@@ -608,10 +506,7 @@ define(function (require) {
                     }
                 }
                 // end comment  or <![CDATA[...]]> //
-                else if (
-                    ar[ix].search(/-->/) > -1 ||
-                    ar[ix].search(/\]>/) > -1
-                ) {
+                else if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1) {
                     str += ar[ix];
                     inComment = false;
                 }
@@ -631,40 +526,26 @@ define(function (require) {
                     ar[ix].search(/<\//) == -1 &&
                     ar[ix].search(/\/>/) == -1
                 ) {
-                    str = !inComment
-                        ? (str += shift[deep++] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
-                else if (
-                    ar[ix].search(/<\w/) > -1 &&
-                    ar[ix].search(/<\//) > -1
-                ) {
-                    str = !inComment
-                        ? (str += shift[deep] + ar[ix])
-                        : (str += ar[ix]);
+                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) > -1) {
+                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // </elm> //
                 else if (ar[ix].search(/<\//) > -1) {
-                    str = !inComment
-                        ? (str += shift[--deep] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[--deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm/> //
                 else if (ar[ix].search(/\/>/) > -1) {
-                    str = !inComment
-                        ? (str += shift[deep] + ar[ix])
-                        : (str += ar[ix]);
+                    str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
                 }
                 // <? xml ... ?> //
                 else if (ar[ix].search(/<\?/) > -1) {
                     str += shift[deep] + ar[ix];
                 }
                 // xmlns //
-                else if (
-                    ar[ix].search(/xmlns\:/) > -1 ||
-                    ar[ix].search(/xmlns\=/) > -1
-                ) {
+                else if (ar[ix].search(/xmlns\:/) > -1 || ar[ix].search(/xmlns\=/) > -1) {
                     str += shift[deep] + ar[ix];
                 } else {
                     str += ar[ix];
@@ -679,10 +560,8 @@ define(function (require) {
 
             if (typeof JSON === 'undefined') return text;
 
-            if (typeof text === 'string')
-                return JSON.stringify(JSON.parse(text), null, step);
-            if (typeof text === 'object')
-                return JSON.stringify(text, null, step);
+            if (typeof text === 'string') return JSON.stringify(JSON.parse(text), null, step);
+            if (typeof text === 'object') return JSON.stringify(text, null, step);
 
             return text; // text is not string nor object
         };
@@ -721,8 +600,7 @@ define(function (require) {
 
         function isSubquery(str, parenthesisLevel) {
             return (
-                parenthesisLevel -
-                (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
+                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
             );
         }
 
@@ -845,10 +723,7 @@ define(function (require) {
             var str = preserveComments
                 ? text
                 : text
-                      .replace(
-                          /\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g,
-                          ''
-                      )
+                      .replace(/\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g, '')
                       .replace(/[ \r\n\t]{1,}xmlns/g, ' xmlns');
             return str.replace(/>\s{0,}</g, '><');
         };
@@ -862,10 +737,7 @@ define(function (require) {
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
             var str = preserveComments
                 ? text
-                : text.replace(
-                      /\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g,
-                      ''
-                  );
+                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
             return str
                 .replace(/\s{1,}/g, ' ')

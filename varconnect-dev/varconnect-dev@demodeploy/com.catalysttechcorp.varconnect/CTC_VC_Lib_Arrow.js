@@ -17,10 +17,7 @@
  * Script Name: CTC_VC_Lib_Arrow
  * Author: john.ramonel
  */
-define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
-    vc2_util,
-    moment
-) {
+define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (vc2_util, moment) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
@@ -58,8 +55,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
                 vc2_util.handleJSONResponse(tokenReq);
                 var tokenResp = tokenReq.PARSED_RESPONSE;
-                if (!tokenResp || !tokenResp.access_token)
-                    throw 'Unable to generate token';
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
@@ -133,16 +129,12 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             if (!parsedResponse) throw 'Unable to read the response';
             var respHeader = parsedResponse.ResponseHeader;
 
-            if (!respHeader || !util.isArray(respHeader))
-                throw 'Missing or Invalid ResponseHeader';
+            if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
             var hasErrors,
                 errorMsgs = [];
 
             respHeader.forEach(function (header) {
-                if (
-                    !header.TransactionStatus ||
-                    header.TransactionStatus == 'ERROR'
-                ) {
+                if (!header.TransactionStatus || header.TransactionStatus == 'ERROR') {
                     hasErrors = true;
                     errorMsgs.push(header.TransactionMessage);
                 }
@@ -161,22 +153,17 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 LibArrowAPI.generateToken();
-                if (!CURRENT.accessToken)
-                    throw 'Unable to generate access token';
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
                 returnValue = LibArrowAPI.getOrderStatus();
             } catch (error) {
@@ -191,18 +178,14 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var response = option.response,
                     itemArray = [];
@@ -218,8 +201,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                 var orderResp = objOrderResponse.OrderDetails[0];
                 var orderDate, arrowSONum;
 
-                if (orderResp.hasOwnProperty('ArrowSONumber'))
-                    arrowSONum = orderResp.ArrowSONumber;
+                if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
                 if (orderResp.hasOwnProperty('Reseller')) {
                     orderDate = orderResp.Reseller.PODate;
                 }
@@ -233,21 +215,13 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                             // map here...
                             var orderItem = {
                                 order_date: orderDate || 'NA',
-                                line_num:
-                                    orderLineObj.ResellerPOLineNumber || 'NA',
+                                line_num: orderLineObj.ResellerPOLineNumber || 'NA',
                                 item_num: orderLineObj.MFGPartNumber || 'NA',
-                                vendorSKU:
-                                    orderLineObj.VendorPartNumber || 'NA',
-                                order_num:
-                                    orderLineObj.InvoiceNumber ||
-                                    arrowSONum ||
-                                    'NA',
-                                ship_qty: parseInt(
-                                    orderLineObj.ShippedQty || '0'
-                                ),
+                                vendorSKU: orderLineObj.VendorPartNumber || 'NA',
+                                order_num: orderLineObj.InvoiceNumber || arrowSONum || 'NA',
+                                ship_qty: parseInt(orderLineObj.ShippedQty || '0'),
                                 carrier: orderLineObj.OracleShipViaCode || 'NA',
-                                order_status:
-                                    orderLineObj.ItemStatusOracle || 'NA',
+                                order_status: orderLineObj.ItemStatusOracle || 'NA',
                                 order_eta: 'NA',
                                 ship_date: 'NA',
                                 tracking_num: 'NA',
@@ -261,64 +235,33 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
                             // shipping details
                             if (orderLineObj.hasOwnProperty('StatusInfoList')) {
-                                var statusInfo =
-                                    orderLineObj.StatusInfoList.StatusInfo;
+                                var statusInfo = orderLineObj.StatusInfoList.StatusInfo;
                                 if (statusInfo.length) {
                                     var statusInfoObj = statusInfo[0]; // only contains 1
-                                    if (
-                                        statusInfoObj.hasOwnProperty(
-                                            'EstimatedShipDate'
-                                        )
-                                    ) {
-                                        orderItem.order_eta =
-                                            statusInfoObj.EstimatedShipDate;
+                                    if (statusInfoObj.hasOwnProperty('EstimatedShipDate')) {
+                                        orderItem.order_eta = statusInfoObj.EstimatedShipDate;
                                     }
-                                    if (
-                                        statusInfoObj.hasOwnProperty(
-                                            'ActualShipDate'
-                                        )
-                                    ) {
-                                        orderItem.ship_date =
-                                            statusInfoObj.ActualShipDate;
+                                    if (statusInfoObj.hasOwnProperty('ActualShipDate')) {
+                                        orderItem.ship_date = statusInfoObj.ActualShipDate;
                                     }
-                                    if (
-                                        statusInfoObj.hasOwnProperty(
-                                            'TrackingNumber'
-                                        )
-                                    ) {
-                                        orderItem.tracking_num =
-                                            statusInfoObj.TrackingNumber;
+                                    if (statusInfoObj.hasOwnProperty('TrackingNumber')) {
+                                        orderItem.tracking_num = statusInfoObj.TrackingNumber;
                                     }
                                 }
                             }
 
                             // serial number list
-                            if (
-                                orderLineObj.hasOwnProperty('SerialNumberList')
-                            ) {
+                            if (orderLineObj.hasOwnProperty('SerialNumberList')) {
                                 var serialNumbers = [];
-                                var serialNumObj =
-                                    orderLineObj.SerialNumberList.SerialNumber;
+                                var serialNumObj = orderLineObj.SerialNumberList.SerialNumber;
                                 log.debug('serialNumObj', serialNumObj);
                                 if (serialNumObj.length) {
-                                    for (
-                                        var j = 0;
-                                        j < serialNumObj.length;
-                                        j++
-                                    ) {
-                                        if (
-                                            serialNumObj[j].hasOwnProperty('ID')
-                                        )
-                                            serialNumbers.push(
-                                                serialNumObj[j].ID
-                                            );
-                                        else
-                                            serialNumbers.push(
-                                                JSON.stringify(serialNumObj[j])
-                                            );
+                                    for (var j = 0; j < serialNumObj.length; j++) {
+                                        if (serialNumObj[j].hasOwnProperty('ID'))
+                                            serialNumbers.push(serialNumObj[j].ID);
+                                        else serialNumbers.push(JSON.stringify(serialNumObj[j]));
                                     }
-                                    orderItem.serial_num =
-                                        serialNumbers.join(',');
+                                    orderItem.serial_num = serialNumbers.join(',');
                                 }
                             }
 
@@ -330,18 +273,12 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                                 orderItem.ship_qty &&
                                 orderItem.ship_qty != 0
                             ) {
-                                var shippedDate = moment(
-                                    orderItem.ship_date
-                                ).toDate();
-                                vc2_util.log(
-                                    logTitle,
-                                    '**** shipped date: ****',
-                                    [
-                                        shippedDate,
-                                        util.isDate(shippedDate),
-                                        shippedDate <= new Date()
-                                    ]
-                                );
+                                var shippedDate = moment(orderItem.ship_date).toDate();
+                                vc2_util.log(logTitle, '**** shipped date: ****', [
+                                    shippedDate,
+                                    util.isDate(shippedDate),
+                                    shippedDate <= new Date()
+                                ]);
 
                                 if (
                                     shippedDate &&
@@ -373,18 +310,14 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             log.audit(logTitle, option);
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var responseBody = this.processRequest();
                 if (!responseBody) throw 'Unable to get response';

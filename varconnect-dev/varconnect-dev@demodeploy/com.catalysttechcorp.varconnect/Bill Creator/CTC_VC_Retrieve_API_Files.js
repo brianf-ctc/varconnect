@@ -67,9 +67,7 @@ define([
             filters: [
                 ['custrecord_vc_bc_connect_type', 'anyof', CONNECT_TYPE.API],
                 'AND',
-                paramConfigID
-                    ? ['internalid', 'anyof', paramConfigID]
-                    : ['isinactive', 'is', 'F']
+                paramConfigID ? ['internalid', 'anyof', paramConfigID] : ['isinactive', 'is', 'F']
             ],
             columns: ['internalid', 'name', 'custrecord_vc_bc_connect_type']
         });
@@ -138,17 +136,11 @@ define([
                 })
             );
         }
-        log.debug(
-            logTitle,
-            LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption)
-        );
+        log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption));
 
         var searchObj = ns_search.create(searchOption);
         var totalPending = searchObj.runPaged().count;
-        log.audit(
-            logTitle,
-            LogPrefix + '>> Orders To Process: ' + totalPending
-        );
+        log.audit(logTitle, LogPrefix + '>> Orders To Process: ' + totalPending);
 
         return searchObj;
     };
@@ -159,28 +151,14 @@ define([
 
         var searchValues = vc2_util.safeParse(context.values.shift());
 
+        log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
         log.audit(
             logTitle,
-            LogPrefix + '>> context: ' + JSON.stringify(context)
+            LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length)
         );
-        log.audit(
-            logTitle,
-            LogPrefix +
-                '>> total to process: ' +
-                JSON.stringify(context.values.length)
-        );
-        LogPrefix = [
-            '[',
-            searchValues.recordType,
-            ':',
-            searchValues.id,
-            '] '
-        ].join('');
+        LogPrefix = ['[', searchValues.recordType, ':', searchValues.id, '] '].join('');
         //var record_id = searchValues.id;
-        log.audit(
-            logTitle,
-            LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues)
-        );
+        log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));
 
         var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
@@ -195,7 +173,10 @@ define([
                 'custrecord_vc_bc_host_key',
                 'custrecord_vc_bc_url',
                 'custrecord_vc_bc_res_path',
-                'custrecord_vc_bc_ack_path'
+                'custrecord_vc_bc_ack_path',
+                'custrecord_vc_bc_token_url',
+                'custrecord_vc_bc_scope',
+                'custrecord_vc_bc_subs_key'
             ]
         });
 
@@ -215,7 +196,10 @@ define([
             host_key: vendorConfig.custrecord_vc_bc_host_key,
             url: vendorConfig.custrecord_vc_bc_url,
             res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+            token_url: vendorConfig.custrecord_vc_bc_token_url,
+            scope: vendorConfig.custrecord_vc_bc_scope,
+            subscription_key: vendorConfig.custrecord_vc_bc_subs_key
         };
 
         vc2_util.log(logTitle, '// tranid: ', searchValues.values['tranid']);
@@ -226,10 +210,7 @@ define([
             // get it from ns runtime
             configObj.country = ns_runtime.country;
         }
-        log.audit(
-            logTitle,
-            LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj)
-        );
+        log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
         try {
             var entryFunction = configObj.entry_function;
 
@@ -242,29 +223,29 @@ define([
                     myArr = VCLib_VendorMap.ingram_api(context.key, configObj);
                     break;
                 case 'techdata_api':
-                    myArr = VCLib_VendorMap.techdata_api(
-                        context.key,
-                        configObj
-                    );
+                    myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
                     break;
                 case 'wefi_api':
                     myArr = VCLib_VendorMap.wefi(context.key, configObj);
+                    break;
+                case 'jenne_api':
+                    myArr = VCLib_VendorMap.jenne_api(context.key, configObj);
+                    break;
+                case 'scansource_api':
+                    myArr = VCLib_VendorMap.scansource_api(context.key, configObj);
+                    break;
+                case 'synnex_api':
+                    myArr = VCLib_VendorMap.synnex_api(context.key, configObj);
                     break;
             }
 
             //log.debug(context.key, myArr);
 
-            log.audit(
-                logTitle,
-                LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr)
-            );
+            log.audit(logTitle, LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr));
 
             VCLib_BillFile.process(configObj, myArr, moment().unix());
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '## Error  ## ' + JSON.stringify(e)
-            );
+            log.error(logTitle, LogPrefix + '## Error  ## ' + JSON.stringify(e));
         }
     };
 

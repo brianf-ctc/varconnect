@@ -58,26 +58,20 @@ define([
                                 cdataChild = 0,
                                 hasElementChild = false;
                             for (var n = xml.firstChild; n; n = n.nextSibling) {
-                                if (n.nodeType == NodeType.ELEMENT)
-                                    hasElementChild = true;
+                                if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
                                 else if (
                                     n.nodeType == NodeType.TEXT &&
                                     n.nodeValue.match(/[^ \f\n\r\t\v]/)
                                 )
                                     textChild++;
                                 // non-whitespace text
-                                else if (n.nodeType == NodeType.CDATA)
-                                    cdataChild++; // cdata section node
+                                else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
                             }
                             if (hasElementChild) {
                                 if (textChild < 2 && cdataChild < 2) {
                                     // structured element with evtl. a single text or/and cdata node ..
                                     X.removeWhite(xml);
-                                    for (
-                                        var n = xml.firstChild;
-                                        n;
-                                        n = n.nextSibling
-                                    ) {
+                                    for (var n = xml.firstChild; n; n = n.nextSibling) {
                                         if (n.nodeType == NodeType.TEXT)
                                             // text node
                                             o['#text'] = X.escape(n.nodeValue);
@@ -87,38 +81,25 @@ define([
                                         else if (o[n.nodeName]) {
                                             // multiple occurence of element ..
                                             if (o[n.nodeName] instanceof Array)
-                                                o[n.nodeName][
-                                                    o[n.nodeName].length
-                                                ] = X.toObj(n);
-                                            else
-                                                o[n.nodeName] = [
-                                                    o[n.nodeName],
-                                                    X.toObj(n)
-                                                ];
+                                                o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
+                                            else o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
                                         } // first occurence of element..
                                         else o[n.nodeName] = X.toObj(n);
                                     }
                                 } else {
                                     // mixed content
-                                    if (!xml.attributes.length)
-                                        o = X.escape(X.innerXml(xml));
+                                    if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
                                     else o['#text'] = X.escape(X.innerXml(xml));
                                 }
                             } else if (textChild) {
                                 // pure text
-                                if (!xml.attributes.length)
-                                    o = X.escape(X.innerXml(xml));
+                                if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
                                 else o['#text'] = X.escape(X.innerXml(xml));
                             } else if (cdataChild) {
                                 // cdata
-                                if (cdataChild > 1)
-                                    o = X.escape(X.innerXml(xml));
+                                if (cdataChild > 1) o = X.escape(X.innerXml(xml));
                                 else
-                                    for (
-                                        var n = xml.firstChild;
-                                        n;
-                                        n = n.nextSibling
-                                    )
+                                    for (var n = xml.firstChild; n; n = n.nextSibling)
                                         o['#cdata'] = X.escape(n.nodeValue);
                             }
                         }
@@ -126,11 +107,7 @@ define([
                     } else if (xml.nodeType == NodeType.DOCUMENT) {
                         // document.node
                         o = X.toObj(xml.documentElement);
-                    } else
-                        log.debug(
-                            'xml2json',
-                            'unhandled node type: ' + xml.nodeType
-                        );
+                    } else log.debug('xml2json', 'unhandled node type: ' + xml.nodeType);
                     return o;
                 },
                 toJson: function (o, name, ind) {
@@ -141,28 +118,17 @@ define([
                         json +=
                             (name ? ':[' : '[') +
                             (o.length > 1
-                                ? '' +
-                                  ind +
-                                  '' +
-                                  o.join(',' + ind + '') +
-                                  '' +
-                                  ind
+                                ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
                                 : o.join('')) +
                             ']';
                     } else if (o == null) json += (name && ':') + 'null';
                     else if (typeof o == 'object') {
                         var arr = [];
-                        for (var m in o)
-                            arr[arr.length] = X.toJson(o[m], m, ind + '');
+                        for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                         json +=
                             (name ? ':{' : '{') +
                             (arr.length > 1
-                                ? '' +
-                                  ind +
-                                  '' +
-                                  arr.join(',' + ind + '') +
-                                  '' +
-                                  ind
+                                ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
                                 : arr.join('')) +
                             '}';
                     } else if (typeof o == 'string')
@@ -183,28 +149,19 @@ define([
                                         ' ' +
                                         n.attributes[i].nodeName +
                                         '="' +
-                                        (
-                                            n.attributes[i].nodeValue || ''
-                                        ).toString() +
+                                        (n.attributes[i].nodeValue || '').toString() +
                                         '"';
                                 if (n.firstChild) {
                                     s += '>';
-                                    for (
-                                        var c = n.firstChild;
-                                        c;
-                                        c = c.nextSibling
-                                    )
-                                        s += asXml(c);
+                                    for (var c = n.firstChild; c; c = c.nextSibling) s += asXml(c);
                                     s += '</' + n.nodeName + '>';
                                 } else s += '/>';
-                            } else if (n.nodeType == NodeType.TEXT)
-                                s += n.nodeValue;
+                            } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
                             else if (n.nodeType == NodeType.CDATA)
                                 s += '<![CDATA[' + n.nodeValue + ']]>';
                             return s;
                         };
-                        for (var c = node.firstChild; c; c = c.nextSibling)
-                            s += asXml(c);
+                        for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
                     }
                     return s;
                 },
@@ -223,10 +180,7 @@ define([
                     for (var n = e.firstChild; n; ) {
                         if (n.nodeType == NodeType.TEXT) {
                             // text node
-                            if (
-                                n.nodeValue &&
-                                !n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                            ) {
+                            if (n.nodeValue && !n.nodeValue.match(/[^ \f\n\r\t\v]/)) {
                                 // pure whitespace text node
                                 var nxt = n.nextSibling;
                                 e.removeChild(n);
@@ -269,8 +223,7 @@ define([
                     query: {
                         url: option.vendorConfig.endPoint,
                         headers: {
-                            SOAPAction:
-                                'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
+                            SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
                             'Content-Type': 'text/xml'
                         },
                         body:
@@ -280,12 +233,8 @@ define([
                             ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
                             '<soap:Body>' +
                             '<AdvanceShipNoticeGet_v2 xmlns="http://WebService.jenne.com">' +
-                            ('<email>' +
-                                option.vendorConfig.user +
-                                '</email>') +
-                            ('<password>' +
-                                option.vendorConfig.password +
-                                '</password>') +
+                            ('<email>' + option.vendorConfig.user + '</email>') +
+                            ('<password>' + option.vendorConfig.password + '</password>') +
                             ('<poNumber>' + option.poNum + '</poNumber>') +
                             '<startDate></startDate>' +
                             '<endDate></endDate>' +
@@ -369,8 +318,7 @@ define([
                 });
 
                 var shipDetails =
-                    shipNode.ASNcartonDetails &&
-                    shipNode.ASNcartonDetails.ASNcartonDetail_v2
+                    shipNode.ASNcartonDetails && shipNode.ASNcartonDetails.ASNcartonDetail_v2
                         ? shipNode.ASNcartonDetails.ASNcartonDetail_v2
                         : null;
 
@@ -405,19 +353,14 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix =
-                    '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 returnValue = libJenneAPI.AdvanceShipNoticeGet(option);
             } catch (error) {
@@ -432,19 +375,14 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix =
-                    '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var xmlResponse = option.xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
@@ -476,10 +414,7 @@ define([
                 var itemArray = [];
 
                 // check for any errors
-                if (
-                    CURRENT.results.Error &&
-                    CURRENT.results.Error.ErrorDescription
-                ) {
+                if (CURRENT.results.Error && CURRENT.results.Error.ErrorDescription) {
                     throw CURRENT.results || 'Undetermined error on results';
                 }
 
@@ -487,21 +422,13 @@ define([
                 if (!arrResultOrders) throw 'Missing order details';
 
                 // if not array, force into an array
-                if (!util.isArray(arrResultOrders))
-                    arrResultOrders = [arrResultOrders];
+                if (!util.isArray(arrResultOrders)) arrResultOrders = [arrResultOrders];
 
-                vc2_util.log(
-                    logTitle,
-                    'Total orders: ',
-                    arrResultOrders.length
-                );
+                vc2_util.log(logTitle, 'Total orders: ', arrResultOrders.length);
 
                 for (var i = 0, j = arrResultOrders.length; i < j; i++) {
                     vc2_util.log(logTitle, '>> order: ', arrResultOrders[i]);
-                    var orderData = libJenneAPI.extractOrder(
-                        arrResultOrders[i],
-                        itemArray
-                    );
+                    var orderData = libJenneAPI.extractOrder(arrResultOrders[i], itemArray);
                 }
 
                 returnValue = itemArray;
@@ -517,23 +444,16 @@ define([
             option = option || {};
 
             try {
-                CURRENT.recordId =
-                    option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig =
-                    option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix =
-                    '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var xmlResponse = this.processRequest(option);
-                returnValue = this.processResponse({
-                    xmlResponse: xmlResponse
-                });
+                returnValue = this.processResponse({ xmlResponse: xmlResponse });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

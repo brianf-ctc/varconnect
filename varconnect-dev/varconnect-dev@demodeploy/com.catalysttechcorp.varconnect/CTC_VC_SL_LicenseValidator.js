@@ -19,18 +19,12 @@ function _decryptLicense(options) {
         accountId;
 
     try {
-        var decryptedLicenseKey = nlapiDecrypt(
-            license,
-            'aes',
-            LICENSE_AES_SECRET
-        );
+        var decryptedLicenseKey = nlapiDecrypt(license, 'aes', LICENSE_AES_SECRET);
         nlapiLogExecution('debug', 'decryptedLicenseKey', decryptedLicenseKey);
         if (decryptedLicenseKey) {
             var resultArray = decryptedLicenseKey.split('|'),
                 product = resultArray[0],
-                expiryDate =
-                    new Date(resultArray[1]) ||
-                    nlapiStringToDate(resultArray[1]),
+                expiryDate = new Date(resultArray[1]) || nlapiStringToDate(resultArray[1]),
                 accountId = resultArray[2];
         }
     } catch (e) {}

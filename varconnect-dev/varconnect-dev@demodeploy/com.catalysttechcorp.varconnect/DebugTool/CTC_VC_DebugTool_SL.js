@@ -29,25 +29,29 @@ define([
                 type: 'customrecord_ctc_vc_vendor_config',
                 filterExpression: [['isinactive', 'is', 'F']],
                 columns: [
-                    ns_search.createColumn({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP,
-                        sort: ns_search.Sort.ASC
-                    })
+                    'name',
+                    'internalid'
+                    // ns_search.createColumn({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP,
+                    //     sort: ns_search.Sort.ASC
+                    // })
                 ]
             });
 
             var arrReturnValue = [];
             arrSeachResults.forEach(function (result) {
                 arrReturnValue.push({
-                    value: result.getValue({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP
-                    }),
-                    text: result.getText({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP
-                    }),
+                    value: result.getValue('internalid'),
+                    text: result.getValue('name'),
+                    // value: result.getValue({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP
+                    // }),
+                    // text: result.getText({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP
+                    // }),
                     isSelected: !arrReturnValue.length
                 });
                 return true;
@@ -74,17 +78,13 @@ define([
                 if (Current.method != 'GET') return;
 
                 if (Current.task == 'viewForm') {
-                    Current.Form = ns_ui.createForm({
-                        title: 'VAR Connect | Debug Tool'
-                    });
-                    Current.Form.clientScriptModulePath =
-                        './CTC_VC_DebugTool_CS.js';
+                    Current.Form = ns_ui.createForm({ title: 'VAR Connect | Debug Tool' });
+                    Current.Form.clientScriptModulePath = './CTC_VC_DebugTool_CS.js';
 
                     var hiddenFields = {
                         suiteleturl: ns_url.resolveScript({
                             scriptId: ns_runtime.getCurrentScript().id,
-                            deploymentId:
-                                ns_runtime.getCurrentScript().deploymentId
+                            deploymentId: ns_runtime.getCurrentScript().deploymentId
                         }),
                         currentfolder: vc2_util.getCurrentFolder()
                     };
@@ -95,16 +95,13 @@ define([
                         type: ns_ui.FieldType.SELECT,
                         label: 'Select a Vendor Config'
                     });
-                    fldVendors.updateBreakType({
-                        breakType: ns_ui.FieldBreakType.STARTCOL
-                    });
+                    fldVendors.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTCOL });
                     fldVendors.isMandatory = true;
 
                     var arrActiveVendors = Helper.getActiveVendors();
                     arrActiveVendors.forEach(function (vendorEntry) {
                         if (!vc2_util.isEmpty(Current.vendorConfigId)) {
-                            vendorEntry.isSelected =
-                                Current.vendorConfigId == vendorEntry.value;
+                            vendorEntry.isSelected = Current.vendorConfigId == vendorEntry.value;
                         }
                         fldVendors.addSelectOption(vendorEntry);
                         return true;
@@ -119,9 +116,7 @@ define([
                         label: 'Enter PO Number'
                     });
                     fldPONum.isMandatory = true;
-                    fldPONum.updateBreakType({
-                        breakType: ns_ui.FieldBreakType.STARTROW
-                    });
+                    fldPONum.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
                     if (Current.ponum) fldPONum.defaultValue = Current.ponum;
                     ////////////////////////////////////////////////////////
 
@@ -132,13 +127,8 @@ define([
                         type: ns_ui.FieldType.INLINEHTML
                     });
 
-                    fldContent.updateBreakType({
-                        breakType: ns_ui.FieldBreakType.STARTROW
-                    });
-                    fldContent.updateDisplaySize({
-                        width: '250',
-                        height: '30'
-                    });
+                    fldContent.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
+                    fldContent.updateDisplaySize({ width: '250', height: '30' });
 
                     var cssHighlightStyle = '';
                     try {
@@ -173,9 +163,7 @@ define([
                         '<html>',
                         '<head>',
                         cssHighlightStyle.url
-                            ? "<link rel='stylesheet' href='" +
-                              cssHighlightStyle.url +
-                              "'>"
+                            ? "<link rel='stylesheet' href='" + cssHighlightStyle.url + "'>"
                             : '',
                         '</head>',
                         '<body>',
@@ -225,9 +213,7 @@ define([
                     });
                     scriptContext.response.writePage(Current.Form);
                 } else {
-                    scriptContext.response.write({
-                        output: JSON.stringify(Current)
-                    });
+                    scriptContext.response.write({ output: JSON.stringify(Current) });
                 }
             } catch (error) {
                 throw error;

@@ -26,21 +26,13 @@ define([
     'N/runtime',
     'N/ui/serverWidget',
     'N/url',
+
     'N/ui/message',
     'N/search',
     'N/record',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils'
-], function (
-    ns_runtime,
-    ns_ui,
-    ns_url,
-    ns_msg,
-    ns_search,
-    ns_record,
-    vc2_constant,
-    vc2_util
-) {
+], function (ns_runtime, ns_ui, ns_url, ns_msg, ns_search, ns_record, vc2_constant, vc2_util) {
     'use strict';
 
     var LogTitle = 'VC|LogSearchTool';
@@ -49,9 +41,7 @@ define([
         entry: function (option) {
             var logTitle = [LogTitle, 'Pages.entry'].join('::'),
                 returnValue;
-            var Form = ns_ui.createForm({
-                title: 'VAR Connect | VC Log Search'
-            });
+            var Form = ns_ui.createForm({ title: 'VAR Connect | VC Log Search' });
 
             log.audit(logTitle, option);
 
@@ -158,8 +148,7 @@ define([
                 pageFn = currentPage.onGet || currentPage;
             }
 
-            if (!pageFn || !util.isFunction(pageFn))
-                throw 'Unable to load current page';
+            if (!pageFn || !util.isFunction(pageFn)) throw 'Unable to load current page';
 
             pageFn.call(UIHelper, this.Current);
 
@@ -186,10 +175,7 @@ define([
         };
 
         if (!option.searchObj) throw 'Missing search object';
-        log.audit(
-            logTitle,
-            '>> searchObj:  ' + JSON.stringify(option.searchObj.searchType)
-        );
+        log.audit(logTitle, '>> searchObj:  ' + JSON.stringify(option.searchObj.searchType));
 
         var searchOption = {
                 type: option.searchObj.searchType,
@@ -199,10 +185,7 @@ define([
             ColumnsSort = option.sortCols || [],
             ColumnsDef = option.columnsDef || {};
 
-        log.audit(
-            logTitle,
-            '>> searchOption:  ' + JSON.stringify(searchOption)
-        );
+        log.audit(logTitle, '>> searchOption:  ' + JSON.stringify(searchOption));
 
         var SortColumns = {};
 
@@ -219,8 +202,7 @@ define([
 
             if (!colData.type) colData.type = ns_ui.FieldType.TEXT;
             if (!colData.label)
-                colData.label =
-                    searchCol.label || searchCol.name || 'Column #' + idx;
+                colData.label = searchCol.label || searchCol.name || 'Column #' + idx;
 
             var colSearch = { name: searchCol.name };
             if (searchCol.join) colSearch.join = searchCol.join;
@@ -229,10 +211,7 @@ define([
 
             searchOption.columns.push(ns_search.createColumn(colSearch));
 
-            if (
-                ColumnsSort.length &&
-                vc2_util.inArray(searchCol.name, ColumnsSort)
-            ) {
+            if (ColumnsSort.length && vc2_util.inArray(searchCol.name, ColumnsSort)) {
                 SortColumns[colData.label] = colData.id;
             }
 
@@ -310,10 +289,7 @@ define([
                 SublistInfo.selectedItems.updateDisplayType({
                     displayType: ns_ui.FieldDisplayType.HIDDEN
                 });
-                SublistInfo.selectedField = [
-                    'custpage_selected_',
-                    sublistOption.id
-                ].join('');
+                SublistInfo.selectedField = ['custpage_selected_', sublistOption.id].join('');
             }
 
             ////////////////////////////////////////
@@ -328,13 +304,9 @@ define([
         });
 
         /// Add sublist columns ////////////////
-        var showColumns =
-            option.showColumns || option.columnsOnly || option.columns || [];
+        var showColumns = option.showColumns || option.columnsOnly || option.columns || [];
         SublistInfo.columns.forEach(function (sublistCol) {
-            if (
-                !vc2_util.isEmpty(showColumns) &&
-                !vc2_util.inArray(sublistCol.id, showColumns)
-            )
+            if (!vc2_util.isEmpty(showColumns) && !vc2_util.inArray(sublistCol.id, showColumns))
                 return true;
 
             var sublistOption = {};
@@ -350,31 +322,19 @@ define([
         ////////////////////////////////////////
 
         /// Add the sublist data ///////////////
-        log.audit(
-            logTitle,
-            '>> searchOption:  ' + JSON.stringify(searchOption)
-        );
+        log.audit(logTitle, '>> searchOption:  ' + JSON.stringify(searchOption));
         var SearchObj = ns_search.create(searchOption);
 
         if (SublistInfo.totalRecords && SearchObj) {
-            log.audit(
-                logTitle,
-                '>> quicksort:  ' + JSON.stringify(SublistInfo.currentSort)
-            );
+            log.audit(logTitle, '>> quicksort:  ' + JSON.stringify(SublistInfo.currentSort));
 
             if (SublistInfo.currentSort && SublistInfo.currentSort != 'none') {
-                log.audit(
-                    logTitle,
-                    '>> quicksort:  ' + JSON.stringify(SublistInfo.currentSort)
-                );
+                log.audit(logTitle, '>> quicksort:  ' + JSON.stringify(SublistInfo.currentSort));
 
                 SearchObj.columns.push(
                     ns_search.createColumn({
                         name: SublistInfo.currentSort,
-                        sort: vc2_util.inArray(SublistInfo.currentSort, [
-                            'created',
-                            'lastmodified'
-                        ])
+                        sort: vc2_util.inArray(SublistInfo.currentSort, ['created', 'lastmodified'])
                             ? ns_search.Sort.DESC
                             : ns_search.Sort.ASC
                     })
@@ -410,16 +370,13 @@ define([
                 SublistInfo.quickSorter.addSelectOption({
                     value: 'none',
                     text: '',
-                    isSelected:
-                        !SublistInfo.currentSort ||
-                        SublistInfo.currentSort == 'none'
+                    isSelected: !SublistInfo.currentSort || SublistInfo.currentSort == 'none'
                 });
                 for (var sortLabel in SortColumns) {
                     SublistInfo.quickSorter.addSelectOption({
                         value: SortColumns[sortLabel],
                         text: sortLabel,
-                        isSelected:
-                            SublistInfo.currentSort == SortColumns[sortLabel]
+                        isSelected: SublistInfo.currentSort == SortColumns[sortLabel]
                     });
                 }
 
@@ -436,12 +393,7 @@ define([
                 pagedResults.pageRanges.forEach(function (pageRow) {
                     SublistInfo.paginator.addSelectOption({
                         value: pageRow.index + 1,
-                        text: [
-                            'Page ',
-                            pageRow.index + 1,
-                            ' | ',
-                            pageRow.compoundLabel
-                        ].join(''),
+                        text: ['Page ', pageRow.index + 1, ' | ', pageRow.compoundLabel].join(''),
                         isSelected: pageRow.index + 1 == SublistInfo.currentPage
                     });
 
@@ -485,14 +437,10 @@ define([
             }
 
             /// add the sublist rows ///////////////
-            var currentPageResults = pagedResults.fetch({
-                index: SublistInfo.currentPage - 1
-            });
+            var currentPageResults = pagedResults.fetch({ index: SublistInfo.currentPage - 1 });
             currentPageResults.data.forEach(function (result, lineNo) {
                 if (SublistInfo.hasCheckbox) {
-                    if (
-                        vc2_util.inArray(result.id, SublistInfo.selectedValues)
-                    ) {
+                    if (vc2_util.inArray(result.id, SublistInfo.selectedValues)) {
                         SublistInfo.Field.setSublistValue({
                             id: 'check',
                             line: lineNo,
@@ -539,17 +487,14 @@ define([
                         '';
 
                     if (!columnValue) return;
-                    if (columnValue.length > 250)
-                        columnValue = columnValue.substr(0, 250) + '...';
+                    if (columnValue.length > 250) columnValue = columnValue.substr(0, 250) + '...';
 
                     if (sublistCol.type == 'SELECT' && sublistCol.recordType) {
                         columnValue = [
                             '<a href="',
                             ns_url.resolveRecord({
                                 recordType: sublistCol.recordType,
-                                recordId: result.getValue({
-                                    name: sublistCol.fieldId
-                                })
+                                recordId: result.getValue({ name: sublistCol.fieldId })
                             }),
                             '" target="_blank">',
                             columnValue,
@@ -560,10 +505,7 @@ define([
                     SublistInfo.Field.setSublistValue({
                         id: sublistCol.id,
                         line: lineNo,
-                        value:
-                            '<span style="font-size:12px;">' +
-                            columnValue +
-                            '</a>'
+                        value: '<span style="font-size:12px;">' + columnValue + '</a>'
                     });
 
                     return true;
@@ -581,9 +523,7 @@ define([
             label: 'SublistInfo',
             container: sublistOption.tab || null
         });
-        sublistInfoField.updateDisplayType({
-            displayType: ns_ui.FieldDisplayType.HIDDEN
-        });
+        sublistInfoField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
         sublistInfoField.defaultValue = JSON.stringify(SublistInfo);
 
         var sublistInfoIframe = Form.addField({

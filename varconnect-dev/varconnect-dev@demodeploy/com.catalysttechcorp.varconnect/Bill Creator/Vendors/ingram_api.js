@@ -29,8 +29,7 @@ define([
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
 
-        LogPrefix =
-            '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
+        LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
         vc2_util.LogPrefix = LogPrefix;
         vc2_util.log(logTitle, '>> current: ', [recordId, config]);
 
@@ -72,15 +71,8 @@ define([
             var invoiceData = invoiceDetails[orderKey];
 
             // check for misc charges
-            if (
-                orderDetails.miscCharges &&
-                orderDetails.miscCharges[orderKey]
-            ) {
-                vc2_util.log(
-                    logTitle,
-                    '>> misc charge: ',
-                    orderDetails.miscCharges[orderKey]
-                );
+            if (orderDetails.miscCharges && orderDetails.miscCharges[orderKey]) {
+                vc2_util.log(logTitle, '>> misc charge: ', orderDetails.miscCharges[orderKey]);
 
                 invoiceData.xmlStr = JSON.stringify({
                     invoiceDetails: JSON.parse(invoiceData.xmlStr),
@@ -88,26 +80,22 @@ define([
                 });
 
                 // add the misc charges ///
-                for (
-                    var ii = 0, jj = orderDetails.miscCharges[orderKey].length;
-                    ii < jj;
-                    ii++
-                ) {
+                for (var ii = 0, jj = orderDetails.miscCharges[orderKey].length; ii < jj; ii++) {
                     var chargeInfo = orderDetails.miscCharges[orderKey][ii];
 
                     if (chargeInfo.description) {
                         if (chargeInfo.description.match(/freight/gi)) {
                             // add it to as shipping charge
-                            invoiceData.ordObj.charges.shipping +=
-                                vc2_util.parseFloat(chargeInfo.amount);
+                            invoiceData.ordObj.charges.shipping += vc2_util.parseFloat(
+                                chargeInfo.amount
+                            );
                         } else {
-                            invoiceData.ordObj.charges.other +=
-                                vc2_util.parseFloat(chargeInfo.amount);
+                            invoiceData.ordObj.charges.other += vc2_util.parseFloat(
+                                chargeInfo.amount
+                            );
                         }
                     } else {
-                        invoiceData.ordObj.charges.other += vc2_util.parseFloat(
-                            chargeInfo.amount
-                        );
+                        invoiceData.ordObj.charges.other += vc2_util.parseFloat(chargeInfo.amount);
                     }
                 }
             }
@@ -173,14 +161,9 @@ define([
                 vc2_util.handleJSONResponse(searchOrderReq);
 
                 var searchOrderResp =
-                    searchOrderReq.PARSED_RESPONSE ||
-                    searchOrderReq.RESPONSE ||
-                    {};
+                    searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
 
-                if (
-                    searchOrderReq.isError ||
-                    vc2_util.isEmpty(searchOrderResp)
-                ) {
+                if (searchOrderReq.isError || vc2_util.isEmpty(searchOrderResp)) {
                     throw (
                         searchOrderReq.errorMsg +
                         (searchOrderReq.details
@@ -210,25 +193,13 @@ define([
                 for (var i = 0, j = ordersResults.length; i < j; i++) {
                     var orderInfo = ordersResults[i];
 
-                    for (
-                        var ii = 0, jj = orderInfo.subOrders.length;
-                        ii < jj;
-                        ii++
-                    ) {
+                    for (var ii = 0, jj = orderInfo.subOrders.length; ii < jj; ii++) {
                         var subOrderInfo = orderInfo.subOrders[ii];
 
-                        for (
-                            var iii = 0, jjj = subOrderInfo.links.length;
-                            iii < jjj;
-                            iii++
-                        ) {
+                        for (var iii = 0, jjj = subOrderInfo.links.length; iii < jjj; iii++) {
                             var subOrderLink = subOrderInfo.links[iii];
 
-                            if (
-                                !subOrderLink.topic ||
-                                subOrderLink.topic != 'invoices'
-                            )
-                                continue;
+                            if (!subOrderLink.topic || subOrderLink.topic != 'invoices') continue;
 
                             arrInvoiceLinks.push(subOrderLink.href);
                             arrOrderNums.push(orderInfo.ingramOrderNumber);
@@ -252,10 +223,7 @@ define([
             arrInvoiceLinks = vc2_util.uniqueArray(arrInvoiceLinks);
             arrOrderNums = vc2_util.uniqueArray(arrOrderNums);
 
-            vc2_util.log(
-                logTitle,
-                '>> Prep to fetch miscellaneous charges.... '
-            );
+            vc2_util.log(logTitle, '>> Prep to fetch miscellaneous charges.... ');
 
             orderMiscCharges = getMiscCharges(
                 util.extend(option, {
@@ -292,8 +260,7 @@ define([
         var objMischCharges = {};
 
         try {
-            if (vc2_util.isEmpty(option.orderNums))
-                throw 'Missing purchase order numbers';
+            if (vc2_util.isEmpty(option.orderNums)) throw 'Missing purchase order numbers';
             for (var i = 0, j = option.orderNums.length; i < j; i++) {
                 var orderNum = option.orderNums[i];
 
@@ -317,14 +284,9 @@ define([
                 vc2_util.handleJSONResponse(orderDetailsReq);
 
                 var orderDetailsResp =
-                    orderDetailsReq.PARSED_RESPONSE ||
-                    orderDetailsReq.RESPONSE ||
-                    {};
+                    orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
 
-                if (
-                    orderDetailsReq.isError ||
-                    vc2_util.isEmpty(orderDetailsReq)
-                ) {
+                if (orderDetailsReq.isError || vc2_util.isEmpty(orderDetailsReq)) {
                     throw (
                         orderDetailsReq.errorMsg +
                         (orderDetailsReq.details
@@ -333,15 +295,9 @@ define([
                     );
                 }
 
-                if (!orderDetailsResp.hasOwnProperty('miscellaneousCharges'))
-                    continue;
+                if (!orderDetailsResp.hasOwnProperty('miscellaneousCharges')) continue;
 
-                for (
-                    var ii = 0,
-                        jj = orderDetailsResp.miscellaneousCharges.length;
-                    ii < jj;
-                    ii++
-                ) {
+                for (var ii = 0, jj = orderDetailsResp.miscellaneousCharges.length; ii < jj; ii++) {
                     var chargeInfo = orderDetailsResp.miscellaneousCharges[ii];
                     vc2_util.log(logTitle, '>> chargeInfo: ', chargeInfo);
 
@@ -380,17 +336,13 @@ define([
         var objInvoiceDetails = {};
 
         try {
-            if (vc2_util.isEmpty(option.invoiceLinks))
-                throw 'Missing invoice links';
+            if (vc2_util.isEmpty(option.invoiceLinks)) throw 'Missing invoice links';
 
             for (var i = 0, j = option.invoiceLinks.length; i < j; i++) {
                 var invoiceLink = option.invoiceLinks[i];
 
                 if (invoiceLink.match(/v6\/invoices/gi)) {
-                    invoiceLink = invoiceLink.replace(
-                        /v6\/invoices/gi,
-                        'v5/invoices'
-                    );
+                    invoiceLink = invoiceLink.replace(/v6\/invoices/gi, 'v5/invoices');
                 }
                 log.audit(logTitle, '// invoiceLink: ' + invoiceLink);
 
@@ -416,21 +368,12 @@ define([
                     }
                 });
                 vc2_util.handleJSONResponse(invoiceDetailsReq);
-                vc2_util.log(
-                    logTitle,
-                    '>> response 2: ',
-                    invoiceDetailsReq.PARSED_RESPONSE
-                );
+                vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
 
                 var invoiceDetailsResp =
-                    invoiceDetailsReq.PARSED_RESPONSE ||
-                    invoiceDetailsReq.RESPONSE ||
-                    {};
+                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
-                if (
-                    invoiceDetailsReq.isError ||
-                    vc2_util.isEmpty(invoiceDetailsResp)
-                ) {
+                if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
                     throw (
                         invoiceDetailsReq.errorMsg +
                         (invoiceDetailsReq.details
@@ -445,53 +388,30 @@ define([
                 )
                     continue;
 
-                var invoiceInfo =
-                        invoiceDetailsResp.serviceresponse
-                            .invoicedetailresponse,
+                var invoiceInfo = invoiceDetailsResp.serviceresponse.invoicedetailresponse,
                     invoiceData = {
                         po: config.poNum,
                         date: invoiceInfo.hasOwnProperty('invoicedate')
-                            ? moment(
-                                  invoiceInfo.invoicedate,
-                                  'YYYY-MM-DD'
-                              ).format('MM/DD/YYYY')
+                            ? moment(invoiceInfo.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY')
                             : moment().format('MM/DD/YYYY'),
                         invoice: invoiceInfo.globalorderid,
                         total: vc2_util.parseFloat(invoiceInfo.totalamount),
                         charges: {
-                            tax: vc2_util.parseFloat(
-                                invoiceInfo.totaltaxamount
-                            ),
+                            tax: vc2_util.parseFloat(invoiceInfo.totaltaxamount),
                             shipping:
-                                vc2_util.parseFloat(
-                                    invoiceInfo.customerfreightamount
-                                ) +
-                                vc2_util.parseFloat(
-                                    invoiceInfo.customerforeignfrightamt
-                                ),
-                            other: vc2_util.parseFloat(
-                                invoiceInfo.discountamount
-                            )
+                                vc2_util.parseFloat(invoiceInfo.customerfreightamount) +
+                                vc2_util.parseFloat(invoiceInfo.customerforeignfrightamt),
+                            other: vc2_util.parseFloat(invoiceInfo.discountamount)
                         },
                         carrier: invoiceInfo.carrier || '',
                         shipDate: invoiceInfo.hasOwnProperty('shipdate')
-                            ? moment(invoiceInfo.shipdate, 'YYYY-MM-DD').format(
-                                  'MM/DD/YYYY'
-                              )
+                            ? moment(invoiceInfo.shipdate, 'YYYY-MM-DD').format('MM/DD/YYYY')
                             : 'NA',
                         lines: []
                     };
 
-                vc2_util.log(
-                    logTitle,
-                    '>> Invoice Data (initial): ',
-                    invoiceData
-                );
-                vc2_util.log(
-                    logTitle,
-                    '>> Processing lines: ',
-                    invoiceInfo.lines.length
-                );
+                vc2_util.log(logTitle, '>> Invoice Data (initial): ', invoiceData);
+                vc2_util.log(logTitle, '>> Processing lines: ', invoiceInfo.lines.length);
 
                 for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
                     var lineInfo = invoiceInfo.lines[ii];
@@ -510,8 +430,7 @@ define([
                     // get the serial numbers
                     if (lineInfo.hasOwnProperty('serialnumberdetails')) {
                         lineInfo.serialnumberdetails.forEach(function (serial) {
-                            if (serial.serialnumber)
-                                lineSerials.push(serial.serialnumber);
+                            if (serial.serialnumber) lineSerials.push(serial.serialnumber);
                             return true;
                         });
                         lineData.SERIAL = lineSerials;
@@ -519,11 +438,8 @@ define([
 
                     var listTracking = [];
                     if (lineInfo.hasOwnProperty('trackingnumberdetails')) {
-                        lineInfo.trackingnumberdetails.forEach(function (
-                            tracking
-                        ) {
-                            if (tracking.trackingnumber)
-                                listTracking.push(tracking.trackingnumber);
+                        lineInfo.trackingnumberdetails.forEach(function (tracking) {
+                            if (tracking.trackingnumber) listTracking.push(tracking.trackingnumber);
                             return true;
                         });
                         lineData.TRACKING = listTracking;
@@ -540,47 +456,36 @@ define([
                         PRICE: vc2_util.parseFloat(lineInfo.unitprice)
                     });
 
-                    vc2_util.log(
-                        logTitle,
-                        '>> ...lineItemRate: ',
-                        lineItemRate
-                    );
+                    vc2_util.log(logTitle, '>> ...lineItemRate: ', lineItemRate);
 
                     if (lineItemRate >= 0) {
                         // increment the quantity
-                        invoiceData.lines[lineIdx].QUANTITY +=
-                            lineData.QUANTITY;
+                        invoiceData.lines[lineIdx].QUANTITY += lineData.QUANTITY;
 
                         if (!vc2_util.isEmpty(lineData.SERIAL)) {
                             if (!invoiceData.lines[lineIdx].SERIAL)
-                                invoiceData.lines[lineIdx].SERIAL =
-                                    lineData.SERIAL;
+                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
                             else
-                                invoiceData.lines[lineIdx].SERIAL =
-                                    lineData.SERIAL.concat(
-                                        invoiceData.lines[lineIdx].SERIAL
-                                    );
-                            // trim unique serials
-                            invoiceData.lines[lineIdx].SERIAL =
-                                vc2_util.uniqueArray(
+                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL.concat(
                                     invoiceData.lines[lineIdx].SERIAL
                                 );
+                            // trim unique serials
+                            invoiceData.lines[lineIdx].SERIAL = vc2_util.uniqueArray(
+                                invoiceData.lines[lineIdx].SERIAL
+                            );
                         }
 
                         if (!vc2_util.isEmpty(lineData.TRACKING)) {
                             if (!invoiceData.lines[lineIdx].TRACKING)
-                                invoiceData.lines[lineIdx].TRACKING =
-                                    lineData.TRACKING;
+                                invoiceData.lines[lineIdx].TRACKING = lineData.TRACKING;
                             else
-                                invoiceData.lines[lineIdx].TRACKING =
-                                    lineData.TRACKING.concat(
-                                        invoiceData.lines[lineIdx].TRACKING
-                                    );
-                            // trim unique tracking
-                            invoiceData.lines[lineIdx].TRACKING =
-                                vc2_util.uniqueArray(
+                                invoiceData.lines[lineIdx].TRACKING = lineData.TRACKING.concat(
                                     invoiceData.lines[lineIdx].TRACKING
                                 );
+                            // trim unique tracking
+                            invoiceData.lines[lineIdx].TRACKING = vc2_util.uniqueArray(
+                                invoiceData.lines[lineIdx].TRACKING
+                            );
                         }
                     } else {
                         invoiceData.lines.push(lineData);
@@ -628,8 +533,7 @@ define([
         vc2_util.handleJSONResponse(tokenReq);
 
         var tokenResp = tokenReq.PARSED_RESPONSE;
-        if (!tokenResp || !tokenResp.access_token)
-            throw 'Unable to generate token';
+        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;
     }

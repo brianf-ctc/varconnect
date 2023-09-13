@@ -61,8 +61,7 @@ define([
                 var tokenResp = tokenReq.PARSED_RESPONSE;
                 this.handleResponse(tokenReq);
 
-                if (!tokenResp || !tokenResp.access_token)
-                    throw 'Unable to generate token';
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
@@ -78,11 +77,7 @@ define([
         handleResponse: function (request) {
             var returnValue = true;
 
-            if (
-                request.isError ||
-                !request.RESPONSE ||
-                request.RESPONSE.code != '200'
-            ) {
+            if (request.isError || !request.RESPONSE || request.RESPONSE.code != '200') {
                 var faultStr = request.PARSED_RESPONSE
                     ? // check fault/faultString
                       (function (resp) {
@@ -154,11 +149,9 @@ define([
                 CURRENT.recordNum = option.poNum || option.transactionNum;
                 CURRENT.vendorConfig = option.vendorConfig;
 
-                vc2_util.LogPrefix =
-                    '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
                 var itemArray = [];
 
                 var arrResponse = this.processRequest(option);
@@ -167,8 +160,7 @@ define([
                     throw 'Missing purchase order details';
 
                 var orderDetail = arrResponse.purchaseOrderDetails.shift();
-                if (!orderDetail || !orderDetail.dellOrders)
-                    throw 'Missing Dell Order info';
+                if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
 
                 for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
                     var dellOrder = orderDetail.dellOrders[i],
@@ -177,15 +169,10 @@ define([
                         };
 
                     if (dellOrder.purchaseOrderLines) {
-                        dellOrder.purchaseOrderLines.forEach(function (
-                            lineData
-                        ) {
+                        dellOrder.purchaseOrderLines.forEach(function (lineData) {
                             (orderItem.item_num = lineData.buyerPartNumber),
-                                (orderItem.vendorSKU =
-                                    lineData.buyerPartNumber),
-                                (orderItem.ship_qty += parseFloat(
-                                    lineData.quantityOrdered
-                                ));
+                                (orderItem.vendorSKU = lineData.buyerPartNumber),
+                                (orderItem.ship_qty += parseFloat(lineData.quantityOrdered));
                             orderItem.line_status = lineData.lineStatus;
                         });
                     }
@@ -201,17 +188,12 @@ define([
                         tracking_num: 'NA'
                     });
 
-                    if (
-                        dellOrder.productInfo &&
-                        util.isArray(dellOrder.productInfo)
-                    ) {
+                    if (dellOrder.productInfo && util.isArray(dellOrder.productInfo)) {
                         var arrSerials = [];
 
                         dellOrder.productInfo.forEach(function (productInfo) {
                             if (util.isArray(productInfo.serviceTags))
-                                arrSerials = arrSerials.concat(
-                                    productInfo.serviceTags
-                                );
+                                arrSerials = arrSerials.concat(productInfo.serviceTags);
                             else arrSerials.push(productInfo.serviceTags);
 
                             return true;
@@ -228,20 +210,12 @@ define([
                     ) {
                         var arrTracking = [];
 
-                        dellOrder.trackingInformation.forEach(function (
-                            tracking
-                        ) {
-                            if (vc2_util.isEmpty(tracking.waybill))
-                                return false;
-                            if (
-                                !vc2_util.inArray(tracking.waybill, arrTracking)
-                            )
+                        dellOrder.trackingInformation.forEach(function (tracking) {
+                            if (vc2_util.isEmpty(tracking.waybill)) return false;
+                            if (!vc2_util.inArray(tracking.waybill, arrTracking))
                                 arrTracking.push(tracking.waybill);
 
-                            if (
-                                !orderItem.carrier ||
-                                orderItem.carrier == 'NA'
-                            ) {
+                            if (!orderItem.carrier || orderItem.carrier == 'NA') {
                                 orderItem.carrier = tracking.carrierName;
                             }
 
@@ -279,11 +253,7 @@ define([
                             shippedDate <= new Date()
                         ]);
 
-                        if (
-                            shippedDate &&
-                            util.isDate(shippedDate) &&
-                            shippedDate <= new Date()
-                        )
+                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
                             orderItem.is_shipped = true;
                     }
 
@@ -307,15 +277,12 @@ define([
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
                 CURRENT.vendorConfig = option.vendorConfig;
-                vc2_util.LogPrefix =
-                    '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig)
-                    throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 LibDellAPI.generateToken();
-                if (!CURRENT.accessToken)
-                    throw 'Unable to generate access token';
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
                 returnValue = LibDellAPI.searchPO();
             } catch (error) {

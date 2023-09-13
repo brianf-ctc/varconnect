@@ -65,9 +65,7 @@ define([
                 container: 'selectgroup'
             });
             isChangedField.defaultValue = 'F';
-            isChangedField.updateDisplayType({
-                displayType: ui.FieldDisplayType.HIDDEN
-            });
+            isChangedField.updateDisplayType({ displayType: ui.FieldDisplayType.HIDDEN });
 
             var subsidiarySelect = form.addField({
                 id: 'subsidiaryfield',
@@ -98,9 +96,7 @@ define([
                 });
                 return true;
             });
-            subsidiarySelect.defaultValue = creds.getValue(
-                'custrecord_vc_subsidiary'
-            );
+            subsidiarySelect.defaultValue = creds.getValue('custrecord_vc_subsidiary');
 
             var synnexgroup = form.addFieldGroup({
                 id: 'synnexgroup',
@@ -125,9 +121,7 @@ define([
                 label: 'Synnex User',
                 container: 'synnexgroup'
             });
-            synnexUserField.defaultValue = creds.getValue(
-                'custrecord_vc_synnex_user'
-            );
+            synnexUserField.defaultValue = creds.getValue('custrecord_vc_synnex_user');
 
             var synnexPassField = form.addField({
                 id: 'synnexpassfield',
@@ -135,9 +129,7 @@ define([
                 label: 'Synnex Pass',
                 container: 'synnexgroup'
             });
-            synnexPassField.defaultValue = creds.getValue(
-                'custrecord_vc_synnex_pass'
-            );
+            synnexPassField.defaultValue = creds.getValue('custrecord_vc_synnex_pass');
 
             var synnexCustNumField = form.addField({
                 id: 'synnexcustnumfield',
@@ -145,9 +137,7 @@ define([
                 label: 'Synnex Customer Number',
                 container: 'synnexgroup'
             });
-            synnexCustNumField.defaultValue = creds.getValue(
-                'custrecord_vc_synnex_customernum'
-            );
+            synnexCustNumField.defaultValue = creds.getValue('custrecord_vc_synnex_customernum');
 
             var dandhUserField = form.addField({
                 id: 'dandhuserfield',
@@ -155,9 +145,7 @@ define([
                 label: 'D&H User',
                 container: 'dandhgroup'
             });
-            dandhUserField.defaultValue = creds.getValue(
-                'custrecord_vc_dandh_user'
-            );
+            dandhUserField.defaultValue = creds.getValue('custrecord_vc_dandh_user');
 
             var dandhPassField = form.addField({
                 id: 'dandhpassfield',
@@ -165,9 +153,7 @@ define([
                 label: 'D&H Pass',
                 container: 'dandhgroup'
             });
-            dandhPassField.defaultValue = creds.getValue(
-                'custrecord_vc_dandh_pass'
-            );
+            dandhPassField.defaultValue = creds.getValue('custrecord_vc_dandh_pass');
 
             var techdataUserField = form.addField({
                 id: 'techdatauserfield',
@@ -175,9 +161,7 @@ define([
                 label: 'Tech Data User',
                 container: 'techdatagroup'
             });
-            techdataUserField.defaultValue = creds.getValue(
-                'custrecord_vc_techdata_user'
-            );
+            techdataUserField.defaultValue = creds.getValue('custrecord_vc_techdata_user');
 
             var techdataPassField = form.addField({
                 id: 'techdatapassfield',
@@ -185,9 +169,7 @@ define([
                 label: 'Tech Data Pass',
                 container: 'techdatagroup'
             });
-            techdataPassField.defaultValue = creds.getValue(
-                'custrecord_vc_techdata_pass'
-            );
+            techdataPassField.defaultValue = creds.getValue('custrecord_vc_techdata_pass');
 
             var ingramUserField = form.addField({
                 id: 'ingramuserfield',
@@ -195,9 +177,7 @@ define([
                 label: 'Ingram Micro User',
                 container: 'ingramgroup'
             });
-            ingramUserField.defaultValue = creds.getValue(
-                'custrecord_vc_ingrammicro_user'
-            );
+            ingramUserField.defaultValue = creds.getValue('custrecord_vc_ingrammicro_user');
 
             var ingramPassField = form.addField({
                 id: 'ingrampassfield',
@@ -205,9 +185,7 @@ define([
                 label: 'Ingram Micro Pass',
                 container: 'ingramgroup'
             });
-            ingramPassField.defaultValue = creds.getValue(
-                'custrecord_vc_ingrammicro_pass'
-            );
+            ingramPassField.defaultValue = creds.getValue('custrecord_vc_ingrammicro_pass');
 
             form.addSubmitButton({
                 label: 'Save'

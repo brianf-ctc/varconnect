@@ -41,9 +41,7 @@ define([
 
         for (var field in fields) {
             var formField = form.getField({ id: fields[field] });
-            formField.updateDisplayType({
-                displayType: ns_ui.FieldDisplayType.DISABLED
-            });
+            formField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.DISABLED });
             formField.defaultValue = '';
         }
     }
@@ -109,14 +107,10 @@ define([
                     fieldId: MAINCFG.FIELD.PROCESS_SPECIAL_ORDERS
                 });
 
+            log.debug(logTitle, '>> isProcessDropship: ' + JSON.stringify(isProcessDropship));
             log.debug(
                 logTitle,
-                '>> isProcessDropship: ' + JSON.stringify(isProcessDropship)
-            );
-            log.debug(
-                logTitle,
-                '>> isProcessSpecialOrder: ' +
-                    JSON.stringify(isProcessSpecialOrder)
+                '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder)
             );
 
             if (!isProcessDropship)

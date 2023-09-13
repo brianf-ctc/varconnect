@@ -113,9 +113,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         ) {
             var current_rec = context.newRecord;
             var currentID = current_rec.id;
-            var createdFromSO = current_rec.getValue({
-                fieldId: 'createdfrom'
-            });
+            var createdFromSO = current_rec.getValue({ fieldId: 'createdfrom' });
             var createdFromType;
             if (createdFromSO)
                 createdFromType = ns_search.lookupFields({
@@ -151,10 +149,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     function updateSO_v2(createdFromSO, transID, transRec) {
         var logTitle = [LogTitle, 'updateSO_v2'].join('::');
 
-        if (
-            PARAM.RESTRICT_SALESORD === true ||
-            PARAM.RESTRICT_SALESORD == 'T'
-        ) {
+        if (PARAM.RESTRICT_SALESORD === true || PARAM.RESTRICT_SALESORD == 'T') {
             log.debug(logTitle, '*** UPDATE RECORD: Not Allowed ***');
             return;
         }
@@ -211,10 +206,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 log.debug({
                     title: 'Update SO V2',
                     details:
-                        'soLineNum =  ' +
-                        soLineNum +
-                        '  PO Line sequence num = ' +
-                        transLineNum
+                        'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
                 });
 
                 if (!isEmpty(transLineNum)) {
@@ -229,19 +221,11 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                         });
 
                         for (var xmlField in xmlFields) {
-                            var fieldValue = result.getValue(
-                                xmlFields[xmlField]
-                            );
+                            var fieldValue = result.getValue(xmlFields[xmlField]);
 
-                            var fieldType = inArray(
-                                xmlFields[xmlField],
-                                xmlFieldsDef.DATE
-                            )
+                            var fieldType = inArray(xmlFields[xmlField], xmlFieldsDef.DATE)
                                 ? 'DATE'
-                                : inArray(
-                                      xmlFields[xmlField],
-                                      xmlFieldsDef.TEXT
-                                  )
+                                : inArray(xmlFields[xmlField], xmlFieldsDef.TEXT)
                                 ? 'TEXT'
                                 : 'TEXT';
 
@@ -261,9 +245,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
 
                             if (!isEmpty(fieldValue)) {
                                 if (fieldType == 'DATE') {
-                                    fieldValue = parseDate({
-                                        dateString: fieldValue
-                                    });
+                                    fieldValue = parseDate({ dateString: fieldValue });
                                 }
 
                                 log.debug({
@@ -307,18 +289,13 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                                 });
                                 log.debug({
                                     title: 'Update SO V2',
-                                    details:
-                                        'Committed SO line num ' + soLineNum
+                                    details: 'Committed SO line num ' + soLineNum
                                 });
                             }
                         } catch (err) {
                             log.error({
                                 title: 'Update SO V2 - Error committing SO line',
-                                details:
-                                    'SO line ' +
-                                    soLineNum +
-                                    ' error = ' +
-                                    err.message
+                                details: 'SO line ' + soLineNum + ' error = ' + err.message
                             });
                         }
                     } else {
@@ -381,8 +358,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         var searchresults = myInvoiceSearch.run().each(function (result) {
             log.debug({
                 title: 'Update Invoice Records',
-                details:
-                    'Updating invoice num = ' + result.getValue('internalid')
+                details: 'Updating invoice num = ' + result.getValue('internalid')
             });
 
             var invUpdated = false;
@@ -394,8 +370,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
             if (invRec != null) {
                 log.debug({
                     title: 'Update Invoice Records',
-                    details:
-                        'Loaded invoice num = ' + result.getValue('internalid')
+                    details: 'Loaded invoice num = ' + result.getValue('internalid')
                 });
 
                 var inv_filters = ns_search.createFilter({
@@ -408,63 +383,56 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 });
                 myInvoiceLineSearch.filters.push(inv_filters);
 
-                var searchLineResults = myInvoiceLineSearch
-                    .run()
-                    .each(function (result) {
-                        var invLineKey = result.getValue({
-                            name: 'lineuniquekey'
-                        });
-                        var invLineNum = getLineNum(invRec, invLineKey);
-
-                        log.debug({
-                            title: 'Update Invoice Records',
-                            details:
-                                'Procesing invoice line num = ' + invLineNum
-                        });
-
-                        if (!isEmpty(invLineNum)) {
-                            var lineNum = invRec.selectLine({
-                                sublistId: 'item',
-                                line: invLineNum
-                            });
-
-                            for (var xmlField in xmlFields) {
-                                var fieldValue = result.getValue({
-                                    name: xmlFields[xmlField],
-                                    join: 'appliedToTransaction'
-                                });
-                                if (!isEmpty(fieldValue))
-                                    invRec.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: xmlFields[xmlField],
-                                        value: fieldValue
-                                    });
-                                else
-                                    invRec.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: xmlFields[xmlField],
-                                        value: ''
-                                    });
-                            }
-
-                            try {
-                                invUpdated = true;
-                                invRec.commitLine({
-                                    sublistId: 'item'
-                                });
-                            } catch (err) {
-                                log.error({
-                                    title: 'Update Invoice - Error committing invoice line',
-                                    details:
-                                        'Invoice line ' +
-                                        invLineNum +
-                                        ' error = ' +
-                                        err.message
-                                });
-                            }
-                        }
-                        return true;
+                var searchLineResults = myInvoiceLineSearch.run().each(function (result) {
+                    var invLineKey = result.getValue({
+                        name: 'lineuniquekey'
                     });
+                    var invLineNum = getLineNum(invRec, invLineKey);
+
+                    log.debug({
+                        title: 'Update Invoice Records',
+                        details: 'Procesing invoice line num = ' + invLineNum
+                    });
+
+                    if (!isEmpty(invLineNum)) {
+                        var lineNum = invRec.selectLine({
+                            sublistId: 'item',
+                            line: invLineNum
+                        });
+
+                        for (var xmlField in xmlFields) {
+                            var fieldValue = result.getValue({
+                                name: xmlFields[xmlField],
+                                join: 'appliedToTransaction'
+                            });
+                            if (!isEmpty(fieldValue))
+                                invRec.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: xmlFields[xmlField],
+                                    value: fieldValue
+                                });
+                            else
+                                invRec.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: xmlFields[xmlField],
+                                    value: ''
+                                });
+                        }
+
+                        try {
+                            invUpdated = true;
+                            invRec.commitLine({
+                                sublistId: 'item'
+                            });
+                        } catch (err) {
+                            log.error({
+                                title: 'Update Invoice - Error committing invoice line',
+                                details: 'Invoice line ' + invLineNum + ' error = ' + err.message
+                            });
+                        }
+                    }
+                    return true;
+                });
             }
             if (invUpdated) {
                 try {
@@ -520,8 +488,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
 
     function inArray(stValue, arrValue) {
         if (!stValue || !arrValue) return false;
-        for (var i = arrValue.length - 1; i >= 0; i--)
-            if (stValue == arrValue[i]) break;
+        for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
         return i > -1;
     }
 
@@ -535,10 +502,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 type: ns_config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(
-                logTitle,
-                LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat)
-            );
+            log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
         }
 
         var dateString = options.dateString,
@@ -546,10 +510,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
 
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
-                var stringToProcess = dateString
-                    .replace(/-/g, '/')
-                    .replace(/\n/g, ' ')
-                    .split(' ');
+                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
 
                 for (var i = 0; i < stringToProcess.length; i++) {
                     var singleString = stringToProcess[i];
@@ -562,16 +523,10 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                     }
                 }
             } catch (e) {
-                log.error(
-                    logTitle,
-                    LogPrefix + '>> !! ERROR !! ' + util.extractError(e)
-                );
+                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
             }
         }
-        log.audit(
-            logTitle,
-            'Parsed Date :' + dateString + '---' + JSON.stringify(date)
-        );
+        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
         // return date;
 
         //Convert to string
@@ -634,20 +589,13 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                     currentNumbersList = newCurrent.split('\n');
 
                     /** check to see if the field already exceeds the max length **/
-                    if (
-                        currentNumbersList[currentNumbersList.length - 1] ===
-                        errorMsg
-                    )
+                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
                         errorFound = true;
 
                     if (!errorFound) {
                         for (var j = 0; j < scannedNums.length; j++) {
                             var numFound = false;
-                            for (
-                                var x = 0;
-                                x < currentNumbersList.length;
-                                x++
-                            ) {
+                            for (var x = 0; x < currentNumbersList.length; x++) {
                                 if (currentNumbersList[x] == scannedNums[j]) {
                                     numFound = true;
                                     break;
@@ -656,10 +604,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                             if (!numFound && scannedNums[j] != 'NA') {
                                 /* OLD  newCurrent += ',' + scannedNums[j]; */
                                 newNumAdded = true;
-                                if (
-                                    newCurrent.length + scannedNums[j].length <
-                                    maxFieldLength
-                                ) {
+                                if (newCurrent.length + scannedNums[j].length < maxFieldLength) {
                                     newCurrent += '\n' + scannedNums[j];
                                     currentNumbersList.push(scannedNums[j]);
                                 } else {
@@ -689,10 +634,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 } else {
                     var newCurrent = '';
                     for (var i = 0; i < scannedNums.length; i++) {
-                        if (
-                            newCurrent.length + scannedNums[i].length >
-                            maxFieldLength
-                        ) {
+                        if (newCurrent.length + scannedNums[i].length > maxFieldLength) {
                             newCurrent += errorMsg;
                             break;
                         } else newCurrent += scannedNums[i] + '\n';
@@ -710,8 +652,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         } catch (err) {
             log.error({
                 title: 'CTC Update PO ',
-                details:
-                    'ERROR In updateFieldLIST ' + fieldID + ' = ' + err.message
+                details: 'ERROR In updateFieldLIST ' + fieldID + ' = ' + err.message
             });
             return recUpdated;
         }

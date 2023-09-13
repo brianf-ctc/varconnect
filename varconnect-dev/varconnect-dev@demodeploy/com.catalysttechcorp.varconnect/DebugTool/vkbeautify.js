@@ -121,37 +121,26 @@ define([], function () {
                 ar[ix].search(/<\//) == -1 &&
                 ar[ix].search(/\/>/) == -1
             ) {
-                str = !inComment
-                    ? (str += shift[deep++] + ar[ix])
-                    : (str += ar[ix]);
+                str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
             }
             // <elm>...</elm> //
             else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) > -1) {
-                str = !inComment
-                    ? (str += shift[deep] + ar[ix])
-                    : (str += ar[ix]);
+                str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
             }
             // </elm> //
             else if (ar[ix].search(/<\//) > -1) {
-                str = !inComment
-                    ? (str += shift[--deep] + ar[ix])
-                    : (str += ar[ix]);
+                str = !inComment ? (str += shift[--deep] + ar[ix]) : (str += ar[ix]);
             }
             // <elm/> //
             else if (ar[ix].search(/\/>/) > -1) {
-                str = !inComment
-                    ? (str += shift[deep] + ar[ix])
-                    : (str += ar[ix]);
+                str = !inComment ? (str += shift[deep] + ar[ix]) : (str += ar[ix]);
             }
             // <? xml ... ?> //
             else if (ar[ix].search(/<\?/) > -1) {
                 str += shift[deep] + ar[ix];
             }
             // xmlns //
-            else if (
-                ar[ix].search(/xmlns\:/) > -1 ||
-                ar[ix].search(/xmlns\=/) > -1
-            ) {
+            else if (ar[ix].search(/xmlns\:/) > -1 || ar[ix].search(/xmlns\=/) > -1) {
                 str += shift[deep] + ar[ix];
             } else {
                 str += ar[ix];
@@ -166,8 +155,7 @@ define([], function () {
 
         if (typeof JSON === 'undefined') return text;
 
-        if (typeof text === 'string')
-            return JSON.stringify(JSON.parse(text), null, step);
+        if (typeof text === 'string') return JSON.stringify(JSON.parse(text), null, step);
         if (typeof text === 'object') return JSON.stringify(text, null, step);
 
         return text; // text is not string nor object
@@ -206,10 +194,7 @@ define([], function () {
     //----------------------------------------------------------------------------
 
     function isSubquery(str, parenthesisLevel) {
-        return (
-            parenthesisLevel -
-            (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
-        );
+        return parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length);
     }
 
     function split_sql(str, tab) {
@@ -331,10 +316,7 @@ define([], function () {
         var str = preserveComments
             ? text
             : text
-                  .replace(
-                      /\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g,
-                      ''
-                  )
+                  .replace(/\<![ \r\n\t]*(--([^\-]|[\r\n]|-[^\-])*--[ \r\n\t]*)\>/g, '')
                   .replace(/[ \r\n\t]{1,}xmlns/g, ' xmlns');
         return str.replace(/>\s{0,}</g, '><');
     };

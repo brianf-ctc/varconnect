@@ -51,14 +51,8 @@ define([
             CURRENT.emailTemplate = CURRENT.mainConfig.emailTemplate;
             CURRENT.searchId = CURRENT.mainConfig.fulfillmentSearch;
 
-            log.debug(
-                logTitle,
-                '*********** Script Execution Start: ' + JSON.stringify(context)
-            );
-            log.debug(
-                logTitle,
-                '... config settings: ' + JSON.stringify(CURRENT)
-            );
+            log.debug(logTitle, '*********** Script Execution Start: ' + JSON.stringify(context));
+            log.debug(logTitle, '... config settings: ' + JSON.stringify(CURRENT));
 
             if (!CURRENT.senderId) throw 'Missing email sender settings';
             if (!CURRENT.searchId) throw 'Missing search ID';
@@ -71,8 +65,7 @@ define([
             // build unique list of emails addresses
             for (i = 0; i < myResults.length; i++) {
                 var sendTo = myResults[i].getValue({
-                    name: vc2_constant.FIELD.TRANSACTION
-                        .SEND_SHIPPING_UPDATE_TO,
+                    name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
                     // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
                     join: 'createdFrom'
                 });
@@ -85,10 +78,7 @@ define([
                 }
             }
 
-            log.debug(
-                logTitle,
-                '>>> unique email list: ' + JSON.stringify(emailsList)
-            );
+            log.debug(logTitle, '>>> unique email list: ' + JSON.stringify(emailsList));
 
             for (i = 0; i < emailsList.length; i++) {
                 var newSendTo = emailsList[i];
@@ -97,8 +87,7 @@ define([
                 // build list of entries for that email from the search results
                 for (ii = 0; ii < myResults.length; ii++) {
                     var sendTo2 = myResults[ii].getValue({
-                        name: vc2_constant.FIELD.TRANSACTION
-                            .SEND_SHIPPING_UPDATE_TO,
+                        name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
                         // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
                         join: 'createdFrom'
                     });
@@ -115,10 +104,7 @@ define([
                 log.debug(logTitle, ' /// sending email to: ' + newSendTo);
 
                 // load email template, build and insert item table
-                var emailDetails = buildEmail(
-                    CURRENT.emailTemplate,
-                    itemTableHTML
-                );
+                var emailDetails = buildEmail(CURRENT.emailTemplate, itemTableHTML);
 
                 try {
                     ns_email.send({
@@ -129,10 +115,7 @@ define([
                     });
                     log.debug(logTitle, '...email succesfully sent');
                 } catch (err) {
-                    log.error(
-                        logTitle,
-                        '## Error sending email: ' + JSON.stringify(err)
-                    );
+                    log.error(logTitle, '## Error sending email: ' + JSON.stringify(err));
                 }
             }
         } catch (error) {
@@ -153,15 +136,10 @@ define([
     function getItemFulfillments() {
         var logTitle = [LogTitle, 'getItemFulfillments'].join('::');
 
-        log.audit(
-            logTitle,
-            '// get itemfulfillments from search: ' + CURRENT.searchId
-        );
+        log.audit(logTitle, '// get itemfulfillments from search: ' + CURRENT.searchId);
 
         var itemFFSearchObj = ns_search.load({ id: CURRENT.searchId });
-        var itemFFSearchAll = vc2_util.searchAllPaged({
-            searchObj: itemFFSearchObj
-        });
+        var itemFFSearchAll = vc2_util.searchAllPaged({ searchObj: itemFFSearchObj });
 
         log.debug(logTitle, '... results count' + itemFFSearchAll.length);
         var resultList = [];
@@ -210,19 +188,12 @@ define([
                 '</tr></thead>');
 
         for (var i = 0; i < bodyList.length; i++) {
-            var tempPO = bodyList[i].getValue({
-                name: 'otherrefnum',
-                join: 'createdFrom'
-            });
+            var tempPO = bodyList[i].getValue({ name: 'otherrefnum', join: 'createdFrom' });
             var tempSO = bodyList[i].getText({ name: 'createdFrom' });
             var tempItem = bodyList[i].getText({ name: 'item' });
             var tempQty = bodyList[i].getValue({ name: 'quantity' });
-            var tempTracking = bodyList[i].getValue({
-                name: 'custcol_ctc_xml_tracking_num'
-            });
-            var tempCarrier = bodyList[i].getValue({
-                name: 'custcol_ctc_xml_carrier'
-            });
+            var tempTracking = bodyList[i].getValue({ name: 'custcol_ctc_xml_tracking_num' });
+            var tempCarrier = bodyList[i].getValue({ name: 'custcol_ctc_xml_carrier' });
             // var tempCompany = bodyList[i].getText({ name: 'entity', join: 'createdFrom' });
             // var tempContact = bodyList[z].getValue({ name: 'contact', join: "customerMain" });
             // var tempShipTo = bodyList[i].getValue({ name: 'shipaddress', join: 'createdFrom' });

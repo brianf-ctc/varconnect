@@ -30,16 +30,7 @@ define([
     'N/format',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js'
-], function (
-    ns_record,
-    ns_runtime,
-    ns_search,
-    ns_url,
-    ns_ui,
-    ns_format,
-    vc2_util,
-    vc2_constant
-) {
+], function (ns_record, ns_runtime, ns_search, ns_url, ns_ui, ns_format, vc2_util, vc2_constant) {
     var LogTitle = 'VC UE Set Status';
 
     var EventActionsHelper = {},
@@ -72,8 +63,7 @@ define([
             var logDateSearch = ns_search.create(searchOptions);
             log.debug(
                 logTitle,
-                'Search date for latest log entries. ' +
-                    JSON.stringify(searchOptions)
+                'Search date for latest log entries. ' + JSON.stringify(searchOptions)
             );
             var maxLogDateResults = logDateSearch.run().getRange(0, 1);
             if (maxLogDateResults && maxLogDateResults.length) {
@@ -116,27 +106,17 @@ define([
                 searchOptions.filters = filters;
                 searchOptions.columns = columns;
                 var pagedLogSearch = ns_search.create(searchOptions);
-                log.debug(
-                    logTitle,
-                    'Search latest log entries. ' +
-                        JSON.stringify(searchOptions)
-                );
+                log.debug(logTitle, 'Search latest log entries. ' + JSON.stringify(searchOptions));
                 var pagedLogResults = pagedLogSearch.runPaged({
                     pageSize: 1000
                 });
                 var arrLogResults = [];
                 // go through search pages
-                for (
-                    var i = 0, j = pagedLogResults.pageRanges.length;
-                    i < j;
-                    i++
-                ) {
+                for (var i = 0, j = pagedLogResults.pageRanges.length; i < j; i++) {
                     var logPage = pagedLogResults.fetch({
                         index: pagedLogResults.pageRanges[i].index
                     });
-                    arrLogResults = arrLogResults.concat(
-                        logPage.data.slice(0, 1000)
-                    );
+                    arrLogResults = arrLogResults.concat(logPage.data.slice(0, 1000));
                     if (logPage.data.length < 1000) break;
                 }
                 // hand pick latest values
@@ -145,19 +125,14 @@ define([
                 for (var x = 0, y = arrLogResults.length; x < y; x++) {
                     var logResult = arrLogResults[x];
                     var statusMessage = logResult.getValue(logFields.BODY);
-                    var lineKey = logResult.getValue(
-                        logFields.TRANSACTION_LINEKEY
-                    );
+                    var lineKey = logResult.getValue(logFields.TRANSACTION_LINEKEY);
                     if (!lineKey) lineKey = 'main';
                     else lineKey = lineKey + '';
                     if (!mapLogStatusMessage.hasOwnProperty(lineKey)) {
                         mapLogStatusMessage[lineKey] = statusMessage;
                     }
                 }
-                log.debug(
-                    logTitle,
-                    'VC log messages=' + JSON.stringify(mapLogStatusMessage)
-                );
+                log.debug(logTitle, 'VC log messages=' + JSON.stringify(mapLogStatusMessage));
                 var lineKeys = Object.keys(mapLogStatusMessage);
                 if (lineKeys.length) {
                     FORM.addField({
@@ -184,29 +159,23 @@ define([
                             });
                             mapLineKeyToLine[lineUniqueKey] = 'header';
                         } else {
-                            var line =
-                                context.newRecord.findSublistLineWithValue({
-                                    sublistId: 'item',
-                                    fieldId: 'lineuniquekey',
-                                    value: lineUniqueKey
-                                });
+                            var line = context.newRecord.findSublistLineWithValue({
+                                sublistId: 'item',
+                                fieldId: 'lineuniquekey',
+                                value: lineUniqueKey
+                            });
                             if (line >= 0) {
                                 context.newRecord.setSublistValue({
                                     sublistId: 'item',
                                     fieldId: 'custpage_ctc_vc_log_col_message',
-                                    value: mapLogStatusMessage[
-                                        lineUniqueKey
-                                    ].substr(0, 4000),
+                                    value: mapLogStatusMessage[lineUniqueKey].substr(0, 4000),
                                     line: line
                                 });
                             }
                             mapLineKeyToLine[lineUniqueKey] = line;
                         }
                     }
-                    log.debug(
-                        logTitle,
-                        'Custom fields set. ' + JSON.stringify(mapLineKeyToLine)
-                    );
+                    log.debug(logTitle, 'Custom fields set. ' + JSON.stringify(mapLineKeyToLine));
                 }
             }
             return returnValue;
@@ -255,17 +224,12 @@ define([
 
             /// SUDO ACTIONS /////////////////////////////////////////
             if (
-                [EVENT_TYPE.VIEW, EVENT_TYPE.CREATE].indexOf(
-                    ContextData.eventType
-                ) >= 0 &&
+                [EVENT_TYPE.VIEW, EVENT_TYPE.CREATE].indexOf(ContextData.eventType) >= 0 &&
                 [CONTEXT_TYPE.USER_INTERFACE].indexOf(ContextData.execType) >= 0
             ) {
                 var paramSudo = context.request.parameters.sudo;
                 if (!vc2_util.isEmpty(paramSudo) && SUDO_ACTIONS[paramSudo]) {
-                    var result = SUDO_ACTIONS[paramSudo].call(
-                        SUDO_ACTIONS,
-                        context
-                    );
+                    var result = SUDO_ACTIONS[paramSudo].call(SUDO_ACTIONS, context);
 
                     if (result) {
                         redirect.toRecord({
@@ -284,12 +248,13 @@ define([
             if (
                 EventRouter[ContextData.recordType] &&
                 EventRouter[ContextData.recordType][eventName] &&
-                typeof EventRouter[ContextData.recordType][eventName] ===
-                    'function'
+                typeof EventRouter[ContextData.recordType][eventName] === 'function'
             ) {
-                returnValue = EventRouter[ContextData.recordType][
-                    eventName
-                ].call(EventRouter, ContextData, context);
+                returnValue = EventRouter[ContextData.recordType][eventName].call(
+                    EventRouter,
+                    ContextData,
+                    context
+                );
             }
 
             return returnValue;
@@ -332,16 +297,10 @@ define([
                 returnValue = null;
             EventActionsHelper.initialize(context);
             try {
-                returnValue = EventActionsHelper.execute(
-                    'beforeSubmit',
-                    context
-                );
+                returnValue = EventActionsHelper.execute('beforeSubmit', context);
             } catch (submitError) {
                 returnValue = false;
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify(submitError)
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(submitError));
                 throw submitError;
             }
 
@@ -360,16 +319,10 @@ define([
 
             EventActionsHelper.initialize(context);
             try {
-                returnValue = EventActionsHelper.execute(
-                    'afterSubmit',
-                    context
-                );
+                returnValue = EventActionsHelper.execute('afterSubmit', context);
             } catch (postSubmitError) {
                 returnValue = false;
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify(postSubmitError)
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(postSubmitError));
                 throw postSubmitError;
             }
 

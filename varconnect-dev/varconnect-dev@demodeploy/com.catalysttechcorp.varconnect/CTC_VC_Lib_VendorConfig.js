@@ -146,10 +146,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -206,10 +203,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 5
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -231,16 +225,31 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
 
         var config = null,
             vendor = options.xmlVendor,
-            subsidiary = options.subsidiary;
+            subsidiary = options.subsidiary,
+            recId = options.internalid;
 
         var filter = [];
-        filter.push(
-            ns_search.createFilter({
-                name: VendorCFG.FIELD.XML_VENDOR,
-                operator: ns_search.Operator.ANYOF,
-                values: vendor
-            })
-        );
+
+        if (vendor) {
+            filter.push(
+                ns_search.createFilter({
+                    name: VendorCFG.FIELD.XML_VENDOR,
+                    operator: ns_search.Operator.ANYOF,
+                    values: vendor
+                })
+            );
+        }
+
+        if (recId) {
+            filter.push(
+                ns_search.createFilter({
+                    name: 'internalid',
+                    operator: ns_search.Operator.ANYOF,
+                    values: recId
+                })
+            );
+        }
+
         filter.push(
             ns_search.createFilter({
                 name: 'isinactive',
@@ -287,10 +296,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {

@@ -38,9 +38,7 @@ define([
 
     function doGet(context) {
         // get the order type from a script parameter
-        var scriptOrderType = runtime
-            .getCurrentScript()
-            .getParameter({ name: 'custscript7' });
+        var scriptOrderType = runtime.getCurrentScript().getParameter({ name: 'custscript7' });
         var formTitle = '';
         var buttonLabel = '';
         var fieldLabel = '';

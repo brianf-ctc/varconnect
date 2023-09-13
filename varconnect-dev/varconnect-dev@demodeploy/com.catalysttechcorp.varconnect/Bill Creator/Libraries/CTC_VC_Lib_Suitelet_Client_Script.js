@@ -40,9 +40,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
         var currRecord = currentRecord.get();
 
         /// extract  the taxlines
-        var taxLinesJSON = currRecord.getValue({
-            fieldId: 'custpage_taxlines'
-        });
+        var taxLinesJSON = currRecord.getValue({ fieldId: 'custpage_taxlines' });
         var taxLines = JSON.parse(taxLinesJSON || '{}');
 
         var Totals = {
@@ -80,11 +78,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
                 util.extend(lineData, taxLines[lineData.itemid])
             );
 
-            console.log(
-                'lineData (item) >> ',
-                lineData,
-                taxLines[lineData.itemid]
-            );
+            console.log('lineData (item) >> ', lineData, taxLines[lineData.itemid]);
             Totals.lineTax += lineData.taxAmount;
             Totals.lineAmount += lineData.amount;
         }
@@ -114,11 +108,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
                 util.extend(lineData, taxLines[lineData.itemid])
             );
 
-            console.log(
-                'lineData (variance) >> ',
-                lineData,
-                taxLines[lineData.itemid]
-            );
+            console.log('lineData (variance) >> ', lineData, taxLines[lineData.itemid]);
 
             Totals.lineTax += lineData.taxAmount;
             Totals.lineAmount += lineData.amount;
@@ -132,10 +122,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
     function fieldChanged(context) {
         var currentValue = context.currentRecord.getValue(context);
 
-        if (
-            context.fieldId == 'custpage_polink' &&
-            nlapiGetFieldValue('custpage_polink') !== ''
-        ) {
+        if (context.fieldId == 'custpage_polink' && nlapiGetFieldValue('custpage_polink') !== '') {
             dialog
                 .confirm({
                     title: 'WARNING',
@@ -248,22 +235,17 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             });
 
             if (!isActive) {
-                [
-                    'applied',
-                    'nsitem',
-                    'itemname',
-                    'description',
-                    'amount',
-                    'amounttax'
-                ].forEach(function (fld) {
-                    try {
-                        currRecord.getSublistField({
-                            sublistId: 'variance',
-                            fieldId: fld,
-                            line: line
-                        }).isDisabled = true;
-                    } catch (e) {}
-                });
+                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax'].forEach(
+                    function (fld) {
+                        try {
+                            currRecord.getSublistField({
+                                sublistId: 'variance',
+                                fieldId: fld,
+                                line: line
+                            }).isDisabled = true;
+                        } catch (e) {}
+                    }
+                );
             }
         }
 

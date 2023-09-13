@@ -12,12 +12,12 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/https',
-    'N/search',
-    '../Libraries/moment',
-    '../Libraries/lodash'
-], function (ns_https, ns_search, moment, lodash) {
+define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_https,
+    ns_search,
+    moment,
+    lodash
+) {
     function processXml(input, config) {
         //var config = JSON.parse(configStr)
 
@@ -53,10 +53,7 @@ define([
 
         log.debug('ar: authBody', input + ': ' + JSON.stringify(authBody));
 
-        log.debug(
-            'ar: authResponse',
-            input + ': ' + JSON.stringify(authResponse)
-        );
+        log.debug('ar: authResponse', input + ': ' + JSON.stringify(authResponse));
 
         var authJson = JSON.parse(authResponse.body);
 
@@ -96,36 +93,21 @@ define([
 
         var myArr = [];
 
-        if (
-            !invBody.ResponseHeader.hasOwnProperty('TotalPages') ||
-            invoiceResponse.code !== 200
-        ) {
-            log.debug(
-                'ar: ' + invoiceResponse.code,
-                input + ': ' + 'No Records Returned'
-            );
+        if (!invBody.ResponseHeader.hasOwnProperty('TotalPages') || invoiceResponse.code !== 200) {
+            log.debug('ar: ' + invoiceResponse.code, input + ': ' + 'No Records Returned');
             return myArr;
         }
 
         for (var r = 0; r < invBody.InvoiceResponse.length; r++) {
-            for (
-                var d = 0;
-                d < invBody.InvoiceResponse[r].InvoiceDetails.length;
-                d++
-            ) {
+            for (var d = 0; d < invBody.InvoiceResponse[r].InvoiceDetails.length; d++) {
                 var xmlObj = invBody.InvoiceResponse[r].InvoiceDetails[d];
 
-                log.debug(
-                    'ar: invoice reponse',
-                    input + ': ' + JSON.stringify(xmlObj)
-                );
+                log.debug('ar: invoice reponse', input + ': ' + JSON.stringify(xmlObj));
 
                 var myObj = {};
                 myObj.po = docNum;
 
-                myObj.date = moment(xmlObj.InvoiceDate, 'DD-MMM-YY').format(
-                    'MM/DD/YYYY'
-                );
+                myObj.date = moment(xmlObj.InvoiceDate, 'DD-MMM-YY').format('MM/DD/YYYY');
                 log.debug('ar: date', myObj.date);
                 myObj.invoice = xmlObj.InvoiceNumber;
                 myObj.total = xmlObj.TotalInvAmount * 1;
@@ -141,14 +123,9 @@ define([
 
                 myObj.lines = [];
 
-                for (
-                    var i = 0;
-                    i < xmlObj.LineDetails.DetailRecord.length;
-                    i++
-                ) {
+                for (var i = 0; i < xmlObj.LineDetails.DetailRecord.length; i++) {
                     //xmlObj.LineDetails.DetailRecord[i]
-                    var item =
-                        xmlObj.LineDetails.DetailRecord[i].CustPartNumber;
+                    var item = xmlObj.LineDetails.DetailRecord[i].CustPartNumber;
                     if (!item || item == '' || item == null) {
                         continue;
                     }
@@ -157,11 +134,8 @@ define([
                         processed: false,
                         ITEMNO: item,
                         PRICE: xmlObj.LineDetails.DetailRecord[i].UnitPrice * 1,
-                        QUANTITY:
-                            xmlObj.LineDetails.DetailRecord[i].QuantityShipped *
-                            1,
-                        DESCRIPTION:
-                            xmlObj.LineDetails.DetailRecord[i].PartDescription
+                        QUANTITY: xmlObj.LineDetails.DetailRecord[i].QuantityShipped * 1,
+                        DESCRIPTION: xmlObj.LineDetails.DetailRecord[i].PartDescription
                     };
 
                     var itemIdx = lodash.findIndex(myObj.lines, {

@@ -110,9 +110,7 @@ define([
                 container: 'itemgroup'
             });
             poNumField.defaultValue = poNum;
-            poNumField.updateDisplayType({
-                displayType: ns_ui.FieldDisplayType.HIDDEN
-            });
+            poNumField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
 
             var itemsField = form.addField({
                 id: 'custpage_itemsfld',
@@ -121,9 +119,7 @@ define([
                 container: 'itemgroup'
             });
             itemsField.defaultValue = JSON.stringify(itemList);
-            itemsField.updateDisplayType({
-                displayType: ns_ui.FieldDisplayType.HIDDEN
-            });
+            itemsField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
 
             var itemselect = form.addField({
                 id: 'itemselectfield',
@@ -146,9 +142,7 @@ define([
                 });
 
                 var currentSNList = getCurrentSNList(poNum, itemId);
-                var snCount = isEmpty(currentSNList)
-                    ? 0
-                    : currentSNList.split(',').length;
+                var snCount = isEmpty(currentSNList) ? 0 : currentSNList.split(',').length;
 
                 var labelcountfield = form.addField({
                     id: 'custpage_label_sncount_' + itemId,
@@ -181,9 +175,7 @@ define([
                     label: 'Line Unique Key:'
                 });
                 lineKeyID.defaultValue = itemId;
-                lineKeyID.updateDisplayType({
-                    displayType: ns_ui.FieldDisplayType.HIDDEN
-                });
+                lineKeyID.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
             }
 
             // Creates and populates the invoice sublist
@@ -215,9 +207,7 @@ define([
         vc2_util.log(logTitle, 'parameters = ', params);
 
         var poField = context.request.parameters.custpage_ponumfld;
-        var itemsField = JSON.parse(
-            context.request.parameters.custpage_itemsfld
-        );
+        var itemsField = JSON.parse(context.request.parameters.custpage_itemsfld);
 
         if (!isEmpty(poField)) {
             vc2_util.log(logTitle, 'PO Num = ', poField);
@@ -278,10 +268,7 @@ define([
                     editMode: false
                 });
             } else {
-                vc2_util.log(
-                    logTitle,
-                    'Could not Create/Submit the Map/Reduce Task '
-                );
+                vc2_util.log(logTitle, 'Could not Create/Submit the Map/Reduce Task ');
                 var form = ns_ui.createForm({
                     title: 'Could not process serial numbers, please try again. (Error = Task-Create)'
                 });
@@ -344,38 +331,19 @@ define([
                 ['numbertext', 'is', poNum]
             ],
             columns: [
-                ns_search.createColumn({
-                    name: 'tranid',
-                    label: 'Document Number'
-                }),
+                ns_search.createColumn({ name: 'tranid', label: 'Document Number' }),
                 ns_search.createColumn({ name: 'item', label: 'Item' }),
-                ns_search.createColumn({
-                    name: 'createdfrom',
-                    label: 'Created From'
-                }),
-                ns_search.createColumn({
-                    name: 'lineuniquekey',
-                    label: 'Line Unique Key'
-                })
+                ns_search.createColumn({ name: 'createdfrom', label: 'Created From' }),
+                ns_search.createColumn({ name: 'lineuniquekey', label: 'Line Unique Key' })
             ]
         });
 
         var searchResultCount = purchaseorderSearchObj.runPaged().count;
-        vc2_util.log(
-            logTitle,
-            'purchaseorderSearchObj result count',
-            searchResultCount
-        );
+        vc2_util.log(logTitle, 'purchaseorderSearchObj result count', searchResultCount);
 
         purchaseorderSearchObj.run().each(function (result) {
             if (itemIDs.indexOf(result.getValue({ name: 'item' })) < 0) {
-                var item_info = {
-                    id: '',
-                    name: '',
-                    soID: '',
-                    poID: '',
-                    lineKey: ''
-                };
+                var item_info = { id: '', name: '', soID: '', poID: '', lineKey: '' };
                 item_info.id = result.getValue({ name: 'item' });
                 item_info.name = result.getText({ name: 'item' });
                 item_info.soID = result.getValue({ name: 'createdfrom' });
@@ -409,22 +377,12 @@ define([
                     sort: ns_search.Sort.ASC,
                     label: 'Name'
                 }),
-                ns_search.createColumn({
-                    name: 'scriptid',
-                    label: 'Script ID'
-                }),
-                ns_search.createColumn({
-                    name: 'custrecordserialitem',
-                    label: 'ItemNum'
-                })
+                ns_search.createColumn({ name: 'scriptid', label: 'Script ID' }),
+                ns_search.createColumn({ name: 'custrecordserialitem', label: 'ItemNum' })
             ]
         });
         var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        vc2_util.log(
-            logTitle,
-            'customrecordserialnumSearchObj result count',
-            searchResultCount
-        );
+        vc2_util.log(logTitle, 'customrecordserialnumSearchObj result count', searchResultCount);
 
         for (var x = 0; x < searchResultCount; x += 1000) {
             var rangeStart = x;

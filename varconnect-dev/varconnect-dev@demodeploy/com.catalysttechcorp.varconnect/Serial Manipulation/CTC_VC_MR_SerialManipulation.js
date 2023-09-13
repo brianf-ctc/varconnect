@@ -59,16 +59,13 @@ define([
             try {
                 var currentScript = ns_runtime.getCurrentScript();
                 PARAM = {
-                    recordType:
-                        currentScript.getParameter('custscript_vc_type'),
+                    recordType: currentScript.getParameter('custscript_vc_type'),
                     recordId: currentScript.getParameter('custscript_vc_id')
                 };
                 log.debug(logTitle, '>> PARAMS: ' + JSON.stringify(PARAM));
-                LogPrefix =
-                    '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+                LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
 
-                if (!PARAM.recordType || !PARAM.recordId)
-                    throw 'Missing record details';
+                if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
                 var mainConfig = Helper.loadMainConfig();
 
@@ -79,10 +76,7 @@ define([
                     throw 'Serials Scan and Update functionality is not set';
                 }
 
-                var record = ns_record.load({
-                    type: PARAM.recordType,
-                    id: PARAM.recordId
-                });
+                var record = ns_record.load({ type: PARAM.recordType, id: PARAM.recordId });
                 if (!record) throw 'Invalid record';
 
                 var SERIALFLD = vc2_constant.RECORD.SERIALS.FIELD;
@@ -105,21 +99,15 @@ define([
                         createdFromData.recordtype == ns_record.Type.SALES_ORDER
                         ? recordData.createdfrom
                         : // created from PO, and has createdfrom data
-                        createdFromData.recordtype ==
-                              ns_record.Type.PURCHASE_ORDER &&
+                        createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
                           createdFromData.createdfrom
                         ? createdFromData.createdfrom
                         : null;
 
+                log.audit(logTitle, LogPrefix + '// record: ' + JSON.stringify(recordData));
                 log.audit(
                     logTitle,
-                    LogPrefix + '// record: ' + JSON.stringify(recordData)
-                );
-                log.audit(
-                    logTitle,
-                    LogPrefix +
-                        '// createdFrom: ' +
-                        JSON.stringify(createdFromData)
+                    LogPrefix + '// createdFrom: ' + JSON.stringify(createdFromData)
                 );
 
                 var lineCount = record.getLineCount({ sublistId: 'item' }),
@@ -132,25 +120,17 @@ define([
                         serialObj[SERIALFLD[recTypeKey]] = PARAM.recordId;
                     }
 
-                    if (
-                        createdFromData.recordtype == ns_record.Type[recTypeKey]
-                    ) {
-                        serialObj[SERIALFLD[recTypeKey]] =
-                            recordData.createdfrom;
+                    if (createdFromData.recordtype == ns_record.Type[recTypeKey]) {
+                        serialObj[SERIALFLD[recTypeKey]] = recordData.createdfrom;
                     }
                 }
                 if (
-                    createdFromData.recordtype ==
-                        ns_record.Type.PURCHASE_ORDER &&
+                    createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
                     createdFromData.createdfrom
                 ) {
-                    serialObj[SERIALFLD.SALES_ORDER] =
-                        createdFromData.createdfrom;
+                    serialObj[SERIALFLD.SALES_ORDER] = createdFromData.createdfrom;
                 }
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// serial obj: ' + JSON.stringify(serialObj)
-                );
+                log.audit(logTitle, LogPrefix + '// serial obj: ' + JSON.stringify(serialObj));
 
                 for (var line = 0; line < lineCount; line++) {
                     var lineData = {
@@ -182,17 +162,11 @@ define([
                         })
                     };
 
-                    if (lineData.serialStr)
-                        lineData.serialArr = Helper.split(lineData.serialStr);
+                    if (lineData.serialStr) lineData.serialArr = Helper.split(lineData.serialStr);
                     if (lineData.updateSerialStr)
-                        lineData.updateSerialArr = Helper.split(
-                            lineData.updateSerialStr
-                        );
+                        lineData.updateSerialArr = Helper.split(lineData.updateSerialStr);
 
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '// Line Data: ' + JSON.stringify(lineData)
-                    );
+                    log.audit(logTitle, LogPrefix + '// Line Data: ' + JSON.stringify(lineData));
 
                     // var itemNum = record.getSublistValue({
                     //     sublistId: 'item',
@@ -265,15 +239,9 @@ define([
                     // }
                 }
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// Return Data: ' + JSON.stringify(returnData)
-                );
+                log.audit(logTitle, LogPrefix + '// Return Data: ' + JSON.stringify(returnData));
             } catch (error) {
-                log.audit(
-                    logTitle,
-                    LogPrefix + ' ## EXIT SCRIPT ## ' + JSON.stringify(error)
-                );
+                log.audit(logTitle, LogPrefix + ' ## EXIT SCRIPT ## ' + JSON.stringify(error));
                 return false;
             }
 
@@ -289,20 +257,15 @@ define([
                 recordId: currentScript.getParameter('custscript_vc_id')
             };
             log.debug(logTitle, '>> PARAMS: ' + JSON.stringify(PARAM));
-            LogPrefix =
-                '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+            LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
 
-            if (!PARAM.recordType || !PARAM.recordId)
-                throw 'Missing record details';
+            if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
             var currentData = JSON.parse(context.values[0]),
                 action = currentData.action,
                 serialId;
 
-            log.debug(
-                logTitle,
-                LogPrefix + '// currentData: ' + JSON.stringify(currentData)
-            );
+            log.debug(logTitle, LogPrefix + '// currentData: ' + JSON.stringify(currentData));
 
             serialId =
                 action == 'create'
@@ -313,16 +276,11 @@ define([
 
             if (!serialId || !action || !currentData.name) throw 'Invalid data';
 
-            if (serialId)
-                context.write({ key: 'success', value: currentData.name });
+            if (serialId) context.write({ key: 'success', value: currentData.name });
             else {
                 if (action == 'create')
-                    context.write({
-                        key: 'duplicate',
-                        value: currentData.name
-                    });
-                else if (action == 'update')
-                    context.write({ key: 'dne', value: currentData.name });
+                    context.write({ key: 'duplicate', value: currentData.name });
+                else if (action == 'update') context.write({ key: 'dne', value: currentData.name });
             }
         },
 
@@ -411,20 +369,14 @@ define([
             var returnValue = false;
 
             try {
-                var serialSearch = ns_search.global({
-                    keywords: 'serial: ' + option.name
-                });
+                var serialSearch = ns_search.global({ keywords: 'serial: ' + option.name });
                 log.debug(
                     logTitle,
-                    LogPrefix +
-                        '// Global search result: ' +
-                        JSON.stringify(serialSearch)
+                    LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch)
                 );
                 if (serialSearch.length) throw 'Matching serial found';
 
-                var recSerial = ns_record.create({
-                    type: 'customrecordserialnum'
-                });
+                var recSerial = ns_record.create({ type: 'customrecordserialnum' });
 
                 for (var key in SERIALFLD) {
                     var fld = SERIALFLD[key];
@@ -434,17 +386,11 @@ define([
                 }
 
                 var serialId = recSerial.save();
-                log.debug(
-                    logTitle,
-                    LogPrefix + '// New serial id: ' + serialId
-                );
+                log.debug(logTitle, LogPrefix + '// New serial id: ' + serialId);
 
                 returnValue = serialId;
             } catch (error) {
-                log.audit(
-                    logTitle,
-                    LogPrefix + '## ERROR:' + JSON.stringify(error)
-                );
+                log.audit(logTitle, LogPrefix + '## ERROR:' + JSON.stringify(error));
                 returnValue = false;
             }
 
@@ -458,14 +404,10 @@ define([
             var returnValue = false;
 
             try {
-                var serialSearch = ns_search.global({
-                    keywords: 'serial: ' + option.name
-                });
+                var serialSearch = ns_search.global({ keywords: 'serial: ' + option.name });
                 log.debug(
                     logTitle,
-                    LogPrefix +
-                        '// Global search result: ' +
-                        JSON.stringify(serialSearch)
+                    LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch)
                 );
                 if (!serialSearch.length) throw 'Matching serial not found';
                 if (serialSearch.length > 1) throw 'Multiple serials found';
@@ -480,9 +422,7 @@ define([
 
                 log.audit(
                     logTitle,
-                    LogPrefix +
-                        '// Serial values: ' +
-                        JSON.stringify(updateValues)
+                    LogPrefix + '// Serial values: ' + JSON.stringify(updateValues)
                 );
 
                 var serialId = ns_record.submitFields({
@@ -490,33 +430,18 @@ define([
                     id: serialSearch[0].id,
                     values: updateValues
                 });
-                log.debug(
-                    logTitle,
-                    LogPrefix + '// updated  serial id: ' + serialId
-                );
+                log.debug(logTitle, LogPrefix + '// updated  serial id: ' + serialId);
 
                 returnValue = serialId;
             } catch (error) {
-                log.audit(
-                    logTitle,
-                    LogPrefix + '## ERROR:' + JSON.stringify(error)
-                );
+                log.audit(logTitle, LogPrefix + '## ERROR:' + JSON.stringify(error));
                 returnValue = false;
             }
 
             return returnValue;
         },
 
-        createSerial_old: function (
-            serial,
-            poId,
-            itemId,
-            soId,
-            ifId,
-            raId,
-            vaId,
-            irId
-        ) {
+        createSerial_old: function (serial, poId, itemId, soId, ifId, raId, vaId, irId) {
             var rs = ns_search.global({ keywords: 'serial: ' + serial });
             log.debug('Global search result', rs);
 
@@ -627,14 +552,9 @@ define([
          * Update transaction to mark serials as processed
          */
         updateTransactionSerials: function (options) {
-            var recType = ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_vc_type'),
-                recId = ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_vc_id');
-            (duplicateSerials = options.duplicateSerials),
-                (dneSerials = options.dneSerials);
+            var recType = ns_runtime.getCurrentScript().getParameter('custscript_vc_type'),
+                recId = ns_runtime.getCurrentScript().getParameter('custscript_vc_id');
+            (duplicateSerials = options.duplicateSerials), (dneSerials = options.dneSerials);
 
             var rec = ns_record.load({
                     type: recType,
@@ -693,15 +613,9 @@ define([
         sendEmail: function (options) {
             var duplicate = options.duplicate,
                 dne = options.dne,
-                sender = ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_vc_sender'),
-                recId = ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_vc_id'),
-                recType = ns_runtime
-                    .getCurrentScript()
-                    .getParameter('custscript_vc_type'),
+                sender = ns_runtime.getCurrentScript().getParameter('custscript_vc_sender'),
+                recId = ns_runtime.getCurrentScript().getParameter('custscript_vc_id'),
+                recType = ns_runtime.getCurrentScript().getParameter('custscript_vc_type'),
                 txnNumber;
 
             var lookup = ns_search.lookupFields({
@@ -715,8 +629,7 @@ define([
             var recipient = sender,
                 cc = [sender];
 
-            if (recType == ns_record.Type.ITEM_RECEIPT)
-                cc = cc.concat(CC_ITEM_RECEIPT);
+            if (recType == ns_record.Type.ITEM_RECEIPT) cc = cc.concat(CC_ITEM_RECEIPT);
             else if (recType == ns_record.Type.ITEM_FULFILLMENT)
                 cc = cc.concat(CC_ITEM_FULFILLMENT);
 

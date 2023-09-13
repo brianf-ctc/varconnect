@@ -55,9 +55,7 @@ define([
             customerNo = vendorConfig.customerNo;
 
         if (!endpoint || !user || !password)
-            throw Error(
-                'Incomplete webservice information for ' + vendorConfig.vendor
-            );
+            throw Error('Incomplete webservice information for ' + vendorConfig.vendor);
     }
 
     /**
@@ -346,8 +344,7 @@ define([
 
             if (
                 mainConfig.multipleIngram &&
-                (xmlVendor == vendorList.INGRAM_MICRO_V_ONE ||
-                    xmlVendor == vendorList.INGRAM_MICRO)
+                (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
             ) {
                 outputArray = _handleMultipleVendor({
                     vendor: vendor,

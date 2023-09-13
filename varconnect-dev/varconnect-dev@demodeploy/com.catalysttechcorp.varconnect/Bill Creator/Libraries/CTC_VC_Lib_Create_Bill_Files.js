@@ -44,8 +44,7 @@ define([
     var Helper = {
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (var i = arrValue.length - 1; i >= 0; i--)
-                if (stValue == arrValue[i]) break;
+            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
         uniqueArray: function (arrVar) {
@@ -110,10 +109,7 @@ define([
             var logTitle = [LogTitle, 'searchPO'].join('::'),
                 returnValue;
 
-            log.audit(
-                logTitle,
-                LogPrefix + '// search for existing PO: ' + poName
-            );
+            log.audit(logTitle, LogPrefix + '// search for existing PO: ' + poName);
 
             var searchObj = ns_search.create({
                 type: 'purchaseorder',
@@ -134,9 +130,7 @@ define([
                     'trandate',
                     'postingperiod',
                     'type',
-                    MainConfig.overridePONum
-                        ? 'custbody_ctc_vc_override_ponum'
-                        : 'tranid',
+                    MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
                     'tranid',
                     'entity',
                     'amount',
@@ -146,10 +140,7 @@ define([
 
             var poData = false;
             if (searchObj.runPaged().count) {
-                var searchResult = searchObj
-                    .run()
-                    .getRange({ start: 0, end: 1 })
-                    .shift();
+                var searchResult = searchObj.run().getRange({ start: 0, end: 1 }).shift();
 
                 poData = {
                     id: searchResult.getValue({ name: 'internalid' }),
@@ -159,10 +150,7 @@ define([
                 };
             }
             returnValue = poData;
-            log.audit(
-                logTitle,
-                LogPrefix + '... PO Data : ' + JSON.stringify(poData)
-            );
+            log.audit(logTitle, LogPrefix + '... PO Data : ' + JSON.stringify(poData));
 
             return returnValue;
         },
@@ -194,11 +182,7 @@ define([
 
             var itemSearch = ns_search.create({
                 type: 'transaction',
-                filters: [
-                    ['internalid', 'anyof', option.poId],
-                    'AND',
-                    ['mainline', 'is', 'F']
-                ],
+                filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
                 columns: [
                     ns_search.createColumn({
                         name: 'item',
@@ -265,15 +249,9 @@ define([
                     return true;
                 });
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// config: ' + JSON.stringify(returnValue)
-                );
+                log.audit(logTitle, LogPrefix + '// config: ' + JSON.stringify(returnValue));
             } catch (error) {
-                log.audit(
-                    logTitle,
-                    LogPrefix + '## ERROR ## ' + JSON.stringify(error)
-                );
+                log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
             }
 
@@ -296,19 +274,13 @@ define([
                     })
                 });
                 var results = JSON.parse(fuzzyResp.body);
-                log.audit(
-                    logTitle,
-                    LogPrefix + '/// Fuse match: ' + JSON.stringify(results)
-                );
+                log.audit(logTitle, LogPrefix + '/// Fuse match: ' + JSON.stringify(results));
 
                 if (results.match) {
                     returnValue = true;
                 }
             } catch (match_error) {
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// Match error: ' + JSON.stringify(match_error)
-                );
+                log.audit(logTitle, LogPrefix + '// Match error: ' + JSON.stringify(match_error));
             }
 
             return returnValue;
@@ -332,10 +304,7 @@ define([
         }
         log.audit(
             logTitle,
-            'Parsed Date :' +
-                dateString +
-                ' : ' +
-                JSON.stringify([dateValue, typeof dateValue])
+            'Parsed Date :' + dateString + ' : ' + JSON.stringify([dateValue, typeof dateValue])
         );
         // return date;
         //Convert to string
@@ -346,10 +315,7 @@ define([
             });
         }
 
-        log.audit(
-            logTitle,
-            'return value :' + JSON.stringify([dateValue, typeof dateValue])
-        );
+        log.audit(logTitle, 'return value :' + JSON.stringify([dateValue, typeof dateValue]));
 
         return dateValue;
     }
@@ -384,37 +350,23 @@ define([
                 LogPrefix = '[bill:' + currentOrder.invoice + '] ';
                 vc2_util.LogPrefix = '[bill:' + currentOrder.invoice + '] ';
 
-                vc2_util.log(
-                    logTitle,
-                    '###### PROCESSING [' + currentOrder.invoice + '] ######'
-                );
+                vc2_util.log(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
                 log.audit(logTitle, { idx: i, data: myArr[i] });
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// Look for existing bills...'
-                );
+                log.audit(logTitle, LogPrefix + '// Look for existing bills...');
                 if (Helper.billFileExists(currentOrder)) {
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '...already exists, skipping'
-                    );
+                    log.audit(logTitle, LogPrefix + '...already exists, skipping');
                     continue;
                 }
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + ' /// Initiate bill file record.'
-                );
+                log.audit(logTitle, LogPrefix + ' /// Initiate bill file record.');
                 var billFileNotes = [];
                 var billFileValues = {
                     name: name,
                     custrecord_ctc_vc_bill_file_position: i + 1,
                     custrecord_ctc_vc_bill_po: currentOrder.po,
                     custrecord_ctc_vc_bill_number: currentOrder.invoice,
-                    custrecord_ctc_vc_bill_date: moment(
-                        currentOrder.date
-                    ).toDate(),
+                    custrecord_ctc_vc_bill_date: moment(currentOrder.date).toDate(),
                     custrecord_ctc_vc_bill_proc_status: 1,
                     custrecord_ctc_vc_bill_integration: configObj.id,
                     custrecord_ctc_vc_bill_src: myArr[i].xmlStr
@@ -430,9 +382,7 @@ define([
 
                 var poData = Helper.searchPO(currentOrder.po.trim());
                 if (!poData) {
-                    billFileNotes.push(
-                        'PO Link is not found : [' + currentOrder.po + ']'
-                    );
+                    billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
                 } else {
                     // load the vendor config
                     var vendorCfg = Helper.loadVendorConfig({
@@ -440,13 +390,7 @@ define([
                     });
 
                     billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
-                    billFileNotes.push(
-                        'Linked to PO: ' +
-                            poData.tranId +
-                            ' (' +
-                            poData.id +
-                            ') '
-                    );
+                    billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
 
                     ///////////////////////////////////
                     //For Ergo:  Cisco, Dell, EMC, Scansource, Westcon
@@ -482,8 +426,7 @@ define([
                 }
 
                 if (dueDate !== null) {
-                    billFileValues.custrecord_ctc_vc_bill_due_date =
-                        moment(dueDate).toDate();
+                    billFileValues.custrecord_ctc_vc_bill_due_date = moment(dueDate).toDate();
                     if (manualDueDate) {
                         billFileValues.custrecord_ctc_vc_bill_due_date_f_file = true;
                     }
@@ -500,11 +443,7 @@ define([
                     for (ii = 0; ii < currentOrder.lines.length; ii++) {
                         var itemNo = currentOrder.lines[ii].ITEMNO;
 
-                        var logPrefix =
-                            LogPrefix +
-                            '// search for matching item [' +
-                            itemNo +
-                            '] ';
+                        var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
 
                         var matchedSku = false;
 
@@ -516,9 +455,7 @@ define([
                         }
                         log.audit(
                             logTitle,
-                            logPrefix +
-                                '.. exact match ? ' +
-                                JSON.stringify(matchedSku)
+                            logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku)
                         );
 
                         if (!matchedSku) {
@@ -530,18 +467,13 @@ define([
 
                             log.audit(
                                 logTitle,
-                                logPrefix +
-                                    '.. fuzzy match ? ' +
-                                    JSON.stringify(matchedSku)
+                                logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku)
                             );
                         }
 
                         if (!matchedSku) {
                             billFileNotes.push('Not matched SKU: ' + itemNo);
-                            log.audit(
-                                logTitle,
-                                logPrefix + '.. match not found. '
-                            );
+                            log.audit(logTitle, logPrefix + '.. match not found. ');
                         } else {
                             currentOrder.lines[ii].NSITEM = matchedSku;
                             arrMatchedSKU.push(matchedSku);
@@ -550,23 +482,18 @@ define([
 
                     log.audit(
                         logTitle,
-                        LogPrefix +
-                            '... matched items: ' +
-                            JSON.stringify(arrMatchedSKU)
+                        LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
                     );
 
                     if (arrMatchedSKU.length) {
-                        billFileNotes.push(
-                            'Matched SKU: ' + arrMatchedSKU.length
-                        );
+                        billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
                     }
                 } else {
                     for (ii = 0; ii < currentOrder.lines.length; ii++) {
                         currentOrder.lines[ii].NSITEM = '';
                     }
                 }
-                billFileValues.custrecord_ctc_vc_bill_json =
-                    JSON.stringify(currentOrder);
+                billFileValues.custrecord_ctc_vc_bill_json = JSON.stringify(currentOrder);
                 billFileValues.custrecord_ctc_vc_bill_log = addNote({
                     note: billFileNotes.join(' | ')
                 });
@@ -587,9 +514,7 @@ define([
 
                 vc2_util.vcLog({
                     title: 'Bill File',
-                    message:
-                        'Created bill file |' +
-                        [record_id, billFileValues.name].join(' - '),
+                    message: 'Created bill file |' + [record_id, billFileValues.name].join(' - '),
                     details: billFileValues,
                     status: LOG_STATUS.SUCCESS
                 });
@@ -623,8 +548,6 @@ define([
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
         }
 
-        log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-
         // get the current notes
         if (billFileId) {
             var recData = ns_search.lookupFields({
@@ -634,9 +557,7 @@ define([
             });
             allNotes = recData.custrecord_ctc_vc_bill_log;
         }
-        if (notes)
-            allNotes =
-                allNotes + '\r\n' + moment().format(dateFormat) + ' - ' + notes;
+        if (notes) allNotes = allNotes + '\r\n' + moment().format('MM/DD/YYYY') + ' - ' + notes;
 
         // lets simplify ///
         // first, split up the notes by date, and make each an object
@@ -645,7 +566,6 @@ define([
             if (arrNotes.indexOf(line) < 0) arrNotes.push(line);
             return true;
         });
-        log.audit(logTitle, '>> arrNotes: ' + JSON.stringify(arrNotes));
         var newNoteStr = arrNotes.join('\r\n');
 
         if (billFileId) {

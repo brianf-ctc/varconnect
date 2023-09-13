@@ -25,12 +25,7 @@
  * 1.00		Jul 9, 2020	    paolodl@nscatalyst.com	Initial Build
  *
  */
-define(['N/ui/serverWidget', 'N/task', 'N/url', 'N/runtime'], function (
-    ui,
-    task,
-    url,
-    runtime
-) {
+define(['N/ui/serverWidget', 'N/task', 'N/url', 'N/runtime'], function (ui, task, url, runtime) {
     var SCRIPT_ID = 'customscript_ctc_vc_mr_serialization',
         DEPLOYMENT_ID = 'customdeploy_ctc_vc_mr_serialization_man';
 
@@ -52,8 +47,7 @@ define(['N/ui/serverWidget', 'N/task', 'N/url', 'N/runtime'], function (
             field.updateLayoutType({
                 layoutType: ui.FieldLayoutType.STARTROW
             });
-            field.defaultValue =
-                'Script is currently processing serial numbers';
+            field.defaultValue = 'Script is currently processing serial numbers';
         }
 
         //        var domain = url.resolveDomain({

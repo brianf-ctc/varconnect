@@ -56,8 +56,7 @@ License: MIT
     }
 
     var IS_WORKER = !global.document && !!global.postMessage,
-        IS_PAPA_WORKER =
-            IS_WORKER && /blob:/i.test((global.location || {}).protocol);
+        IS_PAPA_WORKER = IS_WORKER && /blob:/i.test((global.location || {}).protocol);
     var workers = {},
         workerIdCounter = 0;
 
@@ -101,8 +100,7 @@ License: MIT
                     $(this).attr('type').toLowerCase() === 'file' &&
                     global.FileReader;
 
-                if (!supported || !this.files || this.files.length === 0)
-                    return true; // continue to next input element
+                if (!supported || !this.files || this.files.length === 0) return true; // continue to next input element
 
                 for (var i = 0; i < this.files.length; i++) {
                     queue.push({
@@ -129,21 +127,13 @@ License: MIT
 
                     if (typeof returned === 'object') {
                         if (returned.action === 'abort') {
-                            error(
-                                'AbortError',
-                                f.file,
-                                f.inputElem,
-                                returned.reason
-                            );
+                            error('AbortError', f.file, f.inputElem, returned.reason);
                             return; // Aborts all queued files immediately
                         } else if (returned.action === 'skip') {
                             fileComplete(); // parse the next file in the queue, if any
                             return;
                         } else if (typeof returned.config === 'object')
-                            f.instanceConfig = $.extend(
-                                f.instanceConfig,
-                                returned.config
-                            );
+                            f.instanceConfig = $.extend(f.instanceConfig, returned.config);
                     } else if (returned === 'skip') {
                         fileComplete(); // parse the next file in the queue, if any
                         return;
@@ -162,8 +152,7 @@ License: MIT
             }
 
             function error(name, file, elem, reason) {
-                if (isFunction(options.error))
-                    options.error({ name: name }, file, elem, reason);
+                if (isFunction(options.error)) options.error({ name: name }, file, elem, reason);
             }
 
             function fileComplete() {
@@ -187,9 +176,7 @@ License: MIT
         }
         _config.dynamicTyping = dynamicTyping;
 
-        _config.transform = isFunction(_config.transform)
-            ? _config.transform
-            : false;
+        _config.transform = isFunction(_config.transform) ? _config.transform : false;
 
         if (_config.worker && Papa.WORKERS_SUPPORTED) {
             var w = newWorker();
@@ -215,10 +202,7 @@ License: MIT
         }
 
         var streamer = null;
-        if (
-            _input === Papa.NODE_STREAM_INPUT &&
-            typeof PAPA_BROWSER_CONTEXT === 'undefined'
-        ) {
+        if (_input === Papa.NODE_STREAM_INPUT && typeof PAPA_BROWSER_CONTEXT === 'undefined') {
             // create a node Duplex stream for use
             // with .pipe
             streamer = new DuplexStreamStreamer(_config);
@@ -226,16 +210,9 @@ License: MIT
         } else if (typeof _input === 'string') {
             if (_config.download) streamer = new NetworkStreamer(_config);
             else streamer = new StringStreamer(_config);
-        } else if (
-            _input.readable === true &&
-            isFunction(_input.read) &&
-            isFunction(_input.on)
-        ) {
+        } else if (_input.readable === true && isFunction(_input.read) && isFunction(_input.on)) {
             streamer = new ReadableStreamStreamer(_config);
-        } else if (
-            (global.File && _input instanceof File) ||
-            _input instanceof Object
-        )
+        } else if ((global.File && _input instanceof File) || _input instanceof Object)
             // ...Safari. (see issue #106)
             streamer = new FileStreamer(_config);
 
@@ -282,36 +259,23 @@ License: MIT
             if (!_input.length || Array.isArray(_input[0]))
                 return serialize(null, _input, _skipEmptyLines);
             else if (typeof _input[0] === 'object')
-                return serialize(
-                    _columns || objectKeys(_input[0]),
-                    _input,
-                    _skipEmptyLines
-                );
+                return serialize(_columns || objectKeys(_input[0]), _input, _skipEmptyLines);
         } else if (typeof _input === 'object') {
-            if (typeof _input.data === 'string')
-                _input.data = JSON.parse(_input.data);
+            if (typeof _input.data === 'string') _input.data = JSON.parse(_input.data);
 
             if (Array.isArray(_input.data)) {
-                if (!_input.fields)
-                    _input.fields = _input.meta && _input.meta.fields;
+                if (!_input.fields) _input.fields = _input.meta && _input.meta.fields;
 
                 if (!_input.fields)
                     _input.fields = Array.isArray(_input.data[0])
                         ? _input.fields
                         : objectKeys(_input.data[0]);
 
-                if (
-                    !Array.isArray(_input.data[0]) &&
-                    typeof _input.data[0] !== 'object'
-                )
+                if (!Array.isArray(_input.data[0]) && typeof _input.data[0] !== 'object')
                     _input.data = [_input.data]; // handles input like [1,2,3] or ['asdf']
             }
 
-            return serialize(
-                _input.fields || [],
-                _input.data || [],
-                _skipEmptyLines
-            );
+            return serialize(_input.fields || [], _input.data || [], _skipEmptyLines);
         }
 
         // Default (any valid paths should return before this)
@@ -344,15 +308,12 @@ License: MIT
 
             if (typeof _config.newline === 'string') _newline = _config.newline;
 
-            if (typeof _config.quoteChar === 'string')
-                _quoteChar = _config.quoteChar;
+            if (typeof _config.quoteChar === 'string') _quoteChar = _config.quoteChar;
 
-            if (typeof _config.header === 'boolean')
-                _writeHeader = _config.header;
+            if (typeof _config.header === 'boolean') _writeHeader = _config.header;
 
             if (Array.isArray(_config.columns)) {
-                if (_config.columns.length === 0)
-                    throw new Error('Option columns is empty');
+                if (_config.columns.length === 0) throw new Error('Option columns is empty');
 
                 _columns = _config.columns;
             }
@@ -404,8 +365,7 @@ License: MIT
                     emptyLine =
                         skipEmptyLines === 'greedy'
                             ? data[row].join('').trim() === ''
-                            : data[row].length === 1 &&
-                              data[row][0].length === 0;
+                            : data[row].length === 1 && data[row][0].length === 0;
                 }
                 if (skipEmptyLines === 'greedy' && hasHeader) {
                     var line = [];
@@ -418,14 +378,10 @@ License: MIT
                 if (!emptyLine) {
                     for (var col = 0; col < maxCol; col++) {
                         if (col > 0 && !nullLine) csv += _delimiter;
-                        var colIdx =
-                            hasHeader && dataKeyedByField ? fields[col] : col;
+                        var colIdx = hasHeader && dataKeyedByField ? fields[col] : col;
                         csv += safe(data[row][colIdx], col);
                     }
-                    if (
-                        row < data.length - 1 &&
-                        (!skipEmptyLines || (maxCol > 0 && !nullLine))
-                    ) {
+                    if (row < data.length - 1 && (!skipEmptyLines || (maxCol > 0 && !nullLine))) {
                         csv += _newline;
                     }
                 }
@@ -437,8 +393,7 @@ License: MIT
         function safe(str, col) {
             if (typeof str === 'undefined' || str === null) return '';
 
-            if (str.constructor === Date)
-                return JSON.stringify(str).slice(1, 25);
+            if (str.constructor === Date) return JSON.stringify(str).slice(1, 25);
 
             if (
                 _escapeFormulae === true &&
@@ -448,9 +403,7 @@ License: MIT
                 str = "'" + str;
             }
 
-            var escapedQuoteStr = str
-                .toString()
-                .replace(quoteCharRegex, _escapedQuote);
+            var escapedQuoteStr = str.toString().replace(quoteCharRegex, _escapedQuote);
 
             var needsQuotes =
                 (typeof _quotes === 'boolean' && _quotes) ||
@@ -461,9 +414,7 @@ License: MIT
                 escapedQuoteStr.charAt(0) === ' ' ||
                 escapedQuoteStr.charAt(escapedQuoteStr.length - 1) === ' ';
 
-            return needsQuotes
-                ? _quoteChar + escapedQuoteStr + _quoteChar
-                : escapedQuoteStr;
+            return needsQuotes ? _quoteChar + escapedQuoteStr + _quoteChar : escapedQuoteStr;
         }
 
         function hasAny(str, substrings) {
@@ -495,10 +446,7 @@ License: MIT
 
         this.parseChunk = function (chunk, isFakeChunk) {
             // First chunk pre-processing
-            if (
-                this.isFirstChunk &&
-                isFunction(this._config.beforeFirstChunk)
-            ) {
+            if (this.isFirstChunk && isFunction(this._config.beforeFirstChunk)) {
                 var modifiedChunk = this._config.beforeFirstChunk(chunk);
                 if (modifiedChunk !== undefined) chunk = modifiedChunk;
             }
@@ -509,11 +457,7 @@ License: MIT
             var aggregate = this._partialLine + chunk;
             this._partialLine = '';
 
-            var results = this._handle.parse(
-                aggregate,
-                this._baseIndex,
-                !this._finished
-            );
+            var results = this._handle.parse(aggregate, this._baseIndex, !this._finished);
 
             if (this._handle.paused() || this._handle.aborted()) {
                 this._halted = true;
@@ -523,18 +467,14 @@ License: MIT
             var lastIndex = results.meta.cursor;
 
             if (!this._finished) {
-                this._partialLine = aggregate.substring(
-                    lastIndex - this._baseIndex
-                );
+                this._partialLine = aggregate.substring(lastIndex - this._baseIndex);
                 this._baseIndex = lastIndex;
             }
 
             if (results && results.data) this._rowCount += results.data.length;
 
             var finishedIncludingPreview =
-                this._finished ||
-                (this._config.preview &&
-                    this._rowCount >= this._config.preview);
+                this._finished || (this._config.preview && this._rowCount >= this._config.preview);
 
             if (IS_PAPA_WORKER) {
                 global.postMessage({
@@ -553,11 +493,8 @@ License: MIT
             }
 
             if (!this._config.step && !this._config.chunk) {
-                this._completeResults.data = this._completeResults.data.concat(
-                    results.data
-                );
-                this._completeResults.errors =
-                    this._completeResults.errors.concat(results.errors);
+                this._completeResults.data = this._completeResults.data.concat(results.data);
+                this._completeResults.errors = this._completeResults.errors.concat(results.errors);
                 this._completeResults.meta = results.meta;
             }
 
@@ -571,8 +508,7 @@ License: MIT
                 this._completed = true;
             }
 
-            if (!finishedIncludingPreview && (!results || !results.meta.paused))
-                this._nextChunk();
+            if (!finishedIncludingPreview && (!results || !results.meta.paused)) this._nextChunk();
 
             return results;
         };
@@ -639,11 +575,7 @@ License: MIT
                 xhr.onerror = bindFunction(this._chunkError, this);
             }
 
-            xhr.open(
-                this._config.downloadRequestBody ? 'POST' : 'GET',
-                this._input,
-                !IS_WORKER
-            );
+            xhr.open(this._config.downloadRequestBody ? 'POST' : 'GET', this._input, !IS_WORKER);
             // Headers can only be set when once the request state is OPENED
             if (this._config.downloadRequestHeaders) {
                 var headers = this._config.downloadRequestHeaders;
@@ -655,10 +587,7 @@ License: MIT
 
             if (this._config.chunkSize) {
                 var end = this._start + this._config.chunkSize - 1; // minus one because byte range is inclusive
-                xhr.setRequestHeader(
-                    'Range',
-                    'bytes=' + this._start + '-' + end
-                );
+                xhr.setRequestHeader('Range', 'bytes=' + this._start + '-' + end);
             }
 
             try {
@@ -682,8 +611,7 @@ License: MIT
             this._start += this._config.chunkSize
                 ? this._config.chunkSize
                 : xhr.responseText.length;
-            this._finished =
-                !this._config.chunkSize || this._start >= getFileSize(xhr);
+            this._finished = !this._config.chunkSize || this._start >= getFileSize(xhr);
             this.parseChunk(xhr.responseText);
         };
 
@@ -698,9 +626,7 @@ License: MIT
                 // no content range, then finish!
                 return -1;
             }
-            return parseInt(
-                contentRange.substring(contentRange.lastIndexOf('/') + 1)
-            );
+            return parseInt(contentRange.substring(contentRange.lastIndexOf('/') + 1));
         }
     }
     NetworkStreamer.prototype = Object.create(ChunkStreamer.prototype);
@@ -731,32 +657,24 @@ License: MIT
         };
 
         this._nextChunk = function () {
-            if (
-                !this._finished &&
-                (!this._config.preview || this._rowCount < this._config.preview)
-            )
+            if (!this._finished && (!this._config.preview || this._rowCount < this._config.preview))
                 this._readChunk();
         };
 
         this._readChunk = function () {
             var input = this._input;
             if (this._config.chunkSize) {
-                var end = Math.min(
-                    this._start + this._config.chunkSize,
-                    this._input.size
-                );
+                var end = Math.min(this._start + this._config.chunkSize, this._input.size);
                 input = slice.call(input, this._start, end);
             }
             var txt = reader.readAsText(input, this._config.encoding);
-            if (!usingAsyncReader)
-                this._chunkLoaded({ target: { result: txt } }); // mimic the async signature
+            if (!usingAsyncReader) this._chunkLoaded({ target: { result: txt } }); // mimic the async signature
         };
 
         this._chunkLoaded = function (event) {
             // Very important to increment start each time before handling results
             this._start += this._config.chunkSize;
-            this._finished =
-                !this._config.chunkSize || this._start >= this._input.size;
+            this._finished = !this._config.chunkSize || this._start >= this._input.size;
             this.parseChunk(event.target.result);
         };
 
@@ -839,9 +757,7 @@ License: MIT
         this._streamData = bindFunction(function (chunk) {
             try {
                 queue.push(
-                    typeof chunk === 'string'
-                        ? chunk
-                        : chunk.toString(this._config.encoding)
+                    typeof chunk === 'string' ? chunk : chunk.toString(this._config.encoding)
                 );
 
                 if (parseOnData) {
@@ -922,9 +838,7 @@ License: MIT
             parseCallbackQueue.push(
                 bindFunction(function () {
                     this.parseChunk(
-                        typeof chunk === 'string'
-                            ? chunk
-                            : chunk.toString(config.encoding)
+                        typeof chunk === 'string' ? chunk : chunk.toString(config.encoding)
                     );
                     if (isFunction(callback)) {
                         return callback();
@@ -1010,8 +924,7 @@ License: MIT
                     if (_results.data.length === 0) return;
 
                     _stepCounter += results.data.length;
-                    if (_config.preview && _stepCounter > _config.preview)
-                        _parser.abort();
+                    if (_config.preview && _stepCounter > _config.preview) _parser.abort();
                     else {
                         _results.data = _results.data[0];
                         userStep(_results, self);
@@ -1027,8 +940,7 @@ License: MIT
          */
         this.parse = function (input, baseIndex, ignoreLastRow) {
             var quoteChar = _config.quoteChar || '"';
-            if (!_config.newline)
-                _config.newline = guessLineEndings(input, quoteChar);
+            if (!_config.newline) _config.newline = guessLineEndings(input, quoteChar);
 
             _delimiterError = false;
             if (!_config.delimiter) {
@@ -1039,8 +951,7 @@ License: MIT
                     _config.comments,
                     _config.delimitersToGuess
                 );
-                if (delimGuess.successful)
-                    _config.delimiter = delimGuess.bestDelimiter;
+                if (delimGuess.successful) _config.delimiter = delimGuess.bestDelimiter;
                 else {
                     _delimiterError = true; // add error after parsing (otherwise it would be overwritten)
                     _config.delimiter = Papa.DefaultDelimiter;
@@ -1058,9 +969,7 @@ License: MIT
             _parser = new Parser(parserConfig);
             _results = _parser.parse(_input, baseIndex, ignoreLastRow);
             processResults();
-            return _paused
-                ? { meta: { paused: true } }
-                : _results || { meta: { paused: false } };
+            return _paused ? { meta: { paused: true } } : _results || { meta: { paused: false } };
         };
 
         this.paused = function () {
@@ -1073,9 +982,7 @@ License: MIT
 
             // If it is streaming via "chunking", the reader will start appending correctly already so no need to substring,
             // otherwise we can get duplicate content within a row
-            _input = isFunction(_config.chunk)
-                ? ''
-                : _input.substring(_parser.getCharIndex());
+            _input = isFunction(_config.chunk) ? '' : _input.substring(_parser.getCharIndex());
         };
 
         this.resume = function () {
@@ -1131,8 +1038,7 @@ License: MIT
 
             if (_config.skipEmptyLines) {
                 for (var i = 0; i < _results.data.length; i++)
-                    if (testEmptyLine(_results.data[i]))
-                        _results.data.splice(i--, 1);
+                    if (testEmptyLine(_results.data[i])) _results.data.splice(i--, 1);
             }
 
             if (needsHeaderRow()) fillHeaderFields();
@@ -1155,11 +1061,7 @@ License: MIT
             }
 
             if (Array.isArray(_results.data[0])) {
-                for (
-                    var i = 0;
-                    needsHeaderRow() && i < _results.data.length;
-                    i++
-                )
+                for (var i = 0; needsHeaderRow() && i < _results.data.length; i++)
                     _results.data[i].forEach(addHeader);
 
                 _results.data.splice(0, 1);
@@ -1170,16 +1072,10 @@ License: MIT
 
         function shouldApplyDynamicTyping(field) {
             // Cache function values to avoid calling it for each row
-            if (
-                _config.dynamicTypingFunction &&
-                _config.dynamicTyping[field] === undefined
-            ) {
-                _config.dynamicTyping[field] =
-                    _config.dynamicTypingFunction(field);
+            if (_config.dynamicTypingFunction && _config.dynamicTyping[field] === undefined) {
+                _config.dynamicTyping[field] = _config.dynamicTypingFunction(field);
             }
-            return (
-                (_config.dynamicTyping[field] || _config.dynamicTyping) === true
-            );
+            return (_config.dynamicTyping[field] || _config.dynamicTyping) === true;
         }
 
         function parseDynamic(field, value) {
@@ -1194,12 +1090,7 @@ License: MIT
         }
 
         function applyHeaderAndDynamicTypingAndTransformation() {
-            if (
-                !_results ||
-                (!_config.header &&
-                    !_config.dynamicTyping &&
-                    !_config.transform)
-            )
+            if (!_results || (!_config.header && !_config.dynamicTyping && !_config.transform))
                 return _results;
 
             function processRow(rowSource, i) {
@@ -1210,12 +1101,9 @@ License: MIT
                     var field = j;
                     var value = rowSource[j];
 
-                    if (_config.header)
-                        field =
-                            j >= _fields.length ? '__parsed_extra' : _fields[j];
+                    if (_config.header) field = j >= _fields.length ? '__parsed_extra' : _fields[j];
 
-                    if (_config.transform)
-                        value = _config.transform(value, field);
+                    if (_config.transform) value = _config.transform(value, field);
 
                     value = parseDynamic(field, value);
 
@@ -1263,13 +1151,7 @@ License: MIT
             return _results;
         }
 
-        function guessDelimiter(
-            input,
-            newline,
-            skipEmptyLines,
-            comments,
-            delimitersToGuess
-        ) {
+        function guessDelimiter(input, newline, skipEmptyLines, comments, delimitersToGuess) {
             var bestDelim, bestDelta, fieldCountPrevRow, maxFieldCount;
 
             delimitersToGuess = delimitersToGuess || [
@@ -1312,13 +1194,11 @@ License: MIT
                     }
                 }
 
-                if (preview.data.length > 0)
-                    avgFieldCount /= preview.data.length - emptyLinesCount;
+                if (preview.data.length > 0) avgFieldCount /= preview.data.length - emptyLinesCount;
 
                 if (
                     (typeof bestDelta === 'undefined' || delta <= bestDelta) &&
-                    (typeof maxFieldCount === 'undefined' ||
-                        avgFieldCount > maxFieldCount) &&
+                    (typeof maxFieldCount === 'undefined' || avgFieldCount > maxFieldCount) &&
                     avgFieldCount > 1.99
                 ) {
                     bestDelta = delta;
@@ -1401,25 +1281,16 @@ License: MIT
         }
 
         // Delimiter must be valid
-        if (
-            typeof delim !== 'string' ||
-            Papa.BAD_DELIMITERS.indexOf(delim) > -1
-        )
-            delim = ',';
+        if (typeof delim !== 'string' || Papa.BAD_DELIMITERS.indexOf(delim) > -1) delim = ',';
 
         // Comment character must be valid
-        if (comments === delim)
-            throw new Error('Comment character same as delimiter');
+        if (comments === delim) throw new Error('Comment character same as delimiter');
         else if (comments === true) comments = '#';
-        else if (
-            typeof comments !== 'string' ||
-            Papa.BAD_DELIMITERS.indexOf(comments) > -1
-        )
+        else if (typeof comments !== 'string' || Papa.BAD_DELIMITERS.indexOf(comments) > -1)
             comments = false;
 
         // Newline must be valid: \r, \n, or \r\n
-        if (newline !== '\n' && newline !== '\r' && newline !== '\r\n')
-            newline = '\n';
+        if (newline !== '\n' && newline !== '\r' && newline !== '\r\n') newline = '\n';
 
         // We're gonna need these at the Parser scope
         var cursor = 0;
@@ -1427,8 +1298,7 @@ License: MIT
 
         this.parse = function (input, baseIndex, ignoreLastRow) {
             // For some reason, in Chrome, this speeds things up (!?)
-            if (typeof input !== 'string')
-                throw new Error('Input must be a string');
+            if (typeof input !== 'string') throw new Error('Input must be a string');
 
             // We don't need to compute some of these every time parse() is called,
             // but having them in a more local scope seems to perform better
@@ -1447,18 +1317,14 @@ License: MIT
 
             if (!input) return returnable();
 
-            if (
-                fastMode ||
-                (fastMode !== false && input.indexOf(quoteChar) === -1)
-            ) {
+            if (fastMode || (fastMode !== false && input.indexOf(quoteChar) === -1)) {
                 var rows = input.split(newline);
                 for (var i = 0; i < rows.length; i++) {
                     row = rows[i];
                     cursor += row.length;
                     if (i !== rows.length - 1) cursor += newline.length;
                     else if (ignoreLastRow) return returnable();
-                    if (comments && row.substring(0, commentsLen) === comments)
-                        continue;
+                    if (comments && row.substring(0, commentsLen) === comments) continue;
                     if (stepIsFunction) {
                         data = [];
                         pushRow(row.split(delim));
@@ -1520,10 +1386,7 @@ License: MIT
 
                         // If this quote is escaped, it's part of the data; skip it
                         // If the quote character is the escape character, then check if the next character is the escape character
-                        if (
-                            quoteChar === escapeChar &&
-                            input[quoteSearch + 1] === escapeChar
-                        ) {
+                        if (quoteChar === escapeChar && input[quoteSearch + 1] === escapeChar) {
                             quoteSearch++;
                             continue;
                         }
@@ -1540,47 +1403,27 @@ License: MIT
                         if (nextDelim !== -1 && nextDelim < quoteSearch + 1) {
                             nextDelim = input.indexOf(delim, quoteSearch + 1);
                         }
-                        if (
-                            nextNewline !== -1 &&
-                            nextNewline < quoteSearch + 1
-                        ) {
-                            nextNewline = input.indexOf(
-                                newline,
-                                quoteSearch + 1
-                            );
+                        if (nextNewline !== -1 && nextNewline < quoteSearch + 1) {
+                            nextNewline = input.indexOf(newline, quoteSearch + 1);
                         }
                         // Check up to nextDelim or nextNewline, whichever is closest
                         var checkUpTo =
-                            nextNewline === -1
-                                ? nextDelim
-                                : Math.min(nextDelim, nextNewline);
-                        var spacesBetweenQuoteAndDelimiter =
-                            extraSpaces(checkUpTo);
+                            nextNewline === -1 ? nextDelim : Math.min(nextDelim, nextNewline);
+                        var spacesBetweenQuoteAndDelimiter = extraSpaces(checkUpTo);
 
                         // Closing quote followed by delimiter or 'unnecessary spaces + delimiter'
-                        if (
-                            input[
-                                quoteSearch + 1 + spacesBetweenQuoteAndDelimiter
-                            ] === delim
-                        ) {
+                        if (input[quoteSearch + 1 + spacesBetweenQuoteAndDelimiter] === delim) {
                             row.push(
                                 input
                                     .substring(cursor, quoteSearch)
                                     .replace(quoteCharRegex, quoteChar)
                             );
-                            cursor =
-                                quoteSearch +
-                                1 +
-                                spacesBetweenQuoteAndDelimiter +
-                                delimLen;
+                            cursor = quoteSearch + 1 + spacesBetweenQuoteAndDelimiter + delimLen;
 
                             // If char after following delimiter is not quoteChar, we find next quote char position
                             if (
                                 input[
-                                    quoteSearch +
-                                        1 +
-                                        spacesBetweenQuoteAndDelimiter +
-                                        delimLen
+                                    quoteSearch + 1 + spacesBetweenQuoteAndDelimiter + delimLen
                                 ] !== quoteChar
                             ) {
                                 quoteSearch = input.indexOf(quoteChar, cursor);
@@ -1590,17 +1433,13 @@ License: MIT
                             break;
                         }
 
-                        var spacesBetweenQuoteAndNewLine =
-                            extraSpaces(nextNewline);
+                        var spacesBetweenQuoteAndNewLine = extraSpaces(nextNewline);
 
                         // Closing quote followed by newline or 'unnecessary spaces + newLine'
                         if (
                             input.substring(
                                 quoteSearch + 1 + spacesBetweenQuoteAndNewLine,
-                                quoteSearch +
-                                    1 +
-                                    spacesBetweenQuoteAndNewLine +
-                                    newlineLen
+                                quoteSearch + 1 + spacesBetweenQuoteAndNewLine + newlineLen
                             ) === newline
                         ) {
                             row.push(
@@ -1608,12 +1447,7 @@ License: MIT
                                     .substring(cursor, quoteSearch)
                                     .replace(quoteCharRegex, quoteChar)
                             );
-                            saveRow(
-                                quoteSearch +
-                                    1 +
-                                    spacesBetweenQuoteAndNewLine +
-                                    newlineLen
-                            );
+                            saveRow(quoteSearch + 1 + spacesBetweenQuoteAndNewLine + newlineLen);
                             nextDelim = input.indexOf(delim, cursor); // because we may have skipped the nextDelim in the quoted field
                             quoteSearch = input.indexOf(quoteChar, cursor); // we search for first quote in next line
 
@@ -1622,8 +1456,7 @@ License: MIT
                                 if (aborted) return returnable();
                             }
 
-                            if (preview && data.length >= preview)
-                                return returnable(true);
+                            if (preview && data.length >= preview) return returnable(true);
 
                             break;
                         }
@@ -1632,8 +1465,7 @@ License: MIT
                         errors.push({
                             type: 'Quotes',
                             code: 'InvalidQuotes',
-                            message:
-                                'Trailing quote on quoted field is malformed',
+                            message: 'Trailing quote on quoted field is malformed',
                             row: data.length, // row has yet to be inserted
                             index: cursor
                         });
@@ -1661,10 +1493,7 @@ License: MIT
                 }
 
                 // Next delimiter comes before next newline, so we've reached end of field
-                if (
-                    nextDelim !== -1 &&
-                    (nextDelim < nextNewline || nextNewline === -1)
-                ) {
+                if (nextDelim !== -1 && (nextDelim < nextNewline || nextNewline === -1)) {
                     // we check, if we have quotes, because delimiter char may be part of field enclosed in quotes
                     if (quoteSearch > nextDelim) {
                         // we have quotes, so we try to find the next delimiter not enclosed in quotes and also next starting quote char
@@ -1675,10 +1504,7 @@ License: MIT
                         );
 
                         // if we have next delimiter char which is not enclosed in quotes
-                        if (
-                            nextDelimObj &&
-                            typeof nextDelimObj.nextDelim !== 'undefined'
-                        ) {
+                        if (nextDelimObj && typeof nextDelimObj.nextDelim !== 'undefined') {
                             nextDelim = nextDelimObj.nextDelim;
                             quoteSearch = nextDelimObj.quoteSearch;
                             row.push(input.substring(cursor, nextDelim));
@@ -1705,8 +1531,7 @@ License: MIT
                         if (aborted) return returnable();
                     }
 
-                    if (preview && data.length >= preview)
-                        return returnable(true);
+                    if (preview && data.length >= preview) return returnable(true);
 
                     continue;
                 }
@@ -1728,10 +1553,7 @@ License: MIT
             function extraSpaces(index) {
                 var spaceLength = 0;
                 if (index !== -1) {
-                    var textBetweenClosingQuoteAndIndex = input.substring(
-                        quoteSearch + 1,
-                        index
-                    );
+                    var textBetweenClosingQuoteAndIndex = input.substring(quoteSearch + 1, index);
                     if (
                         textBetweenClosingQuoteAndIndex &&
                         textBetweenClosingQuoteAndIndex.trim() === ''
@@ -1748,8 +1570,7 @@ License: MIT
              */
             function finish(value) {
                 if (ignoreLastRow) return returnable();
-                if (typeof value === 'undefined')
-                    value = input.substring(cursor);
+                if (typeof value === 'undefined') value = input.substring(cursor);
                 row.push(value);
                 cursor = inputLen; // important in case parsing is paused
                 pushRow(row);
@@ -1816,17 +1637,10 @@ License: MIT
                     }
                     // find the next opening quote char position
                     if (nextNextDelim > nextQuoteSearch) {
-                        nextQuoteSearch = input.indexOf(
-                            quoteChar,
-                            nextQuoteSearch + 1
-                        );
+                        nextQuoteSearch = input.indexOf(quoteChar, nextQuoteSearch + 1);
                     }
                     // try to get the next delimiter position
-                    result = getNextUnquotedDelimiter(
-                        nextNextDelim,
-                        nextQuoteSearch,
-                        newLine
-                    );
+                    result = getNextUnquotedDelimiter(nextNextDelim, nextQuoteSearch, newLine);
                 } else {
                     result = {
                         nextDelim: nextDelim,
@@ -1870,11 +1684,7 @@ License: MIT
         else if (msg.results && msg.results.data) {
             var abort = function () {
                 aborted = true;
-                completeWorker(msg.workerId, {
-                    data: [],
-                    errors: [],
-                    meta: { aborted: true }
-                });
+                completeWorker(msg.workerId, { data: [], errors: [], meta: { aborted: true } });
             };
 
             var handle = {
@@ -1920,8 +1730,7 @@ License: MIT
     function workerThreadReceivedMessage(e) {
         var msg = e.data;
 
-        if (typeof Papa.WORKER_ID === 'undefined' && msg)
-            Papa.WORKER_ID = msg.workerId;
+        if (typeof Papa.WORKER_ID === 'undefined' && msg) Papa.WORKER_ID = msg.workerId;
 
         if (typeof msg.input === 'string') {
             global.postMessage({
@@ -1929,10 +1738,7 @@ License: MIT
                 results: Papa.parse(msg.input, msg.config),
                 finished: true
             });
-        } else if (
-            (global.File && msg.input instanceof File) ||
-            msg.input instanceof Object
-        ) {
+        } else if ((global.File && msg.input instanceof File) || msg.input instanceof Object) {
             // thank you, Safari (see issue #106)
             var results = Papa.parse(msg.input, msg.config);
             if (results)

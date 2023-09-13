@@ -36,14 +36,9 @@ define([
     vc2_constant
 ) {
     function execute() {
-        log.audit({
-            title: 'Scheduled set serial Script',
-            details: 'STARTING'
-        });
+        log.audit({ title: 'Scheduled set serial Script', details: 'STARTING' });
 
-        var currentID = ns_runtime
-            .getCurrentScript()
-            .getParameter('custscript_ss_seriallink_id');
+        var currentID = ns_runtime.getCurrentScript().getParameter('custscript_ss_seriallink_id');
         var currentType = ns_runtime
             .getCurrentScript()
             .getParameter('custscript_ss_seriallink_type');

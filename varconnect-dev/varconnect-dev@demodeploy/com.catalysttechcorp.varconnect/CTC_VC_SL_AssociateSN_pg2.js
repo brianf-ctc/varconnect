@@ -40,9 +40,7 @@ define([
 
     function doGet(context) {
         // Trans type set on deployment parameter
-        var scriptOrderType = runtime
-            .getCurrentScript()
-            .getParameter({ name: 'custscript8' });
+        var scriptOrderType = runtime.getCurrentScript().getParameter({ name: 'custscript8' });
 
         // trans num passed from Pg 1
         var scriptOrderNum = context.request.parameters['transnum'];
@@ -87,14 +85,8 @@ define([
                 ['mainline', 'is', 'T']
             ],
             columns: [
-                search.createColumn({
-                    name: 'internalid',
-                    label: 'Internal ID'
-                }),
-                search.createColumn({
-                    name: 'createdfrom',
-                    label: 'Created From'
-                })
+                search.createColumn({ name: 'internalid', label: 'Internal ID' }),
+                search.createColumn({ name: 'createdfrom', label: 'Created From' })
             ]
         });
 
@@ -111,9 +103,7 @@ define([
 
         if (isEmpty(parentID)) return;
 
-        var form = ui.createForm({
-            title: 'Associate Serial Numbers' + formTitle
-        });
+        var form = ui.createForm({ title: 'Associate Serial Numbers' + formTitle });
 
         var recID = form.addField({
             id: 'custpage_transid',
@@ -126,12 +116,7 @@ define([
         var itemList = [];
 
         // Retrieves order data from a saved search
-        itemList = getItems(
-            scriptOrderType,
-            scriptOrderNum,
-            parentID,
-            parentName
-        );
+        itemList = getItems(scriptOrderType, scriptOrderNum, parentID, parentName);
         log.debug('itemlist = ', JSON.stringify(itemList));
 
         form.addSubmitButton({
@@ -167,9 +152,7 @@ define([
     function doPost(context) {
         var request = context.request;
         //			log.debug({title: 'In POST code', details: 'request = '+JSON.stringify(request)});
-        var scriptOrderType = runtime
-            .getCurrentScript()
-            .getParameter({ name: 'custscript8' });
+        var scriptOrderType = runtime.getCurrentScript().getParameter({ name: 'custscript8' });
         var scriptTransID = request.parameters.custpage_transid;
 
         var searchType = '';
@@ -183,10 +166,7 @@ define([
         var includeCount = 0;
         var toInclude = [];
 
-        log.debug({
-            title: 'In POST code',
-            details: 'linecount = ' + lineCount
-        });
+        log.debug({ title: 'In POST code', details: 'linecount = ' + lineCount });
 
         for (var i = 0; i < lineCount; i++) {
             // For each line in the sublist, get the Include checkbox value
@@ -320,10 +300,7 @@ define([
                     name: itemName,
                     serialsList: getItemSerials(itemID, parentID, transType)
                 };
-                log.debug(
-                    'in item search',
-                    'search result = ' + JSON.stringify(resultObj)
-                );
+                log.debug('in item search', 'search result = ' + JSON.stringify(resultObj));
                 itemsList.push(resultObj);
             }
             return true;
@@ -338,12 +315,7 @@ define([
 
         log.debug(
             'in getItemSerials',
-            'itemID = ' +
-                itemID +
-                '  parentID = ' +
-                parentID +
-                '  transType = ' +
-                transType
+            'itemID = ' + itemID + '  parentID = ' + parentID + '  transType = ' + transType
         );
 
         if (transType == ITEM_FULFILLMENT_TRANSACTION_ID) {
@@ -386,18 +358,12 @@ define([
                     label: 'Name'
                 }),
                 search.createColumn({ name: 'scriptid', label: 'Script ID' }),
-                search.createColumn({
-                    name: 'custrecordserialitem',
-                    label: 'ItemNum'
-                })
+                search.createColumn({ name: 'custrecordserialitem', label: 'ItemNum' })
             ]
         });
 
         var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        log.debug(
-            'customrecordserialnumSearchObj result count',
-            searchResultCount
-        );
+        log.debug('customrecordserialnumSearchObj result count', searchResultCount);
         customrecordserialnumSearchObj.run().each(function (result) {
             // .run().each has a limit of 4,000 results
             var serialsObj = {
@@ -441,18 +407,13 @@ define([
         ];
 
         columns.forEach(function (column) {
-            trans_sublist
-                .addField(column)
-                .updateDisplayType({ displayType: column.displayType });
+            trans_sublist.addField(column).updateDisplayType({ displayType: column.displayType });
         });
 
         var expandedItemList = [];
         // Add and populate a line for each item
         items.forEach(function (item, index) {
-            log.debug({
-                title: 'buildSublist',
-                details: 'item = ' + JSON.stringify(item)
-            });
+            log.debug({ title: 'buildSublist', details: 'item = ' + JSON.stringify(item) });
             for (var i = 0; i < item.serialsList.length; i++) {
                 var expandedObj = {
                     itemName: item.name,
@@ -465,10 +426,7 @@ define([
 
         // Add and populate a line for each item
         expandedItemList.forEach(function (expandedItem, index) {
-            log.debug({
-                title: 'buildSublist',
-                details: 'item = ' + JSON.stringify(expandedItem)
-            });
+            log.debug({ title: 'buildSublist', details: 'item = ' + JSON.stringify(expandedItem) });
 
             var params = { line: index };
 

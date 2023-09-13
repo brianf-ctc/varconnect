@@ -16,10 +16,7 @@
 define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
     function onRequest(context) {
         var logTitle = 'BillCreator Dashboard Data';
-        log.debug(
-            logTitle,
-            'params: ' + JSON.stringify(context.request.parameters)
-        );
+        log.debug(logTitle, 'params: ' + JSON.stringify(context.request.parameters));
 
         if (context.request.parameters.data == 'mainTable') {
             var returnArray = [],
@@ -63,15 +60,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
             var s = search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
-                    [
-                        'custrecord_ctc_vc_bill_proc_status',
-                        'anyof',
-                        '2',
-                        '1',
-                        '4',
-                        '6',
-                        '7'
-                    ],
+                    ['custrecord_ctc_vc_bill_proc_status', 'anyof', '2', '1', '4', '6', '7'],
                     'AND',
                     ['custrecord_ctc_vc_bill_linked_po', 'noneof', '@NONE@'],
                     'AND',
@@ -102,13 +91,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
             s = search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
-                    [
-                        'custrecord_ctc_vc_bill_proc_status',
-                        'anyof',
-                        '2',
-                        '1',
-                        '4'
-                    ],
+                    ['custrecord_ctc_vc_bill_proc_status', 'anyof', '2', '1', '4'],
                     'AND',
                     ['custrecord_ctc_vc_bill_linked_po', 'anyof', '@NONE@'],
                     'AND',
@@ -154,10 +137,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                         })
                     ]
                 });
-                log.debug(
-                    logTitle,
-                    'po link type search=' + JSON.stringify(s.filterExpression)
-                );
+                log.debug(logTitle, 'po link type search=' + JSON.stringify(s.filterExpression));
 
                 var pagedData = s.runPaged({
                     pageSize: 1000
@@ -175,10 +155,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                         isPOLinkEmpty = false;
                     });
                 }
-                log.debug(
-                    logTitle,
-                    'po link type mapping=' + JSON.stringify(poLinkTypeMapping)
-                );
+                log.debug(logTitle, 'po link type mapping=' + JSON.stringify(poLinkTypeMapping));
                 if (!isPOLinkEmpty) {
                     for (var i = 0, len = returnArray.length; i < len; i += 1) {
                         var poObj = returnArray[i];
@@ -201,15 +178,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
             var customrecord_ctc_vc_billsSearchObj = search.create({
                 type: 'customrecord_ctc_vc_bills',
                 filters: [
-                    [
-                        'custrecord_ctc_vc_bill_proc_status',
-                        'anyof',
-                        '1',
-                        '2',
-                        '4',
-                        '6',
-                        '7'
-                    ],
+                    ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '6', '7'],
                     'AND',
                     ['isinactive', 'is', 'F']
                 ],
@@ -224,12 +193,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                     })
                 ]
             });
-            var searchResultCount =
-                customrecord_ctc_vc_billsSearchObj.runPaged().count;
+            var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
             log.debug(
                 logTitle,
-                'customrecord_ctc_vc_billsSearchObj result count=' +
-                    searchResultCount
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
             );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var status = result.getValue({
@@ -277,11 +244,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
 
             var customrecord_ctc_vc_billsSearchObj = search.create({
                 type: 'customrecord_ctc_vc_bills',
-                filters: [
-                    ['created', 'onorafter', 'monthsago1'],
-                    'AND',
-                    ['isinactive', 'is', 'F']
-                ],
+                filters: [['created', 'onorafter', 'monthsago1'], 'AND', ['isinactive', 'is', 'F']],
                 columns: [
                     search.createColumn({
                         name: 'internalid',
@@ -293,12 +256,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                     })
                 ]
             });
-            var searchResultCount =
-                customrecord_ctc_vc_billsSearchObj.runPaged().count;
+            var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
             log.debug(
                 logTitle,
-                'customrecord_ctc_vc_billsSearchObj result count=' +
-                    searchResultCount
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
             );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var position =

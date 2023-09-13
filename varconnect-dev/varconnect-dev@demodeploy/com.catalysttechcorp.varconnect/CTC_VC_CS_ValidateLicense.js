@@ -39,18 +39,11 @@ define(['./CTC_VC2_Constants.js', './CTC_VC_Lib_LicenseValidator'], function (
      * @since 2015.2
      */
     function validateField(scriptContext) {
-        if (
-            scriptContext.fieldId ==
-            vc2_constant.RECORD.MAIN_CONFIG.FIELD.LICENSE
-        ) {
+        if (scriptContext.fieldId == vc2_constant.RECORD.MAIN_CONFIG.FIELD.LICENSE) {
             var currentRecord = scriptContext.currentRecord,
-                license = currentRecord.getValue({
-                    fieldId: scriptContext.fieldId
-                });
+                license = currentRecord.getValue({ fieldId: scriptContext.fieldId });
 
-            var response = libLicenseValidator.callValidationSuitelet({
-                license: license
-            });
+            var response = libLicenseValidator.callValidationSuitelet({ license: license });
 
             log.debug('response', JSON.stringify(response));
         }

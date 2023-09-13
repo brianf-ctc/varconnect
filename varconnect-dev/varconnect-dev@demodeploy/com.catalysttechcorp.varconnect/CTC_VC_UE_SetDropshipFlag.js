@@ -20,11 +20,7 @@
  * 1.00		Sep 12, 2019	paolodl		Sets the is dropship flag depending
  */
 
-define(['N/runtime', 'N/record', 'N/search'], function (
-    ns_runtime,
-    record,
-    search
-) {
+define(['N/runtime', 'N/record', 'N/search'], function (ns_runtime, record, search) {
     var LogTitle = 'SetDropShip';
 
     /**

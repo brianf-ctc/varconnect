@@ -56,16 +56,12 @@ define([
                 returnValue = null;
 
             try {
-                if (scriptContext.type != scriptContext.UserEventType.VIEW)
-                    return false;
+                if (scriptContext.type != scriptContext.UserEventType.VIEW) return false;
 
                 var currentRecord = scriptContext.newRecord;
                 if (!currentRecord) return;
 
-                vc2_util.LogPrefix =
-                    '[' +
-                    [currentRecord.type, currentRecord.id].join(':') +
-                    '] ';
+                vc2_util.LogPrefix = '[' + [currentRecord.type, currentRecord.id].join(':') + '] ';
 
                 vc2_util.log(logTitle, '*** START: ', [
                     scriptContext.type,
@@ -103,16 +99,10 @@ define([
                     var lineData = vc2_record.extractLineValues({
                         record: currentRecord,
                         sublistId: 'item',
-                        columns: [
-                            'item',
-                            'itemtype',
-                            vc2_constant.GLOBAL.SN_LINE_FIELD_LINK_ID
-                        ],
+                        columns: ['item', 'itemtype', vc2_constant.GLOBAL.SN_LINE_FIELD_LINK_ID],
                         line: line
                     });
-                    lineData.itemName = encodeURIComponent(
-                        lineData.item_text || ''
-                    );
+                    lineData.itemName = encodeURIComponent(lineData.item_text || '');
                     vc2_util.log(logTitle, '>> lineData: ', [line, lineData]);
 
                     if (lineData.itemType == 'EndGroup') continue;

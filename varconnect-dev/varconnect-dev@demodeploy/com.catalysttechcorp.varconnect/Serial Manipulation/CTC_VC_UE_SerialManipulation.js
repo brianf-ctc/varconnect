@@ -53,13 +53,8 @@ define([
     var USER_EVENT = {
         beforeLoad: function (scriptContext) {
             var logTitle = [LogTitle, 'beforeLoad'].join('::');
-            if (
-                ns_runtime.executionContext !==
-                ns_runtime.ContextType.USER_INTERFACE
-            )
-                return;
-            if (scriptContext.type === scriptContext.UserEventType.DELETE)
-                return;
+            if (ns_runtime.executionContext !== ns_runtime.ContextType.USER_INTERFACE) return;
+            if (scriptContext.type === scriptContext.UserEventType.DELETE) return;
 
             var mainConfig = Helper.loadMainConfig();
             // ,                validLicense = Helper.validateLicense({ mainConfig: mainConfig });
@@ -93,10 +88,7 @@ define([
                         sublist,
                         vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
                     ),
-                    serialSync: Helper.getField(
-                        form,
-                        'custbody_ctc_vc_serialsync_done'
-                    )
+                    serialSync: Helper.getField(form, 'custbody_ctc_vc_serialsync_done')
                 };
                 vc2_util.log(logTitle, '// fieldObj: ', fieldObj);
 
@@ -126,9 +118,7 @@ define([
 
                 // if (scriptContext.newRecord && scriptContext.newRecord.type == ns_record.Type.INVOICE) {
                 var vendorConfig = Helper.searchVendorConfig({
-                    salesOrder: scriptContext.newRecord.getValue({
-                        fieldId: 'createdfrom'
-                    })
+                    salesOrder: scriptContext.newRecord.getValue({ fieldId: 'createdfrom' })
                 });
 
                 if (!vendorConfig) {
@@ -140,10 +130,7 @@ define([
                         });
                 }
             } catch (error) {
-                vc2_util.log(
-                    logTitle,
-                    '## ERROR ## ' + vc2_util.extractError(error)
-                );
+                vc2_util.log(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
             }
 
             return true;
@@ -173,8 +160,7 @@ define([
                         scriptContext.UserEventType.EDIT,
                         scriptContext.UserEventType.XEDIT
                     ]) ||
-                    ns_runtime.executionContext ==
-                        ns_runtime.ContextType.MAP_REDUCE
+                    ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
                 )
                     throw 'Invalid Context/EventType';
 
@@ -207,10 +193,8 @@ define([
                     } else if (
                         (record.type == ns_record.Type.ITEM_FULFILLMENT ||
                             record.type == ns_record.Type.INVOICE) &&
-                        scriptContext.type ==
-                            scriptContext.UserEventType.CREATE &&
-                        (!serialStringUpdate ||
-                            serialStringUpdate.trim().length == 0)
+                        scriptContext.type == scriptContext.UserEventType.CREATE &&
+                        (!serialStringUpdate || serialStringUpdate.trim().length == 0)
                     ) {
                         hasNoSerials = true;
                     }
@@ -221,8 +205,7 @@ define([
                 var tranId = record.getValue({ fieldId: 'tranid' }),
                     taskOption = {};
 
-                var hasSerialListChanged =
-                    Helper.isSerialListChanged(scriptContext);
+                var hasSerialListChanged = Helper.isSerialListChanged(scriptContext);
 
                 vc2_util.log(logTitle, '/// settings: ', {
                     tranId: tranId,
@@ -252,18 +235,13 @@ define([
                         scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR,
                         scriptParams: {}
                     };
-                    taskOption.scriptParams['custscript_vc_all_type'] =
-                        record.type;
+                    taskOption.scriptParams['custscript_vc_all_type'] = record.type;
                     taskOption.scriptParams['custscript_vc_all_id'] = record.id;
                     taskOption.deployId = Helper.forceDeploy(taskOption);
                     // }
                 }
 
-                if (
-                    hasSerials &&
-                    mainConfig.serialScanUpdate &&
-                    hasSerialListChanged
-                ) {
+                if (hasSerials && mainConfig.serialScanUpdate && hasSerialListChanged) {
                     vc2_util.waitRandom(10000);
 
                     taskOption = {
@@ -280,11 +258,7 @@ define([
 
                 vc2_util.log(logTitle, '// Task option: ', taskOption);
             } catch (error) {
-                vc2_util.log(
-                    logTitle,
-                    '## ERROR ##',
-                    vc2_util.extractError(error)
-                );
+                vc2_util.log(logTitle, '## ERROR ##', vc2_util.extractError(error));
             }
 
             vc2_util.log(logTitle, '***** END SCRIPT *****');
@@ -334,10 +308,7 @@ define([
 
             var param = {
                 so: option.salesOrder || option.salesOrderId || option.soId,
-                po:
-                    option.purchaseOrder ||
-                    option.purchaseOrderId ||
-                    option.poId,
+                po: option.purchaseOrder || option.purchaseOrderId || option.poId,
                 inv: option.invoice || option.invoiceId || option.invId
             };
 
@@ -345,35 +316,21 @@ define([
 
             if (param.po) {
                 searchOption.filters.push('AND');
-                searchOption.filters.push([
-                    'custrecordserialpurchase',
-                    'anyof',
-                    param.po
-                ]);
+                searchOption.filters.push(['custrecordserialpurchase', 'anyof', param.po]);
             }
             if (param.so) {
                 searchOption.filters.push('AND');
-                searchOption.filters.push([
-                    'custrecordserialsales',
-                    'anyof',
-                    param.so
-                ]);
+                searchOption.filters.push(['custrecordserialsales', 'anyof', param.so]);
             }
             if (param.inv) {
                 searchOption.filters.push('AND');
-                searchOption.filters.push([
-                    'custrecordserialinvoice',
-                    'anyof',
-                    param.inv
-                ]);
+                searchOption.filters.push(['custrecordserialinvoice', 'anyof', param.inv]);
             }
             vc2_util.log(logTitle, '//searchOption: ', searchOption);
 
             var results = [],
                 searchObj = ns_search.create(searchOption),
-                searchResults = vc2_util.searchAllPaged({
-                    searchObj: searchObj
-                });
+                searchResults = vc2_util.searchAllPaged({ searchObj: searchObj });
 
             searchResults.forEach(function (result) {
                 results.push({
@@ -495,19 +452,13 @@ define([
                         });
                         returnValue = taskId;
                     } catch (e) {
-                        vc2_util.log(
-                            logTitle,
-                            '## ERROR ## ',
-                            vc2_util.extractError(e)
-                        );
+                        vc2_util.log(logTitle, '## ERROR ## ', vc2_util.extractError(e));
                     }
 
                     return returnValue;
                 },
                 copyDeploy: function (scriptId) {
-                    var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join(
-                        '::'
-                    );
+                    var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
                     var returnValue = false;
                     try {
                         var searchDeploy = ns_search.create({
@@ -530,25 +481,12 @@ define([
                                 id: result.id
                             });
 
-                            var newScriptId = result.getValue({
-                                name: 'scriptid'
-                            });
-                            newScriptId = newScriptId
-                                .toUpperCase()
-                                .split('CUSTOMDEPLOY')[1];
-                            newScriptId = [
-                                newScriptId.substring(0, 20),
-                                FN.randomStr()
-                            ].join('_');
+                            var newScriptId = result.getValue({ name: 'scriptid' });
+                            newScriptId = newScriptId.toUpperCase().split('CUSTOMDEPLOY')[1];
+                            newScriptId = [newScriptId.substring(0, 20), FN.randomStr()].join('_');
 
-                            newDeploy.setValue({
-                                fieldId: 'status',
-                                value: 'NOTSCHEDULED'
-                            });
-                            newDeploy.setValue({
-                                fieldId: 'isdeployed',
-                                value: true
-                            });
+                            newDeploy.setValue({ fieldId: 'status', value: 'NOTSCHEDULED' });
+                            newDeploy.setValue({ fieldId: 'isdeployed', value: true });
                             newDeploy.setValue({
                                 fieldId: 'scriptid',
                                 value: newScriptId.toLowerCase().trim()
@@ -598,25 +536,12 @@ define([
                         option.scriptParams,
                         option.taskType
                     ) ||
-                    FN.deploy(
-                        option.scriptId,
-                        null,
-                        option.scriptParams,
-                        option.taskType
-                    ) ||
-                    FN.copyAndDeploy(
-                        option.scriptId,
-                        option.scriptParams,
-                        option.taskType
-                    );
+                    FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
+                    FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
                 vc2_util.log(logTitle, '// deploy: ', returnValue);
             } catch (e) {
-                vc2_util.log(
-                    logTitle,
-                    '## ERROR ## ',
-                    vc2_util.extractError(e)
-                );
+                vc2_util.log(logTitle, '## ERROR ## ', vc2_util.extractError(e));
                 throw e;
             }
             ////////////////////////////////////////
@@ -632,10 +557,7 @@ define([
             try {
                 returnField = form.getField({ id: fieldId });
             } catch (error) {
-                vc2_util.log(logTitle, '## ERROR ## ', [
-                    fieldId,
-                    vc2_util.extractError(error)
-                ]);
+                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
                 returnField = null;
             }
             try {
@@ -648,11 +570,7 @@ define([
                     returnField = null;
                 }
             } catch (invocationErr) {
-                vc2_util.log(
-                    logTitle,
-                    '## ERROR ## ',
-                    'Field (id=' + fieldId + ') is not exposed'
-                );
+                vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                 returnField = null;
             }
 
@@ -662,18 +580,12 @@ define([
             var logTitle = 'getSublistField',
                 returnField;
 
-            vc2_util.log(logTitle, '/// sublist, fieldId: ', [
-                sublist,
-                fieldId
-            ]);
+            vc2_util.log(logTitle, '/// sublist, fieldId: ', [sublist, fieldId]);
 
             try {
                 returnField = sublist.getField({ id: fieldId });
             } catch (error) {
-                vc2_util.log(logTitle, '## ERROR ## ', [
-                    fieldId,
-                    vc2_util.extractError(error)
-                ]);
+                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
                 returnField = null;
             }
             try {
@@ -686,11 +598,7 @@ define([
                     returnField = null;
                 }
             } catch (invocationErr) {
-                vc2_util.log(
-                    logTitle,
-                    '## ERROR ## ',
-                    'Field (id=' + fieldId + ') is not exposed'
-                );
+                vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                 returnField = null;
             }
 
@@ -800,14 +708,9 @@ define([
                         hasSerialsChanged = true;
                     } else if (hasLineSerials && hasExistingSerials) {
                         hasSerialsChanged =
-                            Helper.matchArrayContents(
-                                oldSerialString,
-                                serialString
-                            ) !== 0 ||
-                            Helper.matchArrayContents(
-                                oldSerialStringUpdate,
-                                serialStringUpdate
-                            ) !== 0;
+                            Helper.matchArrayContents(oldSerialString, serialString) !== 0 ||
+                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !==
+                                0;
                     } else {
                         hasSerialsChanged = false;
                     }

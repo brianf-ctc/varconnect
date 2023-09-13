@@ -39,18 +39,12 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         };
 
         WEFI.endpoint = {
-            TOKEN: config.accessEndPoint.replace(
-                '{{TENANT_ID}}',
-                WEFI.credential.TENANT_ID
-            ),
+            TOKEN: config.accessEndPoint.replace('{{TENANT_ID}}', WEFI.credential.TENANT_ID),
             INVOICE: config.endPoint + '/v1.0/reseller/odata/invoices',
             ORDER: config.endPoint + '/v1.0/reseller/odata/approvals'
         };
 
-        log.debug(
-            logTitle,
-            'WEFI.credential=' + JSON.stringify(WEFI.credential)
-        );
+        log.debug(logTitle, 'WEFI.credential=' + JSON.stringify(WEFI.credential));
         log.debug(logTitle, 'WEFI.endpoint=' + JSON.stringify(WEFI.endpoint));
     };
 
@@ -103,9 +97,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             if (!objWefiPO.invoices || !objWefiPO.invoices.length) {
                 log.debug(
                     logTitle,
-                    'No invoice found for PO (' +
-                        objWefiPO.header.purchaseOrderNumber +
-                        ')'
+                    'No invoice found for PO (' + objWefiPO.header.purchaseOrderNumber + ')'
                 );
             }
 
@@ -129,11 +121,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
                 );
 
                 // Loop: WeFi Invoice Lines
-                for (
-                    var ii = 0;
-                    wfInvoiceLines && ii < wfInvoiceLines.length;
-                    ii++
-                ) {
+                for (var ii = 0; wfInvoiceLines && ii < wfInvoiceLines.length; ii++) {
                     var wfInvoiceLine = wfInvoiceLines[ii];
                     var invDetailId = wfInvoiceLine.invoiceDetailId;
 
@@ -146,8 +134,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
                     );
 
                     // Group items by `invoiceDetailId`
-                    objWFPOLinesTMP[invDetailId] =
-                        objWFPOLinesTMP[invDetailId] || null;
+                    objWFPOLinesTMP[invDetailId] = objWFPOLinesTMP[invDetailId] || null;
 
                     // Serial, tracking objects
                     var tracking = wfInvoiceLine.trackingNumber;
@@ -185,16 +172,13 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
                             //order_num: wfInvoiceLine.invoiceId.toString(),	// v1.10
                             order_num: wfInvoiceLine.documentNumber, // v1.10
                             carrier: tracking ? tracking.carrier : '',
-                            tracking_num: tracking
-                                ? tracking.trackingNumberValue
-                                : '',
+                            tracking_num: tracking ? tracking.trackingNumberValue : '',
                             ns_record: '',
                             serial_num: []
                         };
                     }
 
-                    if (serialNo)
-                        objWFPOLinesTMP[invDetailId].serial_num.push(serialNo);
+                    if (serialNo) objWFPOLinesTMP[invDetailId].serial_num.push(serialNo);
                 }
             }
 
@@ -242,10 +226,8 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         option = option || {};
 
         try {
-            CURRENT.recordId =
-                option.poId || option.recordId || CURRENT.recordId;
-            CURRENT.recordNum =
-                option.poNum || option.transactionNum || CURRENT.recordNum;
+            CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
             CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
 
             log.debug(logTitle, 'option=' + JSON.stringify(option));
@@ -275,15 +257,9 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             var wefiPO = WEFI.getOrder({ poNumber: CURRENT.recordNum });
 
             if (!wefiPO.header) {
-                log.error(
-                    logTitle,
-                    'RECORD_NOT_FOUND: wefi po (' + CURRENT.recordNum + ')'
-                );
+                log.error(logTitle, 'RECORD_NOT_FOUND: wefi po (' + CURRENT.recordNum + ')');
             } else if (!wefiPO.invoices || !wefiPO.invoices.length) {
-                log.error(
-                    logTitle,
-                    'ORDER_NOT_SHIPPED: wefi po (' + CURRENT.recordNum + ')'
-                );
+                log.error(logTitle, 'ORDER_NOT_SHIPPED: wefi po (' + CURRENT.recordNum + ')');
             }
 
             returnValue = wefiPO;
@@ -331,8 +307,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
 
             if (tokenReq.isError) throw tokenReq.errorMsg;
             var tokenResp = v2_util.safeParse(tokenReq.RESPONSE);
-            if (!tokenResp || !tokenResp.access_token)
-                throw 'Unable to generate token';
+            if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
             returnValue = tokenResp.access_token;
 
             CURRENT.accessToken = tokenResp.access_token;
@@ -379,8 +354,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             // (ORDER HEADER DETAILS)
             // ----------------------
 
-            var params =
-                "$filter=purchaseOrderNumber eq '" + option.poNumber + "'";
+            var params = "$filter=purchaseOrderNumber eq '" + option.poNumber + "'";
             var url = WEFI.endpoint.ORDER + '?' + params;
 
             log.debug(logTitle, 'order request url=' + url);
@@ -409,10 +383,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
                 parsedResponse.value && parsedResponse.value.length
                     ? parsedResponse.value[0]
                     : null;
-            log.debug(
-                logTitle,
-                'wefiPO.header=' + JSON.stringify(wefiPO.header)
-            );
+            log.debug(logTitle, 'wefiPO.header=' + JSON.stringify(wefiPO.header));
 
             // --------------------------
             // 2. Get shipments/invoices
@@ -423,10 +394,8 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             // You can correlate invoice with particular Order/Approval by using ApprovalId field on Invoice.
 
             if (wefiPO.header && wefiPO.header.approvalId) {
-                var params =
-                    '$filter=approvalId eq ' + wefiPO.header.approvalId;
-                params +=
-                    '&$expand=details($expand=serialNumber,trackingNumber)';
+                var params = '$filter=approvalId eq ' + wefiPO.header.approvalId;
+                params += '&$expand=details($expand=serialNumber,trackingNumber)';
 
                 var url = WEFI.endpoint.INVOICE + '?' + params;
                 log.debug(logTitle, 'invoice required url=' + url);

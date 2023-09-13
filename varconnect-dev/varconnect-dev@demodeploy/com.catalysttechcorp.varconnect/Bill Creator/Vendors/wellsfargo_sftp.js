@@ -12,12 +12,12 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/sftp',
-    'N/encode',
-    '../Libraries/moment',
-    '../Libraries/lodash'
-], function (ns_sftp, ns_encode, moment, lodash) {
+define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_sftp,
+    ns_encode,
+    moment,
+    lodash
+) {
     function processXml(input, config) {
         // establish connection to remote FTP server
         var connection = ns_sftp.createConnection({
@@ -153,9 +153,7 @@ define([
             var DTLD10 = xmlLine.DTLD10;
             var SUMS10 = xmlLine.SUMS10;
 
-            ordObj.date = moment(HDRH10.invoice_date, 'YYMMDD').format(
-                'MM/DD/YYYY'
-            );
+            ordObj.date = moment(HDRH10.invoice_date, 'YYMMDD').format('MM/DD/YYYY');
             ordObj.invoice = HDRH10.invoice_number;
             ordObj.po = HDRH10.purchase_order_number;
             ordObj.charges = {};
@@ -166,10 +164,9 @@ define([
             // set due date if it exists
             for (var h = 0; h < HDRH66.length; h++) {
                 if (HDRH66[h].payment_amount_qualifier == 'ZZ') {
-                    ordObj.duedate = moment(
-                        HDRH66[h].scheduled_payment_date,
-                        'YYYYMMDD'
-                    ).format('MM/DD/YYYY');
+                    ordObj.duedate = moment(HDRH66[h].scheduled_payment_date, 'YYYYMMDD').format(
+                        'MM/DD/YYYY'
+                    );
                 }
             }
 
@@ -208,10 +205,7 @@ define([
                 lineObj.ITEMNO = dtld10.model_number;
 
                 if (dtld10.hasOwnProperty('DTLD41')) {
-                    if (
-                        dtld10.DTLD41.mfg_part_number &&
-                        dtld10.DTLD41.mfg_part_number !== ''
-                    ) {
+                    if (dtld10.DTLD41.mfg_part_number && dtld10.DTLD41.mfg_part_number !== '') {
                         lineObj.ITEMNO = dtld10.DTLD41.mfg_part_number;
                     }
                     if (dtld10.DTLD41.scac_code !== '') {
@@ -222,8 +216,7 @@ define([
                         dtld10.DTLD41.extended_model_number &&
                         dtld10.DTLD41.extended_model_number !== ''
                     ) {
-                        lineObj.ITEMNO_EXT =
-                            dtld10.DTLD41.extended_model_number;
+                        lineObj.ITEMNO_EXT = dtld10.DTLD41.extended_model_number;
                     }
                 }
 
@@ -239,10 +232,7 @@ define([
                 // add any serial numbers
                 if (dtld10.hasOwnProperty('DTLD40')) {
                     dtld10.DTLD40.forEach(function (dtld40) {
-                        if (
-                            dtld40.serial_number_qualifier == 'SE' &&
-                            dtld40.serial_number !== ''
-                        ) {
+                        if (dtld40.serial_number_qualifier == 'SE' && dtld40.serial_number !== '') {
                             lineObj.SERIAL.push(dtld40.serial_number);
                         }
                     });
@@ -275,10 +265,7 @@ define([
                         ordObj.lines[itemIdx].TRACKING.push(tracking);
                     });
 
-                    if (
-                        (ordObj.lines[itemIdx].CARRIER =
-                            '' && lineObj.CARRIER !== '')
-                    ) {
+                    if ((ordObj.lines[itemIdx].CARRIER = '' && lineObj.CARRIER !== '')) {
                         ordObj.lines[itemIdx].CARRIER = lineObj.CARRIER;
                     }
                 } else {
@@ -304,25 +291,15 @@ define([
         switch (lineType) {
             case 'HDRH10':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
                 returnObj.invoice_date = trimPadding(lineStr.slice(27, 33));
-                returnObj.invoice_number_two = trimPadding(
-                    lineStr.slice(33, 44)
-                );
-                returnObj.purchase_order_number = trimPadding(
-                    lineStr.slice(44, 64)
-                );
-                returnObj.invoice_type_indicator = trimPadding(
-                    lineStr.slice(64, 66)
-                );
+                returnObj.invoice_number_two = trimPadding(lineStr.slice(33, 44));
+                returnObj.purchase_order_number = trimPadding(lineStr.slice(44, 64));
+                returnObj.invoice_type_indicator = trimPadding(lineStr.slice(64, 66));
                 returnObj.filler = trimPadding(lineStr.slice(66, 74));
-                returnObj.ge_distributor_number = trimPadding(
-                    lineStr.slice(74, 80)
-                );
+                returnObj.ge_distributor_number = trimPadding(lineStr.slice(74, 80));
                 returnObj.repurchase_flag = trimPadding(lineStr.slice(80, 81));
                 returnObj.transaction_type = trimPadding(lineStr.slice(81, 82));
                 returnObj.filler_two = trimPadding(lineStr.slice(82, 194));
@@ -357,191 +334,114 @@ define([
 
             case 'HDRH66':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.payment_amount_qualifier = trimPadding(
-                    lineStr.slice(27, 29)
-                );
-                returnObj.scheduled_payment_date = trimPadding(
-                    lineStr.slice(29, 37)
-                );
-                returnObj.scheduled_payment_amount = trimPadding(
-                    lineStr.slice(37, 51)
-                );
+                returnObj.payment_amount_qualifier = trimPadding(lineStr.slice(27, 29));
+                returnObj.scheduled_payment_date = trimPadding(lineStr.slice(29, 37));
+                returnObj.scheduled_payment_amount = trimPadding(lineStr.slice(37, 51));
                 returnObj.filler = trimPadding(lineStr.slice(51, 57));
                 returnObj.late_charge_text = trimPadding(lineStr.slice(57, 77));
                 returnObj.filler_two = trimPadding(lineStr.slice(77, 79));
                 returnObj.epd_rate = trimPadding(lineStr.slice(79, 85));
                 returnObj.epd_payment_date = trimPadding(lineStr.slice(85, 91));
                 returnObj.epd_amount = trimPadding(lineStr.slice(91, 4));
-                returnObj.epd_refund_pay_amount = trimPadding(
-                    lineStr.slice(4, 111)
-                );
+                returnObj.epd_refund_pay_amount = trimPadding(lineStr.slice(4, 111));
                 returnObj.epd_days = trimPadding(lineStr.slice(121, 124));
-                returnObj.epd_rate_with_decimal = trimPadding(
-                    lineStr.slice(124, 131)
-                );
+                returnObj.epd_rate_with_decimal = trimPadding(lineStr.slice(124, 131));
                 returnObj.filler_three = trimPadding(lineStr.slice(131, 194));
                 break;
 
             case 'DTLD10':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
                 returnObj.line_number = trimPadding(lineStr.slice(27, 31));
-                returnObj.line_quantity =
-                    trimPadding(lineStr.slice(31, 41)) * 1;
+                returnObj.line_quantity = trimPadding(lineStr.slice(31, 41)) * 1;
                 returnObj.unit_of_measure = trimPadding(lineStr.slice(41, 43));
-                returnObj.line_amount = underPunchString(
-                    trimPadding(lineStr.slice(43, 54))
-                );
-                returnObj.product_code_qualifier = trimPadding(
-                    lineStr.slice(54, 56)
-                );
+                returnObj.line_amount = underPunchString(trimPadding(lineStr.slice(43, 54)));
+                returnObj.product_code_qualifier = trimPadding(lineStr.slice(54, 56));
                 returnObj.model_number = trimPadding(lineStr.slice(56, 80));
                 returnObj.po_line_number = trimPadding(lineStr.slice(80, 86));
-                returnObj.unit_price = underPunchString(
-                    trimPadding(lineStr.slice(86, 97))
-                );
-                returnObj.dad03_unit_price = underPunchString(
-                    trimPadding(lineStr.slice(97, 110))
-                );
-                returnObj.dad03_quantity = underPunchString(
-                    trimPadding(lineStr.slice(110, 124))
-                );
-                returnObj.duration_months = underPunchString(
-                    trimPadding(lineStr.slice(124, 135))
-                );
-                returnObj.contract_start_date = trimPadding(
-                    lineStr.slice(135, 145)
-                );
-                returnObj.contract_end_date = trimPadding(
-                    lineStr.slice(145, 155)
-                );
-                returnObj.line_transaction_type = trimPadding(
-                    lineStr.slice(155, 156)
-                );
+                returnObj.unit_price = underPunchString(trimPadding(lineStr.slice(86, 97)));
+                returnObj.dad03_unit_price = underPunchString(trimPadding(lineStr.slice(97, 110)));
+                returnObj.dad03_quantity = underPunchString(trimPadding(lineStr.slice(110, 124)));
+                returnObj.duration_months = underPunchString(trimPadding(lineStr.slice(124, 135)));
+                returnObj.contract_start_date = trimPadding(lineStr.slice(135, 145));
+                returnObj.contract_end_date = trimPadding(lineStr.slice(145, 155));
+                returnObj.line_transaction_type = trimPadding(lineStr.slice(155, 156));
                 returnObj.filler = trimPadding(lineStr.slice(156, 194));
                 break;
 
             case 'DTLD11':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.invoice_line_number = trimPadding(
-                    lineStr.slice(27, 31)
-                );
-                returnObj.mfg_part_number_qualifier = trimPadding(
-                    lineStr.slice(31, 33)
-                );
+                returnObj.invoice_line_number = trimPadding(lineStr.slice(27, 31));
+                returnObj.mfg_part_number_qualifier = trimPadding(lineStr.slice(31, 33));
                 returnObj.mfg_part_number = trimPadding(lineStr.slice(33, 43));
                 returnObj.sku_id_qualifier = trimPadding(lineStr.slice(43, 45));
                 returnObj.sku_id = trimPadding(lineStr.slice(45, 69));
-                returnObj.mfg_number_qualifier = trimPadding(
-                    lineStr.slice(69, 17)
-                );
+                returnObj.mfg_number_qualifier = trimPadding(lineStr.slice(69, 17));
                 returnObj.mfg_number = trimPadding(lineStr.slice(71, 77));
-                returnObj.distributor_number_qualifier = trimPadding(
-                    lineStr.slice(77, 79)
-                );
-                returnObj.distributor_number = trimPadding(
-                    lineStr.slice(79, 85)
-                );
-                returnObj.program_code_qualifier = trimPadding(
-                    lineStr.slice(85, 87)
-                );
+                returnObj.distributor_number_qualifier = trimPadding(lineStr.slice(77, 79));
+                returnObj.distributor_number = trimPadding(lineStr.slice(79, 85));
+                returnObj.program_code_qualifier = trimPadding(lineStr.slice(85, 87));
                 returnObj.program_number = trimPadding(lineStr.slice(87, 92));
                 returnObj.filler = trimPadding(lineStr.slice(92, 194));
                 break;
 
             case 'DTLD15':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.invoice_line_number = trimPadding(
-                    lineStr.slice(27, 31)
-                );
-                returnObj.product_discription_qualifier = trimPadding(
-                    lineStr.slice(31, 32)
-                );
-                returnObj.product_discription = trimPadding(
-                    lineStr.slice(32, 80)
-                );
+                returnObj.invoice_line_number = trimPadding(lineStr.slice(27, 31));
+                returnObj.product_discription_qualifier = trimPadding(lineStr.slice(31, 32));
+                returnObj.product_discription = trimPadding(lineStr.slice(32, 80));
                 returnObj.filler = trimPadding(lineStr.slice(80, 194));
                 break;
 
             case 'DTLD40':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.serial_number_qualifier = trimPadding(
-                    lineStr.slice(27, 29)
-                );
+                returnObj.serial_number_qualifier = trimPadding(lineStr.slice(27, 29));
                 returnObj.serial_number = trimPadding(lineStr.slice(29, 59));
                 returnObj.filler = trimPadding(lineStr.slice(59, 194));
                 break;
 
             case 'DTLD41':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
                 returnObj.mfg_part_number = trimPadding(lineStr.slice(27, 51));
-                returnObj.vendor_part_number = trimPadding(
-                    lineStr.slice(51, 71)
-                );
-                returnObj.vendor_upc_number = trimPadding(
-                    lineStr.slice(71, 91)
-                );
+                returnObj.vendor_part_number = trimPadding(lineStr.slice(51, 71));
+                returnObj.vendor_upc_number = trimPadding(lineStr.slice(71, 91));
                 returnObj.scac_code = trimPadding(lineStr.slice(91, 95));
-                returnObj.extended_model_number = trimPadding(
-                    lineStr.slice(95, 125)
-                );
+                returnObj.extended_model_number = trimPadding(lineStr.slice(95, 125));
                 returnObj.serial_number = trimPadding(lineStr.slice(125, 145));
-                returnObj.vendor_code_number = trimPadding(
-                    lineStr.slice(145, 149)
-                );
+                returnObj.vendor_code_number = trimPadding(lineStr.slice(145, 149));
                 returnObj.filler = trimPadding(lineStr.slice(149, 194));
                 break;
 
             case 'DTLD42':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.line_level_ship_via_desc = trimPadding(
-                    lineStr.slice(27, 47)
-                );
-                returnObj.ship_trace_number = trimPadding(
-                    lineStr.slice(47, 72)
-                );
+                returnObj.line_level_ship_via_desc = trimPadding(lineStr.slice(27, 47));
+                returnObj.ship_trace_number = trimPadding(lineStr.slice(47, 72));
                 returnObj.filler = trimPadding(lineStr.slice(72, 194));
                 break;
 
             case 'DTLD43':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
                 returnObj.tax_qualifier = trimPadding(lineStr.slice(27, 29));
@@ -553,60 +453,28 @@ define([
 
             case 'SUMS10':
                 returnObj.rec_type = trimPadding(lineStr.slice(0, 6));
-                returnObj.issue_ge_branch_nbr = trimPadding(
-                    lineStr.slice(6, 10)
-                );
+                returnObj.issue_ge_branch_nbr = trimPadding(lineStr.slice(6, 10));
                 returnObj.dealer_number = trimPadding(lineStr.slice(10, 16));
                 returnObj.invoice_number = trimPadding(lineStr.slice(16, 27));
-                returnObj.invoice_amount = underPunchString(
-                    trimPadding(lineStr.slice(27, 37))
-                );
-                returnObj.finance_charge = underPunchString(
-                    trimPadding(lineStr.slice(37, 48))
-                );
+                returnObj.invoice_amount = underPunchString(trimPadding(lineStr.slice(27, 37)));
+                returnObj.finance_charge = underPunchString(trimPadding(lineStr.slice(37, 48)));
                 returnObj.tax_type = trimPadding(lineStr.slice(48, 50));
-                returnObj.vat_amt = underPunchString(
-                    trimPadding(lineStr.slice(50, 61))
-                );
-                returnObj.vat_rate = underPunchString(
-                    trimPadding(lineStr.slice(61, 66))
-                );
+                returnObj.vat_amt = underPunchString(trimPadding(lineStr.slice(50, 61)));
+                returnObj.vat_rate = underPunchString(trimPadding(lineStr.slice(61, 66)));
                 returnObj.filler = trimPadding(lineStr.slice(66, 74));
-                returnObj.distributor_number = trimPadding(
-                    lineStr.slice(74, 80)
-                );
+                returnObj.distributor_number = trimPadding(lineStr.slice(74, 80));
                 returnObj.filler_two = trimPadding(lineStr.slice(80, 81));
-                returnObj.qst_pst_tax_qualifier = trimPadding(
-                    lineStr.slice(81, 83)
-                );
-                returnObj.qst_pst_tax_amount = underPunchString(
-                    trimPadding(lineStr.slice(83, 94))
-                );
-                returnObj.all_tax_qualifier = trimPadding(
-                    lineStr.slice(94, 96)
-                );
-                returnObj.tax_amount = underPunchString(
-                    trimPadding(lineStr.slice(96, 107))
-                );
-                returnObj.model_number_qualifier = trimPadding(
-                    lineStr.slice(107, 109)
-                );
+                returnObj.qst_pst_tax_qualifier = trimPadding(lineStr.slice(81, 83));
+                returnObj.qst_pst_tax_amount = underPunchString(trimPadding(lineStr.slice(83, 94)));
+                returnObj.all_tax_qualifier = trimPadding(lineStr.slice(94, 96));
+                returnObj.tax_amount = underPunchString(trimPadding(lineStr.slice(96, 107)));
+                returnObj.model_number_qualifier = trimPadding(lineStr.slice(107, 109));
                 returnObj.model_number = trimPadding(lineStr.slice(109, 139));
-                returnObj.manufacturer_number_qualifier = trimPadding(
-                    lineStr.slice(139, 141)
-                );
-                returnObj.manufacturer_number = trimPadding(
-                    lineStr.slice(141, 147)
-                );
-                returnObj.distributor_number_qualifier = trimPadding(
-                    lineStr.slice(147, 149)
-                );
-                returnObj.distributor_number = trimPadding(
-                    lineStr.slice(149, 155)
-                );
-                returnObj.program_code_qualifier = trimPadding(
-                    lineStr.slice(155, 157)
-                );
+                returnObj.manufacturer_number_qualifier = trimPadding(lineStr.slice(139, 141));
+                returnObj.manufacturer_number = trimPadding(lineStr.slice(141, 147));
+                returnObj.distributor_number_qualifier = trimPadding(lineStr.slice(147, 149));
+                returnObj.distributor_number = trimPadding(lineStr.slice(149, 155));
+                returnObj.program_code_qualifier = trimPadding(lineStr.slice(155, 157));
                 returnObj.program_number = trimPadding(lineStr.slice(157, 162));
                 returnObj.filler_two = trimPadding(lineStr.slice(162, 194));
                 break;

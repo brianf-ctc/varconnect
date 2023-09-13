@@ -46,10 +46,7 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
 
         for (var i = 0; i < xmlObj.length; i++) {
             if (xmlObj[i][0] == '|H|') {
-                log.audit(
-                    'D&H Process XML',
-                    '>>  Header: ' + JSON.stringify({ line: xmlObj[i] })
-                );
+                log.audit('D&H Process XML', '>>  Header: ' + JSON.stringify({ line: xmlObj[i] }));
 
                 myObj.invoice = trimPadding(xmlObj[i][4], ' ');
                 myObj.date = trimPadding(xmlObj[i][6], ' ');
@@ -74,10 +71,8 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
                 lineObj.processed = false;
                 // lineObj.ITEMNO = trimPadding(xmlObj[i][9], ' ');
                 lineObj.ITEMNO = trimPadding(xmlObj[i][10], ' ');
-                lineObj.PRICE =
-                    trimPadding(xmlObj[i][5], ' ').match(/\d|\./g).join('') * 1;
-                lineObj.QUANTITY =
-                    trimPadding(xmlObj[i][3], ' ').match(/\d|\./g).join('') * 1;
+                lineObj.PRICE = trimPadding(xmlObj[i][5], ' ').match(/\d|\./g).join('') * 1;
+                lineObj.QUANTITY = trimPadding(xmlObj[i][3], ' ').match(/\d|\./g).join('') * 1;
                 lineObj.DESCRIPTION = trimPadding(xmlObj[i][13], ' ');
 
                 myObj.lines.push(lineObj);
@@ -90,51 +85,20 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
                 // total charges
                 // vdeChargeAmount = TaxAmount + EHFTotal + (Tax1 + Tax2 + Tax3)
                 var summary = {
-                    taxAmount:
-                        trimPadding(xmlObj[i][3], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    tax1:
-                        trimPadding(xmlObj[i][5], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    tax2:
-                        trimPadding(xmlObj[i][6], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    tax3:
-                        trimPadding(xmlObj[i][7], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    freight:
-                        trimPadding(xmlObj[i][13], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    handling:
-                        trimPadding(xmlObj[i][14], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    ehfTotal:
-                        trimPadding(xmlObj[i][4], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1,
-                    invoiceTotal:
-                        trimPadding(xmlObj[i][9], ' ')
-                            .match(/\d|\./g)
-                            .join('') * 1
+                    taxAmount: trimPadding(xmlObj[i][3], ' ').match(/\d|\./g).join('') * 1,
+                    tax1: trimPadding(xmlObj[i][5], ' ').match(/\d|\./g).join('') * 1,
+                    tax2: trimPadding(xmlObj[i][6], ' ').match(/\d|\./g).join('') * 1,
+                    tax3: trimPadding(xmlObj[i][7], ' ').match(/\d|\./g).join('') * 1,
+                    freight: trimPadding(xmlObj[i][13], ' ').match(/\d|\./g).join('') * 1,
+                    handling: trimPadding(xmlObj[i][14], ' ').match(/\d|\./g).join('') * 1,
+                    ehfTotal: trimPadding(xmlObj[i][4], ' ').match(/\d|\./g).join('') * 1,
+                    invoiceTotal: trimPadding(xmlObj[i][9], ' ').match(/\d|\./g).join('') * 1
                 };
 
-                log.audit(
-                    'D&H Process XML',
-                    '>> summary line: ' + JSON.stringify(summary)
-                );
+                log.audit('D&H Process XML', '>> summary line: ' + JSON.stringify(summary));
 
                 myObj.total = summary.invoiceTotal;
-                myObj.charges.tax =
-                    summary.taxAmount +
-                    summary.tax1 +
-                    summary.tax2 +
-                    summary.tax3;
+                myObj.charges.tax = summary.taxAmount + summary.tax1 + summary.tax2 + summary.tax3;
                 myObj.charges.shipping = summary.freight + summary.handling;
                 myObj.charges.other = summary.ehfTotal;
 

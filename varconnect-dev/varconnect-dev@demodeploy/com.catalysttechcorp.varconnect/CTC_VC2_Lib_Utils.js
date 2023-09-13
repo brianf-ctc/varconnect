@@ -46,8 +46,7 @@ define(function (require) {
         },
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (var i = arrValue.length - 1; i >= 0; i--)
-                if (stValue == arrValue[i]) break;
+            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
         isUndefined: function (value) {
@@ -61,9 +60,7 @@ define(function (require) {
     util.extend(vc2_util, {
         CACHE: {},
         getCache: function (cacheKey) {
-            return vc2_util.CACHE.hasOwnProperty(cacheKey)
-                ? vc2_util.CACHE[cacheKey]
-                : null;
+            return vc2_util.CACHE.hasOwnProperty(cacheKey) ? vc2_util.CACHE[cacheKey] : null;
         },
         setCache: function (cacheKey, objVar) {
             vc2_util.CACHE[cacheKey] = objVar;
@@ -104,9 +101,7 @@ define(function (require) {
             var returnValue = 0;
             try {
                 returnValue = stValue
-                    ? parseFloat(
-                          stValue.toString().replace(/[^0-9.-]+/g, '') || '0'
-                      )
+                    ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0')
                     : 0;
             } catch (e) {}
 
@@ -132,8 +127,7 @@ define(function (require) {
         },
         getNodeTextContent: function (node) {
             // log.debug('node', node);
-            if (!vc2_util.isUndefined(node))
-                return node.textContent || node.shift().textContent;
+            if (!vc2_util.isUndefined(node)) return node.textContent || node.shift().textContent;
             else return null;
         },
         getNodeContent: function (node) {
@@ -175,8 +169,7 @@ define(function (require) {
 
                 if (!dateFormat) {
                     try {
-                        dateFormat =
-                            nlapiGetContext().getPreference('DATEFORMAT');
+                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
                     } catch (e) {}
                 }
                 vc2_util.CACHE.DATE_FORMAT = dateFormat;
@@ -196,8 +189,7 @@ define(function (require) {
                             singleString = stringArr[0];
                             var convertedDate = new Date(singleString);
 
-                            if (!date || convertedDate > date)
-                                date = convertedDate;
+                            if (!date || convertedDate > date) date = convertedDate;
                         }
                     }
                 } catch (e) {
@@ -274,9 +266,7 @@ define(function (require) {
             return str.substring(str.length - len, str.length);
         },
         roundOff: function (value) {
-            var flValue = util.isNumber(value)
-                ? value
-                : this.forceFloat(value || '0');
+            var flValue = util.isNumber(value) ? value : this.forceFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
@@ -287,10 +277,7 @@ define(function (require) {
     util.extend(vc2_util, {
         // Generate serial link.
         generateSerialLink: function (option) {
-            ns_url =
-                ns_url ||
-                vc2_util.loadModule('N/url') ||
-                vc2_util.loadModuleNS('N/url');
+            ns_url = ns_url || vc2_util.loadModule('N/url') || vc2_util.loadModuleNS('N/url');
 
             var protocol = 'https://';
             var domain = ns_url.resolveDomain({
@@ -332,23 +319,16 @@ define(function (require) {
             var ns_https = require('N/https');
 
             var queryOption = option.query || option.queryOption;
-            if (!queryOption || vc2_util.isEmpty(queryOption))
-                throw 'Missing query option';
+            if (!queryOption || vc2_util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
             var response,
                 responseBody,
                 parsedResponse,
                 param = {
-                    noLogs: option.hasOwnProperty('noLogs')
-                        ? option.noLogs
-                        : false,
-                    doRetry: option.hasOwnProperty('doRetry')
-                        ? option.doRetry
-                        : false,
-                    retryCount: option.hasOwnProperty('retryCount')
-                        ? option.retryCount
-                        : 1,
+                    noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
+                    doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
+                    retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
                     responseType: option.hasOwnProperty('responseType')
                         ? option.responseType
                         : 'JSON',
@@ -357,21 +337,11 @@ define(function (require) {
                         : _DEFAULT.maxRetries || 0,
 
                     logHeader: option.header || logTitle,
-                    logTranId:
-                        option.internalId ||
-                        option.transactionId ||
-                        option.recordId,
-                    isXML: option.hasOwnProperty('isXML')
-                        ? !!option.isXML
-                        : false, // default json
-                    isJSON: option.hasOwnProperty('isJSON')
-                        ? !!option.isJSON
-                        : true, // default json
+                    logTranId: option.internalId || option.transactionId || option.recordId,
+                    isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
+                    isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: vc2_util.inArray(
-                        option.method,
-                        _DEFAULT.validMethods
-                    )
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods)
                         ? option.method
                         : 'get'
                 };
@@ -384,21 +354,14 @@ define(function (require) {
             try {
                 if (!param.noLogs) {
                     vc2_util.vcLog({
-                        title: [
-                            param.logHeader,
-                            ' Request ',
-                            '(' + param.method + ')'
-                        ].join(''),
+                        title: [param.logHeader, ' Request ', '(' + param.method + ')'].join(''),
                         content: queryOption,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
                     });
                 }
 
-                log.audit(
-                    logTitle,
-                    '>> REQUEST: ' + JSON.stringify(queryOption)
-                );
+                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
                 returnValue.REQUEST = queryOption;
 
                 /////////////////////////////////////////
@@ -413,9 +376,7 @@ define(function (require) {
                     logTitle,
                     '>> RESPONSE ' +
                         JSON.stringify({
-                            duration: this.roundOff(
-                                (new Date() - startTime) / 1000
-                            ),
+                            duration: this.roundOff((new Date() - startTime) / 1000),
                             code: response.code || '-no response-',
                             body: response.body || '-empty response-'
                         })
@@ -430,10 +391,7 @@ define(function (require) {
                     returnValue.PARSED_RESPONSE = parsedResponse;
                 }
 
-                if (
-                    !response.code ||
-                    !vc2_util.inArray(response.code, VALID_RESP_CODE)
-                ) {
+                if (!response.code || !vc2_util.inArray(response.code, VALID_RESP_CODE)) {
                     throw parsedResponse
                         ? JSON.stringify(parsedResponse)
                         : 'Received invalid response code - ' + response.code;
@@ -463,10 +421,7 @@ define(function (require) {
                 if (param.doRetry)
                     vc2_util.log(
                         logTitle,
-                        '## RETRY ##  -- ' +
-                            param.retryCount +
-                            '/' +
-                            param.maxRetry
+                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
                     );
 
                 if (param.doRetry && param.maxRetry > param.retryCount) {
@@ -484,9 +439,7 @@ define(function (require) {
                     vc2_util.vcLog({
                         title: [param.logHeader, 'Response'].join(' - '),
                         content: param.isJSON
-                            ? JSON.stringify(
-                                  parsedResponse || responseBody || response
-                              )
+                            ? JSON.stringify(parsedResponse || responseBody || response)
                             : responseBody,
                         transaction: param.logTranId,
                         status: LOG_STATUS.INFO
@@ -496,6 +449,164 @@ define(function (require) {
 
             return returnValue;
         },
+
+        /**
+         *
+         * @param {*} option
+         *      option.method - 'POST/GET'
+         *      option.header - label/title
+         *      option.query - actual query options
+         *      option.recordId/internalId/transactionId
+         *      option.doRetry - true/false
+         *      option.maxRetry - int
+         *      option.waitMs - ms
+         *      option.responseType - JSON/XML
+         *      option.isXML - true/false
+         *      option.isJSON - true/false
+         *      option.noLogs -true/false
+         * @returns
+         *      REQUEST
+         *      RESPONSE
+         *      PARSED_RESPONSE
+         *      returnValue.isError = true;
+         *      returnValue.errorMsg = errorMsg;
+         *      returnValue.error = error;
+         *      returnValue.details = parsedResponse || response;
+         */
+        sendRequestRestlet: function (option) {
+            var logTitle = [LogTitle, 'sendRequestRestlet'].join('::'),
+                returnValue = {};
+
+            var VALID_RESP_CODE = [200, 207];
+
+            var _DEFAULT = {
+                validMethods: ['post', 'get'],
+                maxRetries: 3,
+                maxWaitMs: 3000
+            };
+            var ns_https = require('N/https');
+
+            var queryOption = option.query || option.queryOption;
+            if (!queryOption || vc2_util.isEmpty(queryOption)) throw 'Missing query option';
+
+            option.method = (option.method || 'get').toLowerCase();
+
+            var response,
+                responseBody,
+                parsedResponse,
+                param = {
+                    noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
+                    doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
+                    retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
+                    responseType: option.hasOwnProperty('responseType')
+                        ? option.responseType
+                        : 'JSON',
+                    maxRetry: option.hasOwnProperty('maxRetry')
+                        ? option.maxRetry
+                        : _DEFAULT.maxRetries || 0,
+
+                    logHeader: option.header || logTitle,
+                    logTranId: option.internalId || option.transactionId || option.recordId,
+                    isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
+                    isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
+                    waitMs: option.waitMs || _DEFAULT.maxWaitMs,
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods)
+                        ? option.method
+                        : 'get'
+                };
+            if (option.isXML) param.isJSON = false;
+            queryOption.method = param.method.toUpperCase();
+
+            // log.audit(logTitle, '>> param: ' + JSON.stringify(param));
+            var LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+            var startTime = new Date();
+            try {
+                if (!param.noLogs) {
+                    vc2_util.vcLog({
+                        title: [param.logHeader, ' Request ', '(' + param.method + ')'].join(''),
+                        content: queryOption,
+                        transaction: param.logTranId,
+                        status: LOG_STATUS.INFO
+                    });
+                }
+
+                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
+                returnValue.REQUEST = queryOption;
+
+                /////////////////////////////////////////
+                //// SEND THE REQUEST //////
+                response = ns_https.requestRestlet(queryOption);
+
+                // ns_https[param.method](queryOption);
+                returnValue.RESPONSE = response;
+                /////////////////////////////////////////
+
+                log.audit(
+                    logTitle,
+                    '>> RESPONSE ' +
+                        JSON.stringify({
+                            duration: this.roundOff((new Date() - startTime) / 1000),
+                            code: response.code || '-no response-',
+                            body: response.body || '-empty response-'
+                        })
+                );
+
+                if (!response || !response.body) throw 'Empty or Missing Response !';
+
+                responseBody = response.body;
+                if (param.isJSON) {
+                    parsedResponse = vc2_util.safeParse(response);
+                    returnValue.PARSED_RESPONSE = parsedResponse;
+                }
+
+                if (!response.code || !vc2_util.inArray(response.code, VALID_RESP_CODE)) {
+                    throw parsedResponse
+                        ? JSON.stringify(parsedResponse)
+                        : 'Received invalid response code - ' + response.code;
+                }
+
+                ////////////////////////////
+            } catch (error) {
+                var errorMsg = vc2_util.extractError(error);
+                returnValue.isError = true;
+                returnValue.errorMsg = errorMsg;
+                returnValue.error = error;
+                returnValue.details = parsedResponse || response;
+
+                vc2_util.logError(logTitle, errorMsg);
+
+                if (param.doRetry)
+                    vc2_util.log(
+                        logTitle,
+                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
+                    );
+
+                if (param.doRetry && param.maxRetry > param.retryCount) {
+                    log.audit(logTitle, '... retrying in ' + param.waitMs);
+                    option.retryCount = param.retryCount + 1;
+                    vc2_util.waitMs(param.waitMs);
+                    returnValue = vc2_util.sendRequest(option);
+                }
+            } finally {
+                vc2_util.log(logTitle, '>> RESPONSE time: ', {
+                    duration: this.roundOff((new Date() - startTime) / 1000)
+                });
+
+                if (!param.noLogs) {
+                    vc2_util.vcLog({
+                        title: [param.logHeader, 'Response'].join(' - '),
+                        content: param.isJSON
+                            ? JSON.stringify(parsedResponse || responseBody || response)
+                            : responseBody,
+                        transaction: param.logTranId,
+                        status: LOG_STATUS.INFO
+                    });
+                }
+            }
+
+            return returnValue;
+        },
+
         // Parses the response body into a JSON object.
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
@@ -550,10 +661,7 @@ define(function (require) {
             // ARROW: ResponseHeader
 
             if (request.isError || request.RESPONSE.code != '200') {
-                throw (
-                    'Unexpected Error - ' +
-                    JSON.stringify(request.PARSED_RESPONSE)
-                );
+                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
             }
 
             return returnValue;
@@ -568,10 +676,7 @@ define(function (require) {
             if (!request.RESPONSE || !request.RESPONSE.body)
                 throw 'Invalid or missing XML response';
 
-            ns_xml =
-                ns_xml ||
-                vc2_util.loadModule('N/xml') ||
-                vc2_util.loadModuleNS('N/xml');
+            ns_xml = ns_xml || vc2_util.loadModule('N/xml') || vc2_util.loadModuleNS('N/xml');
 
             var xmlResponse = request.RESPONSE.body,
                 xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });
@@ -582,10 +687,7 @@ define(function (require) {
                 ns_xml.XPath.select({ node: xmlDoc, xpath: '//STATUS' })
             );
 
-            if (
-                respStatus &&
-                vc2_util.inArray(respStatus.toUpperCase(), ['FAILURE'])
-            ) {
+            if (respStatus && vc2_util.inArray(respStatus.toUpperCase(), ['FAILURE'])) {
                 var respStatusMessage = vc2_util.getNodeContent(
                     ns_xml.XPath.select({ node: xmlDoc, xpath: '//MESSAGE' })
                 );
@@ -607,9 +709,7 @@ define(function (require) {
                         xpath: '//OrderInfo/ErrorMsg'
                     })
                 ) ||
-                vc2_util.getNodeContent(
-                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' })
-                );
+                vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' }));
             if (respErrorInfo) throw respErrorInfo;
 
             return returnValue;
@@ -648,36 +748,23 @@ define(function (require) {
                     isBatched = batchTransaction != null;
 
                 logOption.DATE = new Date();
-                logOption.APPLICATION =
-                    option.appName || vc2_constant.LOG_APPLICATION;
+                logOption.APPLICATION = option.appName || vc2_constant.LOG_APPLICATION;
                 logOption.HEADER = option.title || logOption.APPLICATION;
-                logOption.BODY =
-                    option.body ||
-                    option.content ||
-                    option.message ||
-                    option.details;
+                logOption.BODY = option.body || option.content || option.message || option.details;
                 logOption.STATUS =
                     option.logStatus ||
                     option.status ||
                     (option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO);
 
                 logOption.TRANSACTION =
-                    option.recordId ||
-                    option.transaction ||
-                    option.id ||
-                    option.internalid ||
-                    '';
+                    option.recordId || option.transaction || option.id || option.internalid || '';
 
                 if (option.error) {
                     var errorMsg = vc2_util.extractError(option.error);
                     logOption.BODY = errorMsg;
 
-                    logOption.STATUS =
-                        option.error.logStatus ||
-                        option.status ||
-                        LOG_STATUS.ERROR;
-                    if (option.error.details)
-                        option.details = option.error.details;
+                    logOption.STATUS = option.error.logStatus || option.status || LOG_STATUS.ERROR;
+                    if (option.error.details) option.details = option.error.details;
                 }
 
                 if (option.details) {
@@ -745,10 +832,7 @@ define(function (require) {
                     recLog.save();
                 }
             } catch (error) {
-                log.error(
-                    logTitle,
-                    LogPrefix + '## ERROR ## ' + vc2_util.extractError(error)
-                );
+                log.error(logTitle, LogPrefix + '## ERROR ## ' + vc2_util.extractError(error));
             }
             return true;
         },
@@ -765,13 +849,10 @@ define(function (require) {
                 logOption.body = option.details;
                 logOption.title = [
                     option.title,
-                    option.errorMsg ||
-                        option.error ||
-                        vc2_util.extractError(option.error)
+                    option.errorMsg || option.error || vc2_util.extractError(option.error)
                 ].join(' - ');
             }
-            logOption.status =
-                option.status || vc2_constant.LIST.VC_LOG_STATUS.ERROR; // common error
+            logOption.status = option.status || vc2_constant.LIST.VC_LOG_STATUS.ERROR; // common error
 
             return this.vcLog(logOption);
         },
@@ -787,19 +868,13 @@ define(function (require) {
                 });
                 if (lineCount > 0) {
                     recBatch.save();
-                    log.audit(
-                        logTitle,
-                        'VC Logs submitted for batch ' + batchTransaction
-                    );
+                    log.audit(logTitle, 'VC Logs submitted for batch ' + batchTransaction);
                 } else {
                     recBatch = null;
                 }
             }
             if (!recBatch) {
-                log.debug(
-                    logTitle,
-                    'No VC Logs to submit for batch ' + batchTransaction
-                );
+                log.debug(logTitle, 'No VC Logs to submit for batch ' + batchTransaction);
             }
         },
         LogPrefix: null,
@@ -820,20 +895,14 @@ define(function (require) {
                     vc2_util.getUsage() +
                         (logPrefx ? logPrefx + ' ' : '') +
                         logMsg +
-                        (!vc2_util.isEmpty(objvar)
-                            ? JSON.stringify(objvar)
-                            : '')
+                        (!vc2_util.isEmpty(objvar) ? JSON.stringify(objvar) : '')
                 );
             } catch (error) {}
 
             return true;
         },
         logError: function (logTitle, errorMsg) {
-            vc2_util.log(
-                logTitle,
-                { type: 'error', msg: '### ERROR: ' },
-                errorMsg
-            );
+            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR: ' }, errorMsg);
             return;
         },
         logDebug: function (logTitle, msg, msgVar) {
@@ -874,20 +943,12 @@ define(function (require) {
                 if (!objSearch.filters) objSearch.filters = [];
                 if (!objSearch.columns) objSearch.columns = [];
 
-                if (option.filters)
-                    objSearch.filters = objSearch.filters.concat(
-                        option.filters
-                    );
-                if (option.filterExpression)
-                    objSearch.filterExpression = option.filterExpression;
-                if (option.columns)
-                    objSearch.columns = objSearch.columns.concat(
-                        option.columns
-                    );
+                if (option.filters) objSearch.filters = objSearch.filters.concat(option.filters);
+                if (option.filterExpression) objSearch.filterExpression = option.filterExpression;
+                if (option.columns) objSearch.columns = objSearch.columns.concat(option.columns);
 
                 var maxResults = option.maxResults || 0;
-                var pageSize =
-                    maxResults && maxResults <= 1000 ? maxResults : 1000;
+                var pageSize = maxResults && maxResults <= 1000 ? maxResults : 1000;
 
                 // run the search
                 var objPagedResults = objSearch.runPaged({
@@ -896,11 +957,7 @@ define(function (require) {
                 // set the max results to the search length, if not defined;
                 maxResults = maxResults || objPagedResults.count;
 
-                for (
-                    var i = 0, j = objPagedResults.pageRanges.length;
-                    i < j;
-                    i++
-                ) {
+                for (var i = 0, j = objPagedResults.pageRanges.length; i < j; i++) {
                     var pagedResults = objPagedResults.fetch({
                         index: objPagedResults.pageRanges[i].index
                     });
@@ -937,8 +994,7 @@ define(function (require) {
         },
         removeNullValues: function (option) {
             var newObj = {};
-            if (!option || vc2_util.isEmpty(option) || !util.isObject(option))
-                return newObj;
+            if (!option || vc2_util.isEmpty(option) || !util.isObject(option)) return newObj;
 
             for (var prop in option) {
                 if (option[prop] === null) continue;
@@ -984,8 +1040,7 @@ define(function (require) {
                 //  If dataSource is empty or not an array, return false
                 findAll = option.findAll;
 
-            if (vc2_util.isEmpty(dataSource) || !util.isArray(dataSource))
-                return false;
+            if (vc2_util.isEmpty(dataSource) || !util.isArray(dataSource)) return false;
 
             // Initializes an empty array
             var arrResults = [];
@@ -1031,8 +1086,7 @@ define(function (require) {
             var params = option.params || option.fields;
 
             if (this.isEmpty(sourceObj) || this.isEmpty(params)) return false;
-            if (!util.isObject(sourceObj) && !util.isArray(params))
-                return false;
+            if (!util.isObject(sourceObj) && !util.isArray(params)) return false;
 
             returnValue = {};
 
@@ -1124,23 +1178,15 @@ define(function (require) {
             option = option || {};
 
             try {
-                var cacheKey = [
-                    'FileLib.getCurrentFolder',
-                    JSON.stringify(option)
-                ].join('::');
+                var cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
                 returnValue = this.CACHE[cacheKey];
 
-                if (
-                    this.isEmpty(this.CACHE[cacheKey]) ||
-                    option.noCache == true
-                ) {
+                if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
                     var scriptId = option.scriptId;
                     if (!scriptId) {
                         if (!option.currentScript) {
-                            if (!option.runtime)
-                                option.runtime = this.loadModule('N/runtime');
-                            option.currentScript =
-                                option.runtime.getCurrentScript();
+                            if (!option.runtime) option.runtime = this.loadModule('N/runtime');
+                            option.currentScript = option.runtime.getCurrentScript();
                         }
                         scriptId = option.currentScript.id;
                     }
@@ -1214,10 +1260,7 @@ define(function (require) {
 
             var returnValue = null;
 
-            var cacheKey = [
-                'FileLib.searchFile',
-                JSON.stringify(searchOption)
-            ].join('::');
+            var cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
             var fileInfo = this.CACHE[cacheKey];
 
             if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
@@ -1243,9 +1286,7 @@ define(function (require) {
             }
 
             returnValue =
-                option.doReturnArray && option.doReturnArray === true
-                    ? fileInfo
-                    : fileInfo.shift();
+                option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
 
             return returnValue;
         },
@@ -1259,10 +1300,7 @@ define(function (require) {
                     var fileName = option.filename || option.name;
                     if (!fileName) return false;
 
-                    var folderId =
-                        option.folder ||
-                        option.folderId ||
-                        this.getCurrentFolder();
+                    var folderId = option.folder || option.folderId || this.getCurrentFolder();
                     var fileInfo = this.searchFile({
                         name: fileName,
                         folder: folderId

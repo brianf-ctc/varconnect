@@ -32,15 +32,7 @@ define([
     'N/xml',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (
-    ns_render,
-    ns_record,
-    ns_runtime,
-    ns_search,
-    ns_xml,
-    vc_maincfg,
-    vc_license
-) {
+], function (ns_render, ns_record, ns_runtime, ns_search, ns_xml, vc_maincfg, vc_license) {
     var PARAMS = {
             RECORD_TYPE: 'custscript_ctc_vc_serials_rectype',
             RECORD_ID: 'custscript_ctc_vc_serials_recid'
@@ -191,9 +183,7 @@ define([
                 log.debug('sublists', rec.getSublists());
                 log.debug(
                     'sublist',
-                    JSON.stringify(
-                        rec.getSublistFields({ sublistId: sublistId })
-                    )
+                    JSON.stringify(rec.getSublistFields({ sublistId: sublistId }))
                 );
 
                 for (var i = 0; i < serialsLen; i++) {
@@ -232,12 +222,7 @@ define([
                 });
                 context.response.setHeader({
                     name: 'Content-Disposition',
-                    value:
-                        'inline; filename="' +
-                        pdfFileName +
-                        '_' +
-                        recId +
-                        '.pdf"'
+                    value: 'inline; filename="' + pdfFileName + '_' + recId + '.pdf"'
                 });
                 context.response.writePage(renderer.renderAsPdf());
                 //    		context.response.write(renderer.renderAsString());

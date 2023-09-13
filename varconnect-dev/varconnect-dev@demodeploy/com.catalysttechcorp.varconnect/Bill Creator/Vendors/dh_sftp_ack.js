@@ -57,10 +57,7 @@ define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
         ackString += moment().format();
 
         var ackFile = ns_file.create({
-            name:
-                'ErgonomicGroup_InvoiceAck_' +
-                moment().format('YYYYMMDDTHHmmssS') +
-                '.txt',
+            name: 'ErgonomicGroup_InvoiceAck_' + moment().format('YYYYMMDDTHHmmssS') + '.txt',
             fileType: ns_file.Type.PLAINTEXT,
             contents: ackString
         });

@@ -26,15 +26,7 @@ define([
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils',
     './CTC_VC_LIb_SerialsLib.js'
-], function (
-    ns_ui,
-    ns_search,
-    ns_record,
-    ns_url,
-    vc2_constant,
-    vc2_util,
-    vc_serial
-) {
+], function (ns_ui, ns_search, ns_record, ns_url, vc2_constant, vc2_util, vc_serial) {
     var LogTitle = 'ViewSerials';
 
     var SUBLIST_ID = 'custpage_orders',
@@ -45,19 +37,13 @@ define([
             var logTitle = [LogTitle, 'getItemSNList'].join('::');
 
             var serialTxnMap = {};
-            serialTxnMap[ns_record.Type.PURCHASE_ORDER] =
-                SERIALREC.FIELD.PURCHASE_ORDER;
-            serialTxnMap[ns_record.Type.SALES_ORDER] =
-                SERIALREC.FIELD.SALES_ORDER;
+            serialTxnMap[ns_record.Type.PURCHASE_ORDER] = SERIALREC.FIELD.PURCHASE_ORDER;
+            serialTxnMap[ns_record.Type.SALES_ORDER] = SERIALREC.FIELD.SALES_ORDER;
             serialTxnMap[ns_record.Type.INVOICE] = SERIALREC.FIELD.INVOICE;
-            serialTxnMap[ns_record.Type.ITEM_FULFILLMENT] =
-                SERIALREC.FIELD.ITEM_FULFILLMENT;
-            serialTxnMap[ns_record.Type.ITEM_RECEIPT] =
-                SERIALREC.FIELD.ITEM_RECEIPT;
-            serialTxnMap[ns_record.Type.RETURN_AUTHORIZATION] =
-                'custrecordrmanumber';
-            serialTxnMap[ns_record.Type.VENDOR_RETURN_AUTHORIZATION] =
-                'custrecordvendorrma';
+            serialTxnMap[ns_record.Type.ITEM_FULFILLMENT] = SERIALREC.FIELD.ITEM_FULFILLMENT;
+            serialTxnMap[ns_record.Type.ITEM_RECEIPT] = SERIALREC.FIELD.ITEM_RECEIPT;
+            serialTxnMap[ns_record.Type.RETURN_AUTHORIZATION] = 'custrecordrmanumber';
+            serialTxnMap[ns_record.Type.VENDOR_RETURN_AUTHORIZATION] = 'custrecordvendorrma';
 
             var searchOption = {
                 type: SERIALREC.ID,
@@ -72,17 +58,9 @@ define([
             };
 
             if (option.itemId)
-                searchOption.filters.push([
-                    SERIALREC.FIELD.ITEM,
-                    'anyof',
-                    option.itemId
-                ]);
+                searchOption.filters.push([SERIALREC.FIELD.ITEM, 'anyof', option.itemId]);
 
-            if (
-                option.recordType &&
-                serialTxnMap[option.recordType] &&
-                option.recordId
-            ) {
+            if (option.recordType && serialTxnMap[option.recordType] && option.recordId) {
                 searchOption.filters.push('AND');
                 searchOption.filters.push([
                     serialTxnMap[option.recordType],
@@ -118,13 +96,10 @@ define([
             mapRecordLabel[ns_record.Type.PURCHASE_ORDER] = 'Purchase Order';
             mapRecordLabel[ns_record.Type.SALES_ORDER] = 'Sales Order';
             mapRecordLabel[ns_record.Type.INVOICE] = 'Invoice';
-            mapRecordLabel[ns_record.Type.ITEM_FULFILLMENT] =
-                'Item Fulfillment';
+            mapRecordLabel[ns_record.Type.ITEM_FULFILLMENT] = 'Item Fulfillment';
             mapRecordLabel[ns_record.Type.ITEM_RECEIPT] = 'Item Receipt';
-            mapRecordLabel[ns_record.Type.RETURN_AUTHORIZATION] =
-                'Customer RMA';
-            mapRecordLabel[ns_record.Type.VENDOR_RETURN_AUTHORIZATION] =
-                'Vendor RMA';
+            mapRecordLabel[ns_record.Type.RETURN_AUTHORIZATION] = 'Customer RMA';
+            mapRecordLabel[ns_record.Type.VENDOR_RETURN_AUTHORIZATION] = 'Vendor RMA';
 
             try {
                 var param = context.request.parameters,
@@ -135,10 +110,7 @@ define([
                         itemName: param.itemName
                     };
                 vc2_util.log(logTitle, '>> Current: ', Current);
-                vc2_util.LogPrefix =
-                    '[' +
-                    [Current.recordType, Current.recordId].join(':') +
-                    '] ';
+                vc2_util.LogPrefix = '[' + [Current.recordType, Current.recordId].join(':') + '] ';
 
                 if (!Current.itemName && Current.itemId) {
                     var itemData = vc2_util.flatLookup({
@@ -184,9 +156,7 @@ define([
                     container: 'maingroup'
                 });
                 formFields.Item.defaultValue = Current.itemName;
-                formFields.Item.updateDisplayType({
-                    displayType: ns_ui.FieldDisplayType.INLINE
-                });
+                formFields.Item.updateDisplayType({ displayType: ns_ui.FieldDisplayType.INLINE });
 
                 // FIELD: Transaction
                 formFields.TxnData = form.addField({
@@ -202,10 +172,7 @@ define([
                 });
 
                 // FIELD: createdfrom SO
-                if (
-                    Current.recordType != ns_record.Type.SALES_ORDER &&
-                    recordData.createdfrom
-                ) {
+                if (Current.recordType != ns_record.Type.SALES_ORDER && recordData.createdfrom) {
                     formFields.SalesOrd = form.addField({
                         id: 'custpage_salesord',
                         type: ns_ui.FieldType.SELECT,
@@ -213,8 +180,7 @@ define([
                         label: recordData['createdfrom.type'].text,
                         container: 'maingroup'
                     });
-                    formFields.SalesOrd.defaultValue =
-                        recordData.createdfrom.value;
+                    formFields.SalesOrd.defaultValue = recordData.createdfrom.value;
                     formFields.SalesOrd.updateDisplayType({
                         displayType: ns_ui.FieldDisplayType.INLINE
                     });

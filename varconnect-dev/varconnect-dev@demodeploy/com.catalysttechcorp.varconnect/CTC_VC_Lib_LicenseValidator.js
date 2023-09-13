@@ -12,11 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/url', 'N/https', './CTC_VC2_Constants.js'], function (
-    ns_url,
-    ns_https,
-    vc2_constant
-) {
+define(['N/url', 'N/https', './CTC_VC2_Constants.js'], function (ns_url, ns_https, vc2_constant) {
     function callValidationSuitelet(options) {
         var license = options.license,
             external = options.external ? true : null,

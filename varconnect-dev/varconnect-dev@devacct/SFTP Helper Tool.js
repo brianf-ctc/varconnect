@@ -59,17 +59,11 @@ function execute(context) {
             var directory = context.request.parameters.directory;
             var timeout = context.request.parameters.timeout;
             var filename = context.request.parameters.filename;
-            var restricttoscriptids =
-                context.request.parameters.restricttoscriptids;
-            var restricttodomains =
-                context.request.parameters.restricttodomains;
+            var restricttoscriptids = context.request.parameters.restricttoscriptids;
+            var restricttodomains = context.request.parameters.restricttodomains;
 
             if (restricttoscriptids && restricttodomains) {
-                form = addPasswordGUID2Fields(
-                    form,
-                    restricttoscriptids,
-                    restricttodomains
-                );
+                form = addPasswordGUID2Fields(form, restricttoscriptids, restricttodomains);
             }
 
             if (password) {
@@ -117,9 +111,7 @@ function execute(context) {
                     displayType: SERVERWIDGETMODULE.FieldDisplayType.INLINE
                 }).defaultValue = downloadedFile;
             } else if (url) {
-                var theResponse = HTTPSMODULE.get({
-                    url: HOST_KEY_TOOL_URL + url
-                }).body;
+                var theResponse = HTTPSMODULE.get({ url: HOST_KEY_TOOL_URL + url }).body;
                 form.addField({
                     id: 'hostkeyresponse',
                     type: SERVERWIDGETMODULE.FieldType.LONGTEXT,

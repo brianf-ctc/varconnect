@@ -59,6 +59,7 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         MainCFG.FIELD.VARIANCE_ON_OTHER, //29
         MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
         MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31,
+        MainCFG.FIELD.ALLOW_ADJUSTLINE, //32
         MainCFG.FIELD.OVERRIDE_PO_NUM
     ];
 
@@ -72,12 +73,10 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         createIF: MainCFG.FIELD.CREATE_ITEM_FULFILLMENTS, //6
         createIR: MainCFG.FIELD.CREATE_ITEM_RECEIPTS, //7
         ignoreDirectShipDropship: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS, //8
-        ignoreDirectShipSpecialOrder:
-            MainCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
+        ignoreDirectShipSpecialOrder: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS, //9
         createSerialDropship: MainCFG.FIELD.CREATE_SERIAL_DROPSHIPS, //10
         createSerialSpecialOrder: MainCFG.FIELD.CREATE_SERIAL_SPECIAL_ORDERS, //11
-        useInboundTrackingNumbers:
-            MainCFG.FIELD.USE_INB_TRACKING_SPECIAL_ORDERS, //12
+        useInboundTrackingNumbers: MainCFG.FIELD.USE_INB_TRACKING_SPECIAL_ORDERS, //12
         license: MainCFG.FIELD.LICENSE, //13
         copySerialsInv: MainCFG.FIELD.COPY_SERIALS_INV, //14
         serialScanUpdate: MainCFG.FIELD.SERIAL_SCAN_UPDATE, //15
@@ -88,9 +87,9 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         fulfillmentSearch: MainCFG.FIELD.FULFILMENT_SEARCH, //20,
         defaultBillForm: MainCFG.FIELD.DEFAULT_BILL_FORM, //21
         defaultVendorBillStatus: MainCFG.FIELD.DEFAULT_VENDOR_BILL_STATUS, //22
-        allowedVarianceAmountThreshold:
-            MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
+        allowedVarianceAmountThreshold: MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
         isVarianceOnTax: MainCFG.FIELD.VARIANCE_ON_TAX, //24
+        allowAdjustLine: MainCFG.FIELD.ALLOW_ADJUSTLINE, //24
         defaultTaxItem: MainCFG.FIELD.DEFAULT_TAX_ITEM, //25
         defaultTaxItem2: MainCFG.FIELD.DEFAULT_TAX_ITEM2, //25
         isVarianceOnShipping: MainCFG.FIELD.VARIANCE_ON_SHIPPING, //26
@@ -106,9 +105,7 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
 
         for (var fld in mainConfigMap) {
             var configValue = recLookup[mainConfigMap[fld]];
-            mainConfig[fld] = configValue
-                ? configValue.value || configValue
-                : null;
+            mainConfig[fld] = configValue ? configValue.value || configValue : null;
         }
 
         return mainConfig;

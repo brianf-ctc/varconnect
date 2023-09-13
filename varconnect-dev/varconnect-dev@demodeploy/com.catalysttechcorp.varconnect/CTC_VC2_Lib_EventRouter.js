@@ -35,8 +35,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
         },
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (var i = arrValue.length - 1; i >= 0; i--)
-                if (stValue == arrValue[i]) break;
+            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         }
     };
@@ -83,32 +82,17 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
 
             if (eventType == this.Type.CUSTOM) {
                 if (!this.Action[eventType]) return;
-                if (
-                    !Helper.inArray(Current.execType, [
-                        ContextType.USER_INTERFACE
-                    ])
-                )
-                    return;
-                if (
-                    !Helper.inArray(Current.eventType, [
-                        UserEventType.VIEW,
-                        UserEventType.EDIT
-                    ])
-                )
+                if (!Helper.inArray(Current.execType, [ContextType.USER_INTERFACE])) return;
+                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT]))
                     return;
 
-                var paramAction =
-                    scriptContext.request.parameters[this.ParamStr];
+                var paramAction = scriptContext.request.parameters[this.ParamStr];
                 RouterEventFn = this.Action[eventType][paramAction];
 
                 if (!paramAction || !RouterEventFn) return;
                 if (!util.isFunction(RouterEventFn)) return;
 
-                result = RouterEventFn.call(
-                    EventRouter,
-                    scriptContext,
-                    Current
-                );
+                result = RouterEventFn.call(EventRouter, scriptContext, Current);
 
                 if (result) {
                     ns_redir.toRecord({
@@ -120,18 +104,12 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                 RouterEventFn = this.Action[Current.recordType][eventType];
                 if (!util.isFunction(RouterEventFn)) return;
 
-                result = RouterEventFn.call(
-                    EventRouter,
-                    scriptContext,
-                    Current
-                );
+                result = RouterEventFn.call(EventRouter, scriptContext, Current);
                 return result;
             }
         },
         addActionURL: function (name) {
-            return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join(
-                ''
-            );
+            return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join('');
         }
     };
 

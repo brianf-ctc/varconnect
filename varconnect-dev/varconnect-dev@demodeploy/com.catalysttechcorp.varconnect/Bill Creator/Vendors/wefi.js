@@ -48,14 +48,8 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             ORDER: config.url + '/v1.0/reseller/odata/approvals'
         };
 
-        log.debug(
-            logTitle,
-            'WEFI_BC.credential=' + JSON.stringify(WEFI_BC.credential)
-        );
-        log.debug(
-            logTitle,
-            'WEFI_BC.endpoint=' + JSON.stringify(WEFI_BC.endpoint)
-        );
+        log.debug(logTitle, 'WEFI_BC.credential=' + JSON.stringify(WEFI_BC.credential));
+        log.debug(logTitle, 'WEFI_BC.endpoint=' + JSON.stringify(WEFI_BC.endpoint));
     };
 
     /**
@@ -159,11 +153,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
                 );
 
                 // Loop: WeFi Invoice Lines
-                for (
-                    var ii = 0;
-                    wfInvoiceLines && ii < wfInvoiceLines.length;
-                    ii++
-                ) {
+                for (var ii = 0; wfInvoiceLines && ii < wfInvoiceLines.length; ii++) {
                     var wfInvoiceLine = wfInvoiceLines[ii];
                     var invDetailId = wfInvoiceLine.invoiceDetailId; // v1.1
 
@@ -219,8 +209,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
         var logTitle = 'WEFI_BC.getOrder';
 
         try {
-            var params =
-                "$filter=purchaseOrderNumber eq '" + option.poNumber + "'";
+            var params = "$filter=purchaseOrderNumber eq '" + option.poNumber + "'";
             var url = WEFI_BC.endpoint.ORDER + '?' + params;
 
             log.debug(logTitle, 'url=' + url);
@@ -332,8 +321,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
 
             if (tokenReq.isError) throw tokenReq.errorMsg;
             var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
-            if (!tokenResp || !tokenResp.access_token)
-                throw 'Unable to generate token';
+            if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
             log.debug(logTitle, 'access token=' + tokenResp.access_token);
             returnValue = tokenResp.access_token;

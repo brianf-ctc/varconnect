@@ -32,14 +32,7 @@ define([
     '../CTC_VC2_Constants.js',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (
-    record,
-    render,
-    search,
-    vc2_constant,
-    libMainConfig,
-    libLicenseValidator
-) {
+], function (record, render, search, vc2_constant, libMainConfig, libLicenseValidator) {
     var templateId = 'CUSTTMPL_209_5860676_557',
         fileName = '',
         folderPath = '';

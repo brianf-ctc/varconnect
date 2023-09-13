@@ -13,18 +13,16 @@
  *@NScriptType MapReduceScript
  */
 
-define([
-    'N/search',
-    'N/runtime',
-    'N/record',
-    'N/file',
-    './CTC_VC_Lib_Serials.js'
-], function (ns_search, ns_runtime, ns_record, ns_file, vc_serialLib) {
+define(['N/search', 'N/runtime', 'N/record', 'N/file', './CTC_VC_Lib_Serials.js'], function (
+    ns_search,
+    ns_runtime,
+    ns_record,
+    ns_file,
+    vc_serialLib
+) {
     function getInputData() {
         log.audit('getInputData');
-        var fileId = ns_runtime
-            .getCurrentScript()
-            .getParameter('custscript_serialsFileId');
+        var fileId = ns_runtime.getCurrentScript().getParameter('custscript_serialsFileId');
         log.debug('fileId param', fileId);
 
         var serialArray = [];
@@ -40,19 +38,9 @@ define([
             var serials = fileContents.items[i].serials;
 
             for (j in serials) {
-                var line = {
-                    poId: poId,
-                    soId: soId,
-                    itemId: itemId,
-                    serial: serials[j]
-                };
+                var line = { poId: poId, soId: soId, itemId: itemId, serial: serials[j] };
                 log.debug('line to add', line);
-                serialArray.push({
-                    poId: poId,
-                    soId: soId,
-                    itemId: itemId,
-                    serialNum: serials[j]
-                });
+                serialArray.push({ poId: poId, soId: soId, itemId: itemId, serialNum: serials[j] });
             }
         }
 

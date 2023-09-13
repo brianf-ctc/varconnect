@@ -12,13 +12,13 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/xml',
-    'N/https',
-    'N/search',
-    '../Libraries/moment',
-    '../Libraries/lodash'
-], function (ns_xml, ns_https, ns_search, moment, lodash) {
+define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
+    ns_xml,
+    ns_https,
+    ns_search,
+    moment,
+    lodash
+) {
     function processXml(input, config) {
         var tranNsid = input;
 
@@ -121,10 +121,7 @@ define([
                 body: invoiceBody
             });
 
-            log.debug(
-                'td: invoiceResponse',
-                input + ': ' + invoiceResponse.body
-            );
+            log.debug('td: invoiceResponse', input + ': ' + invoiceResponse.body);
 
             var xmlStr = invoiceResponse.body;
 
