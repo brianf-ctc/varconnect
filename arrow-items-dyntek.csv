@@ -1,0 +1,7 @@
+Internal ID,Internal ID,Name,Display Name,Type,SubType,Class,Category,Cost Estimate Type,Department,Location,Manufacturer,Parent,Purchase Price,Purchase Description,Drop Ship Item,Special Order Item
+4557319,11525,ED-TU-1-ZA,,Inventory Item,,Storage,,Average Cost,Product Group : Training,,,,46.63,,No,Yes
+4458913,261764,X-SMED8PTPOD-16G,,Inventory Item,,Storage,,Average Cost,Product Group : Hardware,,NetApp,,3219.99,,No,Yes
+4439745,267664,RS-BT-RCDM-T,,Inventory Item,,Endpoint Security,,Average Cost,Product Group : Software,,Rubrik,,0,,No,Yes
+4439745,267665,RS-BT-EE-PE-PP,,Inventory Item,,Endpoint Security,,Average Cost,Product Group : Hardware Maintenance (PTP),,Rubrik,,383.04,,No,Yes
+4439745,267666,RS-HW-SVC-PE-S2,,Inventory Item,,Endpoint Security,,Average Cost,Product Group : Hardware Maintenance (PTP),,Rubrik,,2524.8,,No,Yes
+4439745,267667,RS-HW-SVC-PE-S1,,Inventory Item,,Endpoint Security,,Average Cost,Product Group : Hardware Maintenance (PTP),,Rubrik,,1468.8,,No,Yes
