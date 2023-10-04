@@ -45,9 +45,6 @@ define([
 
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
-        // since we would have to update this code anyway to support a new vendor config the nsid's
-        // are hard coded here instead of doing a search
-        // return [2, 5, 6]; //[DH, WF, SYNNEX]
         var CONNECT_TYPE = {
                 API: 1,
                 SFTP: 2
@@ -55,9 +52,9 @@ define([
             validVendorCfg = [],
             validVendorCfgName = [];
 
-        var paramConfigID = ns_runtime.getCurrentScript().getParameter({
-            name: 'custscript_ctc_vc_bc_vendor_sftp'
-        });
+        var paramConfigID = ns_runtime
+            .getCurrentScript()
+            .getParameter({ name: 'custscript_ctc_vc_bc_vendor_sftp' });
 
         var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
@@ -80,11 +77,7 @@ define([
 
             return true;
         });
-
-        log.debug(
-            logTitle,
-            '>> Valid SFTP Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
-        );
+        vc2_util.log(logTitle, '>> Valid SFTP Configs : ', [validVendorCfgName, validVendorCfg]);
 
         return validVendorCfg;
     }
@@ -93,12 +86,20 @@ define([
         var logTitle = [LogTitle, 'map'].join(':');
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
-        var paramBillFileName = ns_runtime.getCurrentScript().getParameter({
-            name: 'custscript_ctc_vc_bc_vendor_filename'
-        });
+        var currentScript = ns_runtime.getCurrentScript();
+
+        var param = {
+            billfile: currentScript.getParameter({ name: 'custscript_ctc_vc_bc_vendor_filename' }),
+            skipfilecheck: currentScript.getParameter({
+                name: 'custscript_ctc_vc_bc_skip_filenamecheck'
+            }),
+            skip90days: currentScript.getParameter({
+                name: 'custscript_ctc_vc_bc_skip_90days_check'
+            })
+        };
 
         //get the vendor config details
-        log.audit(logTitle, '>> context.value: ' + JSON.stringify(context.value));
+        vc2_util.log(logTitle, '>> Current : ', [context.value, param]);
 
         var vendorConfig = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
@@ -129,7 +130,7 @@ define([
             res_path: vendorConfig.custrecord_vc_bc_res_path,
             ack_path: vendorConfig.custrecord_vc_bc_ack_path
         };
-        log.audit(logTitle, '>> configObj: ' + JSON.stringify(configObj));
+        vc2_util.log(logTitle, '>> configObj: ', configObj);
 
         try {
             var connection;
@@ -142,12 +143,12 @@ define([
                     directory: configObj.res_path,
                     hostKey: configObj.host_key
                 });
-            } catch (err) {
-                log.error(logTitle, err);
+            } catch (connect_error) {
+                log.error(logTitle + '!CONNECT ERROR!', connect_error);
 
                 vc2_util.vcLog({
                     title: 'SFTP Connect',
-                    error: err,
+                    error: connect_error,
                     status: LOG_STATUS.SFTP_ERROR,
                     details: configObj
                 });
@@ -162,9 +163,8 @@ define([
                 details: configObj
             });
 
-            var list = connection.list({
-                sort: ns_sftp.Sort.DATE_DESC
-            });
+            var list = connection.list({ sort: ns_sftp.Sort.DATE_DESC });
+
             log.audit(logTitle, '>> connectionList: ' + JSON.stringify(list.length));
 
             // create an array of files created in the last 90 days
@@ -190,7 +190,6 @@ define([
             });
 
             var pagedData = billFileSearch.runPaged({ pageSize: 1000 });
-
             var existingFiles = [];
 
             for (var i = 0; i < pagedData.pageRanges.length; i++) {
@@ -207,7 +206,7 @@ define([
 
             for (i = 0; i <= list.length; i++) {
                 // log the file
-                if (i > 0) log.audit(logTitle, '******* File: ' + JSON.stringify(currentFile));
+                // if (i > 0) log.audit(logTitle, '******* File: ' + JSON.stringify(currentFile));
 
                 if (!list[i]) break;
                 currentFile = { data: list[i] };
@@ -235,11 +234,6 @@ define([
                     ? currentFile.ext_rgx.toLowerCase()
                     : currentFile.ext_rgx;
 
-                if (!currentFile.is90days) {
-                    currentFile.skippedReason = 'older than 90days';
-                    continue;
-                }
-
                 if (configObj.entry_function == 'synnex_sftp') {
                     if (list[i].name == '..' || currentFile.ext_rgx !== 'xml') {
                         currentFile.skippedReason = 'non xml file';
@@ -252,8 +246,8 @@ define([
                     }
                 }
 
-                if (paramBillFileName) {
-                    var matchStr = new RegExp(paramBillFileName, 'ig');
+                if (param.billfile) {
+                    var matchStr = new RegExp(param.billfile, 'ig');
 
                     if (!currentFile.data.name.match(matchStr)) {
                         currentFile.skippedReason = 'Not matching the bill file';
@@ -261,19 +255,27 @@ define([
                     }
                 } else {
                     var isAlreadyProcessed = false;
-                    for (var e = 0; e < existingFiles.length; e++) {
-                        if (list[i].name == existingFiles[e]) {
-                            isAlreadyProcessed = true;
-                            break;
+                    
+                    if (!param.skipfilecheck) {
+                        for (var e = 0; e < existingFiles.length; e++) {
+                            if (list[i].name == existingFiles[e]) {
+                                isAlreadyProcessed = true;
+                                break;
+                            }
+                        }
+                        if (isAlreadyProcessed) {
+                            currentFile.skippedReason = 'already processed';
+                            continue;
                         }
                     }
-                    if (isAlreadyProcessed) {
-                        currentFile.skippedReason = 'already processed';
+
+                    if (!param.skip90days && !currentFile.is90days) {
+                        currentFile.skippedReason = 'older than 90days';
                         continue;
                     }
                 }
 
-                // log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));
+                log.audit(logTitle, '..... - adding file: ' + JSON.stringify(list[i]));
 
                 addedFiles.push(list[i].name);
                 context.write({

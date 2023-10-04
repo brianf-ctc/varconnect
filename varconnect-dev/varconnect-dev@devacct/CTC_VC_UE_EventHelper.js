@@ -22,17 +22,7 @@ define([
     './CTC_VC2_Constants',
     './CTC_VC_Lib_MainConfiguration',
     './CTC_VC_Lib_VendorConfig'
-], function (
-    ns_runtime,
-    ns_search,
-    ns_record,
-    ns_msg,
-    EventRouter,
-    vc2_util,
-    vc2_constant,
-    vc_maincfg,
-    vc_vendorcfg
-) {
+], function (ns_runtime, ns_search, ns_record, ns_msg, EventRouter, vc2_util, vc2_constant, vc_maincfg, vc_vendorcfg) {
     var LogTitle = 'VC:BILLFILE';
 
     var Helper = {
@@ -59,8 +49,7 @@ define([
 
                 try {
                     var fldOrig = form.getField({ id: fieldId });
-                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200)
-                        return true;
+                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200) return true;
 
                     var fldNew = form.addField({
                         id: ['custpage', fieldId].join('_'),
@@ -129,10 +118,7 @@ define([
                 scriptContext.form.addButton({
                     id: 'custpage_flexscreen',
                     label: 'Open Flex Screen',
-                    functionName:
-                        '(function(url){return window.open(url, "_blank");})("' +
-                        flexScreenUrl +
-                        '")'
+                    functionName: '(function(url){return window.open(url, "_blank");})("' + flexScreenUrl + '")'
                 });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -152,6 +138,8 @@ define([
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_vc_bc_host_key']);
+
+
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -169,9 +157,7 @@ define([
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
-                Helper.displayAsInlineTextarea(scriptContext.form, [
-                    'custrecord_ctc_vcsp_log_body'
-                ]);
+                Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_ctc_vcsp_log_body']);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -249,9 +235,7 @@ define([
                     });
                     if (!vendorInfoJSON) continue;
                     hasVendorInfo = true;
-                    scriptVendorInfo.push(
-                        'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
-                    );
+                    scriptVendorInfo.push('try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}');
                 }
                 scriptVendorInfo.push('});</script>');
                 fldVendorScr.defaultValue = scriptVendorInfo.join('');

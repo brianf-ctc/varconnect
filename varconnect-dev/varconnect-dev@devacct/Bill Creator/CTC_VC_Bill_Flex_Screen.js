@@ -22,8 +22,8 @@ define([
     'N/url',
     'N/runtime',
     'N/task',
+    'N/format',
     './Libraries/CTC_VC_Lib_BillProcess',
-
     './../CTC_VC_Lib_MainConfiguration',
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
@@ -37,6 +37,7 @@ define([
     ns_url,
     ns_runtime,
     ns_task,
+    ns_format,
     vc_billprocess,
     vc_mainConfig,
     vc2_constant,
@@ -414,13 +415,18 @@ define([
                     nsqty: billLine.OrderLine.quantity,
                     nsrcvd: billLine.OrderLine.quantityreceived,
                     billqty: billLine.OrderLine.quantitybilled,
-                    remainingqty: billLine.OrderLine.BILLABLE + billLine.OrderLine.RECEIVABLE || '',
+                    remainingqty: billLine.OrderLine.BILLABLE
+                        ? billLine.OrderLine.BILLABLE
+                        : billLine.OrderLine.RECEIVABLE || '',
                     rate: billLine.rate,
                     nsrate: billLine.OrderLine.rate,
                     calcamount: billLine.amount,
                     nstaxamt: billLine.taxAmount,
                     description: billLine.description
                 };
+
+                vc2_util.log(logTitle, '... billLIne: ', billLine);
+                vc2_util.log(logTitle, '>> lineData: ', lineData);
 
                 if (Current.IS_ACTIVE_EDIT) {
                     if (lineData.nsrate != lineData.rate)
@@ -431,8 +437,6 @@ define([
                         lineData.varianceqty =
                             '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
                 }
-
-                vc2_util.log(logTitle, '>> lineData: ', lineData);
 
                 /// SET THE LINE DATA /////////////
                 FormHelper.setSublistValues({
@@ -447,6 +451,7 @@ define([
             var AllowToBill = true;
 
             if (Current.IS_ACTIVE_EDIT) {
+                // REPORT Error
                 if (!vc2_util.isEmpty(BillData.Error)) {
                     for (var errorCode in BillData.Error) {
                         var errorMsg = BILL_CREATOR.Code[errorCode]
@@ -469,22 +474,45 @@ define([
                     !vc2_util.inArray(BillData.BillFile.PROC_VARIANCE, ['T', 't', true])
                 ) {
                     var varianceList = [],
+                        withinThreshold = false,
                         exceedThreshold = false;
                     BillData.VarianceList.forEach(function (xvar) {
                         if (xvar == 'EXCEED_THRESHOLD') exceedThreshold = true;
+                        if (xvar == 'WITHIN_THRESHOLD') withinThreshold = true;
                         else varianceList.push(xvar);
                     });
-                    Current.WarnMessage.push('Variance Detected - ' + varianceList.join(', '));
-                    if (exceedThreshold) {
+                    Current.WarnMessage.push(
+                        'Variance Detected' +
+                            (varianceList && varianceList.length
+                                ? ' - ' + varianceList.join(', ')
+                                : '')
+                    );
+                    var totalVariance =
+                        BillData.Total.Variance ||
+                        BillData.Total.LineVariance ||
+                        BillData.Total.Charges;
+                    if (exceedThreshold || withinThreshold) {
+                        var errMsg = exceedThreshold
+                            ? BILL_CREATOR.Code.EXCEED_THRESHOLD.msg
+                            : BILL_CREATOR.Code.WITHIN_THRESHOLD.msg;
+
                         Current.WarnMessage.push(
                             [
-                                BILL_CREATOR.Code.EXCEED_THRESHOLD.msg,
+                                errMsg,
                                 ' -- ',
-                                BillData.MainCFG.allowedThreshold
+                                ns_format.format({
+                                    value: BillData.MainCFG.allowedThreshold,
+                                    type: ns_format.Type.CURRENCY
+                                }),
+                                ', variance: ' +
+                                    ns_format.format({
+                                        value: totalVariance,
+                                        type: ns_format.Type.CURRENCY
+                                    })
                             ].join('')
                         );
-                    }
-                    AllowToBill = false;
+                        AllowToBill = exceedThreshold ? false : true;
+                    } else AllowToBill = false;
                 }
             }
 
@@ -494,7 +522,7 @@ define([
                 LINE_AMOUNT: BillData.Total.LineAmount,
                 TAX_AMOUNT: BillData.Total.Tax,
                 SHIPPING_AMT: BillData.Total.Shipping,
-                VARIANCE_AMT: BillData.Total.Variance
+                VARIANCE_AMT: BillData.Total.Variance || BillData.Total.LineVariance
             });
 
             /// SUBLIST: Variance Lines ///
@@ -524,7 +552,7 @@ define([
                 });
             });
 
-            if (Current.IS_ACTIVE_EDIT && AllowToBill) {
+            if (AllowToBill && Current.IS_ACTIVE_EDIT && Current.IS_BILLABLE) {
                 Current.InfoMessage.push('PO is Ready for Billing');
             }
 

@@ -12,12 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (
-    ns_search,
-    ns_sftp,
-    ns_file,
-    moment
-) {
+define(['N/search', 'N/sftp', 'N/file', '../Libraries/moment'], function (ns_search, ns_sftp, ns_file, moment) {
     function sendAck(input, config, billId) {
         //log.debug('input', input)
         //log.debug('config', config)

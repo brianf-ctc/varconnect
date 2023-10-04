@@ -16,17 +16,17 @@
 /**
  * CHANGELOGS
  *
- * Version	Date            Author		    		Remarks
- * 1.00		Jan 1, 2020	    <author email>			Initial Build
- * 2.00		Nov 2, 2020		paolodl@nscatalyst.com	Add hash conversion to space for Ingram
- * 3.00		Feb 8, 2021		paolodl@nscatalyst.com	Add popylation for new date columns
- * 4.00		Jun 3, 2021		paolodl@nscatalyst.com	Add get order line function
- * 4.01		Jul 21,2021		paolodl@nscatalyst.com	Dynamic date parse
- * 4.02		Apr 8,2022		christian@nscatalyst.com	Date parse returns closest date for ETA
+ * Version  Date            Author                  Remarks
+ * 1.00     Jan 1, 2020     <author email>          Initial Build
+ * 2.00     Nov 2, 2020     paolodl@nscatalyst.com  Add hash conversion to space for Ingram
+ * 3.00     Feb 8, 2021     paolodl@nscatalyst.com  Add popylation for new date columns
+ * 4.00     Jun 3, 2021     paolodl@nscatalyst.com  Add get order line function
+ * 4.01     Jul 21,2021     paolodl@nscatalyst.com  Dynamic date parse
+ * 4.02     Apr 8,2022      christian@nscatalyst.com    Date parse returns closest date for ETA
  *                                                      Updating fields overwrite value if append failed
- * 4.03		May 10,2022		christian@nscatalyst.com	Carrier info should not append to itself
- * 4.04		Jun 14,2022		christian@nscatalyst.com	Return errors and line key for updatePOItemData
- * 4.05		Jun 28,2022		christian@nscatalyst.com	Update po header and line order status
+ * 4.03     May 10,2022     christian@nscatalyst.com    Carrier info should not append to itself
+ * 4.04     Jun 14,2022     christian@nscatalyst.com    Return errors and line key for updatePOItemData
+ * 4.05     Jun 28,2022     christian@nscatalyst.com    Update po header and line order status
  *
  */
 
@@ -91,6 +91,10 @@ define([
                 if (vc2_util.isEmpty(vendorLine)) throw ERROR_MSG.MISSING_VENDOR_LINE;
                 if (vc2_util.isEmpty(orderLines)) throw ERROR_MSG.MISSING_LINES;
 
+                log.debug('aj test  - vendorLine',vendorLine);
+                log.debug('aj test  - orderLines',orderLines);
+                log.debug('aj test  - VendorList',VendorList);
+
                 var matchedLines = vc2_util.findMatching({
                     list: orderLines,
                     findAll: true,
@@ -115,6 +119,7 @@ define([
                         }
                     }
                 });
+                log.debug('aj test  - matchedLines',matchedLines);
 
                 var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
 
@@ -325,8 +330,8 @@ define([
             custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_serial_num: 'serial_num', // textarea
-            custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
-            custcol_ctc_vc_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_prom_deliv_date: 'promised_date',
             custcol_ctc_vc_vendor_info: 'INFO',
             custcol_ctc_vc_order_status: 'STATUS' // text
         },
@@ -340,7 +345,7 @@ define([
             'tracking_num',
             'carrier',
             'serial_num',
-            'promised_date',
+            // 'promised_date',
             'STATUS'
         ],
         columnType: {
@@ -375,7 +380,7 @@ define([
     //***********************************************************************
     //** Update PO Fields with parsed XML data
     //***********************************************************************
-    //	function updatePOItemData(poNum, lineData)
+    //  function updatePOItemData(poNum, lineData)
     function updatePOItemData(option) {
         var logTitle = [LogTitle, 'updatePOItemData'].join('::');
 
@@ -386,6 +391,8 @@ define([
         Current.PO_REC = option.po_record;
         Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
+
+        log.debug('aj - updatePOItemData - VendorLines',Current.VendorLines);
 
         LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
         vc2_util.LogPrefix = LogPrefix;
@@ -423,9 +430,12 @@ define([
                     vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                     vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ]
             });
+
+            log.debug('aj - updatePOItemData - OrderLines',Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
@@ -472,7 +482,7 @@ define([
                     });
 
                     // var SHIP_FIELDS = ['ship_date', 'tracking_num', 'carrier', 'serial_num'];
-                    var SHIP_FIELDS = ['ship_date', 'tracking_num', 'serial_num'];
+                    var SHIP_FIELDS = [];// ['ship_date', 'tracking_num', 'serial_num'];
 
                     // loop thru the vendor columns
                     for (var ii = 0, jj = MAPPING.vendorColumns.length; ii < jj; ii++) {

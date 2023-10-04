@@ -163,6 +163,13 @@ define(function (require) {
                 PROC_VARIANCE: 'custrecord_ctc_vc_bill_proc_variance',
                 FILEPOS: 'custrecord_ctc_vc_bill_file_position'
             }
+        },
+        VENDOR_ITEM_MAPPING: {
+            ID: 'customrecord_ctc_vc_item_mapping',
+            FIELD: {
+                NAME: 'name',
+                ITEM: 'custrecord_ctc_vc_itemmap_item'
+            }
         }
     };
 
@@ -200,7 +207,8 @@ define(function (require) {
             TECH_DATA_API: '12',
             JENNE: '13',
             SCANSOURCE: '14',
-            WEFI: '16'
+            WEFI: '16',
+            DandH_API:'17'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',
@@ -436,10 +444,16 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        WITHIN_THRESHOLD: {
+            code: 'WITHIN_THRESHOLD',
+            msg: 'Variance detected but within threshold',
+            status: Bill_Creator.Status.VARIANCE,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
             msg: 'Variance Total exceeded threshold',
-            status: Bill_Creator.Status.VARIANCE,
+            status: Bill_Creator.Status.PENDING,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_NOT_CREATED: {
@@ -479,7 +493,8 @@ define(function (require) {
         SN_FOLDER_ID: 7,
         EMAIL_TEMPLATE_ID: 220, // Var Connect Shipping Confirmation Template
         POHANDLING: 'Drop', // Special | Drop (default) | Both
-        EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1'
+        EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1',
+        INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
     return VC2_CONSTANT;

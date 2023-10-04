@@ -159,7 +159,7 @@ define([
         },
 
         reduce: function (context) {
-            var logTitle = [LogTitle, 'reduce'].join(':');
+            var logTitle = [LogTitle, 'reduce', context.key].join(':');
             vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
             var ScriptParam = {
@@ -170,7 +170,7 @@ define([
                     name: 'custscript_ctc_vc_bc_bill_in_adv'
                 })
             };
-            // vc2_util.log(logTitle, '// Script Params: ', ScriptParam);
+            vc2_util.log(logTitle, '/// To Process: ', context.values.length);
 
             // var serialsToProcess = null;
             for (var i = 0, j = context.values.length; i < j; i++) {
@@ -180,9 +180,12 @@ define([
                     UpdateValues = {},
                     ReturnObj = { msg: '' };
 
+                vc2_util.log(logTitle, '/// === START =====================================///');
+
                 vc2_util.log(logTitle, '/// CURRENT VALUES: ', currentValues);
 
                 try {
+                    vc_billprocess.resetValues();
                     vc_billprocess.loadBillFile({ id: currentValues.id });
                     var BillFileData = vc_billprocess.FlexData.BillFile;
 
@@ -344,6 +347,7 @@ define([
                         });
                     }
                 }
+                vc2_util.log(logTitle, '/// === END =======================================///');
             }
         },
 

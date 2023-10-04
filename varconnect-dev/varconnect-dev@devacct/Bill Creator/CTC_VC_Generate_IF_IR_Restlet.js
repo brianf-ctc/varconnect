@@ -43,6 +43,26 @@ define([
         Current = {},
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
+    var orderLineFields = [
+        'item',
+        'quantity',
+        'rate',
+        'amount',
+        'custcol_ctc_xml_dist_order_num',
+
+        'custcol_ctc_xml_date_order_placed',
+        'custcol_ctc_vc_order_placed_date',
+        'custcol_ctc_vc_shipped_date',
+        'custcol_ctc_vc_eta_date',
+        'custcol_ctc_xml_ship_date',
+        'custcol_ctc_xml_eta',
+        // 
+        'custcol_ctc_xml_carrier',
+        'custcol_ctc_xml_tracking_num',
+        'custcol_ctc_xml_inb_tracking_num',
+        'custcol_ctc_xml_serial_num'
+    ];
+
     var RESTLET = {
         post: function (context) {
             var logTitle = [LogTitle, 'POST'].join('::'),
@@ -62,8 +82,6 @@ define([
                 vc2_util.LogPrefix = '[purchaseorder:' + Current.poId + '] ';
                 vc2_util.log(logTitle, '// Current Data: ', Current);
                 if (!Current.poId) throw 'Purchase Order Required';
-
-                // throw 'EXIT SCRIPT ';
 
                 // load the bill file
                 if (!Current.billFileId) throw 'Bill File ID is required';
@@ -116,6 +134,21 @@ define([
                     entity: Current.PO_DATA.entity.value || Current.PO_DATA.entity
                 });
 
+                // vc_billprocess.preprocessBill({
+                //     recOrder: Current.PO_REC,
+                //     vendorConfig: vendorCfg,
+                //     billFileId: Current.billFileId
+                // });
+
+                // if (vc_billprocess.FlexData) {
+                //     for (var billField in vc_billprocess.FlexData)
+                //         vc2_util.log(
+                //             logTitle,
+                //             '// BillLines ',
+                //             vc_billprocess.FlexData.BillLines
+                //         );
+                // }
+
                 if (!vendorCfg.ENABLE_FULFILLLMENT)
                     throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
@@ -136,6 +169,7 @@ define([
                 vc2_util.log(logTitle, '*** Creating Fulfillment... ');
 
                 var recItemFF;
+
                 try {
                     recItemFF = vc_recordlib.transform({
                         fromType: ns_record.Type.SALES_ORDER,
@@ -191,11 +225,10 @@ define([
                     value: true
                 });
 
-                var arrLines = Helper.preprocessFulfillLine({
-                    record: recItemFF
-                });
+                var arrLines = Helper.preprocessFulfillLine({ record: recItemFF });
 
                 vc2_util.log(logTitle, '// Payload lines: ', Current.billPayload.lines);
+                vc2_util.log(logTitle, '// IF Lines: ', arrLines);
 
                 var arrMissingSKUs = [],
                     arrUnprocessedLines = [],
@@ -220,127 +253,192 @@ define([
                 var arrAppliedSerials = [];
                 //loop backwards from the line
                 for (var line = lineCount - 1; line >= 0; line--) {
-                    recItemFF.selectLine({ sublistId: 'item', line: line });
+                    try {
+                        recItemFF.selectLine({ sublistId: 'item', line: line });
 
-                    var lineData = vc2_util.findMatching({
-                        dataSet: arrLines,
-                        filter: { line: line }
-                    });
+                        var lineData = vc2_util.findMatching({
+                            dataSet: arrLines,
+                            filter: { line: line }
+                        });
 
-                    if (
-                        !lineData ||
-                        !lineData.matchingLines ||
-                        vc2_util.isEmpty(lineData.matchingLines)
-                    ) {
-                        // unselect the item receive
+                        if (
+                            !lineData ||
+                            !lineData.matchingLines ||
+                            vc2_util.isEmpty(lineData.matchingLines)
+                        ) {
+                            // unselect the item receive
+                            recItemFF.setCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'itemreceive',
+                                value: false
+                            });
+                            recItemFF.commitLine({ sublistId: 'item' });
+                            continue;
+                        }
+                        vc2_util.log(logTitle, '... line data: ', lineData);
+
+                        // get the po line data
+                        var poLineData = vc_recordlib.extractRecordLines({
+                            record: Current.PO_REC,
+                            columns: orderLineFields,
+                            filter: {
+                                line: parseInt(lineData.poline) - 1
+                            }
+                        });
+                        vc2_util.log(logTitle, '... poLineData: ', poLineData);
+
+                        var totalAppliedQty = lineData.APPLIEDQTY,
+                            arrLineSerials = [],
+                            arrLineTracking = [];
+
+                        lineData.matchingLines.forEach(function (billLine) {
+                            // totalAppliedQty += billLine.APPLIEDQTY;
+                            if (billLine.SERIAL && billLine.SERIAL.length)
+                                arrLineSerials = arrLineSerials.concat(billLine.SERIAL);
+                            if (billLine.TRACKING && billLine.TRACKING.length)
+                                arrLineTracking = arrLineTracking.concat(billLine.TRACKING);
+                            return true;
+                        });
+
+                        var updateItemFFline = {
+                            // itemreceive: true,
+                            itemquantity: totalAppliedQty,
+                            quantity: totalAppliedQty
+                        };
+
                         recItemFF.setCurrentSublistValue({
                             sublistId: 'item',
                             fieldId: 'itemreceive',
-                            value: false
+                            value: true
                         });
-                        recItemFF.commitLine({ sublistId: 'item' });
-                        continue;
-                    }
 
-                    vc2_util.log(logTitle, '... line data: ', lineData);
-                    var totalAppliedQty = lineData.APPLIEDQTY,
-                        arrLineSerials = [],
-                        arrLineTracking = [];
+                        // recItemFF.setCurrentSublistValue({
+                        //     sublistId: 'item',
+                        //     fieldId: 'itemquantity',
+                        //     value: totalAppliedQty
+                        // });
+                        // recItemFF.setCurrentSublistValue({
+                        //     sublistId: 'item',
+                        //     fieldId: 'quantity',
+                        //     value: totalAppliedQty
+                        // });
 
-                    lineData.matchingLines.forEach(function (billLine) {
-                        // totalAppliedQty += billLine.APPLIEDQTY;
-                        if (billLine.SERIAL && billLine.SERIAL.length)
-                            arrLineSerials = arrLineSerials.concat(billLine.SERIAL);
-                        if (billLine.TRACKING && billLine.TRACKING.length)
-                            arrLineTracking = arrLineTracking.concat(billLine.TRACKING);
+                        if (
+                            !vc2_util.isEmpty(poLineData) &&
+                            totalAppliedQty == poLineData.quantity
+                        ) {
+                            var poTrackingNum =
+                                    poLineData.custcol_ctc_xml_tracking_num ||
+                                    poLineData.custcol_ctc_xml_inb_tracking_num,
+                                poSerialNum = poLineData.custcol_ctc_xml_serial_num;
 
-                        return true;
-                    });
+                            // update the itemff lines
+                            if (poTrackingNum && poTrackingNum != 'NA')
+                                arrLineTracking = poTrackingNum.split(/\n/g);
 
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'itemreceive',
-                        value: true
-                    });
+                            if (poSerialNum && poSerialNum != 'NA')
+                                arrLineSerials = poSerialNum.split(/\n/g);
 
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'itemquantity',
-                        value: totalAppliedQty
-                    });
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'quantity',
-                        value: totalAppliedQty
-                    });
+                            orderLineFields.forEach(function (poLineFld) {
+                                var poLineValue = poLineData[poLineFld];
 
-                    if (
-                        arrLineSerials &&
-                        arrLineSerials.length &&
-                        (lineData.inventorydetailreq == 'T' || lineData.isserial == 'T')
-                    ) {
-                        arrLineSerials.forEach(function (serial) {
-                            if (totalAppliedQty <= 0) return;
-                            if (vc2_util.inArray(serial, arrAppliedSerials)) return;
+                                // skip the tracking and serial fields
+                                if (
+                                    vc2_util.inArray(poLineFld, [
+                                        'item',
+                                        'itemquantity',
+                                        'quantity',
+                                        'rate',
+                                        'amount',
+                                        // 'custcol_ctc_xml_tracking_num',
+                                        // 'custcol_ctc_xml_inb_tracking_num',
+                                        // 'custcol_ctc_xml_serial_num'
+                                    ])
+                                )
+                                    return true;
 
-                            vc2_util.log(logTitle, '...serial:', [
-                                serial,
-                                totalAppliedQty,
-                                arrAppliedSerials
-                            ]);
+                                // skip empty values
+                                if (vc2_util.isEmpty(poLineValue) || poLineValue == 'NA')
+                                    return true;
 
-                            subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
+                                updateItemFFline[poLineFld] = poLineValue;
+                                return true;
+                            });
+                        }
+
+                        var formattedTracking = '';
+                        arrLineTracking.forEach(function (tracking) {
+                            formattedTracking += tracking + '\r\n';
+                            if (!vc2_util.inArray(tracking, arrTrackingNums))
+                                arrTrackingNums.push(tracking);
+                        });
+
+                        if (formattedTracking)
+                            updateItemFFline['custcol_ctc_xml_tracking_num'] = formattedTracking;
+
+                        if (Current.billPayload.carrier) {
+                            updateItemFFline['custcol_ctc_xml_ship_method'] =
+                                Current.billPayload.carrier;
+
+                            updateItemFFline['custcol_ctc_xml_carrier'] =
+                                Current.billPayload.carrier;
+                        }
+
+                        vc2_util.log(logTitle, '/// item ff line:  ', updateItemFFline);
+
+                        for (var itemffLineField in updateItemFFline) {
+                            recItemFF.setCurrentSublistValue({
                                 sublistId: 'item',
-                                fieldId: 'inventorydetail'
+                                fieldId: itemffLineField,
+                                value: updateItemFFline[itemffLineField]
                             });
-                            subrecordInvDetail.selectNewLine({
-                                sublistId: 'inventoryassignment'
-                            });
-                            subrecordInvDetail.setCurrentSublistValue({
-                                sublistId: 'inventoryassignment',
-                                fieldId: 'receiptinventorynumber',
-                                value: serial
-                            });
-                            subrecordInvDetail.commitLine({
-                                sublistId: 'inventoryassignment'
-                            });
+                        }
 
-                            arrAppliedSerials.push(serial);
-                            totalAppliedQty--;
-                        });
+                        if (
+                            arrLineSerials &&
+                            arrLineSerials.length &&
+                            (lineData.inventorydetailreq == 'T' || lineData.isserial == 'T')
+                        ) {
+                            arrLineSerials.forEach(function (serial) {
+                                if (totalAppliedQty <= 0) return;
+                                if (vc2_util.inArray(serial, arrAppliedSerials)) return;
+
+                                vc2_util.log(logTitle, '...serial:', [
+                                    serial,
+                                    totalAppliedQty,
+                                    arrAppliedSerials
+                                ]);
+
+                                subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
+                                    sublistId: 'item',
+                                    fieldId: 'inventorydetail'
+                                });
+                                subrecordInvDetail.selectNewLine({
+                                    sublistId: 'inventoryassignment'
+                                });
+                                subrecordInvDetail.setCurrentSublistValue({
+                                    sublistId: 'inventoryassignment',
+                                    fieldId: 'receiptinventorynumber',
+                                    value: serial
+                                });
+                                subrecordInvDetail.commitLine({
+                                    sublistId: 'inventoryassignment'
+                                });
+
+                                arrAppliedSerials.push(serial);
+                                totalAppliedQty--;
+                            });
+                        }
+
+                        recItemFF.commitLine({ sublistId: 'item' });
+
+                        if (!objItemSerials[lineData.item]) objItemSerials[lineData.item] = [];
+                        objItemSerials[lineData.item] = vc2_util.uniqueArray(
+                            objItemSerials[lineData.item].concat(arrLineSerials)
+                        );
+                    } catch (itemffLine_error) {
+                        vc2_util.logError(logTitle, itemffLine_error);
                     }
-
-                    var formattedTracking = '';
-                    arrLineTracking.forEach(function (tracking) {
-                        formattedTracking += tracking + '\r\n';
-                        if (!vc2_util.inArray(tracking, arrTrackingNums))
-                            arrTrackingNums.push(tracking);
-                    });
-
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_xml_tracking_num',
-                        value: formattedTracking
-                    });
-
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_xml_ship_method',
-                        value: Current.billPayload.carrier
-                    });
-
-                    recItemFF.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_xml_carrier',
-                        value: Current.billPayload.carrier
-                    });
-
-                    recItemFF.commitLine({ sublistId: 'item' });
-
-                    if (!objItemSerials[lineData.item]) objItemSerials[lineData.item] = [];
-                    objItemSerials[lineData.item] = vc2_util.uniqueArray(
-                        objItemSerials[lineData.item].concat(arrLineSerials)
-                    );
                 }
 
                 for (var lineItem in objItemSerials) {
@@ -593,7 +691,14 @@ define([
             var arrFulfillLines = vc_recordlib.extractRecordLines({
                 record: option.record,
                 findAll: true,
-                columns: ['item', 'quantity', 'quantityremaining', 'inventorydetailreq', 'isserial']
+                columns: [
+                    'item',
+                    'quantity',
+                    'quantityremaining',
+                    'inventorydetailreq',
+                    'isserial',
+                    'poline'
+                ]
             });
             // sort by quantity
             arrFulfillLines = arrFulfillLines.sort(function (a, b) {
@@ -612,6 +717,16 @@ define([
                 return true;
             });
 
+            var vendorItemNameFilter = {
+                AVAILQTY: function (value) {
+                    return value > 0;
+                }
+            };
+            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (
+                value
+            ) {
+                return value && vc2_util.inArray(itemffLine.item, value.split('\n'));
+            };
             arrFulfillLines.forEach(function (itemffLine) {
                 util.extend(itemffLine, {
                     APPLIEDQTY: 0,
@@ -642,7 +757,13 @@ define([
                                     return value > 0;
                                 }
                             }
-                        }) || []
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: vendorItemNameFilter
+                        }) ||
+                        []
                 };
 
                 var fnApplyQty = function (matchedLine) {
@@ -694,7 +815,7 @@ define([
             return arrLines;
         },
         preprocessFulfillLine1: function (option) {
-            var logTitle = [LogTitle, 'preprocessFulfillLine'].join('::'),
+            var logTitle = [LogTitle, 'preprocessFulfillLine1'].join('::'),
                 arrLines = [],
                 logPrefix = '';
 

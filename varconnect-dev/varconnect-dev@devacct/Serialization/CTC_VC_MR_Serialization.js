@@ -42,9 +42,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
         var logTitle = [LogTitle, 'getInputData'].join('::');
         log.debug(logTitle, '############ START SCRIPT ############');
 
-        var srchId = ns_runtime
-            .getCurrentScript()
-            .getParameter('custscript_ctc_vc_mr_serialization_srch');
+        var srchId = ns_runtime.getCurrentScript().getParameter('custscript_ctc_vc_mr_serialization_srch');
 
         if (!srchId) throw new Error('No search provided');
         var srch = ns_search.load({ id: srchId });
@@ -67,8 +65,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
             serial = searchResult.values.inventorynumber,
             item = (searchResult.values.item[0] || searchResult.values.item).value,
             customSerial =
-                searchResult.values.custitemnumber_ctc_vc_sn[0] ||
-                searchResult.values.custitemnumber_ctc_vc_sn;
+                searchResult.values.custitemnumber_ctc_vc_sn[0] || searchResult.values.custitemnumber_ctc_vc_sn;
 
         // 2.00 change for updating custom serials
         log.debug(logTitle, '>> VALUES: ' + JSON.stringify(searchResult.values));
@@ -228,7 +225,8 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                 so = options.so,
                 po = options.po,
                 fulfil = options.fulfil,
-                receipt = options.receipt;
+                receipt = options.receipt,
+                other = options.other;
 
             log.audit(logTitle, LogPrefix + '** Create Custom Serials: ' + JSON.stringify(options));
 
@@ -272,6 +270,13 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                     value: receipt
                 });
 
+            if(other){
+                newSerial.setValue({
+                    fieldId: 'custrecord_ctc_vc_other',
+                    value: other
+                });
+            }
+
             //Return new custom serial id
             return newSerial.save();
         },
@@ -285,14 +290,16 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                 so = options.so,
                 po = options.po,
                 fulfil = options.fulfil,
-                receipt = options.receipt;
+                receipt = options.receipt,
+                id = options.id,
+                customserial_id = options.customserial_id;
 
             log.audit(logTitle, LogPrefix + '** Update Custom Serials: ' + JSON.stringify(options));
 
-            if (customSerial && (so || po)) {
+            if (customserial_id && (so || po)) {
                 var rec = ns_record.load({
                     type: 'customrecordserialnum',
-                    id: customSerial.value
+                    id: customserial_id
                 });
 
                 if (item) rec.setValue({ fieldId: 'custrecordserialitem', value: item });
@@ -311,6 +318,20 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                 if (receipt && !rec.getValue({ fieldId: 'custrecorditemreceipt' }))
                     rec.setValue({ fieldId: 'custrecorditemreceipt', value: fulfil });
 
+                //3.01
+                if (id && !rec.getValue({ fieldId: 'custrecord_ctc_vc_inv_no' })){
+                    rec.setValue({
+                        fieldId: 'custrecord_ctc_vc_inv_no', 
+                        value: Helper.generateLink({ id: id }) 
+                    });
+                
+                    ns_record.submitFields({
+                        type: ns_record.Type.INVENTORY_NUMBER,
+                        id: id,
+                        values: { custitemnumber_ctc_vc_sn: customserial_id }
+                    });
+                    
+                }
                 rec.save();
             }
         },
@@ -332,7 +353,11 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
             log.audit(logTitle, LogPrefix + '>> PROCESS serial -- ' + JSON.stringify(options));
 
             try {
-                if (vc2_util.isEmpty(customSerial)) {
+
+                var arrCustomSerials = Helper.getCustomSerial({serial:serial});
+                log.debug(logTitle+'- arrCustomSerials',arrCustomSerials);
+
+                if (vc2_util.isEmpty(arrCustomSerials) || arrCustomSerials.length<=0) {
                     var newId = Helper.createCustomSerial({
                         id: id,
                         item: item,
@@ -344,26 +369,128 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                     });
 
                     // 2.00 Move logic and change updated field for custom serial
-                    ns_record.submitFields({
-                        type: ns_record.Type.INVENTORY_NUMBER,
-                        id: id,
-                        values: { custitemnumber_ctc_vc_sn: newId }
+                    if(!vc2_util.isEmpty(id)){
+                        ns_record.submitFields({
+                            type: ns_record.Type.INVENTORY_NUMBER,
+                            id: id,
+                            values: { custitemnumber_ctc_vc_sn: newId }
+                        });
+                    }
+                }
+                //2.00 Logic for updating the so and po fields of the existing custom serial
+                else{
+
+                    //3.01 - get the object with same SO or PO from custom serial record search results
+                    var arrSerial = arrCustomSerials.filter(function(objData) {
+                        return (objData.so === so && so) || (objData.po == po && po);
                     });
-                } //2.00 Logic for updating the so and po fields of the existing custom serial
-                else
-                    Helper.updateCustomSerial({
-                        customSerial: customSerial,
-                        item: item,
-                        so: so,
-                        po: po,
-                        fulfil: fulfil,
-                        receipt: receipt
-                    });
+
+                    var objCustomSerial = '';
+                    if(Array.isArray(arrSerial) && arrSerial.length>=1){
+
+                        //3.01 - get the first value
+                        objCustomSerial = arrSerial[0];
+                        
+                        //3.01 - if there are 2 or more duplicate with same PO or SO, grab the serial with inventory number
+                        for(var s=0; s<arrSerial.length; s++){
+                            if(arrSerial[s].invnum){
+                                objCustomSerial = arrSerial[s];
+                            }
+                        }
+                    }
+
+                    log.debug(logTitle+'- objCustomSerial',objCustomSerial);
+
+                    //3.01 - if there is an existing custom serial with same po or so, update the record
+                    if(!vc2_util.isEmpty(objCustomSerial)){
+                        Helper.updateCustomSerial({
+                            customSerial: customSerial,
+                            id: id,
+                            item: item,
+                            so: so,
+                            po: po,
+                            fulfil: fulfil,
+                            receipt: receipt,
+                            customserial_id:objCustomSerial.internalid,
+                        });
+                    }
+                    //3.01 - If SO or PO is different but there is an existing serial
+                    else{
+
+                        var arrIds = [];
+                        for(var i=0; i<arrCustomSerials.length; i++){
+                            arrIds.push(arrCustomSerials[i].internalid);
+                        }
+
+                        var newId = Helper.createCustomSerial({
+                            id: id,
+                            item: item,
+                            serial: serial,
+                            so: so,
+                            po: po,
+                            fulfil: fulfil,
+                            receipt: receipt,
+                            other:'Duplicate serial number with different PO or SO. Please check the existing serial number record with record ID '+arrIds.join(',')
+                        });
+
+                        if(!vc2_util.isEmpty(id)){
+                            ns_record.submitFields({
+                                type: ns_record.Type.INVENTORY_NUMBER,
+                                id: id,
+                                values: { custitemnumber_ctc_vc_sn: newId }
+                            });
+                        }
+                    }
+                    
+                }
             } catch (e) {
                 log.error(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(e));
             }
 
             return fulfil;
+        },
+
+        //aj - Added search for existing custom serial using serial number
+        getCustomSerial:function(options){
+            var logTitle = 'getCustomSerial';
+
+            if(vc2_util.isEmpty(options.serial)){
+                log.error(logTitle,'Serial number is empty');
+                return;
+            }
+
+            var objCustomSerialSearch = ns_search.create({
+                type: "customrecordserialnum",
+                filters:[
+                    ["name","is",options.serial], 
+                    "AND", 
+                    ["isinactive","is","F"]
+                ],
+                columns:[
+                    ns_search.createColumn({
+                        name: "internalid",
+                        sort: ns_search.Sort.ASC
+                    }),
+                    'custrecordserialsales',
+                    'custrecordserialpurchase',
+                    'custrecordserialitem',
+                    'custrecord_ctc_vc_inv_no'
+                ]
+            });
+
+            var arrCustomSerials = [];
+
+            objCustomSerialSearch.run().each(function(result){
+                arrCustomSerials.push({
+                    'internalid':result.getValue('internalid'),
+                    'so':result.getValue('custrecordserialsales'),
+                    'po':result.getValue('custrecordserialpurchase'),
+                    'itemnum':result.getValue('custrecordserialitem'),
+                    'invnum':result.getValue('custrecord_ctc_vc_inv_no')
+                });
+                return true;
+            });
+            return arrCustomSerials;
         }
     };
 

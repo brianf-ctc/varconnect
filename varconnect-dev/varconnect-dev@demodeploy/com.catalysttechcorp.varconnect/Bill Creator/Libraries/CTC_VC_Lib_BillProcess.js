@@ -46,6 +46,7 @@ define([
             VarianceList: [],
             ErrorList: [],
             Error: {},
+            AllowVariance: false,
             AllowBill: false
         },
         BillCreator = vc2_constant.Bill_Creator,
@@ -67,12 +68,12 @@ define([
             var logTitle = [LogTitle, 'PreProcessBill'].join('::'),
                 returnValue = Current;
 
-            var vendorConfig = option.vendorConfig;
-
             try {
+                var vendorConfig = option.vendorConfig;
                 if (!vendorConfig) throw 'Missing vendor Config';
 
                 Current.VendorCFG = vendorConfig;
+                // this.resetValues();
                 this.loadVarianceConfig();
 
                 // load the variance config
@@ -101,7 +102,8 @@ define([
                         Errors: [],
                         Msg: [],
                         Variance: [],
-                        OrderLine: {}
+                        OrderLine: {},
+                        VarianceAmt: 0
                     };
                     try {
                         util.extend(BillLine, {
@@ -133,7 +135,13 @@ define([
                         BillLine.OrderLine = orderLine;
 
                         // check if the quantitys are enough
-                        if (BillLine.rate != orderLine.rate) Helper.setVariance('Price');
+                        if (BillLine.rate != orderLine.rate) {
+                            BillLine.Variance.push('Price');
+                            Helper.setVariance('Price');
+
+                            BillLine.VarianceAmt =
+                                Math.abs(BillLine.rate - orderLine.rate) * BillLine.quantity;
+                        }
 
                         orderLine.RECEIVABLE = orderLine.quantity - orderLine.QTYRCVD;
                         orderLine.BILLABLE = orderLine.QTYRCVD - orderLine.QTYBILLED;
@@ -151,7 +159,8 @@ define([
                             ) {
                                 if (orderLine.RECEIVABLE < BillLine.quantity)
                                     throw 'INSUFFICIENT_QUANTITY';
-                            } else throw 'INSUFFICIENT_QUANTITY';
+                            } else if (orderLine.BILLABLE > 0) throw 'INSUFFICIENT_QUANTITY';
+                            else throw 'NOT_BILLABLE';
                         }
                     } catch (error) {
                         var errorCode = vc2_util.extractError(error);
@@ -159,6 +168,7 @@ define([
                             errorCode: errorCode,
                             details: BillLine.itemName
                         });
+                        BillLine.Errors.push(errorCode);
                         vc2_util.logError(logTitle, error);
                     } finally {
                         Current.BillLines.push(BillLine);
@@ -170,22 +180,21 @@ define([
                 this.processCharges();
                 this.varianceCheck();
 
+                // EVAL if AllowBill
+                if (
+                    Current.HasErrors ||
+                    !vc2_util.isEmpty(Current.ErrorList) ||
+                    !vc2_util.isEmpty(Current.Error)
+                ) {
+                    Current.AllowBill = false;
+                } else if (Current.HasVariance) {
+                    if (!Current.AllowBill) Current.AllowBill = Current.AllowVariance;
+                } else Current.AllowBill = true;
+
                 // // calculate the correct amount
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
-            } finally {
-                [
-                    'VendorData',
-                    'BillLines',
-                    'BillFile',
-                    'Charges',
-                    'OrderData',
-                    'OrderLines'
-                ].forEach(function (fld) {
-                    vc2_util.log(logTitle, '>> CURRENT [' + fld + ']: ', Current[fld]);
-                });
-                Helper.dumpCurrentData();
             }
 
             return returnValue;
@@ -200,15 +209,8 @@ define([
                     doIgnoreVariance = option.ignoreVariance,
                     orderData = option.orderData;
 
-                // reset the errors
-                Current.HasErrors = false;
-                Current.HasVariance = false;
-                Current.AllowBill = false;
-                Current.ErrorList = [];
-                Current.VarianceList = [];
-                Current.Error = {};
-
-                Helper.dumpCurrentData();
+                vc2_util.log(logTitle, '.. doProcessVariance: ', doProcessVariance);
+                vc2_util.log(logTitle, '.. doIgnoreVariance: ', doIgnoreVariance);
 
                 // load the bill lines
                 var VBillLines = vc2_record.extractRecordLines({
@@ -252,29 +254,42 @@ define([
 
                         // from the matching lines, try to collect the appliable qty
                         var orderLine = {};
+
                         vendorLine.MATCHING.forEach(function (matchedLine) {
-                            if (matchedLine.rate != vendorLine.rate) {
-                                if (doProcessVariance) {
-                                    // set the rate to the bill rate
-                                    vc2_record.updateLine({
-                                        record: recVBill,
-                                        lineData: {
-                                            line: matchedLine.line,
-                                            rate: vendorLine.rate,
-                                            quantity: matchedLine.APPLIEDQTY
-                                        }
-                                    });
-                                } else if (doIgnoreVariance) {
-                                    // set the rate to the PO Rate
-                                    vc2_record.updateLine({
-                                        record: recVBill,
-                                        lineData: {
-                                            line: matchedLine.line,
-                                            rate: matchedLine.rate,
-                                            quantity: matchedLine.APPLIEDQTY
-                                        }
-                                    });
+                            vc2_util.log(logTitle, '.. lines: ', {
+                                vendor: vendorLine,
+                                order: matchedLine
+                            });
+
+                            vc2_record.updateLine({
+                                record: recVBill,
+                                lineData: {
+                                    line: matchedLine.line,
+                                    quantity: matchedLine.APPLIEDQTY
                                 }
+                            });
+
+                            if (matchedLine.rate != vendorLine.rate) {
+                                var updateLine = { line: matchedLine.line };
+
+                                if (Current.AllowVariance || doProcessVariance) {
+                                    updateLine.rate = vendorLine.rate;
+                                } else if (doIgnoreVariance) {
+                                    updateLine.rate = matchedLine.rate;
+                                }
+
+                                vc2_util.log(logTitle, '... update line: ', [
+                                    updateLine,
+                                    Current.AllowVariance,
+                                    doProcessVariance,
+                                    doIgnoreVariance
+                                ]);
+
+                                // set the rate to the bill rate
+                                vc2_record.updateLine({
+                                    record: recVBill,
+                                    lineData: updateLine
+                                });
                             }
 
                             // add this to the Billed Lines
@@ -282,7 +297,7 @@ define([
                         });
                     } catch (error) {
                         var errorCode = vc2_util.extractError(error);
-                        Helper.setError({ errorCode: errorCode, details: vendorLine });
+                        Helper.setError({ errorCode: errorCode, details: vendorLine.itemName });
                         vc2_util.logError(logTitle, error);
                     }
                     return true;
@@ -361,8 +376,6 @@ define([
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
-            } finally {
-                Helper.dumpCurrentData();
             }
 
             return returnValue;
@@ -442,6 +455,19 @@ define([
 
             return returnValue;
         },
+        resetValues: function (option) {
+            // RESET! //
+            util.extend(Current, {
+                HasErrors: false,
+                HasVariance: false,
+                VarianceList: [],
+                ErrorList: [],
+                Error: {},
+                AllowVariance: false,
+                AllowBill: false
+            });
+            return true;
+        },
         loadBillFile: function (option) {
             var logTitle = [LogTitle, 'loadBillFile'].join('::'),
                 returnValue = Current.BillFile;
@@ -449,6 +475,8 @@ define([
             try {
                 var recBillFile = option.recBillFile || option.record,
                     billFileId = option.billFileId || option.internalId || option.id;
+
+                Helper.dumpCurrentData();
 
                 if (!recBillFile) {
                     if (!billFileId) throw 'Missing Bill File Id';
@@ -572,13 +600,11 @@ define([
                         Shipping: 0,
                         Tax: 0,
                         LineAmount: 0,
+                        LineVariance: 0,
                         Charges: 0,
                         TxnAmount: 0
                     },
                     VendorData = Current.VendorData;
-
-                // reset
-                // CURRENT.Total = Total;
 
                 Current.BillLines.forEach(function (billLine) {
                     var orderLine = billLine.OrderLine;
@@ -588,22 +614,26 @@ define([
                     ) {
                         Total.Shipping += orderLine.amount;
                     }
-
                     if (billLine.taxAmount) Total.Tax += billLine.taxAmount;
+
+                    Total.LineVariance += billLine.VarianceAmt;
                     Total.LineAmount += billLine.amount;
                 });
+                Total.LineVariance = vc2_util.roundOff(Total.LineVariance);
 
                 Current.Charges.forEach(function (charge) {
                     if (vc2_util.inArray(charge.applied, ['T', 't', true]))
                         Total.Charges += charge.amount || 0;
                 });
                 Total.TxnAmount = Total.Shipping + Total.Tax + Total.LineAmount + Total.Charges;
-
                 util.extend(Current.Total, Total);
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
+                // } finally {
+                //     vc2_util.log(logTitle, '>> Totals: ', Current.Total);
             }
+            return Current.Total;
         },
         processCharges: function () {
             var logTitle = [LogTitle, 'processCharges'].join('::');
@@ -697,7 +727,6 @@ define([
         varianceCheck: function (option) {
             var logTitle = [LogTitle, 'varianceCheck'].join('::');
             try {
-                vc2_util.log(logTitle, '... variance check');
                 // calculate totals first
                 this.calcuateTotals();
 
@@ -705,55 +734,46 @@ define([
                     Total = Current.Total;
 
                 Total.BillAmount = VendorData.total;
-                Total.BillCharges =
-                    (VendorData.charges.tax || 0) +
-                    (VendorData.charges.shipping || 0) +
-                    VendorData.charges.other;
-
                 Current.Charges.forEach(function (charge) {
-                    if (charge.rate || charge.amount) Helper.setVariance(charge.name);
+                    if (
+                        vc2_util.inArray(charge.applied, ['T', 't', true]) &&
+                        (charge.rate || charge.amount)
+                    )
+                        Helper.setVariance(charge.name);
                 });
 
                 Total.Variance = vc2_util.roundOff(Total.BillAmount - Total.TxnAmount);
-                vc2_util.log(logTitle, '... Variance: ', Total.Variance);
+                var varianceAmount = Math.abs(Total.Variance) || Math.abs(Total.LineVariance);
 
-                if (Current.HasVariance)
-                    Current.HasVariance = Total.BillCharges > 0 || Math.abs(Total.Variance) > 0;
+                vc2_util.log(logTitle, '... Variance: ', varianceAmount);
 
-                vc2_util.log(logTitle, '... HasVariance: ', Current.HasVariance);
+                if (Current.HasVariance || Total.Variance > 0) {
+                    Current.HasVariance = Total.Charges > 0 || Math.abs(Total.Variance) > 0;
 
-                if (Current.HasVariance) {
                     if (Current.MainCFG.allowedThreshold) {
                         if (
-                            Total.BillCharges > Current.MainCFG.allowedThreshold ||
-                            Math.abs(Total.Variance) > Current.MainCFG.allowedThreshold
+                            Total.Charges > Current.MainCFG.allowedThreshold ||
+                            varianceAmount > Current.MainCFG.allowedThreshold
                         ) {
                             Helper.setVariance('EXCEED_THRESHOLD');
                         } else {
-                            Current.AllowBill = true;
+                            Helper.setVariance('WITHIN_THRESHOLD');
+                            Current.AllowVariance = true;
                         }
                     }
 
-                    if (Math.abs(Total.Variance) && Current.MainCFG.allowAdjustLine) {
+                    if (Current.MainCFG.allowAdjustLine && varianceAmount) {
                         var otherCharge = vc2_util.clone(ChargesCFG.other);
-                        util.extend(otherCharge, {
-                            rate: Total.Variance,
-                            amount: Total.Variance,
-                            description: 'VC | Adjustment'
-                        });
 
                         // add to Charges List
+                        util.extend(otherCharge, {
+                            rate: varianceAmount,
+                            amount: varianceAmount,
+                            description: 'VC | Adjustment'
+                        });
                         Current.Charges.push(otherCharge);
                     }
-                } else {
-                    // no variance detected, then allow bill
-                    Current.AllowBill = true;
                 }
-
-                /**
-                    VendorAmountTotal = ?LineTotal? + (Tax + Shipping + Other)                
-                    BillAmount = LineTotal + (Tax + Shipping)
-                */
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
@@ -805,10 +825,9 @@ define([
                     'Error',
                     'AllowBill',
                     'Total',
-                    'MainCFG'
+                    'BillLines'
                 ]
             });
-
             vc2_util.log(LogTitle, '>> CURRENT (params) :', paramsToShow);
         },
         setError: function (option) {
@@ -821,7 +840,10 @@ define([
             vc2_util.log(logTitle, '... option2: ', [errorCode, errorDetails]);
 
             if (!Current.Error[errorCode]) Current.Error[errorCode] = [];
-            if (!vc2_util.isEmpty(errorDetails)) Current.Error[errorCode].push(errorDetails);
+            if (!vc2_util.isEmpty(errorDetails)) {
+                if (!vc2_util.inArray(errorDetails, Current.Error[errorCode]))
+                    Current.Error[errorCode].push(errorDetails);
+            }
 
             Current.ErrorList.push(errorCode);
             Current.HasErrors = true;

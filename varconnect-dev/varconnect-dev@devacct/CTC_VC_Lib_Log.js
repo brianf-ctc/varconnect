@@ -53,7 +53,7 @@ define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (
             fieldId: logFields.HEADER,
             value: header ? (header.length > 300 ? header.substr(0, 300) : header) : ''
         });
-
+        
         recLog.setValue({
             fieldId: logFields.BODY,
             value: body || ''

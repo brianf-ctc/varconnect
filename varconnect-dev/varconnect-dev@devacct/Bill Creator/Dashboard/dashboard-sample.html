@@ -44,7 +44,7 @@
                     <div class="side-nav">
                         <div class="side-nav-block">
                             <ul class="list-unstyled">
-                                <h4 style="text-align: center">Alerts</h4>
+                                <h4 style="text-align: center;">Alerts</h4>
                                 <li id="due">
                                     <a
                                         href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_not_proc_due_soon"
@@ -62,9 +62,7 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-exclamation-triangle"></i> No PO Link
-                                        <span
-                                            class="badge pull-right"
-                                            style="background-color: orange"
+                                        <span class="badge pull-right" style="background-color: orange;"
                                             >{{no_po_cnt}}</span
                                         >
                                     </a>
@@ -76,8 +74,7 @@
                                     >
                                         <i class="fa fa-receipt"></i> Pending Receipt
                                         <span class="badge badge-primary pull-right"
-                                            >{{pend_rcpt_cnt}}</span
-                                        >
+                                        >{{pend_rcpt_cnt}}</span>
                                     </a>
                                 </li>
                                 <li id="on_hold">
@@ -87,33 +84,28 @@
                                     >
                                         <i class="fa fa-pause"></i> On Hold
                                         <span class="badge badge-orange pull-right"
-                                            >{{on_hold_cnt}}</span
-                                        >
+                                            >{{on_hold_cnt}}</span>
                                     </a>
                                 </li>
                                 <li id="to_be_processed">
-                                    <a
+                                    <a 
                                         href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054%057"
                                         target="_blank"
                                     >
                                         <i class="fa fa-check"></i> To Be Processed
                                         <span class="badge badge-success pull-right"
                                             >{{to_be_proc_cnt}}</span
-                                        ></a
-                                    >
-                                    <ul class="list-unstyled" style="display: block !important">
+                                    ></a>
+                                    <ul class="list-unstyled" style="display:block !important">
                                         <li>
                                             <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1"
                                                 target="_blank"
                                             >
                                                 <i class="fa fa-clock"></i> Pending
-                                                <span
-                                                    class="badge pull-right"
-                                                    style="background-color: darkcyan"
+                                                <span class="badge pull-right" style="background-color: darkcyan;"
                                                     >{{pending_cnt}}</span
-                                                ></a
-                                            >
+                                            ></a>
                                         </li>
                                         <li>
                                             <a
@@ -123,8 +115,7 @@
                                                 <i class="fa fa-circle-xmark"></i> Errors
                                                 <span class="badge badge-error pull-right"
                                                     >{{alert_error}}</span
-                                                ></a
-                                            >
+                                            ></a>
                                         </li>
                                         <li>
                                             <a
@@ -134,8 +125,7 @@
                                                 <i class="fa fa-rotate"></i> Reprocess
                                                 <span class="badge badge-purple pull-right"
                                                     >{{reprocess_cnt}}</span
-                                                ></a
-                                            >
+                                            ></a>
                                         </li>
                                         <li>
                                             <a
@@ -145,13 +135,12 @@
                                                 <i class="fa fa-not-equal"></i> Variance
                                                 <span class="badge badge-black pull-right"
                                                     >{{variance_cnt}}</span
-                                                ></a
-                                            >
+                                            ></a>
                                         </li>
                                     </ul>
                                 </li>
                                 <br />
-                                <h4 style="text-align: center">Reporting</h4>
+                                <h4 style="text-align: center;">Reporting</h4>
                                 <li class="has_submenu">
                                     <a href="#"
                                         ><i class="fa fa-flag-checkered"></i> Processed
@@ -263,7 +252,7 @@
                                     </ul>
                                 </li>
                                 <br />
-                                <h4 style="text-align: center">Configuration</h4>
+                                <h4 style="text-align: center;">Configuration</h4>
                                 <li class="has_submenu">
                                     <a href="#"
                                         ><i class="fa fa-cog"></i>Setup

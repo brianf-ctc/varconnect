@@ -16,11 +16,7 @@
  * 1.10			Jan 10, 2023			jjacob			Group invoice lines by inv detail id
  */
 
-define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
-    ns_error,
-    ns_search,
-    vc2_util
-) {
+define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (ns_error, ns_search, vc2_util) {
     var WEFI_BC = {};
     WEFI_BC.credential = {};
     WEFI_BC.endpoint = {};
@@ -159,10 +155,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
 
                     log.debug(
                         logTitle,
-                        '[invoice=' +
-                            wfInvoice.invoiceId +
-                            '] wfInvoiceLine=' +
-                            JSON.stringify(wfInvoiceLine)
+                        '[invoice=' + wfInvoice.invoiceId + '] wfInvoiceLine=' + JSON.stringify(wfInvoiceLine)
                     );
 
                     // v1.1
@@ -235,9 +228,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
 
             // The .value from the wefi response is an array type
             // If there is no data, an empty array is returned
-            return parsedResponse.value && parsedResponse.value.length
-                ? parsedResponse.value[0]
-                : null;
+            return parsedResponse.value && parsedResponse.value.length ? parsedResponse.value[0] : null;
         } catch (e) {
             var err = e.name + ': ' + e.message;
             log.error(logTitle, err);

@@ -25,7 +25,8 @@ define([
     './CTC_VC_Lib_WeFi.js',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Utils'
+    './CTC_VC2_Lib_Utils',
+    'N/format'
 ], function (
     lib_synnex,
     lib_techdata,
@@ -39,7 +40,8 @@ define([
     lib_wefi,
     vc_vendorcfg,
     vc2_constant,
-    vc2_util
+    vc2_util,
+    ns_format
 ) {
     var LogTitle = 'WebSvcLib',
         LogPrefix = '';
@@ -166,6 +168,88 @@ define([
         return libVendor;
     }
 
+    function parseDate(option) {
+        var logTitle = [LogTitle, 'parseDate'].join('::');
+
+        var dateString = option.dateString || option,
+            date = '';
+
+        if (dateString && dateString.length > 0 && dateString != 'NA') {
+            try {
+                var multipleDateStrArr = dateString.replace(/\n/g, ' ').split(' ');
+                for (var i = 0; i < multipleDateStrArr.length; i++) {
+                    var singleDateStr = multipleDateStrArr[i];
+                    if (singleDateStr) {
+                        var stringArr = singleDateStr.split('T'); //handle timestamps with T
+                        var dateComponent = stringArr[0];
+                        var convertedDate = null;
+                        try {
+                            convertedDate = ns_format.parse({
+                                value: singleDateStr,
+                                type: ns_format.Type.DATE
+                            });
+                        } catch (dateParseErr) {
+                            try {
+                                convertedDate = ns_format.parse({
+                                    value: dateComponent,
+                                    type: ns_format.Type.DATE
+                                });
+                            } catch (dateParseErr) {
+                                // do nothing
+                            }
+                        }
+                        if (!convertedDate) {
+                            try {
+                                convertedDate = new Date(singleDateStr);
+                            } catch (dateParseErr) {
+                                try {
+                                    convertedDate = new Date(dateComponent);
+                                } catch (dateParseErr) {
+                                    // do nothing
+                                }
+                            }
+                        }
+                        if (!convertedDate) {
+                            try {
+                                singleDateStr = singleDateStr.replace(/-/g, '/');
+                                convertedDate = new Date(singleDateStr);
+                            } catch (dateParseErr) {
+                                try {
+                                    dateComponent = dateComponent.replace(/-/g, '/');
+                                    convertedDate = new Date(dateComponent);
+                                } catch (dateParseErr) {
+                                    // do nothing
+                                }
+                            }
+                        }
+                        if (!convertedDate) {
+                            vc2_util.logError('Unable to recognize date format.', e);
+                        } else if (!date || convertedDate > date) {
+                            date = convertedDate;
+                        }
+                    }
+                }
+            } catch (e) {
+                vc2_util.logError(logTitle, e);
+            }
+        }
+        //Convert to string
+        if (date) {
+            //set date
+            var year = date.getFullYear();
+            if (year < 2000) {
+                year += 100;
+                date.setFullYear(year);
+            }
+
+            date = ns_format.format({
+                value: date,
+                type: ns_format.Type.DATE
+            });
+        }
+        return date;
+    }
+
     function _checkDates(option) {
         var logTitle = [LogTitle, '_checkDates'].join('::');
 
@@ -174,8 +258,8 @@ define([
             tranDate = option.tranDate,
             xmlVendorText = option.xmlVendorText;
 
-        var dtStartDate = vc2_util.parseDate(startDate),
-            dtTranDate = vc2_util.parseDate(tranDate);
+        var dtStartDate = parseDate(startDate),
+            dtTranDate = parseDate(tranDate);
 
         vc2_util.log(logTitle, '>> check dates: ', [
             dtStartDate,

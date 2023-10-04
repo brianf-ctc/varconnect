@@ -88,7 +88,7 @@ define([
                         sublist,
                         vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
                     ),
-                    serialSync: Helper.getField(form, 'custbody_ctc_vc_serialsync_done')
+                    serialSync: Helper.getField(form, 'custbody_ctc_vc_serialsync_done'),
                 };
                 vc2_util.log(logTitle, '// fieldObj: ', fieldObj);
 
@@ -218,11 +218,7 @@ define([
 
                 //Also check if the corresponding features have been enabled before processing
                 var vendorConfig;
-                if (
-                    record.type == ns_record.Type.INVOICE &&
-                    mainConfig.copySerialsInv &&
-                    hasSerialListChanged
-                ) {
+                if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv && hasSerialListChanged) {
                     vendorConfig = Helper.searchVendorConfig({
                         salesOrder: record.getValue({ fieldId: 'createdfrom' })
                     });
@@ -240,6 +236,7 @@ define([
                     taskOption.deployId = Helper.forceDeploy(taskOption);
                     // }
                 }
+
 
                 if (hasSerials && mainConfig.serialScanUpdate && hasSerialListChanged) {
                     vc2_util.waitRandom(10000);
@@ -400,7 +397,9 @@ define([
                     'AND',
                     ['createdfrom', 'anyof', param.so]
                 ],
-                columns: ['entity']
+                columns: [
+                    'entity',
+                ]
             };
 
             var searchPO = ns_search.create(searchOption);
@@ -557,16 +556,12 @@ define([
             try {
                 returnField = form.getField({ id: fieldId });
             } catch (error) {
-                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
+                vc2_util.log(logTitle, '## ERROR ## ', [ fieldId, vc2_util.extractError(error) ]);
                 returnField = null;
             }
             try {
                 if (!returnField || !returnField.id) {
-                    vc2_util.log(
-                        logTitle,
-                        '## ERROR ## ',
-                        'Field (id=' + fieldId + ') is not exposed'
-                    );
+                    vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                     returnField = null;
                 }
             } catch (invocationErr) {
@@ -585,16 +580,12 @@ define([
             try {
                 returnField = sublist.getField({ id: fieldId });
             } catch (error) {
-                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
+                vc2_util.log(logTitle, '## ERROR ## ', [ fieldId, vc2_util.extractError(error) ]);
                 returnField = null;
             }
             try {
                 if (!returnField || !returnField.id) {
-                    vc2_util.log(
-                        logTitle,
-                        '## ERROR ## ',
-                        'Field (id=' + fieldId + ') is not exposed'
-                    );
+                    vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                     returnField = null;
                 }
             } catch (invocationErr) {
@@ -604,30 +595,28 @@ define([
 
             return returnField;
         },
-        split: function (inputString) {
+        split: function(inputString) {
             var result = [];
             if (inputString) {
-                inputString = inputString
-                    .replace(/[,\s]+/g, ',')
-                    .replace(/(^[,\s]+)|([,\s]+$)/g, '');
+                inputString = inputString.replace(/[,\s]+/g,',').replace(/(^[,\s]+)|([,\s]+$)/g,'');
                 result = inputString.split(',');
             }
             return result;
         },
-        matchArrayContents: function (input1, input2) {
+        matchArrayContents: function(input1, input2) {
             var array1 = input1,
                 array2 = input2,
                 returnValue = null;
-            if (util.isString(input1)) {
+            if(util.isString(input1)) {
                 array1 = Helper.split(input1);
             }
-            if (util.isString(input2)) {
+            if(util.isString(input2)) {
                 array2 = Helper.split(input2);
             }
-            if (util.isArray(array1) && util.isArray(array2)) {
+            if(util.isArray(array1) && util.isArray(array2)) {
                 returnValue = 0;
                 var y;
-                for (var x = 0, xCount = array1.length; x < xCount; x += 1) {
+                for(var x = 0, xCount = array1.length; x < xCount; x += 1) {
                     var arr1Content = array1[x];
                     var y = array2.indexOf(arr1Content);
                     var cont1Matched = false;
@@ -643,7 +632,7 @@ define([
                 }
                 y = 0;
                 if (returnValue === 0) {
-                    for (var yCount = array2.length; y < yCount; y += 1) {
+                    for(var yCount = array2.length; y < yCount; y += 1) {
                         var arr2Content = array2[x];
                         var x = array1.indexOf(arr2Content);
                         if (x == -1) {
@@ -671,32 +660,32 @@ define([
                     var lineUniqueKey = record.getSublistValue({
                         sublistId: 'item',
                         fieldId: 'lineuniquekey',
-                        line: line
+                        line: line,
                     });
                     var serialString = record.getSublistValue({
                         sublistId: 'item',
                         fieldId: cols.SERIAL_NUMBER_SCAN,
-                        line: line
+                        line: line,
                     });
                     var serialStringUpdate = record.getSublistValue({
                         sublistId: 'item',
                         fieldId: cols.SERIAL_NUMBER_UPDATE,
-                        line: line
+                        line: line,
                     });
                     var lineEquivalent = oldRecord.findSublistLineWithValue({
                         sublistId: 'item',
                         fieldId: 'lineuniquekey',
-                        value: lineUniqueKey
+                        value: lineUniqueKey,
                     });
                     var oldSerialString = oldRecord.getSublistValue({
                         sublistId: 'item',
                         fieldId: cols.SERIAL_NUMBER_SCAN,
-                        line: lineEquivalent
+                        line: lineEquivalent,
                     });
                     var oldSerialStringUpdate = oldRecord.getSublistValue({
                         sublistId: 'item',
                         fieldId: cols.SERIAL_NUMBER_UPDATE,
-                        line: lineEquivalent
+                        line: lineEquivalent,
                     });
                     if (serialString || serialStringUpdate) {
                         hasLineSerials = true;
@@ -707,10 +696,9 @@ define([
                     if (hasLineSerials != hasExistingSerials) {
                         hasSerialsChanged = true;
                     } else if (hasLineSerials && hasExistingSerials) {
-                        hasSerialsChanged =
+                        hasSerialsChanged = 
                             Helper.matchArrayContents(oldSerialString, serialString) !== 0 ||
-                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !==
-                                0;
+                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !== 0;
                     } else {
                         hasSerialsChanged = false;
                     }
@@ -718,7 +706,7 @@ define([
                 returnValue = hasSerialsChanged;
             }
             return returnValue;
-        }
+        },
     };
 
     return USER_EVENT;

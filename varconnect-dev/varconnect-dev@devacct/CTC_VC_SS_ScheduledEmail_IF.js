@@ -26,16 +26,7 @@ define([
     './CTC_VC_Lib_MainConfiguration.js',
     './CTC_VC2_Lib_Utils.js',
     './CTC_VC2_Constants.js'
-], function (
-    ns_search,
-    ns_email,
-    ns_record,
-    ns_runtime,
-    ns_render,
-    lib_mainconfig,
-    vc2_util,
-    vc2_constant
-) {
+], function (ns_search, ns_email, ns_record, ns_runtime, ns_render, lib_mainconfig, vc2_util, vc2_constant) {
     var CURRENT = {},
         LogTitle = 'Email-IF';
     var testEmail; // send to this email for testing
@@ -98,7 +89,7 @@ define([
                 if (!resultsList.length) continue;
 
                 var itemTableHTML = buildItemTable(resultsList);
-
+                
                 if (testEmail) newSendTo = testEmail;
 
                 log.debug(logTitle, ' /// sending email to: ' + newSendTo);
@@ -124,8 +115,7 @@ define([
         } finally {
             log.debug(
                 logTitle,
-                '******* Script Execution End: ' +
-                    JSON.stringify({ durationms: new Date() - startTime })
+                '******* Script Execution End: ' + JSON.stringify({ durationms: new Date() - startTime })
             );
         }
 

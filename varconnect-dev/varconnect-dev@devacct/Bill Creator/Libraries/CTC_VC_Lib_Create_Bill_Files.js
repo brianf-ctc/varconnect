@@ -105,6 +105,68 @@ define([
             }
             return returnValue;
         },
+        extractVendorItemNames: function (option) {
+            var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
+                returnValue = option.lines || option;
+
+            try {
+                var GlobalVar = vc2_constant.GLOBAL,
+                    ItemMapRecordVar = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
+                if (returnValue && returnValue.length) {
+                    var uniqueItemIds = [];
+                    for (var i = 0, len = returnValue.length; i < len; i += 1) {
+                        var lineData = returnValue[i];
+                        if (!vc2_util.inArray(lineData.item, uniqueItemIds)) {
+                            uniqueItemIds.push(lineData.item);
+                        }
+                    }
+                    log.debug(
+                        logTitle,
+                        'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', ')
+                    );
+                    if (uniqueItemIds.length) {
+                        var searchOption = {
+                            type: ItemMapRecordVar.ID,
+                            filterExpression: [
+                                [ItemMapRecordVar.FIELD.ITEM, 'anyof', uniqueItemIds],
+                                'and',
+                                ['isinactive', 'is', 'F']
+                            ],
+                            columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
+                        };
+                        var searchResults = vc2_util.searchAllPaged(searchOption);
+                        if (searchResults && searchResults.length) {
+                            var vendorItemMap = {};
+                            searchResults.forEach(function (result) {
+                                var vendorItemName = result.getValue({
+                                        name: ItemMapRecordVar.FIELD.NAME
+                                    }),
+                                    item = result.getValue({ name: ItemMapRecordVar.FIELD.ITEM });
+                                if (!vendorItemMap[item]) vendorItemMap[item] = [];
+                                vendorItemMap[item].push(vendorItemName);
+                                return true;
+                            });
+                            for (var i = 0, len = returnValue.length; i < len; i += 1) {
+                                var lineData = returnValue[i],
+                                    vendorItemNames = vendorItemMap[lineData.item];
+                                if (vendorItemNames && vendorItemNames.length) {
+                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
+                                        vendorItemNames.join('\n');
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+
+                throw ns_error.create({
+                    name: 'Unable to extract vendor item names',
+                    message: vc2_util.extractError(error)
+                });
+            }
+            return returnValue;
+        },
         searchPO: function (poName) {
             var logTitle = [LogTitle, 'searchPO'].join('::'),
                 returnValue;
@@ -210,6 +272,21 @@ define([
                 return true;
             });
             returnValue = arrSKUs;
+
+            var arrPOItems = [];
+            arrSKUs.forEach(function (skuDetails) {
+                arrPOItems.push({ item: skuDetails.value });
+                return true;
+            });
+            var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
+            vc2_util.log(logTitle, '// arrSKUsVendorNames: ', arrSKUsVendorNames);
+
+
+            for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
+                arrSKUs[i].vendorItemName =
+                    arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+                // return true;
+            }
 
             return returnValue;
         },
@@ -448,7 +525,10 @@ define([
                         var matchedSku = false;
 
                         for (var iii = 0; iii < availableSkus.length; iii++) {
-                            if (availableSkus[iii].text == itemNo) {
+                            if (
+                                availableSkus[iii].text == itemNo ||
+                                availableSkus[iii].vendorItemName == itemNo
+                            ) {
                                 matchedSku = availableSkus[iii].value;
                                 break;
                             }

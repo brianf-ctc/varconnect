@@ -256,6 +256,18 @@ define(function (require) {
                         lineItemCount
                     );
 
+                    var arrFFItems = [];
+                    for (line = 0; line < lineItemCount; line++) {
+                        var lineFFItem = vc2_record.extractLineValues({
+                            record: recItemFF,
+                            line: line,
+                            columns: [ 'item' ]
+                        });
+                        arrFFItems.push(lineFFItem);
+                    }
+                    var arrVendorItemNames = vc2_record.extractVendorItemNames({
+                        lines: arrFFItems,
+                    });
                     for (line = 0; line < lineItemCount; line++) {
                         try {
                             lineFF = vc2_record.extractLineValues({
@@ -281,6 +293,7 @@ define(function (require) {
                             });
                             lineFF.line = line;
                             lineFF.availqty = lineFF.quantityremaining;
+                            lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = arrVendorItemNames[line][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
                             vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
 
                             // get the

@@ -235,17 +235,15 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             });
 
             if (!isActive) {
-                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax'].forEach(
-                    function (fld) {
-                        try {
-                            currRecord.getSublistField({
-                                sublistId: 'variance',
-                                fieldId: fld,
-                                line: line
-                            }).isDisabled = true;
-                        } catch (e) {}
-                    }
-                );
+                ['applied', 'nsitem','itemname','description','amount','amounttax'].forEach(function (fld) {
+                    try {
+                        currRecord.getSublistField({
+                            sublistId: 'variance',
+                            fieldId: fld,
+                            line: line
+                        }).isDisabled = true;
+                    } catch (e) {}
+                });
             }
         }
 

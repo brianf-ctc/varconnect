@@ -325,8 +325,8 @@ define([
             custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_serial_num: 'serial_num', // textarea
-            custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
-            custcol_ctc_vc_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_prom_deliv_date: 'promised_date',
             custcol_ctc_vc_vendor_info: 'INFO',
             custcol_ctc_vc_order_status: 'STATUS' // text
         },
@@ -340,7 +340,7 @@ define([
             'tracking_num',
             'carrier',
             'serial_num',
-            'promised_date',
+            // 'promised_date',
             'STATUS'
         ],
         columnType: {
@@ -423,7 +423,8 @@ define([
                     vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                     vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ]
             });
 

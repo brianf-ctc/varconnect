@@ -347,7 +347,7 @@ define(function (require) {
                                 }),
                                 dandh: record.getSublistText({
                                     sublistId: 'item',
-                                    fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
+                                    fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                     line: line
                                 }),
                                 quantity: record.getSublistText({
@@ -549,7 +549,7 @@ define(function (require) {
                                 }),
                                 dandh: record.getSublistText({
                                     sublistId: 'item',
-                                    fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
+                                    fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                     line: line
                                 }),
                                 isSerialized: record.getCurrentSublistValue({

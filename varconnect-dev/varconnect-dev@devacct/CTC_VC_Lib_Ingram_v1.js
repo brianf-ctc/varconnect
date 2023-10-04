@@ -245,7 +245,7 @@ define([
                     vendorSKU: respLineData.ingramPartNumber ? respLineData.ingramPartNumber : 'NA',
                     order_num: respLineData.subOrderNumber ? respLineData.subOrderNumber : 'NA',
                     line_status: respLineData.lineStatus ? respLineData.lineStatus : 'NA',
-                    promised_date: respLineData.promisedDeliveryDate || 'NA',
+                    // promised_date: respLineData.promisedDeliveryDate || 'NA',
                     ship_qty:
                         respLineData.hasOwnProperty('quantityConfirmed') &&
                         !vc2_util.isEmpty(respLineData.quantityConfirmed)

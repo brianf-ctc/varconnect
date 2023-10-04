@@ -260,7 +260,7 @@ define([
         }
         return returnValue;
     }
-
+    
     function synnex_api(input, config) {
         var returnValue;
         try {

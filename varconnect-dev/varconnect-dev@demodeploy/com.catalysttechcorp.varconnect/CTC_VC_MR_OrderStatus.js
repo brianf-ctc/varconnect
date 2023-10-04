@@ -592,7 +592,8 @@ define([
                 'amount',
                 vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                 vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                vc2_constant.FIELD.TRANSACTION.DH_MPN
+                vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
             ]
         });
 

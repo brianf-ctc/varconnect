@@ -612,6 +612,16 @@ define([
                 return true;
             });
 
+            var vendorItemNameFilter = {
+                AVAILQTY: function (value) {
+                    return value > 0;
+                }
+            };
+            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (
+                value
+            ) {
+                return value && vc2_util.inArray(itemffLine.item, value.split('\n'));
+            };
             arrFulfillLines.forEach(function (itemffLine) {
                 util.extend(itemffLine, {
                     APPLIEDQTY: 0,
@@ -642,7 +652,13 @@ define([
                                     return value > 0;
                                 }
                             }
-                        }) || []
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: vendorItemNameFilter
+                        }) ||
+                        []
                 };
 
                 var fnApplyQty = function (matchedLine) {

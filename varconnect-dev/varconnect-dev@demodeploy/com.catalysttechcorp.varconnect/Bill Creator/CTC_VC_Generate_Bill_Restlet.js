@@ -38,41 +38,9 @@ define([
 ) {
     var LogTitle = 'VC BILL CREATE RL',
         VCLOG_APPNAME = 'VAR Connect | Process Bill',
-        Current = {
-            Config: {},
-            TOTALS: {
-                AMOUNT: 0,
-                TAX_AMOUNT: 0,
-                SHIP_AMOUNT: 0,
-                LINE_AMOUNT: 0,
-                VARIANCE_AMT: 0
-            },
-            varianceParam: {
-                varianceLines: [],
-                ignoreVariance: false,
-                totalVarianceAmount: 0,
-                allowedThreshold: 0,
-                hasVariance: false,
-                allowVariance: false,
-                listVariance: [],
-                listCharges: []
-            }
-        },
+        Current = { Config: {} },
         LogPrefix = '',
-        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS,
         BILL_CREATOR = vc2_constant.Bill_Creator;
-
-    var ERROR_MSG = vc2_constant.ERRORMSG,
-        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
-
-    var VARIANCE_DEF = {},
-        VARIANCE_TYPE = {
-            MISC: 'miscCharges',
-            TAX: 'tax',
-            SHIP: 'shipping',
-            OTHER: 'other',
-            ADJ: 'adjustment'
-        };
 
     var RESTLET = {
         post: function (context) {
@@ -89,7 +57,7 @@ define([
                     poId: context.PO_LINK,
                     billFileId: context.ID,
                     billInAdvance: context.billInAdvance || false,
-                    processVariance: context.PROC_VARIANCE
+                    processVariance: context.PROC_VARIANCE || false
                 });
 
                 if (!Current.poId) {
@@ -122,7 +90,6 @@ define([
                         ['T', 't', true]
                     );
                 }
-                vc2_util.log(logTitle, '/// Current: ', Current);
 
                 /// =====================================
                 Current.VendorCFG = vendorConfig;
@@ -162,6 +129,30 @@ define([
                 } else {
                     return util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
                 }
+                /// =====================================
+
+                /// =====================================
+                vc2_util.log(logTitle, '/// Current: ', Current);
+                vc2_util.log(
+                    logTitle,
+                    '/// BillData (params): ',
+                    vc2_util.extractValues({
+                        source: BillData,
+                        params: [
+                            'AllowBill',
+                            'AllowVariance',
+                            'HasErrors',
+                            'HasVariance',
+                            'VarianceList',
+                            'ErrorList',
+                            'Error',
+                            'Total',
+                            'BillLines',
+                            'Charges'
+                        ]
+                    })
+                );
+
                 /// =====================================
 
                 /// VALIDATE BEFORE BILL CREATE =========

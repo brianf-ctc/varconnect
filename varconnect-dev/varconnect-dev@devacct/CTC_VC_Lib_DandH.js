@@ -19,11 +19,11 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
-define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
-    ns_xml,
-    vc2_util,
-    moment
-) {
+define([
+    'N/xml',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_util, moment) {
     // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
@@ -51,8 +51,12 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                             '<XMLFORMPOST>' +
                             '<REQUEST>orderStatus</REQUEST>' +
                             '<LOGIN>' +
-                            ('<USERID>' + CURRENT.vendorConfig.user + '</USERID>') +
-                            ('<PASSWORD>' + CURRENT.vendorConfig.password + '</PASSWORD>') +
+                            ('<USERID>' +
+                                CURRENT.vendorConfig.user +
+                                '</USERID>') +
+                            ('<PASSWORD>' +
+                                CURRENT.vendorConfig.password +
+                                '</PASSWORD>') +
                             '</LOGIN>' +
                             '<STATUSREQUEST>' +
                             ('<PONUM>' + CURRENT.recordNum + '</PONUM>') +
@@ -83,14 +87,19 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId =
+                    option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig =
+                    option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix =
+                    '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig)
+                    throw 'Missing vendor configuration!';
 
                 returnValue = LibDnH.getOrderStatus(option);
             } catch (error) {
@@ -105,12 +114,16 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId =
+                    option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig =
+                    option.vendorConfig || CURRENT.vendorConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix =
+                    '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 var xmlResponse = option.xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
@@ -121,7 +134,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     node: xmlDoc,
                     xpath: '//DETAILITEM'
                 });
-                if (!arrItemNodes || !arrItemNodes.length) throw 'XML: Missing Item Details';
+                if (!arrItemNodes || !arrItemNodes.length)
+                    throw 'XML: Missing Item Details';
 
                 for (var i = 0; i < arrItemNodes.length; i++) {
                     var orderItem = {
@@ -218,8 +232,15 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                 node: packageNodes[ii],
                                 xpath: 'SHIPITEM'
                             });
-                            if (shipItemNodes != null && shipItemNodes.length > 0) {
-                                for (var iii = 0; iii < shipItemNodes.length; iii++) {
+                            if (
+                                shipItemNodes != null &&
+                                shipItemNodes.length > 0
+                            ) {
+                                for (
+                                    var iii = 0;
+                                    iii < shipItemNodes.length;
+                                    iii++
+                                ) {
                                     var shipItemNo = ns_xml.XPath.select({
                                         node: shipItemNodes[iii],
                                         xpath: 'SHIPITEMNO'
@@ -231,16 +252,23 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
 
                                     if (shipItemNo) {
                                         itemInPackage = true;
-                                        var serialNum = vc2_util.getNodeTextContent(
-                                            ns_xml.XPath.select({
-                                                node: shipItemNodes[iii],
-                                                xpath: 'SERIALNO'
-                                            })[0]
-                                        );
-                                        if (serialNum != null && serialNum.length > 0) {
+                                        var serialNum =
+                                            vc2_util.getNodeTextContent(
+                                                ns_xml.XPath.select({
+                                                    node: shipItemNodes[iii],
+                                                    xpath: 'SERIALNO'
+                                                })[0]
+                                            );
+                                        if (
+                                            serialNum != null &&
+                                            serialNum.length > 0
+                                        ) {
                                             if (orderItem.serial_num == 'NA')
-                                                orderItem.serial_num = serialNum;
-                                            else orderItem.serial_num += ',' + serialNum;
+                                                orderItem.serial_num =
+                                                    serialNum;
+                                            else
+                                                orderItem.serial_num +=
+                                                    ',' + serialNum;
                                         }
                                     }
                                 }
@@ -250,23 +278,37 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                     node: packageNodes[ii],
                                     xpath: 'CARRIER'
                                 });
-                                carrier = carrier && carrier[0] ? carrier[0].textContent : null;
+                                carrier =
+                                    carrier && carrier[0]
+                                        ? carrier[0].textContent
+                                        : null;
 
                                 if (carrier != null && carrier.length > 0) {
-                                    var carrierService = vc2_util.getNodeTextContent(
-                                        ns_xml.XPath.select({
-                                            node: packageNodes[ii],
-                                            xpath: 'SERVICE'
-                                        })[0]
-                                    );
-                                    if (carrierService != null && carrierService.length > 0) {
+                                    var carrierService =
+                                        vc2_util.getNodeTextContent(
+                                            ns_xml.XPath.select({
+                                                node: packageNodes[ii],
+                                                xpath: 'SERVICE'
+                                            })[0]
+                                        );
+                                    if (
+                                        carrierService != null &&
+                                        carrierService.length > 0
+                                    ) {
                                         if (orderItem.carrier == 'NA')
-                                            orderItem.carrier = carrier + ' - ' + carrierService;
+                                            orderItem.carrier =
+                                                carrier +
+                                                ' - ' +
+                                                carrierService;
                                         else
                                             orderItem.carrier +=
-                                                ',' + carrier + ' - ' + carrierService;
+                                                ',' +
+                                                carrier +
+                                                ' - ' +
+                                                carrierService;
                                     } else {
-                                        if (orderItem.carrier == 'NA') orderItem.carrier = carrier;
+                                        if (orderItem.carrier == 'NA')
+                                            orderItem.carrier = carrier;
                                         else orderItem.carrier += ',' + carrier;
                                     }
                                 }
@@ -276,10 +318,15 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                         xpath: 'TRACKNUM'
                                     })[0]
                                 );
-                                if (trackingNum != null && trackingNum.length > 0) {
+                                if (
+                                    trackingNum != null &&
+                                    trackingNum.length > 0
+                                ) {
                                     if (orderItem.tracking_num == 'NA')
                                         orderItem.tracking_num = trackingNum;
-                                    else orderItem.tracking_num += ',' + trackingNum;
+                                    else
+                                        orderItem.tracking_num +=
+                                            ',' + trackingNum;
                                 }
 
                                 var dateShipped = vc2_util.getNodeTextContent(
@@ -288,10 +335,15 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                         xpath: 'DATESHIPPED'
                                     })[0]
                                 );
-                                if (dateShipped != null && dateShipped.length > 0) {
+                                if (
+                                    dateShipped != null &&
+                                    dateShipped.length > 0
+                                ) {
                                     if (orderItem.ship_date == 'NA')
                                         orderItem.ship_date = dateShipped;
-                                    else orderItem.ship_date += ',' + dateShipped;
+                                    else
+                                        orderItem.ship_date +=
+                                            ',' + dateShipped;
                                 }
                             }
                         }
@@ -299,7 +351,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                         // brianff 12/14
                         // use the same shipdate
                         if (orderItem.ship_date) {
-                            orderItem.ship_date = orderItem.ship_date.split(/,/g)[0];
+                            orderItem.ship_date =
+                                orderItem.ship_date.split(/,/g)[0];
                             // assume everything without a shipdate has NOT shipped
                             // orderItem.is_shipped = true;
                         }
@@ -311,7 +364,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     // }
 
                     // if order status message is "IN PROCESS", then package/ship info is being waited on
-                    if (orderStatusMessage && orderStatusMessage.toUpperCase() !== 'IN PROCESS') {
+                    if (
+                        orderStatusMessage &&
+                        orderStatusMessage.toUpperCase() !== 'IN PROCESS'
+                    ) {
                         orderItem.is_shipped = false;
                     }
 
@@ -322,14 +378,21 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                         orderItem.ship_qty &&
                         orderItem.ship_qty != 0
                     ) {
-                        var shippedDate = moment(orderItem.ship_date, 'MM/DD/YY').toDate();
+                        var shippedDate = moment(
+                            orderItem.ship_date,
+                            'MM/DD/YY'
+                        ).toDate();
                         vc2_util.log(logTitle, '**** shipped date: ****', [
                             shippedDate,
                             util.isDate(shippedDate),
                             shippedDate <= new Date()
                         ]);
 
-                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                        if (
+                            shippedDate &&
+                            util.isDate(shippedDate) &&
+                            shippedDate <= new Date()
+                        )
                             orderItem.is_shipped = true;
                     }
 
@@ -351,13 +414,18 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordId =
+                    option.poId || option.recordId || CURRENT.recordId;
+                CURRENT.recordNum =
+                    option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.vendorConfig =
+                    option.vendorConfig || CURRENT.vendorConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                vc2_util.LogPrefix =
+                    '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.vendorConfig)
+                    throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({
