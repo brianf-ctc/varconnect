@@ -194,7 +194,9 @@ define(['N/record', 'N/search', './CTC_VC2_Constants.js'], function (
 
                         //Transaction Field Ids on serial record grouped by transaction type
                         if (!allFields[txnType]) {
-                            var fields = _getSerialsTransactionFields({ txnType: txnType });
+                            var fields = _getSerialsTransactionFields({
+                                txnType: txnType
+                            });
                             allFields[txnType] = fields;
                             log.debug('allFields[txnType]', allFields[txnType]);
                         }

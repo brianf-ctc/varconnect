@@ -33,11 +33,6 @@ define([
         ver61: 'v6.1'
     };
 
-    var LOG_LEVEL = 0;
-    // 0 - main input / output
-    // 1 - function level
-    // 2 - verbose / debug level
-
     var CURRENT = { apiver: APIVER.ver6 },
         LogStatus = vc2_constant.LIST.VC_LOG_STATUS;
 
@@ -96,7 +91,7 @@ define([
             } catch (error) {
                 throw error;
             } finally {
-                if (LOG_LEVEL == 2) vc2_util.log(logTitle, '>> Access Token: ', returnValue);
+                vc2_util.log(logTitle, '>> Access Token: ', returnValue);
             }
 
             return returnValue;
@@ -105,7 +100,7 @@ define([
             var logTitle = [LogTitle, 'getValidOrders'].join('::'),
                 returnValue;
             try {
-                if (LOG_LEVEL == 2) vc2_util.log(logTitle, '///// GET VALID ORDERS:', option);
+                vc2_util.log(logTitle, '///// GET VALID ORDERS:', option);
 
                 var reqValidOrders = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
@@ -164,12 +159,7 @@ define([
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                if (LOG_LEVEL == 2)
-                    vc2_util.log(
-                        logTitle,
-                        '//// GET ORDER DETAILS:',
-                        ingramOrder.ingramOrderNumber
-                    );
+                vc2_util.log(logTitle, '//// GET ORDER DETAILS:', ingramOrder.ingramOrderNumber);
 
                 var reqOrderDetails = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
@@ -233,7 +223,7 @@ define([
 
             returnValue = nsItemFF;
 
-            if (LOG_LEVEL == 2) vc2_util.log(logTitle, '/// nsitemff: ', nsItemFF);
+            vc2_util.log(logTitle, '/// nsitemff: ', nsItemFF);
             return returnValue;
         },
         extractLineData: function (respLineData) {
@@ -241,8 +231,7 @@ define([
                 returnValue;
 
             try {
-                if (LOG_LEVEL == 2)
-                    vc2_util.log(logTitle, '//// EXTRACT line data...', respLineData);
+                vc2_util.log(logTitle, '// EXTRACT line data...', respLineData);
 
                 // initialize the line data
                 var lineData = {
@@ -256,44 +245,59 @@ define([
                     vendorSKU: respLineData.ingramPartNumber ? respLineData.ingramPartNumber : 'NA',
                     order_num: respLineData.subOrderNumber ? respLineData.subOrderNumber : 'NA',
                     line_status: respLineData.lineStatus ? respLineData.lineStatus : 'NA',
-                    promised_date: respLineData.promisedDeliveryDate || 'NA',
-                    ship_qty: respLineData.quantityOrdered ? respLineData.quantityOrdered : 'NA'
+                    // promised_date: respLineData.promisedDeliveryDate || 'NA',
+                    ship_qty:
+                        respLineData.hasOwnProperty('quantityConfirmed') &&
+                        !vc2_util.isEmpty(respLineData.quantityConfirmed)
+                            ? respLineData.quantityConfirmed
+                            : respLineData.quantityOrdered
+                            ? respLineData.quantityOrdered
+                            : 'NA'
                 };
                 lineData.line_no = vc2_util.parseFloat(lineData.line_num);
 
                 /// extract serials, tracking
-                var shipmentDetails = LibIngramAPI.extractShipmentDetails(
-                    respLineData.shipmentDetails
+                var shipment = LibIngramAPI.extractShipmentDetails(
+                    respLineData.shipmentDetails,
+                    lineData
                 );
 
                 util.extend(lineData, {
-                    ship_date: shipmentDetails.ship_date || 'NA',
-                    order_date: shipmentDetails.order_date || 'NA',
-                    order_eta:
-                        respLineData.promisedDeliveryDate || shipmentDetails.order_eta || 'NA',
-                    carrier: shipmentDetails.carrier || 'NA',
-                    order_eta_ship: shipmentDetails.order_eta_ship || 'NA',
+                    ship_date: shipment.ship_date || 'NA',
+                    order_date: shipment.order_date || 'NA',
+                    order_eta: respLineData.promisedDeliveryDate || shipment.order_eta || 'NA',
+                    carrier: shipment.carrier || 'NA',
+                    order_eta_ship: shipment.order_eta_ship || 'NA',
                     serial_num:
-                        shipmentDetails.serialNos && shipmentDetails.serialNos.length
-                            ? shipmentDetails.serialNos.join(',')
+                        shipment.serialNos && shipment.serialNos.length
+                            ? shipment.serialNos.join(',')
                             : 'NA',
                     tracking_num:
-                        shipmentDetails.trackingNos && shipmentDetails.trackingNos.length
-                            ? shipmentDetails.trackingNos.join(',')
+                        shipment.trackingNos && shipment.trackingNos.length
+                            ? shipment.trackingNos.join(',')
                             : 'NA'
                 });
+
+                var estimatedDates = this.extractEstimatedDates(respLineData.estimatedDates);
+                if (estimatedDates)
+                    util.extend(lineData, {
+                        order_eta: estimatedDates.shipDate || lineData.order_eta,
+                        eta_ship_desc: estimatedDates.shipDescription,
+                        eta_ship_source: estimatedDates.shipSource,
+                        eta_delivery_date: estimatedDates.deliveryDate
+                    });
 
                 returnValue = lineData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;
             } finally {
-                if (LOG_LEVEL == 2) vc2_util.log(logTitle, '>> Line Data: ', returnValue);
+                vc2_util.log(logTitle, '>> Line Data: ', returnValue);
             }
 
             return returnValue;
         },
-        extractShipmentDetails: function (shipmentDetails) {
+        extractShipmentDetails: function (shipmentDetails, lineData) {
             var logTitle = [LogTitle, 'extractShipmentDetails'].join('::'),
                 returnValue;
 
@@ -340,7 +344,7 @@ define([
                 vc2_util.logError(logTitle, error);
                 throw error;
             } finally {
-                if (LOG_LEVEL == 2) vc2_util.log(logTitle, '// Shipment details: ', returnValue);
+                vc2_util.log(logTitle, '// Shipment details: ', returnValue);
             }
 
             return returnValue;
@@ -359,7 +363,7 @@ define([
                 }
             }
 
-            if (LOG_LEVEL == 2) vc2_util.log(logTitle, '//// trackingNos: ', trackingNos);
+            vc2_util.log(logTitle, '//// trackingNos: ', trackingNos);
 
             return trackingNos;
         },
@@ -382,14 +386,49 @@ define([
                     });
                 }
             }
-            if (LOG_LEVEL == 2) vc2_util.log(logTitle, '//// serialNos: ', serialNos);
+            vc2_util.log(logTitle, '//// serialNos: ', serialNos);
 
             return serialNos;
+        },
+        extractEstimatedDates: function (estDateDetails) {
+            var logTitle = [LogTitle, 'extractEstimatedDates'].join('::'),
+                returnValue;
+
+            try {
+                var estimatedDates = {};
+                if (!estDateDetails || !estDateDetails.length) return;
+
+                for (var i = 0, j = estDateDetails.length; i < j; i++) {
+                    var ship = estDateDetails[i].ship,
+                        delivery = estDateDetails[i].delivery;
+
+                    if (ship)
+                        util.extend(estimatedDates, {
+                            shipDate: ship.shipDate,
+                            shipDesc: ship.shipDescription,
+                            shipSource: ship.shipSource
+                        });
+
+                    if (delivery)
+                        util.extend(estimatedDates, {
+                            deliveryDate: delivery.deliveryDate
+                        });
+                }
+
+                returnValue = estimatedDates;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            } finally {
+                vc2_util.log(logTitle, '// Shipment details: ', returnValue);
+            }
+
+            return returnValue;
         }
     };
 
     var LibIngramAPIV61 = vc2_util.extend(LibIngramAPI, {
-        extractShipmentDetails: function (shipmentDetails) {
+        extractShipmentDetails: function (shipmentDetails, lineData) {
             var logTitle = [LogTitle, 'extractShipmentDetails.V61'].join('::'),
                 returnValue;
 
@@ -407,17 +446,22 @@ define([
 
                     // vc2_util.log(logTitle, '**** Shipment Detail **** ', shipmentDetail);
 
+                    // skip this shipment if its not shipped yet
+                    var shippedQty = 0;
+                    if (shipmentDetail.shippedDate) {
+                        shippedQty = parseFloat(shipmentDetail.quantity);
+                    }
+
                     util.extend(shipData, {
-                        // detail: shipmentDetail,
-                        quantity: shipData.quantity + parseFloat(shipmentDetail.quantity),
-                        order_date: shipmentDetail.invoiceDate,
-                        ship_date: shipmentDetail.shippedDate,
-                        order_eta: shipmentDetail.estimatedDeliveryDate || '',
-                        order_eta_ship: shipmentDetail.estimatedDeliveryDate
+                        quantity: shipData.quantity + shippedQty,
+                        order_date: shipmentDetail.invoiceDate || shipData.order_date,
+                        ship_date: shipmentDetail.shippedDate || shipData.ship_date,
+                        order_eta: shipmentDetail.estimatedDeliveryDate || shipData.order_eta || '',
+                        order_eta_ship:
+                            shipmentDetail.estimatedDeliveryDate || shipData.order_eta_ship
                     });
 
                     if (!shipmentDetail.carrierDetails) continue;
-
                     for (var ii = 0, jj = shipmentDetail.carrierDetails.length; ii < jj; ii++) {
                         var carrierDetails = shipmentDetail.carrierDetails[ii];
 
@@ -468,12 +512,11 @@ define([
                     CURRENT.vendorConfig.endPoint &&
                     CURRENT.vendorConfig.endPoint.match(/\/v6.1\//)
                 ) {
-                    if (LOG_LEVEL == 1)
-                        vc2_util.log(
-                            logTitle,
-                            '*** VER 6.1 Endpoint *** ',
-                            CURRENT.vendorConfig.endPoint
-                        );
+                    vc2_util.log(
+                        logTitle,
+                        '*** VER 6.1 Endpoint *** ',
+                        CURRENT.vendorConfig.endPoint
+                    );
                     CURRENT.apiver = APIVER.ver61;
                     LibIngramAPI = LibIngramAPIV61;
                 }
@@ -486,8 +529,7 @@ define([
 
                     var logPrefix = '[' + validOrder.ingramOrderNumber + '] ';
 
-                    if (LOG_LEVEL == 1)
-                        vc2_util.log(logTitle, logPrefix + '**** Ingram Order: **** ', validOrder);
+                    vc2_util.log(logTitle, logPrefix + '**** Ingram Order: **** ', validOrder);
 
                     var ingramOrderDate = validOrder.ingramOrderDate;
 
@@ -495,8 +537,8 @@ define([
                         date: moment(ingramOrderDate).add(1, 'day').toDate(),
                         text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
                     };
-                    if (LOG_LEVEL == 2)
-                        vc2_util.log(logTitle, logPrefix + '// defaultETA: ', defaultETA);
+
+                    vc2_util.log(logTitle, logPrefix + '// defaultETA: ', defaultETA);
 
                     var respOrderDetails = arrResponse.OrderDetails
                         ? arrResponse.OrderDetails[validOrder.ingramOrderNumber]
@@ -509,12 +551,11 @@ define([
                     )
                         continue;
 
-                    if (LOG_LEVEL == 2)
-                        vc2_util.log(
-                            logTitle,
-                            logPrefix + '// Order Detail num lines: ',
-                            respOrderDetails.lines.length
-                        );
+                    vc2_util.log(
+                        logTitle,
+                        logPrefix + '// Order Detail num lines: ',
+                        respOrderDetails.lines.length
+                    );
 
                     for (var ii = 0, jj = respOrderDetails.lines.length; ii < jj; ii++) {
                         var orderItem = LibIngramAPI.extractLineData(respOrderDetails.lines[ii]);

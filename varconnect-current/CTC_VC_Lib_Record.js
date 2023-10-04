@@ -210,6 +210,9 @@ define([
                     'ship_date',
                     'order_date',
                     'order_eta',
+                    'eta_ship_desc',
+                    'eta_ship_source',
+                    'eta_delivery_date',
                     'serial_num',
                     'tracking_num',
                     'carrier',
@@ -322,8 +325,8 @@ define([
             custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
             custcol_ctc_xml_serial_num: 'serial_num', // textarea
-            custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
-            custcol_ctc_vc_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
+            // custcol_ctc_vc_prom_deliv_date: 'promised_date',
             custcol_ctc_vc_vendor_info: 'INFO',
             custcol_ctc_vc_order_status: 'STATUS' // text
         },
@@ -337,7 +340,7 @@ define([
             'tracking_num',
             'carrier',
             'serial_num',
-            'promised_date',
+            // 'promised_date',
             'STATUS'
         ],
         columnType: {
@@ -361,8 +364,8 @@ define([
             LIST: [
                 'custcol_ctc_xml_dist_order_num',
                 'custcol_ctc_xml_date_order_placed',
-                'custcol_ctc_xml_ship_date',
-                'custcol_ctc_xml_carrier'
+                'custcol_ctc_xml_ship_date'
+                // 'custcol_ctc_xml_carrier'
                 // 'custcol_ctc_xml_tracking_num',
                 // 'custcol_ctc_xml_inb_tracking_num'
             ]
@@ -381,6 +384,7 @@ define([
         Current.MainCFG = option.mainConfig;
         Current.VendorCFG = option.vendorConfig;
         Current.PO_REC = option.po_record;
+        Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
 
         LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
@@ -405,7 +409,6 @@ define([
             returnValue.id = POData.createdFromID;
             if (POData.bypassVC) return returnValue;
 
-            // checkForDuplicateItems(po_record);
             Helper.getDateFormat();
 
             // extract lines from the PO
@@ -420,7 +423,8 @@ define([
                     vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                     vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ]
             });
 
@@ -468,10 +472,34 @@ define([
                         orderLineData: orderLineData
                     });
 
+                    // var SHIP_FIELDS = ['ship_date', 'tracking_num', 'carrier', 'serial_num'];
+                    var SHIP_FIELDS = [];// ['ship_date', 'tracking_num', 'serial_num'];
+
                     // loop thru the vendor columns
                     for (var ii = 0, jj = MAPPING.vendorColumns.length; ii < jj; ii++) {
-                        var vendorCol = MAPPING.vendorColumns[ii],
-                            orderCols = vc2_util.getKeysFromValues({
+                        var vendorCol = MAPPING.vendorColumns[ii];
+
+                        if (vc2_util.inArray(vendorCol, SHIP_FIELDS)) {
+                            // If DropShip and fulfillment is not enabled
+                            if (
+                                Current.isDropPO &&
+                                (!Current.MainCFG.createIF || !Current.VendorCFG.processDropships)
+                            ) {
+                                vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
+                                continue;
+                            }
+
+                            if (
+                                !Current.isDropPO &&
+                                (!Current.MainCFG.createIR ||
+                                    !Current.VendorCFG.processSpecialOrders)
+                            ) {
+                                vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
+                                continue;
+                            }
+                        }
+
+                        var orderCols = vc2_util.getKeysFromValues({
                                 source: MAPPING.lineColumn,
                                 value: vendorCol
                             }),
@@ -728,7 +756,6 @@ define([
 
                 vc2_util.log(logTitle, ' // PO updated successfully');
             }
-            
         } catch (err) {
             vc2_util.logError(logTitle, err);
             vc2_util.vcLog({
@@ -963,336 +990,6 @@ define([
         }
 
         return returnValue;
-    }
-
-    /**
-     * Sets column field value, appending if already set and not equal
-     * @param {obj} po_record the opened PO record
-     * @param {str} fieldID the internal id of the field to be updated
-     * @param {str} xmlVal the value to be set in the field
-     * @returns {*} void
-     */
-    function updateField(option) {
-        // po_record, fieldID, xmlVal) {
-        var po_record = option.po_record || Current.PO_REC,
-            fieldID = option.fieldID,
-            xmlVal = option.xmlVal;
-
-        var logTitle = [LogTitle, 'updateField'].join('::');
-        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        vc2_util.LogPrefix = LogPrefix;
-
-        var maxFieldLength = 290; // free form text fields have max length of 300 chars
-
-        var currentFieldValue = po_record.getCurrentSublistValue({
-            sublistId: 'item',
-            fieldId: fieldID
-        });
-
-        if (
-            currentFieldValue != null &&
-            currentFieldValue.length > 0 &&
-            currentFieldValue != 'NA'
-        ) {
-            if (
-                // fieldid is custcol_ctc_xml_carrier || custcol_ctc_vc_order_status OR
-                ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0 ||
-                // newValue is not currentValue, and newValue is not NA
-                (currentFieldValue.indexOf(xmlVal) < 0 && xmlVal != 'NA')
-            ) {
-                var newFieldValue = null;
-                // some fields should just be overwritten
-                if (
-                    ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'].indexOf(fieldID) >= 0
-                ) {
-                    // some fields should just be overwritten
-                    newFieldValue = xmlVal;
-                } else if (
-                    // some field values should stack instead of appending
-                    ['custcol_ctc_xml_eta'].indexOf(fieldID) >= 0
-                ) {
-                    newFieldValue = xmlVal + '\n' + currentFieldValue;
-                } else {
-                    newFieldValue = currentFieldValue + '\n' + xmlVal;
-                }
-
-                // if it exceeded 300
-                if (newFieldValue && newFieldValue.length > 300) {
-                    newFieldValue = newFieldValue.substr(0, maxFieldLength);
-                }
-
-                if (newFieldValue != currentFieldValue) {
-                    po_record.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: fieldID,
-                        value: newFieldValue
-                    });
-
-                    var returnedNewFieldValue = po_record.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: fieldID
-                    });
-
-                    if (
-                        !returnedNewFieldValue ||
-                        (returnedNewFieldValue != newFieldValue && newFieldValue != xmlVal)
-                    ) {
-                        po_record.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: fieldID,
-                            value: xmlVal
-                        });
-                    }
-                }
-            }
-        } else if (xmlVal && xmlVal != null && xmlVal != undefined) {
-            po_record.setCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: fieldID,
-                value: xmlVal
-            });
-        }
-    }
-
-    /**
-     * Sets column field list value, appending if already set and not equal
-     * @param {str} xmlVal the comma separated values to be set in the field
-     * @param {obj} po_record the opened PO record
-     * @param {str} fieldID the internal id of the field to be updated
-     * @returns {*} void
-     */
-    function updateFieldList(option) {
-        //(xmlNumbers, po_record, fieldID) {
-
-        var po_record = option.po_record || Current.PO_REC,
-            xmlNumbers = option.xmlNumbers || option.xmlnum,
-            fieldID = option.fieldID;
-
-        var logTitle = [LogTitle, 'updateFieldList'].join('::');
-        LogPrefix = ['[', po_record.type, ':', po_record.id, '] '].join('');
-        vc2_util.LogPrefix = LogPrefix;
-
-        var errorMsg = 'Maximum Field Length Exceeded';
-        var errorFound = false;
-        var maxFieldLength = 3950;
-
-        // split up the comma delimited line data into arrays for easier processing
-        if (xmlNumbers && xmlNumbers != null && xmlNumbers != undefined) {
-            var scannedNums = new Array();
-            if (typeof xmlNumbers == 'string') scannedNums = xmlNumbers.split(',');
-            else scannedNums = xmlNumbers;
-            try {
-                var currentNumbers = po_record.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldID
-                });
-
-                if (currentNumbers != null) {
-                    if (currentNumbers == 'NA' || (currentNumbers.length = 0)) {
-                        var newValue = xmlNumbers.replace(/[","]+/g, '\n');
-
-                        if (newValue && newValue != null && newValue != undefined)
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: newValue
-                            });
-
-                        if (fieldID == 'custcol_ctc_xml_ship_date') {
-                            var newDate = parseDate({ dateString: newValue });
-                            if (newDate && newDate != null && newDate != undefined)
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'custcol_ctc_vc_shipped_date',
-                                    value: newDate
-                                });
-                        }
-                    } else {
-                        /* remove \r chars */
-                        var newCurrent = currentNumbers.split('\r').join('');
-
-                        var newNumAdded = false;
-
-                        var currentNumbersList = Array();
-                        currentNumbersList = newCurrent.split('\n');
-
-                        /** check to see if the field already exceeds the max length **/
-                        if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
-                            errorFound = true;
-
-                        if (!errorFound) {
-                            for (var j = 0; j < scannedNums.length; j++) {
-                                var numFound = false;
-                                for (var x = 0; x < currentNumbersList.length; x++) {
-                                    if (currentNumbersList[x] == scannedNums[j]) {
-                                        numFound = true;
-                                        break;
-                                    }
-                                }
-                                if (!numFound && scannedNums[j] != 'NA') {
-                                    /* OLD  newCurrent += ',' + scannedNums[j]; */
-                                    newNumAdded = true;
-                                    if (
-                                        newCurrent.length + scannedNums[j].length <
-                                        maxFieldLength
-                                    ) {
-                                        newCurrent += '\n' + scannedNums[j];
-                                        currentNumbersList.push(scannedNums[j]);
-                                    } else {
-                                        newCurrent += '\n' + errorMsg;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (
-                                newNumAdded &&
-                                newCurrent &&
-                                newCurrent != null &&
-                                newCurrent != undefined
-                            ) {
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: fieldID,
-                                    value: newCurrent
-                                });
-                                if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                    var newDate = parseDate({ dateString: newCurrent });
-                                    if (newDate && newDate != null && newDate != undefined)
-                                        po_record.setCurrentSublistValue({
-                                            sublistId: 'item',
-                                            fieldId: 'custcol_ctc_vc_shipped_date',
-                                            value: newDate
-                                        });
-                                }
-                            } else if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                var newDate = parseDate({
-                                    dateString: currentNumbers.split('\r').join('')
-                                });
-                                if (newDate && newDate != null && newDate != undefined)
-                                    po_record.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'custcol_ctc_vc_shipped_date',
-                                        value: newDate
-                                    });
-                            }
-                        }
-                    }
-                } else {
-                    if (
-                        xmlNumbers.length <= maxFieldLength &&
-                        xmlNumbers != null &&
-                        xmlNumbers != undefined
-                    ) {
-                        po_record.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: fieldID,
-                            value: xmlNumbers.replace(/[","]+/g, '\n')
-                        });
-                        if (fieldID == 'custcol_ctc_xml_ship_date') {
-                            var newDate = parseDate({
-                                dateString: xmlNumbers.replace(/[","]+/g, '\n')
-                            });
-                            if (newDate && newDate != null && newDate != undefined)
-                                po_record.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: 'custcol_ctc_vc_shipped_date',
-                                    value: newDate
-                                });
-                        }
-                    } else {
-                        var newCurrent = '';
-                        for (var i = 0; i < scannedNums.length; i++) {
-                            if (newCurrent.length + scannedNums[i].length > maxFieldLength) {
-                                newCurrent += errorMsg;
-                                break;
-                            } else newCurrent += scannedNums[i] + '\n';
-                        }
-                        if (newCurrent && newCurrent != null && newCurrent != undefined) {
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: newCurrent
-                            });
-                            if (fieldID == 'custcol_ctc_xml_ship_date') {
-                                var newDate = parseDate({ dateString: newCurrent });
-                                if (newDate && newDate != null && newDate != undefined)
-                                    po_record.setCurrentSublistValue({
-                                        sublistId: 'item',
-                                        fieldId: 'custcol_ctc_vc_shipped_date',
-                                        value: newDate
-                                    });
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                vc2_util.logError(logTitle, err);
-            }
-        }
-    }
-
-    /**
-     * Checks for lines with duplicate items and sets the ctc fields in the duplicate lines to "Duplicate Item"
-     * @param {obj} po_record the opened PO record
-     * @returns {*} void
-     */
-    function checkForDuplicateItems(po_record) {
-        var logTitle = [LogTitle, 'checkForDuplicateItems'].join('::');
-
-        var lineItemCount = po_record.getLineCount({ sublistId: 'item' });
-        if (!lineItemCount || lineItemCount <= 0) return;
-
-        var a = [
-            'custcol_ctc_xml_dist_order_num',
-            'custcol_ctc_xml_date_order_placed',
-            'custcol_ctc_xml_eta',
-            'custcol_ctc_xml_serial_num',
-            'custcol_ctc_xml_carrier',
-            'custcol_ctc_xml_tracking_num',
-            'custcol_ctc_xml_ship_date'
-        ];
-
-        for (var line = 0; line < lineItemCount; line++) {
-            var tempItem = po_record.getSublistText({
-                sublistId: 'item',
-                fieldId: 'item',
-                line: line
-            });
-
-            for (var x = line + 1; x < lineItemCount; x++) {
-                var tempSubItem = po_record.getSublistText({
-                    sublistId: 'item',
-                    fieldId: vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
-                    line: x
-                });
-
-                if (tempItem == tempSubItem) {
-                    //Update XML fields with word DUPLICATE
-                    var tempItemDupeTest = po_record.getSublistText({
-                        sublistId: 'item',
-                        fieldId: 'custcol_ctc_xml_eta',
-                        line: x
-                    });
-
-                    if (tempItemDupeTest !== 'Duplicate Item') {
-                        var lineNum = po_record.selectLine({
-                            sublistId: 'item',
-                            line: x
-                        });
-                        a.forEach(function (fieldID) {
-                            po_record.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: fieldID,
-                                value: 'Duplicate Item'
-                            });
-                        });
-                        po_record.commitLine({
-                            sublistId: 'item'
-                        });
-                    }
-                }
-            }
-        }
     }
 
     function parseDate(option) {

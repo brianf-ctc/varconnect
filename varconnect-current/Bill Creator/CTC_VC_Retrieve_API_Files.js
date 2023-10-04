@@ -19,22 +19,34 @@ define([
     'N/error',
     './Libraries/moment',
     '../CTC_VC2_Lib_Utils',
+    './../CTC_VC2_Constants',
+    './../CTC_VC_Lib_MainConfiguration',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map'
-], function (ns_search, ns_runtime, ns_error, moment, vc2_util, VCLib_BillFile, VCLib_VendorMap) {
+], function (
+    ns_search,
+    ns_runtime,
+    ns_error,
+    moment,
+    vc2_util,
+    vc2_constant,
+    vc_mainCfg,
+    VCLib_BillFile,
+    VCLib_VendorMap
+) {
     var LogTitle = 'MR_BillFiles-API',
+        VCLOG_APPNAME = 'VAR Connect|Retrieve Bill (API)',
         LogPrefix = '';
 
     var MAP_REDUCE = {};
 
     MAP_REDUCE.getInputData = function () {
         var logTitle = [LogTitle, 'getInputData'].join(':');
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         LogPrefix = '[getInputData] ';
 
-        var CONNECT_TYPE = {
-                API: 1,
-                SFTP: 2
-            },
+        var CONNECT_TYPE = { API: 1, SFTP: 2 },
             validVendorCfg = [],
             validVendorCfgName = [];
 
@@ -135,6 +147,7 @@ define([
 
     MAP_REDUCE.reduce = function (context) {
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
         var searchValues = vc2_util.safeParse(context.values.shift());
 
@@ -160,12 +173,21 @@ define([
                 'custrecord_vc_bc_host_key',
                 'custrecord_vc_bc_url',
                 'custrecord_vc_bc_res_path',
-                'custrecord_vc_bc_ack_path'
+                'custrecord_vc_bc_ack_path',
+                'custrecord_vc_bc_token_url',
+                'custrecord_vc_bc_scope',
+                'custrecord_vc_bc_subs_key'
             ]
         });
 
+        var mainConfig = vc_mainCfg.getMainConfiguration();
+
         var configObj = {
             id: searchValues.values['custentity_vc_bill_config.vendor'].value,
+            poNum: mainConfig.overridePONum
+                ? searchValues.values['custbody_ctc_vc_override_ponum'] ||
+                  searchValues.values['tranid']
+                : searchValues.values['tranid'],
             ack_function: vendorConfig.custrecord_vc_bc_ack,
             entry_function: vendorConfig.custrecord_vc_bc_entry,
             user_id: vendorConfig.custrecord_vc_bc_user,
@@ -174,8 +196,13 @@ define([
             host_key: vendorConfig.custrecord_vc_bc_host_key,
             url: vendorConfig.custrecord_vc_bc_url,
             res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path
+            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
+            token_url: vendorConfig.custrecord_vc_bc_token_url,
+            scope: vendorConfig.custrecord_vc_bc_scope,
+            subscription_key: vendorConfig.custrecord_vc_bc_subs_key
         };
+
+        vc2_util.log(logTitle, '// tranid: ', searchValues.values['tranid']);
 
         if (vc2_util.isOneWorld()) {
             configObj.country = searchValues.values['country.subsidiary'].value;
@@ -201,6 +228,15 @@ define([
                 case 'wefi_api':
                     myArr = VCLib_VendorMap.wefi(context.key, configObj);
                     break;
+                case 'jenne_api':
+                    myArr = VCLib_VendorMap.jenne_api(context.key, configObj);
+                    break;
+                case 'scansource_api':
+                    myArr = VCLib_VendorMap.scansource_api(context.key, configObj);
+                    break;
+                case 'synnex_api':
+                    myArr = VCLib_VendorMap.synnex_api(context.key, configObj);
+                    break;
             }
 
             //log.debug(context.key, myArr);
@@ -214,6 +250,8 @@ define([
     };
 
     MAP_REDUCE.summarize = function (summary) {
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         handleErrorIfAny(summary);
         createSummaryRecord(summary);
     };

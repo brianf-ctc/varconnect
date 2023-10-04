@@ -69,8 +69,12 @@ define(function (require) {
                 Helper.initializeFeatures();
 
                 Current.Features = {
-                    MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
-                    MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+                    MULTISHIPTO: ns_runtime.isFeatureInEffect({
+                        feature: 'MULTISHIPTO'
+                    }),
+                    MULTILOCINVT: ns_runtime.isFeatureInEffect({
+                        feature: 'MULTILOCINVT'
+                    })
                 };
 
                 Current.MainCFG = option.mainConfig;
@@ -111,17 +115,12 @@ define(function (require) {
 
                 OrderLines.forEach(function (orderLine) {
                     try {
-                        if (!orderLine.order_num || orderLine.order_num == 'NA')
-                            throw ERROR_MSG.MISSING_ORDERNUM;
+                        if (!orderLine.order_num || orderLine.order_num == 'NA') throw ERROR_MSG.MISSING_ORDERNUM;
 
-                        if (
-                            orderLine.hasOwnProperty('is_shipped') &&
-                            orderLine.is_shipped === false
-                        )
+                        if (orderLine.hasOwnProperty('is_shipped') && orderLine.is_shipped === false)
                             throw ERROR_MSG.NOT_YET_SHIPPED;
 
-                        if (orderLine.hasOwnProperty('ns_record') && orderLine.ns_record)
-                            throw ERROR_MSG.ORDER_EXISTS;
+                        if (orderLine.hasOwnProperty('ns_record') && orderLine.ns_record) throw ERROR_MSG.ORDER_EXISTS;
 
                         orderLine.ship_qty = parseInt(orderLine.ship_qty || '0', 10);
                         if (orderLine.ship_qty == 0) throw ERROR_MSG.NO_SHIP_QTY;
@@ -145,8 +144,7 @@ define(function (require) {
                         Helper.logError(
                             {
                                 message: JSON.stringify(orderLine),
-                                logStatus:
-                                    order_error.logStatus || vc2_constant.LIST.VC_LOG_STATUS.WARN
+                                logStatus: order_error.logStatus || vc2_constant.LIST.VC_LOG_STATUS.WARN
                             },
                             vc2_util.extractError(order_error)
                         );

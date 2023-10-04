@@ -22,66 +22,57 @@ define([
 ], function (ns_https, ns_search, ns_runtime, vc2_util, moment, lodash) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
-        LogPrefix;
+        LogPrefix,
+        CURRENT = {};
 
     function processXml(recordId, config) {
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
 
-        log.audit(logTitle, [recordId, config]);
         LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
+        vc2_util.LogPrefix = LogPrefix;
+        vc2_util.log(logTitle, '>> current: ', [recordId, config]);
 
-        var recordData = vc2_util.flatLookup({
-            type: ns_search.Type.PURCHASE_ORDER,
-            id: recordId,
-            columns: ['tranid']
-        });
+        // var recordData = vc2_util.flatLookup({
+        //     type: ns_search.Type.PURCHASE_ORDER,
+        //     id: recordId,
+        //     columns: ['tranid', 'subsidiary']
+        // });
 
         var token = generateToken({
             recordId: recordId,
             config: config,
-            tranId: recordData.tranid
+            tranId: config.poNum
         });
-        log.audit(logTitle, LogPrefix + '>> access token: ' + JSON.stringify(token));
+        vc2_util.log(logTitle, '>> access token: ', token);
 
         var orderDetails = getOrderDetails({
             config: config,
             recordId: recordId,
-            token: token,
-            recordData: recordData
+            token: token
+            // recordData: recordData
         });
-        log.audit(logTitle, LogPrefix + '>> orderDetails: ' + JSON.stringify(orderDetails));
+        vc2_util.log(logTitle, '>> orderDetails: ', orderDetails);
 
         var invoiceDetails = getInvoiceDetails({
             config: config,
             recordId: recordId,
             token: token,
-            recordData: recordData,
+            // recordData: recordData,
             invoiceLinks: orderDetails.invoiceLinks,
             orderNumbers: orderDetails.orderNumbers
         });
-        // log.audit(logTitle, LogPrefix + '>> invoiceDetails: ' + JSON.stringify(invoiceDetails));
-
-        // for (orderId in orderDetails) {
-        //     log.audit(logTitle, LogPrefix + '>> orderId: ' + orderId);
-        //     log.audit(logTitle, LogPrefix + '>> order details: ' + JSON.stringify(orderDetails[orderId]));
-        // }
 
         var arrInvoices = [];
 
         for (var orderKey in invoiceDetails) {
-            log.audit(logTitle, LogPrefix + '>> invoice Id: ' + orderKey);
+            vc2_util.log(logTitle, '>> invoice Id: ', orderKey);
 
             var invoiceData = invoiceDetails[orderKey];
 
             // check for misc charges
             if (orderDetails.miscCharges && orderDetails.miscCharges[orderKey]) {
-                log.audit(
-                    logTitle,
-                    LogPrefix +
-                        '>> misc charge: ' +
-                        JSON.stringify(orderDetails.miscCharges[orderKey])
-                );
+                vc2_util.log(logTitle, '>> misc charge: ', orderDetails.miscCharges[orderKey]);
 
                 invoiceData.xmlStr = JSON.stringify({
                     invoiceDetails: JSON.parse(invoiceData.xmlStr),
@@ -109,7 +100,7 @@ define([
                 }
             }
 
-            log.audit(logTitle, LogPrefix + '>> invoiceData: ' + JSON.stringify(invoiceData));
+            vc2_util.log(logTitle, '>> invoiceData: ', invoiceData);
 
             arrInvoices.push(invoiceData);
         }
@@ -121,10 +112,8 @@ define([
         var logTitle = [LogTitle, 'getOrderDetails'].join('::'),
             returnValue = {};
 
-        // log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
-
         var config = option.config,
-            recordData = option.recordData,
+            // recordData = option.recordData,
             token = option.token,
             recordId = option.recordId;
 
@@ -144,12 +133,12 @@ define([
                     vc2_util.convertToQuery({
                         customerNumber: config.partner_id,
                         isoCountryCode: config.country,
-                        customerOrderNumber: recordData.tranid,
+                        customerOrderNumber: config.poNum,
                         pageNumber: pageNum,
                         pageSize: pageSize
                     });
                 searchUrl = config.url + searchUrl;
-                log.audit(logTitle, LogPrefix + '>> searchUrl: ' + searchUrl);
+                vc2_util.log(logTitle, '>> searchUrl: ', searchUrl);
 
                 // send the request
                 var searchOrderReq = vc2_util.sendRequest({
@@ -165,10 +154,11 @@ define([
                             'IM-CustomerNumber': config.partner_id,
                             customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
-                            'IM-CorrelationID': recordData.tranid
+                            'IM-CorrelationID': config.poNum
                         }
                     }
                 });
+                vc2_util.handleJSONResponse(searchOrderReq);
 
                 var searchOrderResp =
                     searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
@@ -183,24 +173,20 @@ define([
                 }
 
                 if (!searchOrderResp.recordsFound) {
-                    log.audit(logTitle, LogPrefix + '!! No records found !!');
+                    vc2_util.log(logTitle, '!! No records found !!');
+
                     break;
                 }
 
                 var ordersResults = searchOrderResp.orders;
                 recordsCount = recordsCount + (searchOrderResp.pageSize || 0);
 
-                log.audit(
-                    logTitle,
-                    LogPrefix +
-                        '>> ' +
-                        JSON.stringify({
-                            recordsCount: recordsCount,
-                            recordsFound: searchOrderResp.recordsFound,
-                            totalOrders: ordersResults.length,
-                            currentPage: pageNum
-                        })
-                );
+                vc2_util.log(logTitle, '>> ', {
+                    recordsCount: recordsCount,
+                    recordsFound: searchOrderResp.recordsFound,
+                    totalOrders: ordersResults.length,
+                    currentPage: pageNum
+                });
 
                 if (vc2_util.isEmpty(ordersResults)) break;
 
@@ -231,22 +217,24 @@ define([
                 }
             }
 
-            log.audit(logTitle, LogPrefix + '>> Invoice Links: ' + JSON.stringify(arrInvoiceLinks));
-            log.audit(logTitle, LogPrefix + '>> Order Numbers: ' + JSON.stringify(arrOrderNums));
+            vc2_util.log(logTitle, '>> Invoice Links: ', arrInvoiceLinks);
+            vc2_util.log(logTitle, '>> Order Numbers: ', arrOrderNums);
+
             arrInvoiceLinks = vc2_util.uniqueArray(arrInvoiceLinks);
             arrOrderNums = vc2_util.uniqueArray(arrOrderNums);
 
-            log.audit(logTitle, LogPrefix + '>> Prep to fetch miscellaneous charges.... ');
+            vc2_util.log(logTitle, '>> Prep to fetch miscellaneous charges.... ');
+
             orderMiscCharges = getMiscCharges(
                 util.extend(option, {
                     invoiceLinks: arrInvoiceLinks,
                     orderNums: arrOrderNums
                 })
             );
-            log.audit(logTitle, LogPrefix + '>> misc charges: ' + JSON.stringify(orderMiscCharges));
+
+            vc2_util.log(logTitle, '>> misc charges: ', orderMiscCharges);
         } catch (error) {
-            var errorMsg = vc2_util.extractError(error);
-            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+            vc2_util.logError(logTitle, error);
         } finally {
             returnValue = {
                 invoiceLinks: arrInvoiceLinks || [],
@@ -262,10 +250,10 @@ define([
         var logTitle = [LogTitle, 'getMiscCharges'].join('::'),
             returnValue = {};
 
-        log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+        vc2_util.log(logTitle, '>> option: ', option);
 
         var config = option.config,
-            recordData = option.recordData,
+            // recordData = option.recordData,
             token = option.token,
             recordId = option.recordId;
 
@@ -289,10 +277,11 @@ define([
                             'IM-CustomerNumber': config.partner_id,
                             customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
-                            'IM-CorrelationID': recordData.tranid
+                            'IM-CorrelationID': config.poNum
                         }
                     }
                 });
+                vc2_util.handleJSONResponse(orderDetailsReq);
 
                 var orderDetailsResp =
                     orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
@@ -310,7 +299,7 @@ define([
 
                 for (var ii = 0, jj = orderDetailsResp.miscellaneousCharges.length; ii < jj; ii++) {
                     var chargeInfo = orderDetailsResp.miscellaneousCharges[ii];
-                    log.audit(logTitle, LogPrefix + '>> chargeInfo: ' + JSON.stringify(chargeInfo));
+                    vc2_util.log(logTitle, '>> chargeInfo: ', chargeInfo);
 
                     if (!chargeInfo.subOrderNumber) continue;
                     if (!objMischCharges[chargeInfo.subOrderNumber])
@@ -325,8 +314,7 @@ define([
                 vc2_util.waitMs(1200);
             }
         } catch (error) {
-            var errorMsg = vc2_util.extractError(error);
-            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+            vc2_util.logError(logTitle, error);
         } finally {
             returnValue = objMischCharges;
         }
@@ -338,10 +326,10 @@ define([
         var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
             returnValue = {};
 
-        log.audit(logTitle, LogPrefix + '>> option: ' + JSON.stringify(option));
+        vc2_util.log(logTitle, '>> option: ', option);
 
         var config = option.config,
-            recordData = option.recordData,
+            // recordData = option.recordData,
             token = option.token,
             recordId = option.recordId;
 
@@ -352,6 +340,11 @@ define([
 
             for (var i = 0, j = option.invoiceLinks.length; i < j; i++) {
                 var invoiceLink = option.invoiceLinks[i];
+
+                if (invoiceLink.match(/v6\/invoices/gi)) {
+                    invoiceLink = invoiceLink.replace(/v6\/invoices/gi, 'v5/invoices');
+                }
+                log.audit(logTitle, '// invoiceLink: ' + invoiceLink);
 
                 var invoiceDetailsReq = vc2_util.sendRequest({
                     header: [LogTitle, 'Invoice Details'].join(' '),
@@ -364,15 +357,18 @@ define([
                             ('&isoCountryCode=' + config.country),
                         headers: {
                             'Content-Type': 'application/json',
-                            Accept: 'application/json',
+                            Accept: '*/*',
                             Authorization: 'Bearer ' + token,
                             'IM-CustomerNumber': config.partner_id,
-                            customerNumber: config.partner_id,
+                            // customerNumber: config.partner_id,
                             'IM-CountryCode': config.country,
-                            'IM-CorrelationID': recordData.tranid
+                            'IM-CorrelationID': config.poNum,
+                            'IM-ApplicationID': ns_runtime.accountId
                         }
                     }
                 });
+                vc2_util.handleJSONResponse(invoiceDetailsReq);
+                vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
 
                 var invoiceDetailsResp =
                     invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
@@ -394,7 +390,7 @@ define([
 
                 var invoiceInfo = invoiceDetailsResp.serviceresponse.invoicedetailresponse,
                     invoiceData = {
-                        po: recordData.tranid,
+                        po: config.poNum,
                         date: invoiceInfo.hasOwnProperty('invoicedate')
                             ? moment(invoiceInfo.invoicedate, 'YYYY-MM-DD').format('MM/DD/YYYY')
                             : moment().format('MM/DD/YYYY'),
@@ -407,20 +403,19 @@ define([
                                 vc2_util.parseFloat(invoiceInfo.customerforeignfrightamt),
                             other: vc2_util.parseFloat(invoiceInfo.discountamount)
                         },
+                        carrier: invoiceInfo.carrier || '',
+                        shipDate: invoiceInfo.hasOwnProperty('shipdate')
+                            ? moment(invoiceInfo.shipdate, 'YYYY-MM-DD').format('MM/DD/YYYY')
+                            : 'NA',
                         lines: []
                     };
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> Invoice Data (initial): ' + JSON.stringify(invoiceData)
-                );
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> Processing lines: ' + JSON.stringify(invoiceInfo.lines.length)
-                );
+
+                vc2_util.log(logTitle, '>> Invoice Data (initial): ', invoiceData);
+                vc2_util.log(logTitle, '>> Processing lines: ', invoiceInfo.lines.length);
 
                 for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
                     var lineInfo = invoiceInfo.lines[ii];
-                    log.audit(logTitle, LogPrefix + '>> ...Line Info: ' + JSON.stringify(lineInfo));
+                    vc2_util.log(logTitle, '>> ...Line Info: ', lineInfo);
 
                     if (vc2_util.isEmpty(lineInfo.vendorpartnumber)) continue;
 
@@ -454,16 +449,14 @@ define([
                     var lineIdx = lodash.findIndex(invoiceData.lines, {
                         ITEMNO: lineData.ITEMNO
                     });
-                    log.audit(logTitle, LogPrefix + '>> ...lineIdx: ' + JSON.stringify(lineIdx));
+                    vc2_util.log(logTitle, '>> ...lineIdx: ', lineIdx);
 
                     var lineItemRate = lodash.findIndex(invoiceData.lines, {
                         ITEMNO: lineData.ITEMNO,
                         PRICE: vc2_util.parseFloat(lineInfo.unitprice)
                     });
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '>> ...lineItemRate: ' + JSON.stringify(lineItemRate)
-                    );
+
+                    vc2_util.log(logTitle, '>> ...lineItemRate: ', lineItemRate);
 
                     if (lineItemRate >= 0) {
                         // increment the quantity
@@ -498,7 +491,7 @@ define([
                         invoiceData.lines.push(lineData);
                     }
                 }
-                log.audit(logTitle, LogPrefix + '>> Invoice Data: ' + JSON.stringify(invoiceData));
+                vc2_util.log(logTitle, '>> Invoice Data: ', invoiceData);
 
                 objInvoiceDetails[invoiceData.invoice] = {
                     ordObj: invoiceData,
@@ -508,8 +501,7 @@ define([
                 // vc_util.waitMs(500);
             }
         } catch (error) {
-            var errorMsg = vc2_util.extractError(error);
-            log.error(logTitle, LogPrefix + '## ERROR ## ' + errorMsg);
+            vc2_util.log(logTitle, '## ERROR ##', error);
         } finally {
             returnValue = objInvoiceDetails;
         }
@@ -519,7 +511,6 @@ define([
 
     function generateToken(option) {
         var logTitle = [LogTitle, 'generateToken'].join('::');
-        // log.audit(logTitle, option);
 
         var tokenReq = vc2_util.sendRequest({
             header: [LogTitle, 'GenerateToken'].join(' '),
@@ -539,15 +530,15 @@ define([
                 }
             }
         });
+        vc2_util.handleJSONResponse(tokenReq);
 
-        if (tokenReq.isError) throw tokenReq.errorMsg;
-        var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
+        var tokenResp = tokenReq.PARSED_RESPONSE;
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;
     }
 
-    // Add the return statement that identifies the entry point function.
+    // // Add the return statement that identifies the entry point function.
     return {
         processXml: processXml
     };

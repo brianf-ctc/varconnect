@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -33,8 +33,18 @@ define([
     'N/email',
     '../CTC_VC2_Constants.js',
     '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator'
-], function (ns_record, ns_search, ns_runtime, ns_email, vc2_constant, vc_maincfg, vc_license) {
+    '../CTC_VC_Lib_LicenseValidator',
+    '../CTC_VC2_Lib_Utils'
+], function (
+    ns_record,
+    ns_search,
+    ns_runtime,
+    ns_email,
+    vc2_constant,
+    vc_maincfg,
+    vc_license,
+    vc2_utils
+) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -75,8 +85,8 @@ define([
                     recordType: record.type,
                     salesOrderId: null
                 };
-                var createdFromData = Helper.flatLookup({
-                    type: ns_record.Type.TRANSACTION,
+                var createdFromData = vc2_utils.flatLookup({
+                    type: ns_search.Type.TRANSACTION,
                     id: recordData.createdfrom,
                     columns: ['type', 'recordtype', 'createdfrom']
                 });
@@ -110,7 +120,7 @@ define([
                         serialObj[SERIALFLD[recTypeKey]] = PARAM.recordId;
                     }
 
-                    if (createdFromData.recordtype == ns_record.Type[recType]) {
+                    if (createdFromData.recordtype == ns_record.Type[recTypeKey]) {
                         serialObj[SERIALFLD[recTypeKey]] = recordData.createdfrom;
                     }
                 }
@@ -154,7 +164,7 @@ define([
 
                     if (lineData.serialStr) lineData.serialArr = Helper.split(lineData.serialStr);
                     if (lineData.updateSerialStr)
-                        lineData.updateSeriaArr = Helper.split(lineData.updateSerialStr);
+                        lineData.updateSerialArr = Helper.split(lineData.updateSerialStr);
 
                     log.audit(logTitle, LogPrefix + '// Line Data: ' + JSON.stringify(lineData));
 
@@ -183,19 +193,27 @@ define([
                     // var serialArray = Helper.split(serialString);
                     // var updateSerialArray = Helper.split(updateSerialString);
 
-                    lineData.serialArr.forEach(function (serial) {
-                        var serialData = util.extend({ action: 'create', name: serial }, serialObj);
-                        serialData[SERIALFLD.ITEM] = lineData.item;
-                        returnData.push(serialData);
-                        return true;
-                    });
+                    if (lineData.serialArr)
+                        lineData.serialArr.forEach(function (serial) {
+                            var serialData = util.extend(
+                                { action: 'create', name: serial },
+                                serialObj
+                            );
+                            serialData[SERIALFLD.ITEM] = lineData.item;
+                            returnData.push(serialData);
+                            return true;
+                        });
 
-                    lineData.updateSerialArray.forEach(function (serial) {
-                        var serialData = util.extend({ action: 'update', name: serial }, serialObj);
-                        serialData[SERIALFLD.ITEM] = lineData.item;
-                        returnData.push(serialData);
-                        return true;
-                    });
+                    if (lineData.updateSerialArr)
+                        lineData.updateSerialArr.forEach(function (serial) {
+                            var serialData = util.extend(
+                                { action: 'update', name: serial },
+                                serialObj
+                            );
+                            serialData[SERIALFLD.ITEM] = lineData.item;
+                            returnData.push(serialData);
+                            return true;
+                        });
 
                     // for (var i in serialArray)
                     //     returnObj.push({
@@ -227,7 +245,7 @@ define([
                 return false;
             }
 
-            return returnObj;
+            return returnData;
         },
 
         reduce: function (context) {

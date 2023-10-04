@@ -69,7 +69,10 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
             ],
             columns: [
                 search.createColumn({ name: 'mainline', label: '*' }),
-                search.createColumn({ name: 'tranid', label: 'Document Number' }),
+                search.createColumn({
+                    name: 'tranid',
+                    label: 'Document Number'
+                }),
                 search.createColumn({ name: 'item', label: 'Item' }),
                 search.createColumn({ name: 'quantity', label: 'Quantity' })
             ]

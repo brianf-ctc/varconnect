@@ -42,9 +42,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
         var logTitle = [LogTitle, 'getInputData'].join('::');
         log.debug(logTitle, '############ START SCRIPT ############');
 
-        var srchId = ns_runtime
-            .getCurrentScript()
-            .getParameter('custscript_ctc_vc_mr_serialization_srch');
+        var srchId = ns_runtime.getCurrentScript().getParameter('custscript_ctc_vc_mr_serialization_srch');
 
         if (!srchId) throw new Error('No search provided');
         var srch = ns_search.load({ id: srchId });
@@ -67,8 +65,7 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
             serial = searchResult.values.inventorynumber,
             item = (searchResult.values.item[0] || searchResult.values.item).value,
             customSerial =
-                searchResult.values.custitemnumber_ctc_vc_sn[0] ||
-                searchResult.values.custitemnumber_ctc_vc_sn;
+                searchResult.values.custitemnumber_ctc_vc_sn[0] || searchResult.values.custitemnumber_ctc_vc_sn;
 
         // 2.00 change for updating custom serials
         log.debug(logTitle, '>> VALUES: ' + JSON.stringify(searchResult.values));
@@ -193,7 +190,10 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
             txnSearch.run().each(function (result) {
                 var type = result.getValue('type'),
                     createdFrom = result.getValue('createdfrom'),
-                    createdFromType = result.getValue({ name: 'type', join: 'createdfrom' });
+                    createdFromType = result.getValue({
+                        name: 'type',
+                        join: 'createdfrom'
+                    });
 
                 if (!soFound) {
                     if (type == 'SalesOrd') soFound = result.id;
@@ -216,7 +216,12 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                 else return true;
             });
 
-            return { so: soFound, po: poFound, fulfil: ifFound, receipt: irFound };
+            return {
+                so: soFound,
+                po: poFound,
+                fulfil: ifFound,
+                receipt: irFound
+            };
         },
 
         createCustomSerial: function (options) {
@@ -295,21 +300,37 @@ define(['N/record', 'N/search', 'N/url', 'N/runtime', './../CTC_VC2_Lib_Utils'],
                     id: customSerial.value
                 });
 
-                if (item) rec.setValue({ fieldId: 'custrecordserialitem', value: item });
+                if (item)
+                    rec.setValue({
+                        fieldId: 'custrecordserialitem',
+                        value: item
+                    });
 
                 if (so && !rec.getValue({ fieldId: 'custrecordserialsales' }))
-                    rec.setValue({ fieldId: 'custrecordserialsales', value: so });
+                    rec.setValue({
+                        fieldId: 'custrecordserialsales',
+                        value: so
+                    });
 
                 if (po && !rec.getValue({ fieldId: 'custrecordserialpurchase' }))
-                    rec.setValue({ fieldId: 'custrecordserialpurchase', value: po });
+                    rec.setValue({
+                        fieldId: 'custrecordserialpurchase',
+                        value: po
+                    });
 
                 //3.00
                 if (fulfil && !rec.getValue({ fieldId: 'custrecorditemfulfillment' }))
-                    rec.setValue({ fieldId: 'custrecorditemfulfillment', value: fulfil });
+                    rec.setValue({
+                        fieldId: 'custrecorditemfulfillment',
+                        value: fulfil
+                    });
 
                 //3.00
                 if (receipt && !rec.getValue({ fieldId: 'custrecorditemreceipt' }))
-                    rec.setValue({ fieldId: 'custrecorditemreceipt', value: fulfil });
+                    rec.setValue({
+                        fieldId: 'custrecorditemreceipt',
+                        value: fulfil
+                    });
 
                 rec.save();
             }

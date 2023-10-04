@@ -18,28 +18,31 @@ define([
     'N/runtime',
     'N/error',
     'N/https',
-    'N/config',
-    './Libraries/moment',
+    './Libraries/CTC_VC_Lib_BillProcess',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
+
     './../CTC_VC2_Lib_Utils',
-    './../CTC_VC2_Constants'
+    './../CTC_VC2_Constants',
+    './Libraries/moment'
 ], function (
     ns_search,
     ns_record,
     ns_runtime,
     ns_error,
     ns_https,
-    ns_config,
-    moment,
+    vc_billprocess,
     vc_billfile,
     vc2_util,
-    vc2_constant
+    vc2_constant,
+    moment
 ) {
     var LogTitle = 'VC PROCESS BILL',
+        VCLOG_APPNAME = 'VAR Connect | Process Bill',
         LogPrefix = '',
         BILL_CREATOR = vc2_constant.Bill_Creator,
         BILL_FILE = vc2_constant.RECORD.BILLFILE,
-        BILLFILE_FLD = vc2_constant.RECORD.BILLFILE.FIELD;
+        BILLFILE_FLD = vc2_constant.RECORD.BILLFILE.FIELD,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     var SCRIPT = {
         RL_ITEMFF: {
@@ -59,8 +62,8 @@ define([
     var MAP_REDUCE = {
         getInputData: function () {
             var logTitle = [LogTitle, 'getInputData'].join(':');
-
-            log.debug(logTitle, '*** START SCRIPT ***');
+            vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+            vc2_util.LogPrefix = 'GetInputData';
 
             var ScriptParam = {
                 billFileID: ns_runtime.getCurrentScript().getParameter({
@@ -70,6 +73,7 @@ define([
                     name: 'custscript_ctc_vc_bc_bill_in_adv'
                 })
             };
+            vc2_util.log(logTitle, '*** START SCRIPT ***', ScriptParam);
 
             ////// SEARCH OPTION //////////////
             var searchOption = {
@@ -149,13 +153,14 @@ define([
 
             var searchObj = ns_search.create(searchOption);
             var totalPending = searchObj.runPaged().count;
-            log.audit(logTitle, '>> Bills To Process: ' + totalPending);
+            vc2_util.log(logTitle, '>> Bills To Process: ' + totalPending);
 
             return searchObj;
         },
 
         reduce: function (context) {
-            var logTitle = [LogTitle, 'reduce'].join(':');
+            var logTitle = [LogTitle, 'reduce', context.key].join(':');
+            vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
             var ScriptParam = {
                 billFileID: ns_runtime.getCurrentScript().getParameter({
@@ -165,115 +170,184 @@ define([
                     name: 'custscript_ctc_vc_bc_bill_in_adv'
                 })
             };
-
-            log.debug(logTitle, '>> ScriptParam: ' + JSON.stringify(ScriptParam));
-            log.debug(logTitle, '>> total to process: ' + JSON.stringify(context.values.length));
+            vc2_util.log(logTitle, '/// To Process: ', context.values.length);
 
             // var serialsToProcess = null;
             for (var i = 0, j = context.values.length; i < j; i++) {
-                var currentData = JSON.parse(context.values[i]);
-                var updateValues = {};
+                var currentValues = JSON.parse(context.values[i]);
+
+                var CurrentData = {},
+                    UpdateValues = {},
+                    ReturnObj = { msg: '' };
+
+                vc2_util.log(logTitle, '/// === START =====================================///');
+
+                vc2_util.log(logTitle, '/// CURRENT VALUES: ', currentValues);
 
                 try {
-                    var poId = currentData.values[BILLFILE_FLD.PO_LINK].value;
-                    LogPrefix = '[purchaseorder:' + poId + ' ]';
+                    vc_billprocess.resetValues();
+                    vc_billprocess.loadBillFile({ id: currentValues.id });
+                    var BillFileData = vc_billprocess.FlexData.BillFile;
 
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... currentData: ' + JSON.stringify(currentData)
-                    );
+                    if (vc_billprocess.FlexData.HasErrors) {
+                        return util.extend(
+                            ReturnObj,
+                            vc_billprocess.reportError() || { msg: 'Unexpected Error occurred.' }
+                        );
+                    }
 
-                    var vendorCfg = Helper.loadVendorConfig({
-                        entity: currentData.values['entity.' + BILLFILE_FLD.PO_LINK].value
+                    vc2_util.log(logTitle, '... bill file data: ', BillFileData);
+                    util.extend(CurrentData, {
+                        PO_ID: currentValues.values[BILLFILE_FLD.PO_LINK].value,
+                        entity: currentValues.values['entity.' + BILLFILE_FLD.PO_LINK].value,
+                        poStatus: currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK],
+                        billFileId: currentValues.id,
+                        billFile: BillFileData,
+                        billData: JSON.parse(BillFileData.JSON),
+                        isBillReceivable: BillFileData.IS_RCVBLE
                     });
 
-                    var requestBillFile = Helper.fetchBillFile({ internalId: currentData.id });
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... billFileData: ' + JSON.stringify(requestBillFile)
-                    );
+                    vc2_util.LogPrefix = '[purchaseorder:' + CurrentData.PO_ID + ' ]';
+                    util.extend(CurrentData, {
+                        isOrderReceivable: vc2_util.inArray(CurrentData.poStatus.value, [
+                            'pendingReceipt',
+                            'partiallyReceived',
+                            'pendingBillPartReceived'
+                        ])
+                    });
+                    vc2_util.log(logTitle, '... CurrentData: ', CurrentData);
 
-                    // check the PO Status
-                    var poStatus = currentData.values['statusref.' + BILLFILE_FLD.PO_LINK];
-                    log.audit(logTitle, LogPrefix + ' ... po status: ' + JSON.stringify(poStatus));
+                    var vendorCfg = Helper.loadVendorConfig(CurrentData);
+                    var statusNote = [
+                        'PO Status: ' + CurrentData.poStatus.text,
+                        'Bill File receivable? ' + JSON.stringify(CurrentData.isBillReceivable),
+                        'Fulfillment enabled? ' + JSON.stringify(vendorCfg.ENABLE_FULFILLLMENT)
+                    ].join(' ');
 
-                    var isBillReceivable = requestBillFile[BILLFILE_FLD.IS_RCVBLE];
-                    log.audit(
-                        logTitle,
-                        LogPrefix + ' ... isBillReceivable: ' + JSON.stringify(isBillReceivable)
-                    );
+                    // add it to the VC Logs
+                    vc2_util.vcLog({
+                        title: 'Bill Creator | Process Bill',
+                        recordId: CurrentData.PO_ID,
+                        message: statusNote
+                    });
 
-                    var isOrderReceivable = vc2_util.inArray(poStatus.value, [
-                        'pendingReceipt',
-                        'partiallyReceived',
-                        'pendingBillPartReceived'
-                    ]);
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '... isOrderReceivable: ' + JSON.stringify(isOrderReceivable)
-                    );
+                    /// check for existing bill
+                    var arrExistingBills = Helper.getExistingBill({
+                        entity: CurrentData.entity,
+                        invoiceNo: CurrentData.billData.invoice
+                    });
+                    vc2_util.log(logTitle, '... existing bills? ', arrExistingBills);
 
+                    /// BILL ALREADY EXISTS //////////////////////
+                    if (arrExistingBills && arrExistingBills.length) {
+                        ReturnObj = vc2_util.extend(BILL_CREATOR.Code.EXISTING_BILLS, {
+                            id: arrExistingBills[0].id,
+                            existingBills: JSON.stringify(arrExistingBills),
+                            details: [
+                                'Bill #' + arrExistingBills[0].tranId,
+                                ' (id:' + arrExistingBills[0].id + '). '
+                            ].join('')
+                        });
+                        return;
+                    }
+
+                    /// ITEM FULFILLMENT  ///////////
                     var respItemff = {};
-                    if (vendorCfg.ENABLE_FULFILLLMENT && isBillReceivable && isOrderReceivable) {
+                    if (
+                        vendorCfg.ENABLE_FULFILLLMENT &&
+                        CurrentData.isBillReceivable &&
+                        CurrentData.isOrderReceivable
+                    ) {
                         respItemff = Helper.createItemFulfillment({
-                            currentData: currentData,
-                            billFileData: requestBillFile
+                            currentData: currentValues,
+                            billFileData: CurrentData.billFile
                         });
-                    }
 
+                        vc2_util.log(logTitle, '... itemff response: ', respItemff);
+                        if (respItemff.isError) {
+                            util.extend(ReturnObj, respItemff);
+                            throw respItemff.msg;
+                        }
+                    }
+                    ////////////////////
+
+                    /// PREPARE for BILL CREATION
                     // get any updated values from the record
-                    var reqBillCreate = util.extend(JSON.parse(JSON.stringify(requestBillFile)), {
-                        paramBillInAdv: ScriptParam.billInAdv,
-                        billFileId: currentData.id
-                    });
-
-                    log.debug(logTitle, '>> requestObj: ' + JSON.stringify(reqBillCreate));
-
-                    var respBillCreate = ns_https.requestRestlet({
-                        headers: { 'Content-Type': 'application/json' },
-                        scriptId: SCRIPT.RL_BILLCREATE.ID,
-                        deploymentId: SCRIPT.RL_BILLCREATE.DEPLOY,
+                    var billCreateReqBody = util.extend(
+                        vc2_util.extractValues({
+                            source: CurrentData.billFile,
+                            params: ['ID', 'PO_LINK', 'PROC_VARIANCE', 'IS_RCVBLE']
+                        }),
+                        {
+                            paramBillInAdv: ScriptParam.billInAdv
+                        }
+                    );
+                    vc2_util.log(logTitle, '... bill create req: ', billCreateReqBody);
+                    var billCreateReq = vc2_util.sendRequestRestlet({
+                        header: 'Bill Creator | Bill Create',
                         method: 'POST',
-                        body: JSON.stringify(reqBillCreate)
+                        recordId: BillFileData.PO_LINK,
+                        isJSON: true,
+                        query: {
+                            headers: { 'Content-Type': 'application/json' },
+                            scriptId: SCRIPT.RL_BILLCREATE.ID,
+                            deploymentId: SCRIPT.RL_BILLCREATE.DEPLOY,
+                            body: JSON.stringify(billCreateReqBody)
+                        }
                     });
+                    vc2_util.handleJSONResponse(billCreateReq);
+                    if (!billCreateReq.PARSED_RESPONSE) throw 'Unable to parse response body';
 
-                    var respBody = JSON.parse(respBillCreate.body);
-                    log.debug(logTitle, '>> responseBody: ' + JSON.stringify(respBody));
+                    ReturnObj = billCreateReq.PARSED_RESPONSE;
+                    if (ReturnObj.isError) throw ReturnObj.msg;
+                } catch (error) {
+                    vc2_util.logError(logTitle, JSON.stringify(error));
 
-                    if (respBody.status) {
-                        updateValues[BILLFILE_FLD.STATUS] = respBody.status;
-                    }
+                    ReturnObj.isError = true;
+                    ReturnObj.errorMsg = vc2_util.extractError(error);
 
-                    if (respBody.msg) {
-                        updateValues[BILLFILE_FLD.PROCESS_LOG] = vc_billfile.addNote({
-                            note: respBody.msg,
-                            current: requestBillFile[BILLFILE_FLD.PROCESS_LOG]
+                    // vc2_util.vcLogError({
+                    //     title: 'Bill Creator | Error',
+                    //     recordId: current.PO_ID,
+                    //     details: vc2_util.extractError(error)
+                    // });
+                } finally {
+                    log.debug(logTitle, '// FINALLY // returnObj: ' + JSON.stringify(ReturnObj));
+
+                    // check for any logs
+                    var logMsg = ReturnObj.msg || ReturnObj.errorMsg;
+                    if (ReturnObj.details) logMsg += ' ' + ReturnObj.details;
+                    if (logMsg)
+                        vc_billfile.addNote({
+                            note: logMsg,
+                            id: currentValues.id
                         });
+
+                    if (ReturnObj.status) {
+                        UpdateValues[BILLFILE_FLD.STATUS] = ReturnObj.status;
                     }
 
-                    if (respBody.id) {
-                        updateValues[BILLFILE_FLD.BILL_LINK] = respBody.id;
+                    if (ReturnObj.id) {
+                        UpdateValues[BILLFILE_FLD.BILL_LINK] = ReturnObj.id;
                     }
 
-                    if (respBody.varianceLines) {
-                        var jsonData = JSON.parse(requestBillFile[BILLFILE_FLD.JSON]);
-                        jsonData.varianceLines = respBody.varianceLines;
-                        updateValues[BILLFILE_FLD.JSON] = JSON.stringify(jsonData);
+                    if (ReturnObj.varianceLines) {
+                        CurrentData.billData.varianceLines = ReturnObj.varianceLines;
+                        UpdateValues[BILLFILE_FLD.JSON] = JSON.stringify(CurrentData.billData);
                     }
 
-                    log.debug(logTitle, '>> update fields: ' + JSON.stringify(updateValues));
+                    log.debug(logTitle, '>> update fields: ' + JSON.stringify(UpdateValues));
 
                     //if the updateValues object isn't empty update the record
-                    if (!vc2_util.isEmpty(updateValues)) {
+                    if (!vc2_util.isEmpty(UpdateValues)) {
                         ns_record.submitFields({
                             type: BILL_FILE.ID,
-                            id: currentData.id,
-                            values: updateValues
+                            id: currentValues.id,
+                            values: UpdateValues
                         });
                     }
-                } catch (e) {
-                    log.error(context.key + ': ' + 'Error encountered in reduce', e);
                 }
+                vc2_util.log(logTitle, '/// === END =======================================///');
             }
         },
 
@@ -287,6 +361,7 @@ define([
         fetchBillFile: function (option) {
             if (!option.internalId) return false;
             var parentSearchFields = [
+                'internalid',
                 BILLFILE_FLD.IS_RCVBLE,
                 BILLFILE_FLD.PROCESS_LOG,
                 BILLFILE_FLD.STATUS,
@@ -384,113 +459,154 @@ define([
                     return true;
                 });
 
-                log.audit(logTitle, LogPrefix + '// config: ' + JSON.stringify(returnValue));
+                vc2_util.log(logTitle, '... vendor config: ', returnValue);
             } catch (error) {
-                log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(error));
-                returnValue = false;
+                vc2_util.logError(logTitle, error);
+                throw error;
+                // returnValue = false;
             }
 
             return returnValue;
         },
         createItemFulfillment: function (option) {
             var logTitle = [LogTitle, 'createItemFulfillment'].join('::'),
-                returnValue = true;
+                returnValue = {};
 
             try {
                 var recordData = option.currentData,
                     billFileData = option.billFileData;
 
-                log.audit(logTitle, LogPrefix + '>> recordData   : ' + JSON.stringify(recordData));
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> billFileData   : ' + JSON.stringify(billFileData)
-                );
+                vc2_util.log(logTitle, '**** ITEM FF Request ***');
 
-                var respItemFF = ns_https.requestRestlet({
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    scriptId: SCRIPT.RL_ITEMFF.ID,
-                    deploymentId: SCRIPT.RL_ITEMFF.DEPLOY,
-                    body: JSON.stringify(billFileData)
+                // vc2_util.log(logTitle, '// record data: ', recordData);
+                // vc2_util.log(logTitle, '... bill file data: ', billFileData);
+
+                var itemFFReqBody = vc2_util.extractValues({
+                    source: billFileData,
+                    params: ['PO_LINK', 'ID', 'IS_RCVBLE', 'JSON']
                 });
+                vc2_util.log(logTitle, '... itemff request: ', itemFFReqBody);
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '>> response-itemff   : ' + JSON.stringify(respItemFF)
-                );
-
-                if (respItemFF.code == 200) {
-                    var respBody = JSON.parse(respItemFF.body);
-                    if (!respBody) throw 'Unable to parse response body';
-
-                    log.audit(logTitle, LogPrefix + '>> respBody   : ' + JSON.stringify(respBody));
-
-                    if (respBody.isError) throw respBody.errorMsg || respBody.msg;
-
-                    if (respBody.itemff) {
-                        vc_billfile.addNote({
-                            id: recordData.id,
-                            note:
-                                'Item Fulfillment succesfully created...  ' +
-                                ('[id:' + respBody.itemff + ']')
-                        });
+                var itemFFReq = vc2_util.sendRequestRestlet({
+                    header: 'Bill Creator | ItemFF Request',
+                    method: 'POST',
+                    recordId: billFileData.PO_LINK,
+                    isJSON: true,
+                    query: {
+                        headers: { 'Content-Type': 'application/json' },
+                        scriptId: SCRIPT.RL_ITEMFF.ID,
+                        deploymentId: SCRIPT.RL_ITEMFF.DEPLOY,
+                        body: JSON.stringify(itemFFReqBody)
                     }
+                });
+                vc2_util.handleJSONResponse(itemFFReq);
+                var itemFFResponse = itemFFReq.PARSED_RESPONSE;
+                if (!itemFFResponse) throw 'Unable to parse response body';
 
-                    if (respBody.serialData) {
-                        log.audit(
-                            logTitle,
-                            LogPrefix +
-                                '/// Processing serials...  ' +
-                                JSON.stringify(respBody.serialData)
-                        );
+                vc2_util.log(logTitle, '... response: ', itemFFResponse);
 
-                        var serialsToProcess = respBody.serialData;
+                if (itemFFResponse.isError) {
+                    util.extend(returnValue, itemFFResponse);
+                    throw itemFFResponse.errorMsg || itemFFResponse.msg;
+                }
 
-                        for (var i = 0; i < serialsToProcess.lines.length; i++) {
-                            var requestObj = {};
-                            requestObj.lineToProcess = i;
-                            requestObj.serialObj = serialsToProcess;
+                if (itemFFResponse.itemff) {
+                    vc_billfile.addNote({
+                        id: recordData.id,
+                        note:
+                            'Item Fulfillment succesfully created...  ' +
+                            ('[id:' + itemFFResponse.itemff + ']')
+                    });
+                }
 
-                            var respSerials = ns_https.requestRestlet({
+                /// SERIALS PROCESSING ///
+                if (itemFFResponse.serialData && itemFFResponse.serialData.lines) {
+                    vc2_util.log(logTitle, '// Processing serials...', itemFFResponse.serialData);
+                    var serialsToProcess = itemFFResponse.serialData;
+
+                    /// SERIALS PROCESSING ///
+                    for (var i = 0; i < serialsToProcess.lines.length; i++) {
+                        // skip line with no serials
+                        if (vc2_util.isEmpty(serialsToProcess.lines[i].serials)) continue;
+
+                        var serialsAddReq = vc2_util.sendRequestRestlet({
+                            header: LogTitle + '| Serials Process',
+                            method: 'POST',
+                            recordId: billFileData.PO_LINK,
+                            isJSON: true,
+                            query: {
                                 headers: { 'Content-Type': 'application/json' },
                                 scriptId: SCRIPT.RL_SERIALS.ID,
                                 deploymentId: SCRIPT.RL_SERIALS.DEPLOY,
-                                method: 'POST',
                                 body: JSON.stringify({
                                     lineToProcess: i,
                                     serialObj: serialsToProcess
                                 })
-                            });
+                            }
+                        });
 
-                            log.debug(
-                                logTitle,
-                                LogPrefix + '// serials: ' + JSON.stringify(respSerials)
-                            );
-                        }
+                        vc2_util.handleJSONResponse(serialsAddReq);
+                        var itemFFResponse = itemFFReq.PARSED_RESPONSE;
+                        if (!itemFFResponse) throw 'Unable to parse response body';
+
+                        vc2_util.log(
+                            logTitle,
+                            '... (serials) response: ',
+                            serialsAddReq.PARSED_RESPONSE
+                        );
                     }
-                } else {
-                    /// ERROR //////////////
-                    vc_billfile.addNote({
-                        id: recordData.id,
-                        note: 'Error creating fulfillment : ' + respItemFF.body
-                    });
-
-                    Helper.updateBillFile({
-                        internalId: recordData.id,
-                        current: billFileData,
-                        updateValues: {
-                            custrecord_ctc_vc_bill_proc_status: BILL_CREATOR.Status.ERROR
-                        }
-                    });
-                    throw 'Error creating fulfillment: ' + respItemFF.body;
-                    ////////////////////////////
                 }
+                /// SERIALS PROCESSING ///
+
+                // ////////////////////////////
             } catch (error) {
-                log.error(logTitle, LogPrefix + '** ERROR **' + vc2_util.extractError(error));
-                returnValue = false;
+                vc2_util.logError(logTitle, error);
+                vc_billfile.addNote({
+                    id: recordData.id,
+                    note: 'Error creating fulfillment : ' + returnValue.msg
+                });
+                returnValue.isError = true;
+            } finally {
+                vc2_util.log(logTitle, returnValue);
             }
+
+            return returnValue;
+        },
+        getExistingBill: function (option) {
+            var logTitle = [LogTitle, 'getExistingBill'].join('::'),
+                returnValue;
+            option = option || {};
+            var arrExistingBills = [];
+
+            var vendorbillSearchObj = ns_search.create({
+                type: 'vendorbill',
+                filters: [
+                    ['type', 'anyof', 'VendBill'],
+                    'AND',
+                    ['mainname', 'anyof', option.entity],
+                    'AND',
+                    ['numbertext', 'is', option.invoiceNo],
+                    'AND',
+                    ['mainline', 'is', 'T']
+                ],
+                columns: ['internalid', 'tranid', 'transactionnumber']
+            });
+
+            vendorbillSearchObj.run().each(function (result) {
+                arrExistingBills.push({
+                    id: result.getValue('internalid'),
+                    tranId: result.getValue('tranid'),
+                    tranNum: result.getValue('transactionnumber')
+                });
+
+                return true;
+            });
+
+            log.audit(
+                logTitle,
+                LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills)
+            );
+            returnValue = arrExistingBills;
 
             return returnValue;
         }

@@ -29,8 +29,12 @@ define(function (require) {
             try {
                 Current.Script = ns_runtime.getCurrentScript();
                 Current.Features = {
-                    MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
-                    MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+                    MULTISHIPTO: ns_runtime.isFeatureInEffect({
+                        feature: 'MULTISHIPTO'
+                    }),
+                    MULTILOCINVT: ns_runtime.isFeatureInEffect({
+                        feature: 'MULTILOCINVT'
+                    })
                 };
                 Current.PO_ID = option.poId || option.purchaseOrderId;
                 Current.SO_ID = option.soId || option.salesOrderId;

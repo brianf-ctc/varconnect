@@ -90,7 +90,9 @@ define([
                 operator: ns_search.Operator.IS,
                 values: transID
             });
-            var mySearch = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+            var mySearch = ns_search.load({
+                id: 'customsearch_ctc_ir_vendor_orders'
+            });
             mySearch.filters.push(filters);
 
             // If order num already exists do nothing
@@ -322,17 +324,17 @@ define([
         LogPrefix = '[purchaseorder:' + po_ID + ']';
 
         /******
-			 lineData definition {	line_num:"NA",
-									item_num = "NA',1
-									order_num:"NA",
-									order_date:"NA",
-									order_eta:"NA",
-									ship_qty:"NA",
-									ship_date:"NA",
-									tracking_num:"NA",
-									carrier:"NA",
-									serial_num:"NA"};
-			 ***/
+             lineData definition {	line_num:"NA",
+                                    item_num = "NA',1
+                                    order_num:"NA",
+                                    order_date:"NA",
+                                    order_eta:"NA",
+                                    ship_qty:"NA",
+                                    ship_date:"NA",
+                                    tracking_num:"NA",
+                                    carrier:"NA",
+                                    serial_num:"NA"};
+             ***/
 
         /*** CONSTANTS - Custom IDs ***/
         //			var PO_Valid_Date = '4/13/2019';

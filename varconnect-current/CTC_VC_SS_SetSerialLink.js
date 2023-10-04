@@ -74,7 +74,7 @@ define([
 
             // + '&compid='+accountId
             //            var lineLinkUrl = vcGlobals.SN_VIEW_SL_URL  + '&transType='+currentType + '&transId='+currentID + '&itemId='+itemId + '&itemName='+itemName
-            var lineLinkUrl = vc2_util.generateSerialLink({
+            var lineLinkUrl = generateSerialLink({
                 transType: currentType,
                 transId: currentID,
                 itemId: itemId,
@@ -93,6 +93,22 @@ define([
             });
         }
         current_rec.save();
+    }
+
+    function generateSerialLink(option) {
+        // var ns_url = ns_url || vc2_util.loadModule('N/url') || vc2_util.loadModuleNS('N/url');
+
+        var protocol = 'https://';
+        var domain = ns_url.resolveDomain({
+            hostType: ns_url.HostType.APPLICATION
+        });
+        var linkUrl = ns_url.resolveScript({
+            scriptId: vc2_constant.SCRIPT.VIEW_SERIALS_SL,
+            deploymentId: vc2_constant.DEPLOYMENT.VIEW_SERIALS_SL,
+            params: option
+        });
+
+        return protocol + domain + linkUrl;
     }
 
     function isEmpty(stValue) {

@@ -27,13 +27,13 @@ define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lod
         headers['Content-Type'] = 'application/json';
         headers['Accept'] = 'application/json';
 
-        var findDocumentNumber = ns_search.lookupFields({
-            type: ns_search.Type.PURCHASE_ORDER,
-            id: tranNsid,
-            columns: ['tranid']
-        });
+        // var findDocumentNumber = ns_search.lookupFields({
+        //     type: ns_search.Type.PURCHASE_ORDER,
+        //     id: tranNsid,
+        //     columns: ['tranid']
+        // });
 
-        var docNum = findDocumentNumber.tranid;
+        var docNum = config.poNum;
 
         var baseUrl = config.url;
 

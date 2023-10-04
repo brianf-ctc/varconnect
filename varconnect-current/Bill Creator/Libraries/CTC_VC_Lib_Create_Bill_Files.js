@@ -20,7 +20,6 @@ define([
     'N/https',
     './../../CTC_VC2_Constants',
     './../../CTC_VC2_Lib_Utils',
-
     './../../CTC_VC_Lib_MainConfiguration',
     './moment'
 ], function (
@@ -103,6 +102,68 @@ define([
                         ('Parsed Date [' + dateString + ']: ') +
                         JSON.stringify([dateValue, typeof dateValue])
                 );
+            }
+            return returnValue;
+        },
+        extractVendorItemNames: function (option) {
+            var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
+                returnValue = option.lines || option;
+
+            try {
+                var GlobalVar = vc2_constant.GLOBAL,
+                    ItemMapRecordVar = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
+                if (returnValue && returnValue.length) {
+                    var uniqueItemIds = [];
+                    for (var i = 0, len = returnValue.length; i < len; i += 1) {
+                        var lineData = returnValue[i];
+                        if (!vc2_util.inArray(lineData.item, uniqueItemIds)) {
+                            uniqueItemIds.push(lineData.item);
+                        }
+                    }
+                    log.debug(
+                        logTitle,
+                        'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', ')
+                    );
+                    if (uniqueItemIds.length) {
+                        var searchOption = {
+                            type: ItemMapRecordVar.ID,
+                            filterExpression: [
+                                [ItemMapRecordVar.FIELD.ITEM, 'anyof', uniqueItemIds],
+                                'and',
+                                ['isinactive', 'is', 'F']
+                            ],
+                            columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
+                        };
+                        var searchResults = vc2_util.searchAllPaged(searchOption);
+                        if (searchResults && searchResults.length) {
+                            var vendorItemMap = {};
+                            searchResults.forEach(function (result) {
+                                var vendorItemName = result.getValue({
+                                        name: ItemMapRecordVar.FIELD.NAME
+                                    }),
+                                    item = result.getValue({ name: ItemMapRecordVar.FIELD.ITEM });
+                                if (!vendorItemMap[item]) vendorItemMap[item] = [];
+                                vendorItemMap[item].push(vendorItemName);
+                                return true;
+                            });
+                            for (var i = 0, len = returnValue.length; i < len; i += 1) {
+                                var lineData = returnValue[i],
+                                    vendorItemNames = vendorItemMap[lineData.item];
+                                if (vendorItemNames && vendorItemNames.length) {
+                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
+                                        vendorItemNames.join('\n');
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+
+                throw ns_error.create({
+                    name: 'Unable to extract vendor item names',
+                    message: vc2_util.extractError(error)
+                });
             }
             return returnValue;
         },
@@ -211,6 +272,20 @@ define([
                 return true;
             });
             returnValue = arrSKUs;
+
+            var arrPOItems = [];
+            arrSKUs.forEach(function (skuDetails) {
+                arrPOItems.push({ item: skuDetails.value });
+                return true;
+            });
+            var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
+            vc2_util.log(logTitle, '// arrSKUsVendorNames: ', arrSKUsVendorNames);
+
+            for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
+                arrSKUs[i].vendorItemName =
+                    arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+                // return true;
+            }
 
             return returnValue;
         },
@@ -345,178 +420,189 @@ define([
             log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
         }
 
-        for (var i = 0; i < myArr.length; i++) {
-            var currentOrder = myArr[i].ordObj;
-            LogPrefix = '[bill:' + currentOrder.invoice + '] ';
-            vc2_util.LogPrefix = '[bill:' + currentOrder.invoice + '] ';
+        try {
+            for (var i = 0; i < myArr.length; i++) {
+                var currentOrder = myArr[i].ordObj;
+                LogPrefix = '[bill:' + currentOrder.invoice + '] ';
+                vc2_util.LogPrefix = '[bill:' + currentOrder.invoice + '] ';
 
-            vc2_util.log(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
-            log.audit(logTitle, { idx: i, data: myArr[i] });
+                vc2_util.log(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
+                log.audit(logTitle, { idx: i, data: myArr[i] });
 
-            log.audit(logTitle, LogPrefix + '// Look for existing bills...');
-            if (Helper.billFileExists(currentOrder)) {
-                log.audit(logTitle, LogPrefix + '...already exists, skipping');
-                continue;
-            }
-
-            log.audit(logTitle, LogPrefix + ' /// Initiate bill file record.');
-            var billFileNotes = [];
-            var billFileValues = {
-                name: name,
-                custrecord_ctc_vc_bill_file_position: i + 1,
-                custrecord_ctc_vc_bill_po: currentOrder.po,
-                custrecord_ctc_vc_bill_number: currentOrder.invoice,
-                custrecord_ctc_vc_bill_date: moment(currentOrder.date).toDate(),
-                custrecord_ctc_vc_bill_proc_status: 1,
-                custrecord_ctc_vc_bill_integration: configObj.id,
-                custrecord_ctc_vc_bill_src: myArr[i].xmlStr
-            };
-
-            var dueDate = null,
-                manualDueDate = false;
-
-            if (currentOrder.hasOwnProperty('duedate') == true) {
-                dueDate = currentOrder.duedate;
-                manualDueDate = true;
-            }
-
-            var poData = Helper.searchPO(currentOrder.po.trim());
-            if (!poData) {
-                billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
-            } else {
-                // load the vendor config
-                var vendorCfg = Helper.loadVendorConfig({ entity: poData.entityId });
-
-                billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
-                billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
-
-                ///////////////////////////////////
-                //For Ergo:  Cisco, Dell, EMC, Scansource, Westcon
-                if (Helper.inArray(poData.entityId, ['75', '203', '216', '371', '496'])) {
-                    billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
+                log.audit(logTitle, LogPrefix + '// Look for existing bills...');
+                if (Helper.billFileExists(currentOrder)) {
+                    log.audit(logTitle, LogPrefix + '...already exists, skipping');
+                    continue;
                 }
 
-                // if (vendorCfg.ENABLE_FULFILLLMENT)
-                //     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
-                ///////////////////////////////////
+                log.audit(logTitle, LogPrefix + ' /// Initiate bill file record.');
+                var billFileNotes = [];
+                var billFileValues = {
+                    name: name,
+                    custrecord_ctc_vc_bill_file_position: i + 1,
+                    custrecord_ctc_vc_bill_po: currentOrder.po,
+                    custrecord_ctc_vc_bill_number: currentOrder.invoice,
+                    custrecord_ctc_vc_bill_date: moment(currentOrder.date).toDate(),
+                    custrecord_ctc_vc_bill_proc_status: 1,
+                    custrecord_ctc_vc_bill_integration: configObj.id,
+                    custrecord_ctc_vc_bill_src: myArr[i].xmlStr
+                };
 
-                var vendorTerms = 0;
-                var searchTerms = ns_search.lookupFields({
-                    type: ns_search.Type.VENDOR,
-                    id: poData.entityId,
-                    columns: ['terms']
-                });
+                var dueDate = null,
+                    manualDueDate = false;
 
-                if (searchTerms.terms.length > 0) {
-                    vendorTerms = searchTerms.terms[0].value;
-
-                    if (!manualDueDate) {
-                        var daysToPay = ns_search.lookupFields({
-                            type: ns_search.Type.TERM,
-                            id: vendorTerms,
-                            columns: ['daysuntilnetdue']
-                        }).daysuntilnetdue;
-
-                        dueDate = moment(currentOrder.date)
-                            .add(parseInt(daysToPay), 'days')
-                            .format('MM/DD/YYYY');
-                    }
+                if (currentOrder.hasOwnProperty('duedate') == true) {
+                    dueDate = currentOrder.duedate;
+                    manualDueDate = true;
                 }
-            }
 
-            if (dueDate !== null) {
-                billFileValues.custrecord_ctc_vc_bill_due_date = moment(dueDate).toDate();
-                if (manualDueDate) {
-                    billFileValues.custrecord_ctc_vc_bill_due_date_f_file = true;
-                }
-            }
+                var poData = Helper.searchPO(currentOrder.po.trim());
+                if (!poData) {
+                    billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
+                } else {
+                    // load the vendor config
+                    var vendorCfg = Helper.loadVendorConfig({
+                        entity: poData.entityId
+                    });
 
-            var ii;
-            if (poData.id) {
-                // match payload items to transaction items
-                var availableSkus = Helper.collectItemsFromPO({ poId: poData.id });
-                var arrMatchedSKU = [];
+                    billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
+                    billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
 
-                for (ii = 0; ii < currentOrder.lines.length; ii++) {
-                    var itemNo = currentOrder.lines[ii].ITEMNO;
+                    ///////////////////////////////////
+                    //For Ergo:  Cisco, Dell, EMC, Scansource, Westcon
+                    // if (Helper.inArray(poData.entityId, ['75', '203', '216', '371', '496'])) {
+                    //     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
+                    // }
 
-                    var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
+                    if (vendorCfg.ENABLE_FULFILLLMENT)
+                        billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
 
-                    var matchedSku = false;
+                    var vendorTerms = 0;
+                    var searchTerms = ns_search.lookupFields({
+                        type: ns_search.Type.VENDOR,
+                        id: poData.entityId,
+                        columns: ['terms']
+                    });
 
-                    for (var iii = 0; iii < availableSkus.length; iii++) {
-                        if (availableSkus[iii].text == itemNo) {
-                            matchedSku = availableSkus[iii].value;
-                            break;
+                    if (searchTerms.terms.length > 0) {
+                        vendorTerms = searchTerms.terms[0].value;
+
+                        if (!manualDueDate) {
+                            var daysToPay = ns_search.lookupFields({
+                                type: ns_search.Type.TERM,
+                                id: vendorTerms,
+                                columns: ['daysuntilnetdue']
+                            }).daysuntilnetdue;
+
+                            dueDate = moment(currentOrder.date)
+                                .add(parseInt(daysToPay), 'days')
+                                .format('MM/DD/YYYY');
                         }
                     }
-                    log.audit(
-                        logTitle,
-                        logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku)
-                    );
+                }
 
-                    if (!matchedSku) {
-                        matchedSku = Helper.isItemMatchRL({
-                            list: availableSkus,
-                            searchKeys: ['text'],
-                            value: itemNo
-                        });
+                if (dueDate !== null) {
+                    billFileValues.custrecord_ctc_vc_bill_due_date = moment(dueDate).toDate();
+                    if (manualDueDate) {
+                        billFileValues.custrecord_ctc_vc_bill_due_date_f_file = true;
+                    }
+                }
 
+                var ii;
+                if (poData.id) {
+                    // match payload items to transaction items
+                    var availableSkus = Helper.collectItemsFromPO({
+                        poId: poData.id
+                    });
+                    var arrMatchedSKU = [];
+
+                    for (ii = 0; ii < currentOrder.lines.length; ii++) {
+                        var itemNo = currentOrder.lines[ii].ITEMNO;
+
+                        var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
+
+                        var matchedSku = false;
+
+                        for (var iii = 0; iii < availableSkus.length; iii++) {
+                            if (
+                                availableSkus[iii].text == itemNo ||
+                                availableSkus[iii].vendorItemName == itemNo
+                            ) {
+                                matchedSku = availableSkus[iii].value;
+                                break;
+                            }
+                        }
                         log.audit(
                             logTitle,
-                            logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku)
+                            logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku)
                         );
+
+                        if (!matchedSku) {
+                            matchedSku = Helper.isItemMatchRL({
+                                list: availableSkus,
+                                searchKeys: ['text'],
+                                value: itemNo
+                            });
+
+                            log.audit(
+                                logTitle,
+                                logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku)
+                            );
+                        }
+
+                        if (!matchedSku) {
+                            billFileNotes.push('Not matched SKU: ' + itemNo);
+                            log.audit(logTitle, logPrefix + '.. match not found. ');
+                        } else {
+                            currentOrder.lines[ii].NSITEM = matchedSku;
+                            arrMatchedSKU.push(matchedSku);
+                        }
                     }
 
-                    if (!matchedSku) {
-                        billFileNotes.push('Not matched SKU: ' + itemNo);
-                        log.audit(logTitle, logPrefix + '.. match not found. ');
-                    } else {
-                        currentOrder.lines[ii].NSITEM = matchedSku;
-                        arrMatchedSKU.push(matchedSku);
+                    log.audit(
+                        logTitle,
+                        LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
+                    );
+
+                    if (arrMatchedSKU.length) {
+                        billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
+                    }
+                } else {
+                    for (ii = 0; ii < currentOrder.lines.length; ii++) {
+                        currentOrder.lines[ii].NSITEM = '';
                     }
                 }
-
-                log.audit(
-                    logTitle,
-                    LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
-                );
-
-                if (arrMatchedSKU.length) {
-                    billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
-                }
-            } else {
-                for (ii = 0; ii < currentOrder.lines.length; ii++) {
-                    currentOrder.lines[ii].NSITEM = '';
-                }
-            }
-            billFileValues.custrecord_ctc_vc_bill_json = JSON.stringify(currentOrder);
-            billFileValues.custrecord_ctc_vc_bill_log = addNote({
-                note: billFileNotes.join(' | ')
-            });
-
-            // create the bill file record
-            var objRecord = ns_record.create({
-                type: 'customrecord_ctc_vc_bills',
-                isDynamic: true
-            });
-
-            for (var fieldId in billFileValues) {
-                objRecord.setValue({
-                    fieldId: fieldId,
-                    value: billFileValues[fieldId]
+                billFileValues.custrecord_ctc_vc_bill_json = JSON.stringify(currentOrder);
+                billFileValues.custrecord_ctc_vc_bill_log = addNote({
+                    note: billFileNotes.join(' | ')
                 });
+
+                // create the bill file record
+                var objRecord = ns_record.create({
+                    type: 'customrecord_ctc_vc_bills',
+                    isDynamic: true
+                });
+
+                for (var fieldId in billFileValues) {
+                    objRecord.setValue({
+                        fieldId: fieldId,
+                        value: billFileValues[fieldId]
+                    });
+                }
+                var record_id = objRecord.save();
+
+                vc2_util.vcLog({
+                    title: 'Bill File',
+                    message: 'Created bill file |' + [record_id, billFileValues.name].join(' - '),
+                    details: billFileValues,
+                    status: LOG_STATUS.SUCCESS
+                });
+
+                log.audit(logTitle, '>> Bill File created: ' + record_id);
             }
-            var record_id = objRecord.save();
-
-            vc2_util.vcLog({
-                title: 'Bill File',
-                message: 'Created bill file |' + [record_id, billFileValues.name].join(' - '),
-                details: billFileValues,
-                status: LOG_STATUS.SUCCESS
-            });
-
-            log.audit(logTitle, '>> Bill File created: ' + record_id);
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
+            throw error;
         }
 
         log.audit(logTitle, '**** END process ****  ');
@@ -541,8 +627,6 @@ define([
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
         }
 
-        log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-
         // get the current notes
         if (billFileId) {
             var recData = ns_search.lookupFields({
@@ -552,7 +636,7 @@ define([
             });
             allNotes = recData.custrecord_ctc_vc_bill_log;
         }
-        if (notes) allNotes = allNotes + '\r\n' + moment().format(dateFormat) + ' - ' + notes;
+        if (notes) allNotes = allNotes + '\r\n' + moment().format('MM/DD/YYYY') + ' - ' + notes;
 
         // lets simplify ///
         // first, split up the notes by date, and make each an object
@@ -561,7 +645,6 @@ define([
             if (arrNotes.indexOf(line) < 0) arrNotes.push(line);
             return true;
         });
-        log.audit(logTitle, '>> arrNotes: ' + JSON.stringify(arrNotes));
         var newNoteStr = arrNotes.join('\r\n');
 
         if (billFileId) {

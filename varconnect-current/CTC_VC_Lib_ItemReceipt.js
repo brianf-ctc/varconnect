@@ -33,7 +33,7 @@ define(function (require) {
     var vc2_constant = require('./CTC_VC2_Constants.js'),
         vc_log = require('./CTC_VC_Lib_Log.js'),
         vc2_util = require('./CTC_VC2_Lib_Utils.js'),
-        util_record = require('./CTC_VC2_Lib_Record.js');
+        vc2_record = require('./CTC_VC2_Lib_Record.js');
 
     var LogTitle = 'ItemRRLib',
         LogPrefix = '',
@@ -195,9 +195,21 @@ define(function (require) {
 
                     var hasReceivableLine = false,
                         receivablesLines = [],
+                        arrLineRRData = [],
                         matchingLine,
                         line,
                         lineRRData;
+                    for (line = 0; line < lineItemCount; line++) {
+                        lineRRData = vc2_record.extractLineValues({
+                            record: record,
+                            line: line,
+                            columns: ['item']
+                        });
+                        arrLineRRData.push(lineRRData);
+                    }
+                    var arrVendorItemNames = vc2_record.extractVendorItemNames({
+                        lines: arrLineRRData
+                    });
 
                     /// REMOVE any items that is not in the XML  Line Data /////////////
                     Helper.log(logTitle, '**** Prepare item receipt lines ****');
@@ -230,7 +242,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
+                                fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                 line: line
                             }),
                             quantity: record.getSublistText({
@@ -240,14 +252,18 @@ define(function (require) {
                             }),
                             CURRENTPO: Current.PO_ID
                         };
+                        lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
+                            arrVendorItemNames[line][
+                                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                            ];
 
                         Helper.log(logTitle, '// receipt line', lineRRData);
 
                         try {
                             /// REMOVE lines thats not from the list
                             matchingLine = Helper.findMatchingItem({
-                                data: lineRRData,
-                                dataSet: LinesToReceive
+                                data: lineRRData, // dataToFind
+                                dataSet: LinesToReceive // dataToTest
                             });
 
                             if (!matchingLine) throw 'Line not found on receivable items';
@@ -375,7 +391,7 @@ define(function (require) {
                             }),
                             dandh: record.getSublistText({
                                 sublistId: 'item',
-                                fieldId: vc2_constant.FIELD.ITEM.DH_MPN,
+                                fieldId: vc2_constant.FIELD.TRANSACTION.DH_MPN,
                                 line: line
                             }),
                             isSerialized: record.getCurrentSublistValue({
@@ -399,6 +415,10 @@ define(function (require) {
                             });
                             continue;
                         }
+                        lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
+                            arrVendorItemNames[line][
+                                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                            ];
 
                         for (ii = 0; ii < UniqueLineItems.length; ii++) {
                             var itemToShip = UniqueLineItems[ii];
@@ -411,7 +431,14 @@ define(function (require) {
                                 (lineRRData.dandh &&
                                     Current.VendorCFG.xmlVendor ==
                                         vc2_constant.LIST.XML_VENDOR.DandH &&
-                                    lineRRData.dandh == itemToShip.item_num);
+                                    lineRRData.dandh == itemToShip.item_num) ||
+                                (lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] &&
+                                    vc2_util.inArray(
+                                        itemToShip.item_num,
+                                        lineRRData[
+                                            vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                        ].split('\n')
+                                    ));
 
                             if (!isMatchingLine) {
                                 Helper.log(logTitle, '... skipped');
@@ -1034,6 +1061,33 @@ define(function (require) {
                             if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
                             if (xmlVendor !== vendorList.DandH) throw 'non D&H vendor';
                             if (dataToFind.dandh !== dataToTest[itemType]) throw ' not matched.';
+                            returnValue = true;
+                            log.audit(logTitle, _logPrefix + ' >> matched. <<');
+                        } catch (check_error) {
+                            // log.audit(
+                            //     logTitle,
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
+                            // );
+                        }
+                        return returnValue;
+                    },
+                    vendorNameCheck: function (itemType) {
+                        var _logPrefix = logPrefix + ' // vendorNameCheck:[' + itemType + ']',
+                            returnValue = false;
+
+                        try {
+                            if (!dataToTest[itemType]) throw '[' + itemType + '] not present';
+
+                            if (
+                                !dataToFind[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] ||
+                                !vc2_util.inArray(
+                                    dataToTest[itemType],
+                                    dataToFind[
+                                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                    ].split('\n')
+                                )
+                            )
+                                throw ' not matched.';
 
                             returnValue = true;
                             log.audit(logTitle, _logPrefix + ' >> matched. <<');
@@ -1052,7 +1106,8 @@ define(function (require) {
                         hasMatch =
                             LineItemCheck.itemCheck(fld) ||
                             LineItemCheck.ingramCheck(fld) ||
-                            LineItemCheck.dnhCheck(fld);
+                            LineItemCheck.dnhCheck(fld) ||
+                            LineItemCheck.vendorNameCheck(fld);
                     }
                     return true;
                 });

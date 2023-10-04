@@ -55,14 +55,7 @@ define(function (request) {
                 });
                 Current.poData = util_record.extractValues({
                     record: Current.recordPO,
-                    fields: [
-                        'tranid',
-                        'trandate',
-                        'subsidiary',
-                        'entity',
-                        'dropshipso',
-                        'custbody_ctc_po_link_type'
-                    ]
+                    fields: ['tranid', 'trandate', 'subsidiary', 'entity', 'dropshipso', 'custbody_ctc_po_link_type']
                 });
                 log.debug(logTitle, LogPrefix + Current.poData);
 
@@ -73,8 +66,7 @@ define(function (request) {
                 if (!Current.VendorCFG) throw 'Missing Vendor Config';
 
                 Current.isDropPO =
-                    Current.poData.dropshipso ||
-                    Current.poData.custbody_ctc_po_link_type == 'Drop Shipment';
+                    Current.poData.dropshipso || Current.poData.custbody_ctc_po_link_type == 'Drop Shipment';
 
                 // TODO: create new websvc lib
                 var outputObj = vc_websvc.process({
@@ -92,10 +84,7 @@ define(function (request) {
                 log.debug(logTitle, LogPrefix + '>> Order Lines: ' + JSON.stringify(outputObj));
 
                 // if there are no lines.. just exit the script
-                if (
-                    !outputObj.itemArray ||
-                    (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-                ) {
+                if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info)) {
                     throw 'No line items to process';
                 }
 
@@ -107,10 +96,7 @@ define(function (request) {
                     mainConfig: Current.MainCFG,
                     vendorConfig: Current.VendorCFG
                 });
-                log.debug(
-                    logTitle,
-                    LogPrefix + '>> Update status: ' + JSON.stringify(updateStatus)
-                );
+                log.debug(logTitle, LogPrefix + '>> Update status: ' + JSON.stringify(updateStatus));
 
                 Current.soId = updateStatus && updateStatus.id;
 
@@ -133,7 +119,10 @@ define(function (request) {
                     : null;
 
                 Current.soData = Current.recordSO
-                    ? util_record.extractValues({ record: Current.recordSO, fields: ['entity'] })
+                    ? util_record.extractValues({
+                          record: Current.recordSO,
+                          fields: ['entity']
+                      })
                     : null;
             } catch (error) {
                 util.extend(returnObj, {

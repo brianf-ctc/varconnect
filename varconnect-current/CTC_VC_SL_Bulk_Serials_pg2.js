@@ -25,6 +25,7 @@ define([
     'N/task',
     'N/http',
     'N/config',
+    'N/url',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
     './CTC_VC_Lib_MainConfiguration.js'
@@ -36,14 +37,19 @@ define([
     ns_task,
     ns_https,
     ns_config,
+    ns_url,
     vc2_util,
     vc2_constant,
     lib_maincfg
 ) {
+    var LogTitle = 'SL:BulkSerials';
+
     const PO_SERIAL_NUMBER_FOLDER = vc2_constant.GLOBAL.SN_FOLDER_ID;
 
     function onRequest(context) {
-        log.debug('Enter serial Pg2', 'main Entry');
+        var logTitle = [LogTitle, 'onRequest'].join('::');
+
+        vc2_util.log(logTitle, 'Enter serial Pg2 - main Entry');
 
         if (context.request.method == 'GET') {
             doGet(context);
@@ -53,12 +59,13 @@ define([
     }
 
     function doGet(context) {
-        log.debug('DoGet', JSON.stringify(context));
+        var logTitle = [LogTitle, 'doGet'].join('::');
 
         var poNum = context.request.parameters['item'];
-        log.debug('Enter serial Pg2', 'poNum = ' + poNum);
+        vc2_util.log(logTitle, 'Enter serial Pg2 - poNum = ', poNum);
+
         if (isEmpty(poNum)) {
-            log.debug({ title: 'In Get code', details: 'PO Num EMPTY' });
+            vc2_util.log(logTitle, 'PO Num EMPTY');
             var form = ns_ui.createForm({
                 title: 'Error - PO Number empty/not found. Please try again'
             });
@@ -176,7 +183,7 @@ define([
 
             context.response.writePage(form);
         } else {
-            log.debug({ title: 'In GET code', details: 'Item List EMPTY' });
+            vc2_util.log(logTitle, 'Item List EMPTY');
             var form = ns_ui.createForm({
                 title: 'Error - No items found. Please try again'
             });
@@ -185,6 +192,8 @@ define([
     }
 
     function doPost(context) {
+        var logTitle = [LogTitle, 'doPost'].join('::');
+
         var request = context.request;
         var params = JSON.stringify(context.request.parameters);
 
@@ -194,21 +203,26 @@ define([
             items: []
         };
 
-        log.debug({ title: 'In POST code', details: 'Submit button clicked' });
-        log.debug({ title: 'In POST code', details: 'parameters = ' + params });
+        vc2_util.log(logTitle, 'Submit button clicked');
+        vc2_util.log(logTitle, 'parameters = ', params);
 
         var poField = context.request.parameters.custpage_ponumfld;
         var itemsField = JSON.parse(context.request.parameters.custpage_itemsfld);
 
         if (!isEmpty(poField)) {
-            log.debug({ title: 'In POST code', details: 'PO Num = ' + poField });
+            vc2_util.log(logTitle, 'PO Num = ', poField);
+
             outputObj.poId = itemsField[0].poID;
             if (!isEmpty(itemsField)) {
+                vc2_util.log(logTitle, 'itemsField = ', itemsField);
+
                 if (!isEmpty(outputObj.poId)) {
                     setSNLineLink(outputObj.poId);
                 }
                 outputObj.soId = itemsField[0].soID;
-                log.debug({ title: 'In POST code', details: 'SO Num = ' + outputObj.soId });
+
+                vc2_util.log(logTitle, 'SO Num = ', outputObj.soId);
+
                 for (var i = 0; i < itemsField.length; i++) {
                     var itemObj = {
                         itemId: '',
@@ -220,10 +234,8 @@ define([
                     var newSNStr = getNewSNStr(params, itemsField[i].id)
                         .replace(/\\n/g, ',')
                         .replace(/\\r/g, ',');
-                    log.debug({
-                        title: 'In POST code',
-                        details: 'Item ' + itemsField[i].id + ' New SNs = ' + newSNStr
-                    });
+
+                    vc2_util.log(logTitle, 'Item ', newSNStr);
                     if (!isEmpty(newSNStr)) {
                         var tempList = newSNStr.split(',');
                         //remove empty array elements
@@ -235,7 +247,7 @@ define([
                 }
             }
             var fileID = createAndSaveFile(outputObj, poField);
-            log.debug({ title: 'In POST code', details: 'PO File Created, ID = ' + fileID });
+            vc2_util.log(logTitle, 'PO File Created, ID = ', fileID);
 
             var mrTask = ns_task.create({
                 taskType: ns_task.TaskType.MAP_REDUCE,
@@ -245,7 +257,8 @@ define([
             });
 
             if (!isEmpty(mrTask)) {
-                log.debug({ title: 'In POST code', details: 'mrTask = ' + JSON.stringify(mrTask) });
+                vc2_util.log(logTitle, 'mrTask = ', mrTask);
+
                 var mrTaskID = mrTask.submit();
                 // Redirect back to page 1
                 context.response.sendRedirect({
@@ -255,17 +268,14 @@ define([
                     editMode: false
                 });
             } else {
-                log.debug({
-                    title: 'In POST code',
-                    details: 'Could not Create/Submit the Map/Reduce Task '
-                });
+                vc2_util.log(logTitle, 'Could not Create/Submit the Map/Reduce Task ');
                 var form = ns_ui.createForm({
                     title: 'Could not process serial numbers, please try again. (Error = Task-Create)'
                 });
                 context.response.writePage(form);
             }
         } else {
-            log.debug({ title: 'In POST code', details: 'PO Num EMPTY' });
+            vc2_util.log(logTitle, 'PO Num EMPTY');
             var form = ns_ui.createForm({
                 title: 'Error - PO Number empty/not found. Please try again'
             });
@@ -274,6 +284,8 @@ define([
     }
 
     function _loadMainConfig() {
+        var logTitle = [LogTitle, '_loadMainConfig'].join('::');
+
         var mainConfig = lib_maincfg.getMainConfiguration();
 
         if (!mainConfig) {
@@ -283,6 +295,8 @@ define([
     }
 
     function createAndSaveFile(outputObj, poField) {
+        var logTitle = [LogTitle, 'createAndSaveFile'].join('::');
+
         var mainConfig = _loadMainConfig(),
             fileObj = ns_file.create({
                 name: poField + 'Serials.txt',
@@ -298,6 +312,8 @@ define([
     }
 
     function getItems(poNum) {
+        var logTitle = [LogTitle, 'getItems'].join('::');
+
         var items = [];
         var itemIDs = [];
 
@@ -323,7 +339,8 @@ define([
         });
 
         var searchResultCount = purchaseorderSearchObj.runPaged().count;
-        log.debug('purchaseorderSearchObj result count', searchResultCount);
+        vc2_util.log(logTitle, 'purchaseorderSearchObj result count', searchResultCount);
+
         purchaseorderSearchObj.run().each(function (result) {
             if (itemIDs.indexOf(result.getValue({ name: 'item' })) < 0) {
                 var item_info = { id: '', name: '', soID: '', poID: '', lineKey: '' };
@@ -343,6 +360,8 @@ define([
     }
 
     function getCurrentSNList(poNum, itemID) {
+        var logTitle = [LogTitle, 'getCurrentSNList'].join('::');
+
         var snList = '';
 
         var customrecordserialnumSearchObj = ns_search.create({
@@ -363,7 +382,7 @@ define([
             ]
         });
         var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        log.debug('customrecordserialnumSearchObj result count', searchResultCount);
+        vc2_util.log(logTitle, 'customrecordserialnumSearchObj result count', searchResultCount);
 
         for (var x = 0; x < searchResultCount; x += 1000) {
             var rangeStart = x;
@@ -386,17 +405,19 @@ define([
     }
 
     function getNewSNStr(params, itemid) {
+        var logTitle = [LogTitle, 'getNewSNStr'].join('::');
+
         var itemID = 'custpage_newsn_' + itemid;
         var newIndex = params.indexOf('custpage_newsn_' + itemid);
-        log.debug('index of item id', newIndex);
+        vc2_util.log(logTitle, 'index of item id', newIndex);
         if (newIndex >= 0) {
             newIndex += itemID.length + 3; // move past itemID +":"
             var newEndIndex = params.indexOf('"', newIndex);
-            log.debug('end index of item id', newEndIndex);
+            vc2_util.log(logTitle, 'end index of item id', newEndIndex);
 
             if (newIndex < newEndIndex) {
                 var newSNStr = params.substring(newIndex, newEndIndex);
-                log.debug('new SN string', newSNStr);
+                vc2_util.log(logTitle, 'new SN string', newSNStr);
 
                 return newSNStr;
             }
@@ -406,6 +427,8 @@ define([
     }
 
     function setSNLineLink(poID) {
+        var logTitle = [LogTitle, 'setSNLineLink'].join('::');
+
         var poRec = ns_record.load({
             type: ns_record.Type.PURCHASE_ORDER,
             id: poID,
@@ -417,6 +440,10 @@ define([
             type: ns_config.Type.COMPANY_INFORMATION
         });
         var accountId = companyObj.getValue('companyid');
+
+        vc2_util.log(logTitle, '>>  poNum', poNum);
+        vc2_util.log(logTitle, '>>  soNum', soNum);
+        vc2_util.log(logTitle, '>>  companyObj', companyObj);
 
         var lineCount = poRec.getLineCount({ sublistId: 'item' });
         for (var i = 0; i < lineCount; i++) {
@@ -432,12 +459,14 @@ define([
                 fieldId: 'item',
                 line: i
             });
-            var lineLinkUrl = vc2_util.generateSerialLink({
+
+            var lineLinkUrl = generateSerialLink({
                 sonum: soNum,
                 ponum: poNum,
                 itemid: itemId,
                 itemname: itemName
             });
+
             poRec.setSublistValue({
                 sublistId: 'item',
                 fieldId: vc2_constant.GLOBAL.SN_LINE_FIELD_LINK_ID,
@@ -471,6 +500,22 @@ define([
 
     function isEven(n) {
         return n % 2 == 0;
+    }
+
+    function generateSerialLink(option) {
+        // var ns_url = ns_url || vc2_util.loadModule('N/url') || vc2_util.loadModuleNS('N/url');
+
+        var protocol = 'https://';
+        var domain = ns_url.resolveDomain({
+            hostType: ns_url.HostType.APPLICATION
+        });
+        var linkUrl = ns_url.resolveScript({
+            scriptId: vc2_constant.SCRIPT.VIEW_SERIALS_SL,
+            deploymentId: vc2_constant.DEPLOYMENT.VIEW_SERIALS_SL,
+            params: option
+        });
+
+        return protocol + domain + linkUrl;
     }
 
     return {

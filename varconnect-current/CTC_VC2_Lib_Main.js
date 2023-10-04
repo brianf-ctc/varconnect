@@ -132,8 +132,7 @@ define(function (require) {
                 subsidiary: subsidiary
             });
 
-            if (!vendorConfig)
-                throw 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName;
+            if (!vendorConfig) throw 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName;
 
             // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 
@@ -148,7 +147,7 @@ define(function (require) {
 
         // get the vendor record
         Current.MainCFG = option.mainConfig || this.loadMainConfig();
- 
+
         Current.PO_NUM = option.poNum;
         Current.PO_ID = option.poId;
         Current.PO_REC = option.record || option.poRecord || Helper.getOrderRecord(option);

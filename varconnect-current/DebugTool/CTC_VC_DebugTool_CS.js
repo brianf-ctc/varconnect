@@ -116,7 +116,7 @@ define([
 
             var thisRecord = ns_currentRecord.get();
 
-            var xmlVendor = thisRecord.getValue({ fieldId: 'custpage_vendor' }),
+            var internalId = thisRecord.getValue({ fieldId: 'custpage_vendor' }),
                 poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' });
 
             setTimeout(function () {
@@ -127,8 +127,8 @@ define([
 
                         try {
                             var objPO = Helper.getPODetails(poNum),
-                                vendorConfig = Helper.loadDebugVendorConfig({
-                                    xmlVendor: xmlVendor,
+                                vendorConfig = vc_vendorcfg.getDebugVendorConfiguration({
+                                    internalid: internalId,
                                     xmlSubsidiary: objPO.subsidiary
                                 });
                             if (!objPO || !poNum) throw 'Valid PO Number is required';

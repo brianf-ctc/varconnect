@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -18,6 +18,8 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
     Mustache,
     vc2_util
 ) {
+    var dashboardVersion = '-whit', // v20230709
+        dashboardHtmlFilename = ['dashboard', dashboardVersion, '.html'].join(''); // dashboard-whit.html
     function onRequest(context) {
         var logTitle = 'BillCreator Dashboard';
         var data = {};
@@ -107,9 +109,54 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
         data.to_be_proc_cnt = s6.runPaged().count;
 
+        var s7 = ns_search.create({
+            type: 'customrecord_ctc_vc_bills',
+            filters: [
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '7'],
+                'AND',
+                ['isinactive', 'is', 'F']
+            ],
+            columns: ['internalid']
+        });
+
+        data.variance_cnt = s7.runPaged().count;
+
+        var s8 = ns_search.create({
+            type: 'customrecord_ctc_vc_bills',
+            filters: [
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1'],
+                'AND',
+                ['isinactive', 'is', 'F']
+            ],
+            columns: ['internalid']
+        });
+
+        data.pending_cnt = s8.runPaged().count;
+
+        var s9 = ns_search.create({
+            type: 'customrecord_ctc_vc_bills',
+            filters: [
+                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '4'],
+                'AND',
+                ['isinactive', 'is', 'F']
+            ],
+            columns: ['internalid']
+        });
+
+        data.reprocess_cnt = s9.runPaged().count;
+
+        var s10 = ns_search.create({
+            type: 'customrecordtype',
+            filters: [['scriptid', 'is', 'customrecord_vc_bill_vendor_config']]
+        });
+        s10.run(0, 1).each(function (result) {
+            data.vendconfig_rectype_id = result.id;
+            return false;
+        });
+
         //search for the file first
         var fileSearch = vc2_util.searchFile({
-            name: 'dashboard.html',
+            name: dashboardHtmlFilename,
             folder: -15 // Suitescripts folder
         });
         vc2_util.log(logTitle, 'fileSearch >> ', fileSearch);
@@ -124,7 +171,7 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
             // create the file
             var newFileObj = ns_file.create({
-                name: 'dashboard.html',
+                name: dashboardHtmlFilename,
                 fileType: ns_file.Type.PLAINTEXT,
                 contents: vc2_util.getFileContent({
                     fileId: dashboardFile.id
@@ -137,7 +184,9 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
             newFileObj.save();
         }
 
-        var html = ns_file.load({ id: 'SuiteScripts/dashboard.html' }).getContents();
+        var html = ns_file
+            .load({ id: ['SuiteScripts/', dashboardHtmlFilename].join('') })
+            .getContents();
         context.response.write(Mustache.render(html, data));
     }
 

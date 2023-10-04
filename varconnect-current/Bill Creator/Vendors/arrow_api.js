@@ -27,14 +27,7 @@ define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], fu
 
         log.debug('ar: input', tranNsid);
 
-        var findDocumentNumber = ns_search.lookupFields({
-            type: ns_search.Type.PURCHASE_ORDER,
-            id: tranNsid,
-            columns: ['tranid']
-        });
-
-        var docNum = findDocumentNumber.tranid;
-
+        var docNum = config.poNum;
         log.debug('ar: docNum', input + ': ' + docNum);
 
         var headers = {};

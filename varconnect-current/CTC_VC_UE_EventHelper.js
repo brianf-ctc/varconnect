@@ -147,10 +147,10 @@ define([
 
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                Helper.hideFields(scriptContext.form, ['custrecord_vc_bc_maincfg']);
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-
                 Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_vc_bc_host_key']);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -203,16 +203,20 @@ define([
 
                 var vendorCfg = vc_vendorcfg.getVendorConfiguration({
                     vendor: currentRecord.getValue({ fieldId: 'entity' }),
-                    subsidiary: currentRecord.getValue({ fieldId: 'subsidiary' })
+                    subsidiary: currentRecord.getValue({
+                        fieldId: 'subsidiary'
+                    })
                 });
                 log.audit(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
 
-                if (!mainCfg.overridePONum || !vendorCfg) {
+                if (!mainCfg.overridePONum) {
                     Helper.hideFields(scriptContext.form, ['custbody_ctc_vc_override_ponum']);
                 }
 
                 // VENDOR LINE INFO /////
-                var lineCount = currentRecord.getLineCount({ sublistId: 'item' }),
+                var lineCount = currentRecord.getLineCount({
+                        sublistId: 'item'
+                    }),
                     hasVendorInfo = false;
 
                 var fldVendorScr = scriptContext.form.addField({
@@ -272,9 +276,8 @@ define([
     EventRouter.Action['__ALL__'] = {
         onBeforeLoad: function (scriptContext, Current) {},
         onBeforeSubmit: function (scriptContext, Current) {},
-        onAfterSubmit: function (scriptContext, Current) {},
+        onAfterSubmit: function (scriptContext, Current) {}
     };
-
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         triggerOrderStatus: function (scriptContext, Current) {

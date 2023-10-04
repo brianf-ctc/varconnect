@@ -32,9 +32,10 @@ define([
     'N/search',
     'N/runtime',
     '../CTC_VC2_Constants.js',
+    '../CTC_VC2_Lib_Utils',
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator'
-], function (ns_record, ns_search, ns_runtime, vc2_constant, vc_maincfg, vc_license) {
+], function (ns_record, ns_search, ns_runtime, vc2_constant, vc2_util, vc_maincfg, vc_license) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -51,13 +52,14 @@ define([
                     recordType: currentScript.getParameter('custscript_vc_all_type'),
                     recordId: currentScript.getParameter('custscript_vc_all_id')
                 };
-                log.debug(logTitle, '>> PARAMS: ' + JSON.stringify(PARAM));
+                vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
                 LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
+                vc2_util.LogPrefix = LogPrefix;
 
                 if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
                 var mainConfig = Helper.loadMainConfig();
-                log.debug(logTitle, LogPrefix + '>> mainConfig: ' + JSON.stringify(mainConfig));
+                vc2_util.log(logTitle, '>> mainConfig: ', mainConfig);
 
                 Helper.validateLicense({ mainConfig: mainConfig });
 
@@ -107,8 +109,6 @@ define([
                 // skip non-sales order transaction
                 if (!recordData.salesOrderId) throw 'No source Sales Order';
 
-                log.audit(logTitle, LogPrefix + '// Record Data: ' + JSON.stringify(recordData));
-
                 var lineCount = record.getLineCount({ sublistId: 'item' }),
                     itemList = {},
                     arrItems = [];
@@ -150,10 +150,9 @@ define([
                             var subLineCount = subRec.getLineCount({
                                 sublistId: 'inventoryassignment'
                             });
-                            log.audit(
-                                logTitle,
-                                LogPrefix + '....// subLineCount: ' + JSON.stringify(subLineCount)
-                            );
+
+                            vc2_util.log(logTitle, '....// subLineCount: ', subLineCount);
+
                             for (var subline = 0; subline < subLineCount; subline++) {
                                 var invData = {
                                     numRcpt: subRec.getSublistText({
@@ -173,12 +172,13 @@ define([
                             }
                         }
                     } catch (subrec_error) {
-                        log.audit(
+                        vc2_util.log(
                             logTitle,
-                            LogPrefix + JSON.stringify(subrec_error.message || subrec_error)
+                            '## SUBREC ERROR ##',
+                            vc2_util.extractError(subrec_error)
                         );
                     }
-                    log.audit(logTitle, LogPrefix + '....// lineData: ' + JSON.stringify(lineData));
+                    vc2_util.log(logTitle, '....// lineData: ', lineData);
 
                     /////////////////////////
 
@@ -192,8 +192,8 @@ define([
                     /** NOTE: need to identify which serials we need to update
                      */
                 }
-                log.audit(logTitle, LogPrefix + '// Item List: ' + JSON.stringify(arrItems));
-                log.audit(logTitle, LogPrefix + '// Item List: ' + JSON.stringify(itemList));
+                vc2_util.log(logTitle, '// Record Data: ', recordData);
+                vc2_util.log(logTitle, '// itemList: ', itemList);
 
                 var SERIAL_FLD = vc2_constant.RECORD.SERIALS.FIELD;
 
@@ -201,49 +201,45 @@ define([
                 var searchOption = {
                     type: vc2_constant.RECORD.SERIALS.ID,
                     filters: [
-                        {
-                            name: 'isinactive',
-                            operator: 'is',
-                            values: 'F'
-                        },
-                        {
-                            name: SERIAL_FLD.SALES_ORDER,
-                            operator: 'anyof',
-                            values: recordData.salesOrderId
-                        },
-                        {
-                            name: SERIAL_FLD.ITEM,
-                            operator: 'anyof',
-                            values: arrItems
-                        }
+                        ['isinactive', 'is', 'F'],
+                        'AND',
+                        [SERIAL_FLD.SALES_ORDER, 'anyof', recordData.salesOrderId],
+                        'AND',
+                        [SERIAL_FLD.ITEM, 'anyof', arrItems]
                     ],
-                    columns: ['internalid', SERIAL_FLD.ITEM, SERIAL_FLD.NAME]
+                    columns: [
+                        'internalid',
+                        SERIAL_FLD.ITEM,
+                        SERIAL_FLD.NAME,
+                        SERIAL_FLD.ITEM_FULFILLMENT,
+                        SERIAL_FLD.INVOICE,
+                        SERIAL_FLD.SALES_ORDER
+                    ]
                 };
 
                 if (PARAM.recordType == ns_record.Type.ITEM_FULFILLMENT) {
-                    searchOption.filters.push({
-                        name: SERIAL_FLD.ITEM_FULFILLMENT,
-                        operator: 'isempty'
-                    });
+                    searchOption.filters.push('AND', [
+                        SERIAL_FLD.ITEM_FULFILLMENT,
+                        'anyof',
+                        '@NONE@'
+                    ]);
                 } else if (PARAM.recordType == ns_record.Type.INVOICE) {
                     // just include serials that has not yet invoice-tagged, but itemff-tagged
-                    searchOption.filters.push({
-                        name: SERIAL_FLD.ITEM_FULFILLMENT,
-                        operator: 'isnotempty'
-                    });
 
-                    searchOption.filters.push({
-                        name: SERIAL_FLD.INVOICE,
-                        operator: 'isempty'
-                    });
+                    searchOption.filters.push(
+                        'AND',
+                        [SERIAL_FLD.ITEM_FULFILLMENT, 'noneof', '@NONE@'],
+                        'AND',
+                        [SERIAL_FLD.INVOICE, 'anyof', '@NONE@']
+                    );
                 }
 
-                log.audit(
-                    logTitle,
-                    LogPrefix + '// Search Option: ' + JSON.stringify(searchOption)
-                );
+                vc2_util.log(logTitle, '// Search Option: ', searchOption);
 
                 var searchObj = ns_search.create(searchOption);
+
+                vc2_util.log(logTitle, '// Total Results: ', searchObj.runPaged().count);
+
                 var searchResults = Helper.searchAllPaged({ searchObj: searchObj });
                 var returnResults = [];
 
@@ -251,9 +247,13 @@ define([
                     var resultData = {
                         id: result.getValue({ name: 'internalid' }),
                         item: result.getValue({ name: SERIAL_FLD.ITEM }),
-                        name: result.getValue({ name: SERIAL_FLD.NAME })
+                        name: result.getValue({ name: SERIAL_FLD.NAME }),
+                        invoice: result.getValue({ name: SERIAL_FLD.INVOICE }),
+                        salesorder: result.getValue({ name: SERIAL_FLD.SALES_ORDER }),
+                        fulfillment: result.getValue({ name: SERIAL_FLD.ITEM_FULFILLMENT })
                     };
                     resultData.item = Helper.parseFloat(resultData.item);
+                    vc2_util.log(logTitle, '.... results: ', resultData);
 
                     if (itemList[resultData.item]) {
                         itemList[resultData.item].forEach(function (serialData) {
@@ -263,11 +263,8 @@ define([
                                 if (!Helper.inArray(resultData.name, serialData.serialNums)) return;
                             }
 
-                            log.audit(
-                                logTitle,
-                                LogPrefix +
-                                    ('...// add to serial data: ' + JSON.stringify(resultData))
-                            );
+                            vc2_util.log(logTitle, '...// add to serial data: ', resultData);
+
                             returnResults.push(resultData);
                             serialData.quantity--;
                             return true;
@@ -277,14 +274,11 @@ define([
                     return true;
                 });
 
-                log.audit(
-                    logTitle,
-                    '>> Total serials to update/create: ' + JSON.stringify(returnResults)
-                );
+                vc2_util.log(logTitle, '>> Total serials to update/create: ', returnResults);
 
                 return returnResults;
             } catch (error) {
-                log.audit(logTitle, LogPrefix + ' ## EXIT SCRIPT ## ' + JSON.stringify(error));
+                vc2_util.log(logTitle, ' ## EXIT SCRIPT ## ', vc2_util.extractError(error));
                 return false;
             }
         },
@@ -300,10 +294,12 @@ define([
                 recordId: currentScript.getParameter('custscript_vc_all_id')
             };
             LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
-            log.debug(logTitle, LogPrefix + '>> PARAMS: ' + JSON.stringify(PARAM));
+            vc2_util.LogPrefix = LogPrefix;
+
+            vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
 
             var currentData = JSON.parse(context.values[0]);
-            log.debug(logTitle, LogPrefix + '>> currentData: ' + JSON.stringify(currentData));
+            vc2_util.log(logTitle, '>> currentData: ', currentData);
 
             if (currentData) {
                 var serialId = currentData.id,
@@ -335,10 +331,12 @@ define([
                 recordId: currentScript.getParameter('custscript_vc_all_id')
             };
             LogPrefix = '[' + [PARAM.recordType, PARAM.recordId].join(':') + '] ';
-            log.debug(logTitle, LogPrefix + '>> PARAMS: ' + JSON.stringify(PARAM));
+            vc2_util.LogPrefix = LogPrefix;
+
+            vc2_util.log(logTitle, '>> PARAMS: ', PARAM);
 
             summary.reduceSummary.errors.iterator().each(function (key, error) {
-                log.error(logTitle, LogPrefix + 'Reduce Error for key: ' + key, error);
+                vc2_util.log(logTitle, 'Reduce Error for key: ' + key, error);
                 return true;
             });
             var reduceKeys = [];
@@ -415,7 +413,7 @@ define([
         flatLookup: function (option) {
             var logTitle = [LogTitle, 'Helper.flatLookup'].join('::');
 
-            log.audit(logTitle, LogPrefix + '// ' + JSON.stringify(option));
+            vc2_util.log(logTitle, '// ', option);
             var arrData = null,
                 arrResults = null;
             arrResults = ns_search.lookupFields(option);
@@ -490,7 +488,7 @@ define([
                     if (maxResults < 0) break;
                 }
             } catch (e) {
-                log.debug(logTitle, '>> error: ' + JSON.stringify(e));
+                vc2_util.log(logTitle, ' ## ERROR ##: ', vc2_util.extractError(e));
                 throw e.message;
             }
 

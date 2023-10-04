@@ -47,7 +47,8 @@ define([
     vc_websvclib,
     vc_license
 ) {
-    var LogTitle = 'MR_OrderStatus';
+    var LogTitle = 'MR_OrderStatus',
+        VCLOG_APPNAME = 'VAR Connect | OrderStatus';
     var LogPrefix = '';
     var Params = {},
         Current = {};
@@ -64,6 +65,9 @@ define([
     MAP_REDUCE.getInputData = function () {
         var logTitle = [LogTitle, 'getInputData'].join('::');
         vc2_util.logDebug(logTitle, '###### START OF SCRIPT ######');
+
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         var returnValue;
 
         try {
@@ -212,6 +216,8 @@ define([
     MAP_REDUCE.map = function (mapContext) {
         var logTitle = [LogTitle, 'map'].join('::');
 
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         var outputObj;
         try {
             // for each search result, the map function is called in parallel. It will handle the request write out the requestXML
@@ -312,7 +318,10 @@ define([
                 (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
             ) {
                 throw outputObj.isError && outputObj.errorMessage
-                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
+                    ? {
+                          message: outputObj.errorMessage,
+                          logStatus: LOG_STATUS.WS_ERROR
+                      }
                     : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
                           details: outputObj
                       });
@@ -329,7 +338,8 @@ define([
                 poNum: Current.poId,
                 lineData: vc2_util.clone(outputObj.itemArray),
                 mainConfig: Current.MainCFG,
-                vendorConfig: Current.VendorCFG
+                vendorConfig: Current.VendorCFG,
+                isDropPO: Current.isDropPO
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
 
@@ -369,9 +379,13 @@ define([
 
                 if (Params.use_fulfill_rl === true || Params.use_fulfill_rl == 'T') {
                     // Helper.processItemFulfillment_restlet({ orderLines: outputObj.itemArray });
-                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
+                    Helper.processItemFulfillment({
+                        orderLines: outputObj.itemArray
+                    });
                 } else {
-                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
+                    Helper.processItemFulfillment({
+                        orderLines: outputObj.itemArray
+                    });
                 }
             } else {
                 if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
@@ -389,7 +403,9 @@ define([
                 // Move the searches outside of the for loop for governance issues
                 /// IF SEARCH ///////////////
                 var arrFulfillments = [];
-                var objSearchIF = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
+                var objSearchIF = ns_search.load({
+                    id: 'customsearch_ctc_if_vendor_orders'
+                });
                 objSearchIF.filters.push(
                     ns_search.createFilter({
                         name: 'custbody_ctc_if_vendor_order_match',
@@ -398,7 +414,9 @@ define([
                     })
                 );
 
-                var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
+                var ItemFFSearchAll = vc2_util.searchAllPaged({
+                    searchObj: objSearchIF
+                });
                 vc2_util.log(logTitle, '>> Total Results [IF]: ', ItemFFSearchAll.length);
 
                 ItemFFSearchAll.forEach(function (result) {
@@ -414,7 +432,9 @@ define([
 
                 /// IR SEARCH /////////////////
                 var arrReceipts = [];
-                var objSearchIR = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
+                var objSearchIR = ns_search.load({
+                    id: 'customsearch_ctc_ir_vendor_orders'
+                });
                 objSearchIR.filters.push(
                     ns_search.createFilter({
                         name: 'custbody_ctc_if_vendor_order_match',
@@ -422,7 +442,9 @@ define([
                         values: Current.NumPrefix
                     })
                 );
-                var ItemRcptSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIR });
+                var ItemRcptSearchAll = vc2_util.searchAllPaged({
+                    searchObj: objSearchIR
+                });
 
                 ItemRcptSearchAll.forEach(function (result) {
                     arrReceipts.push({
@@ -514,6 +536,8 @@ define([
     };
 
     MAP_REDUCE.reduce = function (context) {
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         // reduce runs on each serial number to save it
         // each instance of reduce has 5000 unit and this way there will be a new one for each line
         var logTitle = [LogTitle, 'reduce'].join('::');
@@ -568,7 +592,8 @@ define([
                 'amount',
                 vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                 vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                vc2_constant.FIELD.TRANSACTION.DH_MPN
+                vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
             ]
         });
 
@@ -618,53 +643,18 @@ define([
                 customerInfo.entity && customerInfo.entity.value ? customerInfo.entity.value : null;
         }
 
-        var srchGlobal = ns_search.global({ keywords: serial });
-
-        vc2_util.logDebug(logTitle, '>> Global Search - ' + serial + ': ', srchGlobal);
-
-        var serialValues = vc2_util.removeNullValues({
-            name: serial,
-            custrecordserialpurchase: currentData.poId || null,
-            custrecordserialitem: currentData.itemId || null,
-            custrecordserialsales: currentData.soId || null,
-            custrecorditemfulfillment: currentData.orderNum || null,
-            custrecorditemreceipt: currentData.receiptNum || null,
-            custrecordcustomer: currentData.customerId
+        //create or update serial record.
+        Helper.processSerial({
+            serial: serial,
+            currentData: currentData
         });
-        vc2_util.logDebug(logTitle, '... serialValues: ', serialValues);
-
-        var recordSerial, serialId;
-
-        if (!srchGlobal.length) {
-            recordSerial = ns_record.create({ type: 'customrecordserialnum' });
-
-            for (var fld in serialValues) {
-                recordSerial.setValue({ fieldId: fld, value: serialValues[fld] });
-            }
-
-            serialId = recordSerial.save();
-
-            vc2_util.logDebug(logTitle, '>> New Serial ID: ', serialId);
-        } else if (srchGlobal.length == 1) {
-            var searchResult = srchGlobal[0];
-
-            if (searchResult.recordType == 'customrecordserialnum') {
-                ns_record.submitFields({
-                    type: 'customrecordserialnum',
-                    id: searchResult.id,
-                    values: serialValues,
-                    options: { enablesourcing: true }
-                });
-            }
-            vc2_util.logDebug(logTitle, ' >> Matching serial found : ', searchResult);
-        } else {
-            vc2_util.logDebug(logTitle, ' >> Multiple Duplicates ', srchGlobal.length);
-        }
 
         return true;
     };
 
     MAP_REDUCE.summarize = function (summary) {
+        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
         //any errors that happen in the above methods are thrown here so they should be handled
         //log stuff that we care about, like number of serial numbers
         var logTitle = [LogTitle, 'summarize'].join('::');
@@ -914,10 +904,9 @@ define([
 
                 returnValue = arrResults;
             } catch (error) {
-                vc2.logError(logTitle, error);
+                vc2_util.logError(logTitle, error);
                 returnValue = false;
                 throw Helper.extractError(error);
-            } finally {
             }
 
             return returnValue;
@@ -979,7 +968,9 @@ define([
 
                 vc2_util.log(logTitle, '/// OrderNums: ', [arrOrderNums, arrVendorOrderNums]);
 
-                var arrExistingIFS = Helper.searchExistingIFs({ orderNums: arrVendorOrderNums });
+                var arrExistingIFS = Helper.searchExistingIFs({
+                    orderNums: arrVendorOrderNums
+                });
 
                 vc2_util.log(logTitle, '... arrExistingIFS: ');
 
@@ -1125,6 +1116,72 @@ define([
             }
 
             return returnValue;
+        },
+        processSerial: function (option) {
+            var logTitle = 'helper.processSerial';
+
+            var serial = option.serial;
+            var currentData = option.currentData;
+
+            if (vc2_util.isEmpty(serial)) {
+                vc2_util.vcLog({
+                    title: logTitle + ' | Error',
+                    error: 'Empty Serial',
+                    transaction: currentData.poId || ''
+                });
+                return;
+            }
+
+            //search for serial
+            var objSerialSearch = ns_search.create({
+                type: 'customrecordserialnum',
+                filters: [['name', 'is', serial], 'AND', ['isinactive', 'is', 'F']],
+                columns: [
+                    ns_search.createColumn({
+                        name: 'internalid',
+                        sort: ns_search.Sort.DESC
+                    })
+                ]
+            });
+
+            //range search
+            var resultSet = objSerialSearch.run();
+            var arrResult = resultSet.getRange({ start: 0, end: 1 });
+
+            /** ===== remove null values ===== **/
+            var serialValues = vc2_util.removeNullValues({
+                name: serial,
+                custrecordserialpurchase: currentData.poId || null,
+                custrecordserialitem: currentData.itemId || null,
+                custrecordserialsales: currentData.soId || null,
+                custrecorditemfulfillment: currentData.orderNum || null,
+                custrecorditemreceipt: currentData.receiptNum || null,
+                custrecordcustomer: currentData.customerId
+            });
+            vc2_util.logDebug(logTitle, '... serialValues: ', serialValues);
+
+            /** ===== update serial ===== **/
+            if (Array.isArray(arrResult) && typeof arrResult[0] !== 'undefined') {
+                vc2_util.logDebug(logTitle, ' >> Matching serial found : ', arrResult);
+
+                ns_record.submitFields({
+                    type: 'customrecordserialnum',
+                    id: arrResult[0].getValue('internalid'),
+                    values: serialValues,
+                    options: { enablesourcing: true }
+                });
+            } else {
+                /** ===== create serial ===== **/
+                var recordSerial = ns_record.create({ type: 'customrecordserialnum' });
+                for (var fld in serialValues) {
+                    recordSerial.setValue({
+                        fieldId: fld,
+                        value: serialValues[fld]
+                    });
+                }
+                var serialId = recordSerial.save();
+                vc2_util.logDebug(logTitle, '>> New Serial ID: ', serialId);
+            }
         }
     };
 

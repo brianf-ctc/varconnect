@@ -38,6 +38,7 @@ define([
 ) {
     var CURRENT = {},
         LogTitle = 'Email-IF';
+    var testEmail; // send to this email for testing
 
     function execute(context) {
         var logTitle = [LogTitle, 'execute'].join('::');
@@ -98,17 +99,19 @@ define([
 
                 var itemTableHTML = buildItemTable(resultsList);
 
+                if (testEmail) newSendTo = testEmail;
+
                 log.debug(logTitle, ' /// sending email to: ' + newSendTo);
 
                 // load email template, build and insert item table
-                var myHTML = buildEmail(CURRENT.emailTemplate, itemTableHTML);
+                var emailDetails = buildEmail(CURRENT.emailTemplate, itemTableHTML);
 
                 try {
                     ns_email.send({
                         author: CURRENT.senderId,
                         recipients: newSendTo,
-                        subject: 'Order Shipping Update - Item Fulfillments',
-                        body: myHTML
+                        subject: emailDetails.subject,
+                        body: emailDetails.body
                     });
                     log.debug(logTitle, '...email succesfully sent');
                 } catch (err) {
@@ -146,6 +149,8 @@ define([
             if (!isEmpty(tempQty) && tempQty.indexOf('-') < 0) {
                 resultList.push(result);
             }
+
+            if (testEmail) return false; // test using first result
 
             return true;
         });
@@ -227,18 +232,22 @@ define([
         var renderer = ns_render.create();
 
         // render the subject line
-        // renderer.templateContent = emailSubj;
-        renderer.templateContent = emailBody;
+        renderer.templateContent = emailSubj;
+        var newSubject = renderer.renderAsString();
 
         // render email body
+        renderer.templateContent = emailBody;
         var newBody = renderer.renderAsString();
 
         // replace the string <TABLEINFO> in the template body with the HTML string emailBody
-        newBody = newBody.replace('%%TABLEINFO%%', itemTableHTML);
+        newBody = newBody.replace('&lt;TABLEINFO&gt;', itemTableHTML);
 
         // log.audit(logTitle, '>> email body:  ' + newBody);
 
-        return newBody;
+        return {
+            subject: newSubject,
+            body: newBody
+        };
     }
 
     function getTodayDate() {

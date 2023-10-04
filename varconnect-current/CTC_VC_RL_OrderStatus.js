@@ -10,7 +10,7 @@
  *
  * @NApiVersion 2.x
  * @NModuleScope Public
- * @NScriptType MapReduceScript
+ * @NScriptType Restlet
  */
 define(function (require) {
     var ns_record = require('N/record'),

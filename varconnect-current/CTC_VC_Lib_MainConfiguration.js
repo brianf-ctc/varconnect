@@ -59,6 +59,7 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         MainCFG.FIELD.VARIANCE_ON_OTHER, //29
         MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
         MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31,
+        MainCFG.FIELD.ALLOW_ADJUSTLINE, //32
         MainCFG.FIELD.OVERRIDE_PO_NUM
     ];
 
@@ -88,6 +89,7 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         defaultVendorBillStatus: MainCFG.FIELD.DEFAULT_VENDOR_BILL_STATUS, //22
         allowedVarianceAmountThreshold: MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD, //23
         isVarianceOnTax: MainCFG.FIELD.VARIANCE_ON_TAX, //24
+        allowAdjustLine: MainCFG.FIELD.ALLOW_ADJUSTLINE, //24
         defaultTaxItem: MainCFG.FIELD.DEFAULT_TAX_ITEM, //25
         defaultTaxItem2: MainCFG.FIELD.DEFAULT_TAX_ITEM2, //25
         isVarianceOnShipping: MainCFG.FIELD.VARIANCE_ON_SHIPPING, //26
@@ -147,6 +149,7 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
     // }
 
     function getMainConfiguration() {
+        var logTitle = 'MainCFG';
         var result = {};
 
         var fldsMainConfig = [];
@@ -154,18 +157,34 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
             fldsMainConfig.push(mainConfigMap[fld]);
         }
 
-        var recLookup = vc2_util.flatLookup({
+        var mainConfigSearch = ns_search.create({
             type: MainCFG.ID,
-            id: 1,
+            filters: [['isinactive', 'is', 'F']],
             columns: fldsMainConfig
         });
 
-        if (recLookup) {
-            result = _generateMainConfig(recLookup);
-        }
+        var mainConfig = {};
 
-        // log.audit('getMainConfiguration', result);
-        return result;
+        mainConfigSearch.run().each(function (row) {
+            for (var fld in mainConfigMap) {
+                var rowValue = row.getValue({ name: mainConfigMap[fld] });
+                mainConfig[fld] = rowValue ? rowValue.value || rowValue : null;
+            }
+            return true;
+        });
+
+        // var recLookup = vc2_util.flatLookup({
+        //     type: MainCFG.ID,
+        //     id: 1,
+        //     columns: fldsMainConfig
+        // });
+
+        // if (recLookup) {
+        //     result = _generateMainConfig(recLookup);
+        // }
+
+        // // log.audit('getMainConfiguration', result);
+        return mainConfig;
     }
 
     return {

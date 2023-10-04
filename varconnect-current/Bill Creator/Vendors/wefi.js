@@ -74,13 +74,13 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             log.debug(logTitle, 'poInternalId=' + poInternalId);
             log.debug(logTitle, 'vendorConfig=' + JSON.stringify(vendorConfig));
 
-            var objLookup = ns_search.lookupFields({
-                type: ns_search.Type.PURCHASE_ORDER,
-                id: poInternalId,
-                columns: ['tranid']
-            });
+            // var objLookup = ns_search.lookupFields({
+            //     type: ns_search.Type.PURCHASE_ORDER,
+            //     id: poInternalId,
+            //     columns: ['tranid']
+            // });
 
-            var poNumber = objLookup.tranid;
+            var poNumber = vendorConfig.poNum;
             log.debug(logTitle, 'poNumber=' + poNumber);
 
             if (!poNumber) {
@@ -119,7 +119,9 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             }
 
             // Get invoices
-            var wefiInvoices = WEFI_BC.getInvoices({ approvalId: wefiPO.approvalId });
+            var wefiInvoices = WEFI_BC.getInvoices({
+                approvalId: wefiPO.approvalId
+            });
             log.debug(logTitle, 'wefiInvoices=' + wefiInvoices.length);
 
             // Loop: WeFi Invoices

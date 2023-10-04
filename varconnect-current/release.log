@@ -1,3 +1,48 @@
+07 Aug
+
+ * Bill Creator Flex Screen - fix calculation for 'Adjustments', only includes the difference between the calculated total and the bill file total.
+  - re-calculates if the Variance is disabled
+  
+ * Bill Creator (Fulfillment) - fix for partial fulfillment, fix for same items on separate lines
+ * Bill Creator Flex screen - updated error msgs
+   - PO Qty is insufficient for the bill
+   - Purchase Order is ready for fulfillment, then it will be billed
+   - Fulfill from bill file is not configured.
+   - Unmatched items on the bill
+   - Items are already billed
+   - 
+ * added 'Is Receivable' on flex screen
+ * added columns 
+ 	- Billed Qty
+ 	- Received Qty
+ 	- Available Qty
+ * automatically close 
+ * added new fields on Bill Create Vendor Config
+ * added Jenne/Scansource/Synnex
+
+ D&H fix - textContent issue
+ Scansource Fix - 
+ 
+ 
+ https://webservice.jenne.com/JenneWebService.asmx
+
+
+ 
+ 
+  
+
+
+24 May 2023
+ * Flex screen minor fix - prevent error if charge item is missing/inactive 
+ * Bill Creator - IF Creation 
+   - set the ship date on the fulfillment, if available on the bill file
+   - set the carrier on the IF lines, if available on the bill file
+   - allow fulfillment on Bill Creation
+ * Order status - skip update shipment fields if Fulfillment creation is disabled
+ 
+
+
+
 08-03
  * added targeted Bill File download thru SFTP
  * only process Bill Files that is not inactive

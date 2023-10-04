@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -13,14 +13,16 @@
  * @NScriptType Suitelet
  */
 
-define(['N/log', 'N/search'], function (log, search) {
+define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
     function onRequest(context) {
-        log.debug('params', context.request.parameters);
+        var logTitle = 'BillCreator Dashboard Data';
+        log.debug(logTitle, 'params: ' + JSON.stringify(context.request.parameters));
 
         if (context.request.parameters.data == 'mainTable') {
-            var returnArray = [];
+            var returnArray = [],
+                poIds = [];
 
-            log.debug('started');
+            log.debug(logTitle, 'started');
 
             var columns = [
                 search.createColumn({
@@ -77,7 +79,11 @@ define(['N/log', 'N/search'], function (log, search) {
                 var currentPage = pagedData.fetch(i);
 
                 currentPage.data.forEach(function (result) {
-                    returnArray.push(buildObject(result));
+                    var poObj = buildObject(result);
+                    returnArray.push(poObj);
+                    if (poObj.poId && poIds.indexOf(poObj.poId) == -1) {
+                        poIds.push(poObj.poId);
+                    }
                 });
             }
 
@@ -102,11 +108,63 @@ define(['N/log', 'N/search'], function (log, search) {
                 var currentPage = pagedData.fetch(i);
 
                 currentPage.data.forEach(function (result) {
-                    returnArray.push(buildObject(result));
+                    var poObj = buildObject(result);
+                    returnArray.push(poObj);
+                    if (poObj.poId && poIds.indexOf(poObj.poId) == -1) {
+                        poIds.push(poObj.poId);
+                    }
                 });
             }
 
-            log.debug('done');
+            log.debug(logTitle, 'fetching po type');
+            //get po type
+            if (poIds.length) {
+                s = search.create({
+                    type: search.Type.TRANSACTION,
+                    filters: [
+                        ['type', 'anyof', 'PurchOrd'],
+                        'AND',
+                        ['appliedtotransaction.type', 'anyof', 'SalesOrd'],
+                        'AND',
+                        ['internalid', 'anyof', poIds],
+                        'AND',
+                        ['memorized', 'is', 'F']
+                    ],
+                    columns: [
+                        search.createColumn({
+                            name: 'applyinglinktype',
+                            join: 'appliedtotransaction'
+                        })
+                    ]
+                });
+                log.debug(logTitle, 'po link type search=' + JSON.stringify(s.filterExpression));
+
+                var pagedData = s.runPaged({
+                    pageSize: 1000
+                });
+
+                var poLinkTypeMapping = {},
+                    isPOLinkEmpty = true;
+                for (var i = 0; i < pagedData.pageRanges.length; i++) {
+                    var currentPage = pagedData.fetch(i);
+                    currentPage.data.forEach(function (result) {
+                        poLinkTypeMapping[result.id] = result.getValue({
+                            name: 'applyinglinktype',
+                            join: 'appliedtotransaction'
+                        });
+                        isPOLinkEmpty = false;
+                    });
+                }
+                log.debug(logTitle, 'po link type mapping=' + JSON.stringify(poLinkTypeMapping));
+                if (!isPOLinkEmpty) {
+                    for (var i = 0, len = returnArray.length; i < len; i += 1) {
+                        var poObj = returnArray[i];
+                        poObj.poType = poLinkTypeMapping[poObj.poId] || '';
+                    }
+                }
+            }
+
+            log.debug(logTitle, 'done');
 
             context.response.write(
                 JSON.stringify({
@@ -136,7 +194,10 @@ define(['N/log', 'N/search'], function (log, search) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug('customrecord_ctc_vc_billsSearchObj result count', searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var status = result.getValue({
                     name: 'custrecord_ctc_vc_bill_proc_status',
@@ -196,7 +257,10 @@ define(['N/log', 'N/search'], function (log, search) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug('customrecord_ctc_vc_billsSearchObj result count', searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var position =
                     result.getValue({
@@ -241,13 +305,41 @@ define(['N/log', 'N/search'], function (log, search) {
 
         returnObj.billAmount = billJson.total;
 
-        returnObj.billDate = result.getValue({
-            name: 'custrecord_ctc_vc_bill_date'
-        });
+        returnObj.billDate = {
+            display: result.getValue({
+                name: 'custrecord_ctc_vc_bill_date'
+            }),
+            data: result.getValue({
+                name: 'custrecord_ctc_vc_bill_date'
+            })
+        };
+        if (returnObj.billDate.display) {
+            var tempDate = format.parse({
+                value: returnObj.billDate.display,
+                type: format.Type.DATE
+            });
+            if (tempDate) {
+                returnObj.billDate.data = tempDate.toISOString();
+            }
+        }
 
-        returnObj.billDue = result.getValue({
-            name: 'custrecord_ctc_vc_bill_due_date'
-        });
+        returnObj.billDue = {
+            display: result.getValue({
+                name: 'custrecord_ctc_vc_bill_due_date'
+            }),
+            data: result.getValue({
+                name: 'custrecord_ctc_vc_bill_due_date'
+            })
+        };
+        if (returnObj.billDue.display) {
+            var tempDate = format.parse({
+                value: returnObj.billDue.display,
+                type: format.Type.DATE
+            });
+            if (tempDate) {
+                returnObj.billDue.data = tempDate.toISOString();
+            }
+        }
 
         var po = result.getText({
             name: 'custrecord_ctc_vc_bill_linked_po'
@@ -262,6 +354,8 @@ define(['N/log', 'N/search'], function (log, search) {
         returnObj.poId = result.getValue({
             name: 'custrecord_ctc_vc_bill_linked_po'
         });
+
+        returnObj.poType = '';
 
         returnObj.poStatus = result.getText({
             name: 'statusref',

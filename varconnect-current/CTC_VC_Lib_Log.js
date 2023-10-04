@@ -48,10 +48,12 @@ define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (
             fieldId: logFields.APPLICATION,
             value: options.logApp || vc2_constant.LOG_APPLICATION
         });
+
         recLog.setValue({
             fieldId: logFields.HEADER,
-            value: header || ''
+            value: header ? (header.length > 300 ? header.substr(0, 300) : header) : ''
         });
+
         recLog.setValue({
             fieldId: logFields.BODY,
             value: body || ''

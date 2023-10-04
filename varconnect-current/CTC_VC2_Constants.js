@@ -49,6 +49,7 @@ define(function (require) {
                 DEFAULT_BILL_FORM: 'custrecord_ctc_vc_bill_form',
                 DEFAULT_VENDOR_BILL_STATUS: 'custrecord_ctc_vc_bill_status',
                 ALLOWED_VARIANCE_AMOUNT_THRESHOLD: 'custrecord_ctc_vc_bill_var_threshold',
+                ALLOW_ADJUSTLINE: 'custrecord_ctc_vc_bill_var_allow_adjline',
                 VARIANCE_ON_TAX: 'custrecord_ctc_vc_bill_tax_var',
                 DEFAULT_TAX_ITEM: 'custrecord_ctc_vc_bill_tax_item',
                 DEFAULT_TAX_ITEM2: 'custrecord_ctc_vc_bill_tax_item2',
@@ -161,6 +162,13 @@ define(function (require) {
                 IS_RCVBLE: 'custrecord_ctc_vc_bill_is_recievable',
                 PROC_VARIANCE: 'custrecord_ctc_vc_bill_proc_variance',
                 FILEPOS: 'custrecord_ctc_vc_bill_file_position'
+            }
+        },
+        VENDOR_ITEM_MAPPING: {
+            ID: 'customrecord_ctc_vc_item_mapping',
+            FIELD: {
+                NAME: 'name',
+                ITEM: 'custrecord_ctc_vc_itemmap_item'
             }
         }
     };
@@ -399,11 +407,17 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        UNMATCHED_ITEMS: {
+            code: 'UNMATCHED_ITEMS',
+            msg: 'Unmatched items on the bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
             status: Bill_Creator.Status.CLOSED,
-            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         HAS_VARIANCE: {
             code: 'HAS_VARIANCE',
@@ -429,7 +443,18 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-
+        WITHIN_THRESHOLD: {
+            code: 'WITHIN_THRESHOLD',
+            msg: 'Variance detected but within threshold',
+            status: Bill_Creator.Status.VARIANCE,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+        EXCEED_THRESHOLD: {
+            code: 'EXCEED_THRESHOLD',
+            msg: 'Variance Total exceeded threshold',
+            status: Bill_Creator.Status.PENDING,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
@@ -439,7 +464,7 @@ define(function (require) {
         BILL_CREATE_DISABLED: {
             code: 'BILL_CREATE_DISABLED',
             msg: 'Vendor Bill creation is disabled',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
         UNABLE_TO_ADD_VARIANCE_LINE: {
@@ -453,8 +478,12 @@ define(function (require) {
     VC2_CONSTANT.Bill_Creator = Bill_Creator;
 
     VC2_CONSTANT.GLOBAL = {
-        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
-        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),
+        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({
+            feature: 'subsidiaries'
+        }),
+        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
+            feature: 'pickpackship'
+        }),
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',
@@ -463,7 +492,8 @@ define(function (require) {
         SN_FOLDER_ID: 7,
         EMAIL_TEMPLATE_ID: 220, // Var Connect Shipping Confirmation Template
         POHANDLING: 'Drop', // Special | Drop (default) | Both
-        EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1'
+        EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1',
+        INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
     return VC2_CONSTANT;

@@ -117,7 +117,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     itemArray = [];
 
                 if (!xmlDoc) throw 'Unable to parse XML';
-                var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
+                var arrItemNodes = ns_xml.XPath.select({
+                    node: xmlDoc,
+                    xpath: '//DETAILITEM'
+                });
                 if (!arrItemNodes || !arrItemNodes.length) throw 'XML: Missing Item Details';
 
                 for (var i = 0; i < arrItemNodes.length; i++) {
@@ -137,7 +140,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     };
 
                     var itemNum = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ITEMNO' })[0]
+                        ns_xml.XPath.select({
+                            node: arrItemNodes[i],
+                            xpath: 'ITEMNO'
+                        })[0]
                     );
                     if (itemNum != null && itemNum.length > 0) {
                         orderItem.item_num = itemNum;
@@ -146,14 +152,20 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     //D&H does not support a separate vendorSKU as of Jan 9 2019
 
                     var shipQty = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'QUANTITY' })[0]
+                        ns_xml.XPath.select({
+                            node: arrItemNodes[i],
+                            xpath: 'QUANTITY'
+                        })[0]
                     );
                     if (shipQty != null && shipQty.length > 0) {
                         orderItem.ship_qty = shipQty;
                     }
 
                     var etaDate = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: arrItemNodes[i], xpath: 'ETA' })[0]
+                        ns_xml.XPath.select({
+                            node: arrItemNodes[i],
+                            xpath: 'ETA'
+                        })[0]
                     );
                     if (etaDate != null && etaDate.length > 0) {
                         orderItem.order_eta = etaDate;
@@ -162,22 +174,34 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
 
                     var orderNum = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'ORDERNUM' })[0]
+                        ns_xml.XPath.select({
+                            node: orderStatusNode,
+                            xpath: 'ORDERNUM'
+                        })[0]
                     );
                     if (orderNum != null && orderNum.length > 0) {
                         orderItem.order_num = orderNum;
                     }
 
                     var invoice = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'INVOICE' })[0]
+                        ns_xml.XPath.select({
+                            node: orderStatusNode,
+                            xpath: 'INVOICE'
+                        })[0]
                     );
                     var orderStatusMessage = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'MESSAGE' })[0]
+                        ns_xml.XPath.select({
+                            node: orderStatusNode,
+                            xpath: 'MESSAGE'
+                        })[0]
                     );
                     orderItem.order_status = orderStatusMessage;
 
                     var orderDateTime = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({ node: orderStatusNode, xpath: 'DATE' })[0]
+                        ns_xml.XPath.select({
+                            node: orderStatusNode,
+                            xpath: 'DATE'
+                        })[0]
                     );
                     if (orderDateTime != null && orderDateTime.length > 0) {
                         orderItem.order_date = orderDateTime;
@@ -196,12 +220,16 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                             });
                             if (shipItemNodes != null && shipItemNodes.length > 0) {
                                 for (var iii = 0; iii < shipItemNodes.length; iii++) {
-                                    if (
-                                        ns_xml.XPath.select({
-                                            node: shipItemNodes[iii],
-                                            xpath: 'SHIPITEMNO'
-                                        })[0].textContent == itemNum
-                                    ) {
+                                    var shipItemNo = ns_xml.XPath.select({
+                                        node: shipItemNodes[iii],
+                                        xpath: 'SHIPITEMNO'
+                                    });
+                                    shipItemNo =
+                                        shipItemNo && shipItemNo[0]
+                                            ? shipItemNo[0].textContent
+                                            : null;
+
+                                    if (shipItemNo) {
                                         itemInPackage = true;
                                         var serialNum = vc2_util.getNodeTextContent(
                                             ns_xml.XPath.select({
@@ -221,7 +249,9 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                 var carrier = ns_xml.XPath.select({
                                     node: packageNodes[ii],
                                     xpath: 'CARRIER'
-                                })[0].textContent;
+                                });
+                                carrier = carrier && carrier[0] ? carrier[0].textContent : null;
+
                                 if (carrier != null && carrier.length > 0) {
                                     var carrierService = vc2_util.getNodeTextContent(
                                         ns_xml.XPath.select({
@@ -330,7 +360,9 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
-                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
+                returnValue = this.processResponse({
+                    xmlResponse: respOrderStatus
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

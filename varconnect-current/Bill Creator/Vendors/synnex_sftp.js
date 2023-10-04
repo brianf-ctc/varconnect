@@ -12,7 +12,14 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, moment) {
+define(['N/xml', 'N/sftp', '../../CTC_VC2_Lib_Utils', '../Libraries/moment'], function (
+    ns_xml,
+    ns_sftp,
+    vc2_util,
+    moment
+) {
+    var LogTitle = 'WS:SynnexSFTP';
+
     var NodeType = {
         ELEMENT: ns_xml.NodeType.ELEMENT_NODE, //1
         TEXT: ns_xml.NodeType.TEXT_NODE, //3
@@ -191,6 +198,99 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
     };
 
     function processXml(input, config) {
+        var logTitle = [LogTitle, 'processXml'].join('::');
+
+        // establish connection to remote FTP server
+
+        var connection = ns_sftp.createConnection({
+            username: config.user_id,
+            passwordGuid: config.user_pass,
+            url: config.url,
+            directory: config.res_path,
+            hostKey: config.host_key
+        });
+
+        vc2_util.log(logTitle, '*** Loading: ', input);
+
+        var downloadedFile = connection.download({ filename: input });
+
+        var xmlStr = downloadedFile.getContents();
+        var returnArr = [];
+
+        var xmlObj = ns_xml.Parser.fromString(xmlStr);
+        var xmlInvoice = ns_xml.XPath.select({
+            node: xmlObj,
+            xpath: '//SynnexB2B/Invoice'
+        });
+
+        for (var i = 0; i < xmlInvoice.length; i++) {
+            var jsonObj = Helper.xml2json(xmlInvoice[i], '');
+            var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
+
+            vc2_util.log(logTitle, '*** PROCESSING bill file: ', invoiceData);
+
+            var myObj = {
+                po: invoiceData.CustomerPONumber,
+                date: invoiceData.InvoiceDate,
+                invoice: invoiceData.InvoiceNumber,
+                charges: {
+                    tax: parseFloat(invoiceData.Summary.SalesTax),
+                    other:
+                        parseFloat(invoiceData.Summary.MinOrderFee) +
+                        parseFloat(invoiceData.Summary.ProcessingFee) +
+                        parseFloat(invoiceData.Summary.BoxCharge),
+                    shipping: parseFloat(invoiceData.Summary.Freight)
+                },
+                total: parseFloat(invoiceData.Summary.TotalInvoiceAmount),
+                lines: []
+            };
+
+            if (!util.isArray(invoiceData.Items.Item)) {
+                invoiceData.Items.Item = [invoiceData.Items.Item];
+            }
+
+            var trackingNos = null;
+            if (invoiceData.Tracking && invoiceData.Tracking.TrackNumber) {
+                trackingNos = util.isArray(invoiceData.Tracking.TrackNumber)
+                    ? invoiceData.Tracking.TrackNumber
+                    : [invoiceData.Tracking.TrackNumber];
+            }
+
+            for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
+                var itemData = invoiceData.Items.Item[ii];
+
+                var lineData = {
+                    processed: false,
+                    ITEMNO: itemData.ManuafacturerPartNumber,
+                    PRICE: parseFloat(itemData.UnitPrice),
+                    QUANTITY: parseFloat(itemData.ShipQuantity),
+                    DESCRIPTION: itemData.ProductDescription
+                };
+
+                if (trackingNos) lineData.TRACKING = trackingNos;
+
+                var serialNos = itemData.SerialNo
+                    ? util.isArray(itemData.SerialNo)
+                        ? itemData.SerialNo
+                        : [itemData.SerialNo]
+                    : null;
+                if (serialNos) lineData.SERIAL = serialNos;
+                vc2_util.log(logTitle, '...line data: ', lineData);
+                myObj.lines.push(lineData);
+            }
+
+            vc2_util.log(logTitle, ' --- added: ', myObj);
+
+            returnArr.push({
+                xmlStr: JSON.stringify(jsonObj),
+                ordObj: myObj
+            });
+        }
+
+        return returnArr;
+    }
+
+    function processXml_orig(input, config) {
         // establish connection to remote FTP server
 
         var connection = ns_sftp.createConnection({
@@ -250,6 +350,7 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
             }
 
             returnArr.push({
+                xmlStr: JSON.stringify(jsonObj),
                 ordObj: myObj
             });
         }
@@ -258,7 +359,10 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
         return returnArr;
     }
 
-    function processXml_old(input, config) {
+    function processXml_new(input, config) {
+        var logTitle = [LogTitle, 'processXml'].join('::'),
+            returnValue;
+
         // establish connection to remote FTP server
 
         var connection = ns_sftp.createConnection({
@@ -274,141 +378,79 @@ define(['N/xml', 'N/sftp', '../Libraries/moment'], function (ns_xml, ns_sftp, mo
         });
 
         var xmlStr = downloadedFile.getContents();
-
-        var xmlArr = [];
-
-        // Parse the file and break up individual bills
-
-        var xmlKey = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>';
-
-        do {
-            if (xmlStr.indexOf(xmlKey, xmlKey.length) == -1) {
-                xmlArr.push(xmlStr);
-                xmlStr = '';
-            } else {
-                xmlArr.push(xmlStr.slice(0, xmlStr.indexOf(xmlKey, xmlKey.length)));
-                xmlStr = xmlStr.slice(xmlStr.indexOf(xmlKey, xmlKey.length), xmlStr.length);
-            }
-
-            log.debug('xmlStr', JSON.stringify(xmlStr));
-        } while (xmlStr.indexOf(xmlKey) == 0);
-
         var returnArr = [];
 
-        for (f = 0; f < xmlArr.length; f++) {
-            var returnObj = {};
-            returnObj.xmlStr = xmlArr[f];
+        var xmlObj = ns_xml.Parser.fromString(xmlStr);
+        var xmlInvoice = ns_xml.XPath.select({
+            node: xmlObj,
+            xpath: '//SynnexB2B/Invoice'
+        });
 
-            var xmlObj = ns_xml.Parser.fromString(xmlArr[f]);
+        for (var i = 0; i < xmlInvoice.length; i++) {
+            var jsonObj = Helper.xml2json(xmlInvoice[i], '');
+            var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
 
-            var myObj = {};
+            vc2_util.log(logTitle, '*** PROCESSING bill file: ', invoiceData);
 
-            myObj.po = ns_xml.XPath.select({
-                node: xmlObj,
-                xpath: '/SynnexB2B/Invoice/CustomerPONumber'
-            })[0].textContent;
+            var myObj = {
+                po: invoiceData.CustomerPONumber,
+                date: invoiceData.InvoiceDate,
+                invoice: invoiceData.InvoiceNumber,
+                charges: {
+                    tax: parseFloat(invoiceData.Summary.SalesTax),
+                    other:
+                        parseFloat(invoiceData.Summary.MinOrderFee) +
+                        parseFloat(invoiceData.Summary.ProcessingFee) +
+                        parseFloat(invoiceData.Summary.BoxCharge),
+                    shipping: parseFloat(invoiceData.Summary.Freight)
+                },
+                total: parseFloat(invoiceData.Summary.TotalInvoiceAmount),
+                lines: []
+            };
 
-            myObj.charges = {};
+            vc2_util.log(logTitle, '... myObj: ', myObj);
+            vc2_util.log(logTitle, '... items: ', invoiceData.Items.Item);
 
-            //XML XPath Tool https://xmlgrid.net/
+            if (!util.isArray(invoiceData.Items.Item)) {
+                invoiceData.Items.Item = [invoiceData.Items.Item];
+            }
+            vc2_util.log(logTitle, '... Tracking: ', invoiceData.Tracking);
 
-            var rawDate = ns_xml.XPath.select({
-                //12/16/16
-                node: xmlObj,
-                xpath: '/SynnexB2B/Invoice/InvoiceDate'
-            })[0].textContent;
+            // var trackingNos = null;
+            // if (invoiceData.Tracking && invoiceData.Tracking.TrackNumber) {
+            //     trackingNos = util.isArray(invoiceData.Tracking.TrackNumber)
+            //         ? invoiceData.Tracking.TrackNumber
+            //         : [invoiceData.Tracking.TrackNumber];
+            // }
 
-            myObj.date = moment(rawDate, 'YYYY-MM-DD').format('MM/DD/YYYY');
+            for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
+                var itemData = invoiceData.Items.Item[ii];
 
-            myObj.invoice = ns_xml.XPath.select({
-                node: xmlObj,
-                xpath: '/SynnexB2B/Invoice/InvoiceNumber'
-            })[0].textContent;
+                vc2_util.log(logTitle, '... itemData: ', itemData);
+                // vc2_util.log(logTitle, '... Serials: ', itemData.SerialNo);
 
-            myObj.charges.tax =
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/SalesTax'
-                })[0].textContent * 1;
-
-            // myObj.charges.other = ns_xml.XPath.select({
-            //   node: xmlObj,
-            //   xpath: '/SynnexB2B/Invoice/Summary/ExpenseTotal'
-            // })[0].textContent * 1;
-
-            myObj.charges.other =
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/MinOrderFee'
-                })[0].textContent * 1;
-
-            myObj.charges.other +=
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/ProcessingFee'
-                })[0].textContent * 1;
-
-            myObj.charges.other +=
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/BoxCharge'
-                })[0].textContent * 1;
-
-            myObj.charges.shipping =
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/Freight'
-                })[0].textContent * 1;
-
-            myObj.total =
-                ns_xml.XPath.select({
-                    node: xmlObj,
-                    xpath: '/SynnexB2B/Invoice/Summary/TotalInvoiceAmount'
-                })[0].textContent * 1;
-
-            myObj.lines = [];
-
-            var lineItem = ns_xml.XPath.select({
-                node: xmlObj,
-                xpath: '/SynnexB2B/Invoice/Items/Item'
-            });
-
-            log.debug('sx: lines', lineItem.length);
-            log.debug('sx: lineItem', lineItem);
-
-            for (var i = 0; i < lineItem.length; i++) {
-                var lineObj = {};
-
-                lineObj.processed = false;
-
-                lineObj.ITEMNO = lineItem[i].getElementsByTagName({
-                    tagName: 'ManuafacturerPartNumber'
-                })[0].textContent;
-
-                lineObj.PRICE =
-                    lineItem[i].getElementsByTagName({
-                        tagName: 'UnitPrice'
-                    })[0].textContent * 1;
-
-                lineObj.QUANTITY =
-                    lineItem[i].getElementsByTagName({
-                        tagName: 'ShipQuantity'
-                    })[0].textContent * 1;
-
-                lineObj.DESCRIPTION = lineItem[i].getElementsByTagName({
-                    tagName: 'ProductDescription'
-                })[0].textContent;
-
-                myObj.lines.push(lineObj);
+                myObj.lines.push({
+                    processed: false,
+                    ITEMNO: itemData.ManuafacturerPartNumber,
+                    PRICE: parseFloat(itemData.UnitPrice),
+                    QUANTITY: parseFloat(itemData.ShipQuantity),
+                    DESCRIPTION: itemData.ProductDescription
+                    // TRACKING: trackingNos,
+                    // SERIAL: itemData.SerialNo
+                    //     ? util.isArray(itemData.SerialNo)
+                    //         ? itemData.SerialNo
+                    //         : [itemData.SerialNo]
+                    //     : null
+                });
             }
 
-            returnObj.ordObj = myObj;
-
-            returnArr.push(returnObj);
+            returnArr.push({
+                xmlStr: JSON.stringify(jsonObj),
+                ordObj: myObj
+            });
         }
 
         log.debug('returnArr', returnArr);
-
         return returnArr;
     }
 

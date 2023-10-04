@@ -29,25 +29,29 @@ define([
                 type: 'customrecord_ctc_vc_vendor_config',
                 filterExpression: [['isinactive', 'is', 'F']],
                 columns: [
-                    ns_search.createColumn({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP,
-                        sort: ns_search.Sort.ASC
-                    })
+                    'name',
+                    'internalid'
+                    // ns_search.createColumn({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP,
+                    //     sort: ns_search.Sort.ASC
+                    // })
                 ]
             });
 
             var arrReturnValue = [];
             arrSeachResults.forEach(function (result) {
                 arrReturnValue.push({
-                    value: result.getValue({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP
-                    }),
-                    text: result.getText({
-                        name: 'custrecord_ctc_vc_xml_vendor',
-                        summary: ns_search.Summary.GROUP
-                    }),
+                    value: result.getValue('internalid'),
+                    text: result.getValue('name'),
+                    // value: result.getValue({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP
+                    // }),
+                    // text: result.getText({
+                    //     name: 'custrecord_ctc_vc_xml_vendor',
+                    //     summary: ns_search.Summary.GROUP
+                    // }),
                     isSelected: !arrReturnValue.length
                 });
                 return true;

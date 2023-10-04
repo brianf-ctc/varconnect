@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -22,6 +22,7 @@
  *
  * Version	Date            Author		    		Remarks
  * 1.00		May 1, 2020	    paolodl@nscatalyst.com	Initial Build
+ * 1.01     Jun 7, 2023     christian               Trigger only on serial list change
  *
  */
 
@@ -59,6 +60,7 @@ define([
             // ,                validLicense = Helper.validateLicense({ mainConfig: mainConfig });
 
             LogPrefix = [
+                ns_runtime.executionContext,
                 scriptContext.type,
                 scriptContext.newRecord.type,
                 scriptContext.newRecord.id || '_NEW_'
@@ -66,16 +68,11 @@ define([
             LogPrefix = '[' + LogPrefix + '] ';
             vc2_util.LogPrefix = LogPrefix;
 
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    '*** SCRIPT START ****' +
-                    JSON.stringify({
-                        eventType: scriptContext.type,
-                        contextType: ns_runtime.executionContext,
-                        mainConfig: mainConfig
-                    })
-            );
+            vc2_util.log(logTitle, '*** SCRIPT START ****', {
+                eventType: scriptContext.type,
+                contextType: ns_runtime.executionContext,
+                mainConfig: mainConfig
+            });
 
             try {
                 //If Serial Scan and Update feature is disabled, hide the corresponding columns
@@ -113,7 +110,7 @@ define([
                     }
 
                     // serial sync checkbox
-                    if (fieldObj.serialSync.id)
+                    if (fieldObj.serialSync)
                         fieldObj.serialSync.updateDisplayType({
                             displayType: ns_ui.FieldDisplayType.HIDDEN
                         });
@@ -127,13 +124,13 @@ define([
                 if (!vendorConfig) {
                     // serial sync checkbox
 
-                    if (fieldObj.serialSync.id)
+                    if (fieldObj.serialSync)
                         fieldObj.serialSync.updateDisplayType({
                             displayType: ns_ui.FieldDisplayType.HIDDEN
                         });
                 }
             } catch (error) {
-                log.audit(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
+                vc2_util.log(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
             }
 
             return true;
@@ -142,37 +139,33 @@ define([
 
         afterSubmit: function (scriptContext) {
             var logTitle = [LogTitle, 'afterSubmit'].join('::');
+
             LogPrefix = [
+                ns_runtime.executionContext,
                 scriptContext.type,
                 scriptContext.newRecord.type,
                 scriptContext.newRecord.id || '_NEW_'
             ].join(':');
             LogPrefix = '[' + LogPrefix + '] ';
+            vc2_util.LogPrefix = LogPrefix;
 
             var mainConfig = Helper.loadMainConfig();
-            if (!mainConfig) return;
-
-            if (
-                !vc2_util.inArray(scriptContext.type, [
-                    scriptContext.UserEventType.CREATE,
-                    scriptContext.UserEventType.EDIT,
-                    scriptContext.UserEventType.XEDIT
-                ]) ||
-                ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
-            )
-                return;
-
-            log.debug(
-                logTitle,
-                LogPrefix +
-                    '****** START SCRIPT *****' +
-                    JSON.stringify({
-                        eventType: scriptContext.type,
-                        contextType: ns_runtime.executionContext
-                    })
-            );
 
             try {
+                if (!mainConfig) throw 'Missing main config!';
+
+                if (
+                    !vc2_util.inArray(scriptContext.type, [
+                        scriptContext.UserEventType.CREATE,
+                        scriptContext.UserEventType.EDIT,
+                        scriptContext.UserEventType.XEDIT
+                    ]) ||
+                    ns_runtime.executionContext == ns_runtime.ContextType.MAP_REDUCE
+                )
+                    throw 'Invalid Context/EventType';
+
+                vc2_util.log(logTitle, '****** START SCRIPT *****');
+
                 var cols = vc2_constant.FIELD.TRANSACTION,
                     hasSerials = false,
                     hasNoSerials = false,
@@ -211,22 +204,25 @@ define([
 
                 var tranId = record.getValue({ fieldId: 'tranid' }),
                     taskOption = {};
-                log.debug(
-                    logTitle,
-                    LogPrefix +
-                        '>> settings: ' +
-                        JSON.stringify({
-                            tranId: tranId,
-                            hasSerials: hasSerials,
-                            hasNoSerials: hasNoSerials,
-                            'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
-                            'mainConfig.copySerialsInv': mainConfig.copySerialsInv
-                        })
-                );
+
+                var hasSerialListChanged = Helper.isSerialListChanged(scriptContext);
+
+                vc2_util.log(logTitle, '/// settings: ', {
+                    tranId: tranId,
+                    hasSerials: hasSerials,
+                    hasNoSerials: hasNoSerials,
+                    hasSerialListChanged: hasSerialListChanged,
+                    'mainConfig.serialScanUpdate': mainConfig.serialScanUpdate,
+                    'mainConfig.copySerialsInv': mainConfig.copySerialsInv
+                });
 
                 //Also check if the corresponding features have been enabled before processing
                 var vendorConfig;
-                if (record.type == ns_record.Type.INVOICE && mainConfig.copySerialsInv) {
+                if (
+                    record.type == ns_record.Type.INVOICE &&
+                    mainConfig.copySerialsInv &&
+                    hasSerialListChanged
+                ) {
                     vendorConfig = Helper.searchVendorConfig({
                         salesOrder: record.getValue({ fieldId: 'createdfrom' })
                     });
@@ -245,7 +241,7 @@ define([
                     // }
                 }
 
-                if (hasSerials && mainConfig.serialScanUpdate) {
+                if (hasSerials && mainConfig.serialScanUpdate && hasSerialListChanged) {
                     vc2_util.waitRandom(10000);
 
                     taskOption = {
@@ -260,12 +256,12 @@ define([
                     taskOption.deployId = Helper.forceDeploy(taskOption);
                 }
 
-                log.audit(logTitle, LogPrefix + '>> Task option:  ' + JSON.stringify(taskOption));
+                vc2_util.log(logTitle, '// Task option: ', taskOption);
             } catch (error) {
-                log.audit(logTitle, '## ERROR ## ' + vc2_util.extractError(error));
+                vc2_util.log(logTitle, '## ERROR ##', vc2_util.extractError(error));
             }
 
-            log.audit(logTitle, LogPrefix + '***** END SCRIPT *****');
+            vc2_util.log(logTitle, '***** END SCRIPT *****');
         }
     };
 
@@ -316,7 +312,7 @@ define([
                 inv: option.invoice || option.invoiceId || option.invId
             };
 
-            log.audit(logTitle, param);
+            vc2_util.log(logTitle, '// param: ', param);
 
             if (param.po) {
                 searchOption.filters.push('AND');
@@ -330,7 +326,7 @@ define([
                 searchOption.filters.push('AND');
                 searchOption.filters.push(['custrecordserialinvoice', 'anyof', param.inv]);
             }
-            log.audit(logTitle, searchOption);
+            vc2_util.log(logTitle, '//searchOption: ', searchOption);
 
             var results = [],
                 searchObj = ns_search.create(searchOption),
@@ -404,32 +400,16 @@ define([
                     'AND',
                     ['createdfrom', 'anyof', param.so]
                 ],
-                columns: [
-                    'internalid',
-                    'transactionname',
-                    'entity',
-                    'custbody_ctc_vc_serialsync_done',
-                    'createdfrom',
-                    ns_search.createColumn({
-                        name: 'entityid',
-                        join: 'vendor'
-                    })
-                ]
+                columns: ['entity']
             };
 
             var searchPO = ns_search.create(searchOption);
-            if (!searchPO.runPaged().count) return false;
-
             searchPO.run().each(function (result) {
                 param.vendor = result.getValue({ name: 'entity' });
-                param.vendorName = result.getValue({
-                    name: 'entityid',
-                    join: 'vendor'
-                });
-                return true;
+                return false; // return first vendor
             });
 
-            log.audit(logTitle, LogPrefix + JSON.stringify(param));
+            vc2_util.log(logTitle, '// param', param);
 
             return param.vendor;
         },
@@ -466,17 +446,13 @@ define([
                         });
 
                         // check the status
-                        log.audit(
-                            logTitle,
-                            '## DEPLOY status: ' +
-                                JSON.stringify({
-                                    id: taskId,
-                                    status: taskStatus
-                                })
-                        );
+                        vc2_util.log(logTitle, '## DEPLOY status: ', {
+                            id: taskId,
+                            status: taskStatus
+                        });
                         returnValue = taskId;
                     } catch (e) {
-                        log.error(logTitle, e.name + ':' + e.message);
+                        vc2_util.log(logTitle, '## ERROR ## ', vc2_util.extractError(e));
                     }
 
                     return returnValue;
@@ -551,7 +527,7 @@ define([
                         : option.taskType;
                 }
 
-                log.debug(logTitle, '>> params: ' + JSON.stringify(option));
+                vc2_util.log(logTitle, '// params', option);
 
                 returnValue =
                     FN.deploy(
@@ -563,9 +539,9 @@ define([
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
-                log.audit(logTitle, '>> deploy: ' + JSON.stringify(returnValue));
+                vc2_util.log(logTitle, '// deploy: ', returnValue);
             } catch (e) {
-                log.error(logTitle, e.name + ': ' + e.message);
+                vc2_util.log(logTitle, '## ERROR ## ', vc2_util.extractError(e));
                 throw e;
             }
             ////////////////////////////////////////
@@ -573,28 +549,175 @@ define([
             return returnValue;
         },
         getField: function (form, fieldId) {
-            var returnField;
+            var logTitle = 'getField',
+                returnField;
+
+            vc2_util.log(logTitle, '/// fieldId: ', [fieldId]);
 
             try {
                 returnField = form.getField({ id: fieldId });
-                if (!returnField || !returnField.id) throw 'Field is not exposed';
             } catch (error) {
-                log.audit('getSublistField', error);
+                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
+                returnField = null;
+            }
+            try {
+                if (!returnField || !returnField.id) {
+                    vc2_util.log(
+                        logTitle,
+                        '## ERROR ## ',
+                        'Field (id=' + fieldId + ') is not exposed'
+                    );
+                    returnField = null;
+                }
+            } catch (invocationErr) {
+                vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
+                returnField = null;
             }
 
             return returnField;
         },
         getSublistField: function (sublist, fieldId) {
-            var returnField;
+            var logTitle = 'getSublistField',
+                returnField;
+
+            vc2_util.log(logTitle, '/// sublist, fieldId: ', [sublist, fieldId]);
 
             try {
                 returnField = sublist.getField({ id: fieldId });
-                if (!returnField || !returnField.id) throw 'Field is not exposed';
             } catch (error) {
-                log.audit('getSublistField', error);
+                vc2_util.log(logTitle, '## ERROR ## ', [fieldId, vc2_util.extractError(error)]);
+                returnField = null;
+            }
+            try {
+                if (!returnField || !returnField.id) {
+                    vc2_util.log(
+                        logTitle,
+                        '## ERROR ## ',
+                        'Field (id=' + fieldId + ') is not exposed'
+                    );
+                    returnField = null;
+                }
+            } catch (invocationErr) {
+                vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
+                returnField = null;
             }
 
             return returnField;
+        },
+        split: function (inputString) {
+            var result = [];
+            if (inputString) {
+                inputString = inputString
+                    .replace(/[,\s]+/g, ',')
+                    .replace(/(^[,\s]+)|([,\s]+$)/g, '');
+                result = inputString.split(',');
+            }
+            return result;
+        },
+        matchArrayContents: function (input1, input2) {
+            var array1 = input1,
+                array2 = input2,
+                returnValue = null;
+            if (util.isString(input1)) {
+                array1 = Helper.split(input1);
+            }
+            if (util.isString(input2)) {
+                array2 = Helper.split(input2);
+            }
+            if (util.isArray(array1) && util.isArray(array2)) {
+                returnValue = 0;
+                var y;
+                for (var x = 0, xCount = array1.length; x < xCount; x += 1) {
+                    var arr1Content = array1[x];
+                    var y = array2.indexOf(arr1Content);
+                    var cont1Matched = false;
+                    while (y >= 0) {
+                        cont1Matched = true;
+                        array2 = array2.splice(y, 1);
+                        y = array2.indexOf(arr1Content);
+                    }
+                    if (!cont1Matched) {
+                        returnValue = -1; // array2 missing some values
+                        break;
+                    }
+                }
+                y = 0;
+                if (returnValue === 0) {
+                    for (var yCount = array2.length; y < yCount; y += 1) {
+                        var arr2Content = array2[x];
+                        var x = array1.indexOf(arr2Content);
+                        if (x == -1) {
+                            returnValue = 1; // array2 has some new values
+                            break;
+                        }
+                    }
+                }
+            }
+            return returnValue;
+        },
+        isSerialListChanged: function (option) {
+            var logTitle = [LogTitle || '', 'isSerialListChanged'].join('::'),
+                returnValue = false;
+            var oldRecord = option.oldRecord,
+                record = option.newRecord;
+            if (!oldRecord) returnValue = true; // create
+            else if (oldRecord) {
+                var cols = vc2_constant.FIELD.TRANSACTION,
+                    hasSerialsChanged = false,
+                    hasLineSerials = false,
+                    hasExistingSerials = false,
+                    lineCount = record.getLineCount({ sublistId: 'item' });
+                for (var line = 0; line < lineCount; line++) {
+                    var lineUniqueKey = record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'lineuniquekey',
+                        line: line
+                    });
+                    var serialString = record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_SCAN,
+                        line: line
+                    });
+                    var serialStringUpdate = record.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_UPDATE,
+                        line: line
+                    });
+                    var lineEquivalent = oldRecord.findSublistLineWithValue({
+                        sublistId: 'item',
+                        fieldId: 'lineuniquekey',
+                        value: lineUniqueKey
+                    });
+                    var oldSerialString = oldRecord.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_SCAN,
+                        line: lineEquivalent
+                    });
+                    var oldSerialStringUpdate = oldRecord.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: cols.SERIAL_NUMBER_UPDATE,
+                        line: lineEquivalent
+                    });
+                    if (serialString || serialStringUpdate) {
+                        hasLineSerials = true;
+                    }
+                    if (oldSerialString || oldSerialStringUpdate) {
+                        hasExistingSerials = true;
+                    }
+                    if (hasLineSerials != hasExistingSerials) {
+                        hasSerialsChanged = true;
+                    } else if (hasLineSerials && hasExistingSerials) {
+                        hasSerialsChanged =
+                            Helper.matchArrayContents(oldSerialString, serialString) !== 0 ||
+                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !==
+                                0;
+                    } else {
+                        hasSerialsChanged = false;
+                    }
+                }
+                returnValue = hasSerialsChanged;
+            }
+            return returnValue;
         }
     };
 
