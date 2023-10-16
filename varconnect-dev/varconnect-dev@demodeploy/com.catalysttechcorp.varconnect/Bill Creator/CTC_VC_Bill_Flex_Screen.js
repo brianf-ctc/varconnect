@@ -522,6 +522,7 @@ define([
                 LINE_AMOUNT: BillData.Total.LineAmount,
                 TAX_AMOUNT: BillData.Total.Tax,
                 SHIPPING_AMT: BillData.Total.Shipping,
+                CHARGE_AMT: BillData.Total.Charges,
                 VARIANCE_AMT: BillData.Total.Variance || BillData.Total.LineVariance
             });
 
@@ -1139,7 +1140,7 @@ define([
 
             FormHelper.updateFieldValue({
                 name: 'CALC_VARIANCETOTAL',
-                value: Current.TOTALS_DATA.VARIANCE_AMT
+                value: Current.TOTALS_DATA.VARIANCE_AMT + Current.TOTALS_DATA.CHARGE_AMT
             });
         }
     };

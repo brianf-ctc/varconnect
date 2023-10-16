@@ -146,10 +146,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -206,10 +203,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 5
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {
@@ -302,10 +296,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 end: 1
             });
         } catch (e) {
-            log.error(
-                logTitle,
-                LogPrefix + '!! ERROR !!' + vc2_util.extractError(e)
-            );
+            log.error(logTitle, LogPrefix + '!! ERROR !!' + vc2_util.extractError(e));
         }
 
         if (result && result[0]) {

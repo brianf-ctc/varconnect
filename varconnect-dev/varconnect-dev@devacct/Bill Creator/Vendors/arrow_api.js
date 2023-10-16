@@ -116,7 +116,10 @@ define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], fu
 
                 myObj.charges.tax = xmlObj.TotalTaxAmount * 1;
                 myObj.charges.shipping = xmlObj.TotalFrieghtAmt * 1;
-                myObj.charges.other = xmlObj.TotalPSTAmount * 1 + xmlObj.TotalHSTAmount * 1 + xmlObj.TotalGSTAmount * 1;
+                myObj.charges.other =
+                    xmlObj.TotalPSTAmount * 1 +
+                    xmlObj.TotalHSTAmount * 1 +
+                    xmlObj.TotalGSTAmount * 1;
 
                 myObj.lines = [];
 

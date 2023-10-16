@@ -16,7 +16,6 @@ define([
     './CTC_VC_Lib_Synnex',
     './CTC_VC_Lib_TechData',
     './CTC_VC_Lib_DandH',
-    './CTC_VC_Lib_DandH_v2',
     './CTC_VC_Lib_Ingram',
     './CTC_VC_Lib_Dell',
     './CTC_VC_Lib_Arrow',
@@ -32,7 +31,6 @@ define([
     lib_synnex,
     lib_techdata,
     lib_dnh,
-    lib_dnhv2,
     lib_ingram,
     lib_dell,
     lib_arrow,
@@ -138,9 +136,6 @@ define([
                 break;
             case vendorList.DandH:
                 libVendor = lib_dnh;
-                break;
-            case vendorList.DandH_API:
-                libVendor = lib_dnhv2;
                 break;
             case vendorList.INGRAM_MICRO:
                 libVendor = lib_ingram;

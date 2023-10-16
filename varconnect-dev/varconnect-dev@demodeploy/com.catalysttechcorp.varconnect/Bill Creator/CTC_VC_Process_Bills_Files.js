@@ -149,7 +149,7 @@ define([
                 searchOption.filters.push('AND');
                 searchOption.filters.push(['internalid', 'anyof', ScriptParam.billFileID]);
             }
-            // log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
+            log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
 
             var searchObj = ns_search.create(searchOption);
             var totalPending = searchObj.runPaged().count;

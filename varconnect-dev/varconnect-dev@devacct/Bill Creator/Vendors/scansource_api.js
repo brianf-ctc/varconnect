@@ -40,15 +40,8 @@ define(function (require) {
         };
 
         var invoiceListUrl =
-            config.url +
-            '/list?customerNumber=' +
-            config.partner_id +
-            '&poNumber=' +
-            config.poNum;
-        log.debug(
-            TransId + ' | ' + stLogTitle + ' | invoiceListUrl',
-            invoiceListUrl
-        );
+            config.url + '/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum;
+        log.debug(TransId + ' | ' + stLogTitle + ' | invoiceListUrl', invoiceListUrl);
 
         var objResponse = https.get({
             url: invoiceListUrl,
@@ -93,10 +86,7 @@ define(function (require) {
             tokenResponse = 'Bearer ' + responseBody.access_token;
         }
 
-        log.debug(
-            TransId + ' | ' + stLogTitle + ' | tokenResponse',
-            tokenResponse
-        );
+        log.debug(TransId + ' | ' + stLogTitle + ' | tokenResponse', tokenResponse);
         return tokenResponse;
     }
 
@@ -129,9 +119,7 @@ define(function (require) {
                     objData.lines.push({
                         ITEMNO: arrInvoiceLines[n].ItemNumber,
                         PRICE: vc2_util.parseFloat(arrInvoiceLines[n].Price),
-                        QUANTITY: vc2_util.parseFloat(
-                            arrInvoiceLines[n].Ordered
-                        ),
+                        QUANTITY: vc2_util.parseFloat(arrInvoiceLines[n].Ordered),
                         DESCRIPTION: arrInvoiceLines[n].ItemDescription,
                         SERIAL: arrInvoiceLines[n].SerialNumbers
                     });

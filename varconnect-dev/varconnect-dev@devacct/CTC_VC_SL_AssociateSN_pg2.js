@@ -13,15 +13,15 @@
  * @NScriptType Suitelet
  */
 
-define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/record', 'N/http'], function (
-    ui,
-    email,
-    runtime,
-    log,
-    search,
-    rec,
-    http
-) {
+define([
+    'N/ui/serverWidget',
+    'N/email',
+    'N/runtime',
+    'N/log',
+    'N/search',
+    'N/record',
+    'N/http'
+], function (ui, email, runtime, log, search, rec, http) {
     const SUBLIST_ID = 'custpage_items';
 
     const PO_TRANSACTION_ID = 15;
@@ -69,7 +69,10 @@ define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/rec
 
         if (isEmpty(searchType)) return;
 
-        log.debug('in doGet ', 'filterType = ' + filterType + ' scriptOrderNum = ' + scriptOrderNum);
+        log.debug(
+            'in doGet ',
+            'filterType = ' + filterType + ' scriptOrderNum = ' + scriptOrderNum
+        );
 
         // Get the current transaction's ID and created from ID
         var itemfulfillmentSearchObj = search.create({
@@ -327,7 +330,11 @@ define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/rec
             filterList = [
                 ['custrecordserialitem', 'anyof', itemID],
                 'AND',
-                [['custrecordserialinvoice', 'anyof', parentID], 'OR', ['custrecordserialsales', 'anyof', parentID]],
+                [
+                    ['custrecordserialinvoice', 'anyof', parentID],
+                    'OR',
+                    ['custrecordserialsales', 'anyof', parentID]
+                ],
                 'AND',
                 ['custrecordrmanumber', 'anyof', '@NONE@']
             ];

@@ -24,13 +24,13 @@
  *@NScriptType UserEventScript
  */
 
-define(['N/runtime', 'N/url', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils', './CTC_VC2_Lib_Record'], function (
-    ns_runtime,
-    ns_url,
-    vc2_constant,
-    vc2_util,
-    vc2_record
-) {
+define([
+    'N/runtime',
+    'N/url',
+    './CTC_VC2_Constants',
+    './CTC_VC2_Lib_Utils',
+    './CTC_VC2_Lib_Record'
+], function (ns_runtime, ns_url, vc2_constant, vc2_util, vc2_record) {
     //        vcGlobals.SN_LINE_FIELD_LINK_ID
     var LogTitle = 'SetSerialLink';
 
@@ -108,11 +108,14 @@ define(['N/runtime', 'N/url', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils', './C
                     if (lineData.itemType == 'EndGroup') continue;
 
                     var lineSerialLink =
-                        serialLinkUrl + ('&itemName=' + lineData.itemName) + ('&itemId=' + lineData.item);
+                        serialLinkUrl +
+                        ('&itemName=' + lineData.itemName) +
+                        ('&itemId=' + lineData.item);
 
                     lineFixJS.push(
                         '(function(){',
-                        "var el = jq('div#item_layer tr:eq(" + (line + 1 + ") a:contains(Serial Number Link)');"),
+                        "var el = jq('div#item_layer tr:eq(" +
+                            (line + 1 + ") a:contains(Serial Number Link)');"),
                         'if (! el || !el.length) return;',
                         'el.attr("href", "' + lineSerialLink + '");',
                         '})();'

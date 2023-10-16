@@ -207,8 +207,7 @@ define(function (require) {
             TECH_DATA_API: '12',
             JENNE: '13',
             SCANSOURCE: '14',
-            WEFI: '16',
-            DandH_API:'17'
+            WEFI: '16'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',

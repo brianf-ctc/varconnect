@@ -281,7 +281,6 @@ define([
             var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
             vc2_util.log(logTitle, '// arrSKUsVendorNames: ', arrSKUsVendorNames);
 
-
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
                 arrSKUs[i].vendorItemName =
                     arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];

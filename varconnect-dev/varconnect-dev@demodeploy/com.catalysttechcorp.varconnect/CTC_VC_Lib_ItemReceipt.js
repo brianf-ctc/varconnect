@@ -201,7 +201,7 @@ define(function (require) {
                         lineRRData;
                     for (line = 0; line < lineItemCount; line++) {
                         lineRRData = vc2_record.extractLineValues({
-                            record: recItemFF,
+                            record: record,
                             line: line,
                             columns: ['item']
                         });

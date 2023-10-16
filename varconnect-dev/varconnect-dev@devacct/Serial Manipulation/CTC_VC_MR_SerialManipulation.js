@@ -35,7 +35,16 @@ define([
     '../CTC_VC_Lib_MainConfiguration.js',
     '../CTC_VC_Lib_LicenseValidator',
     '../CTC_VC2_Lib_Utils'
-], function (ns_record, ns_search, ns_runtime, ns_email, vc2_constant, vc_maincfg, vc_license, vc2_utils) {
+], function (
+    ns_record,
+    ns_search,
+    ns_runtime,
+    ns_email,
+    vc2_constant,
+    vc_maincfg,
+    vc_license,
+    vc2_utils
+) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -90,12 +99,16 @@ define([
                         createdFromData.recordtype == ns_record.Type.SALES_ORDER
                         ? recordData.createdfrom
                         : // created from PO, and has createdfrom data
-                        createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER && createdFromData.createdfrom
+                        createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
+                          createdFromData.createdfrom
                         ? createdFromData.createdfrom
                         : null;
 
                 log.audit(logTitle, LogPrefix + '// record: ' + JSON.stringify(recordData));
-                log.audit(logTitle, LogPrefix + '// createdFrom: ' + JSON.stringify(createdFromData));
+                log.audit(
+                    logTitle,
+                    LogPrefix + '// createdFrom: ' + JSON.stringify(createdFromData)
+                );
 
                 var lineCount = record.getLineCount({ sublistId: 'item' }),
                     serialObj = {};
@@ -111,7 +124,10 @@ define([
                         serialObj[SERIALFLD[recTypeKey]] = recordData.createdfrom;
                     }
                 }
-                if (createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER && createdFromData.createdfrom) {
+                if (
+                    createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
+                    createdFromData.createdfrom
+                ) {
                     serialObj[SERIALFLD.SALES_ORDER] = createdFromData.createdfrom;
                 }
                 log.audit(logTitle, LogPrefix + '// serial obj: ' + JSON.stringify(serialObj));
@@ -147,7 +163,8 @@ define([
                     };
 
                     if (lineData.serialStr) lineData.serialArr = Helper.split(lineData.serialStr);
-                    if (lineData.updateSerialStr) lineData.updateSerialArr = Helper.split(lineData.updateSerialStr);
+                    if (lineData.updateSerialStr)
+                        lineData.updateSerialArr = Helper.split(lineData.updateSerialStr);
 
                     log.audit(logTitle, LogPrefix + '// Line Data: ' + JSON.stringify(lineData));
 
@@ -178,7 +195,10 @@ define([
 
                     if (lineData.serialArr)
                         lineData.serialArr.forEach(function (serial) {
-                            var serialData = util.extend({ action: 'create', name: serial }, serialObj);
+                            var serialData = util.extend(
+                                { action: 'create', name: serial },
+                                serialObj
+                            );
                             serialData[SERIALFLD.ITEM] = lineData.item;
                             returnData.push(serialData);
                             return true;
@@ -186,7 +206,10 @@ define([
 
                     if (lineData.updateSerialArr)
                         lineData.updateSerialArr.forEach(function (serial) {
-                            var serialData = util.extend({ action: 'update', name: serial }, serialObj);
+                            var serialData = util.extend(
+                                { action: 'update', name: serial },
+                                serialObj
+                            );
                             serialData[SERIALFLD.ITEM] = lineData.item;
                             returnData.push(serialData);
                             return true;
@@ -255,7 +278,8 @@ define([
 
             if (serialId) context.write({ key: 'success', value: currentData.name });
             else {
-                if (action == 'create') context.write({ key: 'duplicate', value: currentData.name });
+                if (action == 'create')
+                    context.write({ key: 'duplicate', value: currentData.name });
                 else if (action == 'update') context.write({ key: 'dne', value: currentData.name });
             }
         },
@@ -346,7 +370,10 @@ define([
 
             try {
                 var serialSearch = ns_search.global({ keywords: 'serial: ' + option.name });
-                log.debug(logTitle, LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch)
+                );
                 if (serialSearch.length) throw 'Matching serial found';
 
                 var recSerial = ns_record.create({ type: 'customrecordserialnum' });
@@ -378,7 +405,10 @@ define([
 
             try {
                 var serialSearch = ns_search.global({ keywords: 'serial: ' + option.name });
-                log.debug(logTitle, LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch));
+                log.debug(
+                    logTitle,
+                    LogPrefix + '// Global search result: ' + JSON.stringify(serialSearch)
+                );
                 if (!serialSearch.length) throw 'Matching serial not found';
                 if (serialSearch.length > 1) throw 'Multiple serials found';
 
@@ -390,7 +420,10 @@ define([
                     updateValues[fld] = option[fld];
                 }
 
-                log.audit(logTitle, LogPrefix + '// Serial values: ' + JSON.stringify(updateValues));
+                log.audit(
+                    logTitle,
+                    LogPrefix + '// Serial values: ' + JSON.stringify(updateValues)
+                );
 
                 var serialId = ns_record.submitFields({
                     type: 'customrecordserialnum',
@@ -547,10 +580,12 @@ define([
                     serialUpdateArray = Helper.split(serialUpdateString);
 
                 serialArray.forEach(function (serial) {
-                    if (serial && duplicateSerials.indexOf(serial) > -1) newSerials.push('DUP-FOUND-' + serial);
+                    if (serial && duplicateSerials.indexOf(serial) > -1)
+                        newSerials.push('DUP-FOUND-' + serial);
                 });
                 serialUpdateArray.forEach(function (serial) {
-                    if (serial && dneSerials.indexOf(serial) > -1) newDneSerials.push('DNE-' + serial);
+                    if (serial && dneSerials.indexOf(serial) > -1)
+                        newDneSerials.push('DNE-' + serial);
                 });
 
                 rec.setSublistValue({
@@ -595,12 +630,16 @@ define([
                 cc = [sender];
 
             if (recType == ns_record.Type.ITEM_RECEIPT) cc = cc.concat(CC_ITEM_RECEIPT);
-            else if (recType == ns_record.Type.ITEM_FULFILLMENT) cc = cc.concat(CC_ITEM_FULFILLMENT);
+            else if (recType == ns_record.Type.ITEM_FULFILLMENT)
+                cc = cc.concat(CC_ITEM_FULFILLMENT);
 
             if (duplicate && duplicate.length > 0) {
                 log.debug('Sending email for duplicate serials');
                 var subject = 'Duplicate' + EMAIL_SUBJECT + txnNumber,
-                    body = EMAIL_BODY_DUP.replace('{txn}', txnNumber).replace('{dup}', duplicate.join(', '));
+                    body = EMAIL_BODY_DUP.replace('{txn}', txnNumber).replace(
+                        '{dup}',
+                        duplicate.join(', ')
+                    );
 
                 ns_email.send({
                     author: sender,
@@ -613,7 +652,10 @@ define([
             if (dne && dne.length > 0) {
                 log.debug('Sending email for dne serials');
                 var subject = 'Non-existent' + EMAIL_SUBJECT + txnNumber,
-                    body = EMAIL_BODY_DNE.replace('{txn}', txnNumber).replace('{dne}', dne.join(', '));
+                    body = EMAIL_BODY_DNE.replace('{txn}', txnNumber).replace(
+                        '{dne}',
+                        dne.join(', ')
+                    );
 
                 ns_email.send({
                     author: sender,

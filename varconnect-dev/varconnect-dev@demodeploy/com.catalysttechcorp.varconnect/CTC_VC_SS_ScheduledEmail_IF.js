@@ -226,7 +226,8 @@ define([
             isDynamic: false
         });
         // Get Template Subject and Body
-        var emailBody = emailTemplate.getValue({ fieldId: 'content' });
+        var emailBody = emailTemplate.getValue({ fieldId: 'content' }),
+            emailSubj = emailTemplate.getValue({ fieldId: 'subject' });
 
         // Create a template rendere so we can render (fill in template field tags)
         var renderer = ns_render.create();
@@ -240,7 +241,7 @@ define([
         var newBody = renderer.renderAsString();
 
         // replace the string <TABLEINFO> in the template body with the HTML string emailBody
-        newBody = newBody.replace('&lt;TABLEINFO&gt;', itemTableHTML);
+        newBody = newBody.replace('%%TABLEINFO%%', itemTableHTML);
 
         // log.audit(logTitle, '>> email body:  ' + newBody);
 

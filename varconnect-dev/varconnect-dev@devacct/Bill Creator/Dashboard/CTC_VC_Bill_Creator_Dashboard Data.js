@@ -128,15 +128,19 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                         'AND',
                         ['internalid', 'anyof', poIds],
                         'AND',
-                        ["formulanumeric: CASE {appliedtotransaction.applyingtransaction} WHEN ({type}||' #'||{number}) THEN 1 ELSE 0 END", 'equalto', '1'],
+                        [
+                            "formulanumeric: CASE {appliedtotransaction.applyingtransaction} WHEN ({type}||' #'||{number}) THEN 1 ELSE 0 END",
+                            'equalto',
+                            '1'
+                        ],
                         'AND',
-                        ['memorized', 'is', 'F'],
+                        ['memorized', 'is', 'F']
                     ],
                     columns: [
                         search.createColumn({
                             name: 'applyinglinktype',
-                            join: 'appliedtotransaction',
-                        }),
+                            join: 'appliedtotransaction'
+                        })
                     ]
                 });
                 log.debug(logTitle, 'po link type search=' + JSON.stringify(s.filterExpression));
@@ -152,7 +156,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                     currentPage.data.forEach(function (result) {
                         poLinkTypeMapping[result.id] = result.getValue({
                             name: 'applyinglinktype',
-                            join: 'appliedtotransaction',
+                            join: 'appliedtotransaction'
                         });
                         isPOLinkEmpty = false;
                     });
@@ -196,7 +200,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug(logTitle, 'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var status = result.getValue({
                     name: 'custrecord_ctc_vc_bill_proc_status',
@@ -256,7 +263,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug(logTitle, 'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var position =
                     result.getValue({
@@ -326,7 +336,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
             data: result.getValue({
                 name: 'custrecord_ctc_vc_bill_due_date'
             })
-        }
+        };
         if (returnObj.billDue.display) {
             var tempDate = format.parse({
                 value: returnObj.billDue.display,

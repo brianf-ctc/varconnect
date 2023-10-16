@@ -40,7 +40,7 @@
                     <div class="side-nav">
                         <div class="side-nav-block">
                             <ul class="list-unstyled">
-                                <h4 style="text-align: center;">Summary</h4>
+                                <h4 style="text-align: center">Summary</h4>
                                 <li id="due">
                                     <a
                                         href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_not_proc_due_soon"
@@ -59,7 +59,8 @@
                                     >
                                         <i class="fa fa-receipt"></i>To Receive
                                         <span class="badge badge-primary pull-right"
-                                        >{{pend_rcpt_cnt}}</span>
+                                            >{{pend_rcpt_cnt}}</span
+                                        >
                                     </a>
                                 </li>
                                 <li id="no_po">
@@ -68,7 +69,9 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-exclamation-triangle"></i>No PO Link
-                                        <span class="badge pull-right" style="background-color: orange;"
+                                        <span
+                                            class="badge pull-right"
+                                            style="background-color: orange"
                                             >{{no_po_cnt}}</span
                                         >
                                     </a>
@@ -80,7 +83,8 @@
                                     >
                                         <i class="fa fa-pause"></i>On Hold
                                         <span class="badge badge-orange pull-right"
-                                            >{{on_hold_cnt}}</span>
+                                            >{{on_hold_cnt}}</span
+                                        >
                                     </a>
                                 </li>
                                 <li id="to_be_processed" class="has_submenu">
@@ -90,13 +94,15 @@
                                     </a>
                                     <ul class="list-unstyled">
                                         <li>
-                                            <a 
+                                            <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_non_processed&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_PROC_STATUS=1%052%054%057"
                                                 target="_blank"
                                             >
-                                                <i class="fa fa-check"></i> All<span class="badge badge-success pull-right"
+                                                <i class="fa fa-check"></i> All<span
+                                                    class="badge badge-success pull-right"
                                                     >{{to_be_proc_cnt}}</span
-                                            ></a>
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
@@ -104,9 +110,12 @@
                                                 target="_blank"
                                             >
                                                 <i class="fa fa-clock"></i> Pending
-                                                <span class="badge pull-right" style="background-color: darkcyan;"
+                                                <span
+                                                    class="badge pull-right"
+                                                    style="background-color: darkcyan"
                                                     >{{pending_cnt}}</span
-                                            ></a>
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
@@ -114,9 +123,12 @@
                                                 target="_blank"
                                             >
                                                 <i class="fa fa-rotate"></i> Reprocess
-                                                <span class="badge pull-right" style="background-color: darkcyan;"
+                                                <span
+                                                    class="badge pull-right"
+                                                    style="background-color: darkcyan"
                                                     >{{reprocess_cnt}}</span
-                                            ></a>
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
@@ -126,7 +138,8 @@
                                                 <i class="fa fa-not-equal"></i> Variance
                                                 <span class="badge badge-black pull-right"
                                                     >{{variance_cnt}}</span
-                                            ></a>
+                                                ></a
+                                            >
                                         </li>
                                         <li>
                                             <a
@@ -136,18 +149,18 @@
                                                 <i class="fa fa-circle-xmark"></i> Errors
                                                 <span class="badge badge-error pull-right"
                                                     >{{alert_error}}</span
-                                            ></a>
+                                                ></a
+                                            >
                                         </li>
                                     </ul>
                                 </li>
                                 <br />
-                                <h4 style="text-align: center;">Shortcuts</h4>
+                                <h4 style="text-align: center">Shortcuts</h4>
                                 <li>
                                     <a
                                         href="/app/common/custom/custrecordentrylist.nl?rectype={{vendconfig_rectype_id}}"
                                         target="_blank"
-                                        ><i class="fa fa-cog"></i>Vendor
-                                        Configs</a
+                                        ><i class="fa fa-cog"></i>Vendor Configs</a
                                     >
                                 </li>
                             </ul>
@@ -162,7 +175,9 @@
                             <div class="col-md-12">
                                 <div class="widget">
                                     <div class="widget-head br-blue">
-                                        <h3 class="pull-left">VAR Connect - Bill Creator Dashboard</h3>
+                                        <h3 class="pull-left">
+                                            VAR Connect - Bill Creator Dashboard
+                                        </h3>
                                         <div class="pull-right">
                                             <!-- <a href="https://www.nscatalyst.com/"><img
                                                 src="https://tstdrv1716438.app.netsuite.com/core/media/media.nl?id=73&amp;c=TSTDRV1716438&amp;h=0SWiBnADOHDG9AtbUuNG48Q4IIJs5TUQCo6eQBHZfaM-QrF5"
@@ -252,15 +267,15 @@
                                                     {
                                                         data: 'billDate',
                                                         render: {
-                                                            '_': 'display',
-                                                            'sort': 'data'
+                                                            _: 'display',
+                                                            sort: 'data'
                                                         }
                                                     },
                                                     {
                                                         data: 'billDue',
                                                         render: {
-                                                            '_': 'display',
-                                                            'sort': 'data'
+                                                            _: 'display',
+                                                            sort: 'data'
                                                         }
                                                     },
                                                     {

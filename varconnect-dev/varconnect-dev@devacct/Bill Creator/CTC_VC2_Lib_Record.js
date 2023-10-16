@@ -882,8 +882,6 @@ define(function (require) {
 
                 vc2_util.log(logTitle, '>> arrOutputLines: ', arrOutputLines);
 
-                
-
                 // vc2_util.log(logTitle, '**** MATCHING ITEMS END **** ', arrOutputLines);
             } catch (error) {
                 vc2_util.logError(logTitle, error);

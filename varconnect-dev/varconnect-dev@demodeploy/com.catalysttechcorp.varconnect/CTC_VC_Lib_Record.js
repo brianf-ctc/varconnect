@@ -473,7 +473,7 @@ define([
                     });
 
                     // var SHIP_FIELDS = ['ship_date', 'tracking_num', 'carrier', 'serial_num'];
-                    var SHIP_FIELDS = ['ship_date', 'tracking_num', 'serial_num'];
+                    var SHIP_FIELDS = []; // ['ship_date', 'tracking_num', 'serial_num'];
 
                     // loop thru the vendor columns
                     for (var ii = 0, jj = MAPPING.vendorColumns.length; ii < jj; ii++) {
