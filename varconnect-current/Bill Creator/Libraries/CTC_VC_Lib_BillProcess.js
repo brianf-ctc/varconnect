@@ -631,8 +631,8 @@ define([
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
                 // } finally {
-                //     vc2_util.log(logTitle, '>> Totals: ', Current.Total);
             }
+            vc2_util.log(logTitle, '>> Totals: ', Current.Total);
             return Current.Total;
         },
         processCharges: function () {
@@ -745,10 +745,18 @@ define([
                 Total.Variance = vc2_util.roundOff(Total.BillAmount - Total.TxnAmount);
                 var varianceAmount = Math.abs(Total.Variance) || Math.abs(Total.LineVariance);
 
-                vc2_util.log(logTitle, '... Variance: ', varianceAmount);
+                vc2_util.log(logTitle, '... Variance Amount: ', varianceAmount);
 
-                if (Current.HasVariance || Total.Variance > 0) {
-                    Current.HasVariance = Total.Charges > 0 || Math.abs(Total.Variance) > 0;
+                if (Current.HasVariance || Total.Variance > 0 || Total.Charges > 0) {
+                    Current.HasVariance =
+                        Total.Charges > 0 ||
+                        Math.abs(Total.Variance) > 0 ||
+                        Math.abs(Total.LineVariance) > 0;
+
+                    vc2_util.log(logTitle, '... Has Variance!!: ', {
+                        variance: varianceAmount,
+                        allowedTreshold: Current.MainCFG.allowedThreshold
+                    });
 
                     if (Current.MainCFG.allowedThreshold) {
                         if (
@@ -778,6 +786,7 @@ define([
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
             }
+            vc2_util.log(logTitle, '>> Totals: ', Current.Total);
         },
         reportError: function (option) {
             var logTitle = [LogTitle, 'setError'].join(': ');
