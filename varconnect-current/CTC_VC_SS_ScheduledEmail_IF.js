@@ -59,22 +59,26 @@ define([
 
             var myResults = getItemFulfillments(CURRENT.searchId),
                 emailsList = [],
+                itemFFList = [],
                 i,
                 ii;
 
             // build unique list of emails addresses
             for (i = 0; i < myResults.length; i++) {
                 var sendTo = myResults[i].getValue({
-                    name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
-                    // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
-                    join: 'createdFrom'
-                });
+                        name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
+                        join: 'createdFrom'
+                    }),
+                    itemFF = myResults[i].getValue({ name: 'internalid' });
+
                 if (!sendTo) continue;
                 var sendToList = sendTo.split(',');
 
                 for (ii = 0; ii < sendToList.length; ii++) {
                     if (emailsList.indexOf(sendToList[ii]) >= 0) continue;
                     emailsList.push(sendToList[ii]);
+
+                    if (!vc2_util.inArray(itemFF, itemFFList)) itemFFList.push(itemFF);
                 }
             }
 
@@ -88,7 +92,6 @@ define([
                 for (ii = 0; ii < myResults.length; ii++) {
                     var sendTo2 = myResults[ii].getValue({
                         name: vc2_constant.FIELD.TRANSACTION.SEND_SHIPPING_UPDATE_TO,
-                        // constants.Fields.Transaction.SEND_SHIPPING_UPDATE_TO,
                         join: 'createdFrom'
                     });
                     if (sendTo2.indexOf(newSendTo) >= 0) {
@@ -226,7 +229,8 @@ define([
             isDynamic: false
         });
         // Get Template Subject and Body
-        var emailBody = emailTemplate.getValue({ fieldId: 'content' });
+        var emailBody = emailTemplate.getValue({ fieldId: 'content' }),
+            emailSubj = emailTemplate.getValue({ fieldId: 'subject' });
 
         // Create a template rendere so we can render (fill in template field tags)
         var renderer = ns_render.create();
@@ -240,7 +244,7 @@ define([
         var newBody = renderer.renderAsString();
 
         // replace the string <TABLEINFO> in the template body with the HTML string emailBody
-        newBody = newBody.replace('&lt;TABLEINFO&gt;', itemTableHTML);
+        newBody = newBody.replace('%%TABLEINFO%%', itemTableHTML);
 
         // log.audit(logTitle, '>> email body:  ' + newBody);
 

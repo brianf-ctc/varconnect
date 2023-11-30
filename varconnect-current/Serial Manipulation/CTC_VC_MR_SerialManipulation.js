@@ -128,7 +128,8 @@ define([
                     createdFromData.recordtype == ns_record.Type.PURCHASE_ORDER &&
                     createdFromData.createdfrom
                 ) {
-                    serialObj[SERIALFLD.SALES_ORDER] = createdFromData.createdfrom;
+                    serialObj[SERIALFLD.SALES_ORDER] =
+                        createdFromData.createdfrom.value || createdFromData.createdfrom;
                 }
                 log.audit(logTitle, LogPrefix + '// serial obj: ' + JSON.stringify(serialObj));
 

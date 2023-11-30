@@ -32,7 +32,7 @@ define(function (require) {
     var vc2_util = require('./../../CTC_VC2_Lib_Utils');
 
     //Contants
-    var LOG_TITLE = 'synnex_api.js';
+    var LogTitle = 'WS:SynnexAPI';
 
     var NodeType = {
         ELEMENT: xml.NodeType.ELEMENT_NODE, //1
@@ -213,31 +213,80 @@ define(function (require) {
         };
         return headers;
     }
-    function _getInvoiceDetails(recordId, tranid, config) {
-        var url = config.url;
-        var user_id = config.user_id;
-        var user_pass = config.user_pass;
-        var partner_id = config.partner_id;
+    function _getInvoiceDetails(option) {
+        var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
+            returnValue;
 
-        var headers = _getHeader();
-        var body = '<?xml version="1.0" encoding="UTF-8"?>';
-        body += '<SynnexB2B version="2.2">';
-        body += '<Credential>';
-        body += '<UserID>' + user_id + '</UserID>';
-        body += '<Password>' + user_pass + '</Password>';
-        body += '</Credential>';
-        body += '<InvoiceRequest>';
-        body += '<CustomerNumber>' + partner_id + '</CustomerNumber>';
-        body += '<PONumber>' + tranid + '</PONumber>';
-        body += '</InvoiceRequest>';
-        body += '</SynnexB2B>';
-        var objResponse = https.post({
-            url: url,
-            headers: headers,
-            body: body
-        });
-        log.debug('_getInvoiceDetails | response', objResponse);
-        return objResponse.body;
+        var config = option.config,
+            recordId = option.recordId,
+            invoiceDetResp;
+
+        vc2_util.log(logTitle, '// params: ', option);
+
+        try {
+            // do the request
+            var invoiceDetReq = vc2_util.sendRequest({
+                header: [LogTitle, 'Invoice Details'].join(' '),
+                method: 'post',
+                recordId: recordId,
+                query: {
+                    url: config.url,
+                    headers: {
+                        Accept: '*/*',
+                        'Content-Type': 'application/xml'
+                    },
+                    body:
+                        '<?xml version="1.0" encoding="UTF-8"?>' +
+                        '<SynnexB2B version="2.2">' +
+                        '<Credential>' +
+                        ('<UserID>' + config.user_id + '</UserID>') +
+                        ('<Password>XX' + config.user_pass + '</Password>') +
+                        '</Credential>' +
+                        '<InvoiceRequest>' +
+                        ('<CustomerNumber>' + config.partner_id + '</CustomerNumber>') +
+                        ('<PONumber>' + config.poNum + '</PONumber>') +
+                        '</SynnexB2B>' +
+                        '</InvoiceRequest>'
+                }
+            });
+
+            vc2_util.handleJSONResponse(invoiceDetReq);
+            invoiceDetResp = invoiceDetReq.PARSED_RESPONSE || invoiceDetReq.RESPONSE || {};
+
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
+        } finally {
+            returnValue = {
+                invoiceLinks: arrInvoiceLinks || [],
+                orderNumbers: arrOrderNums || [],
+                miscCharges: orderMiscCharges
+            };
+        }
+
+        // var url = config.url;
+        // var user_id = config.user_id;
+        // var user_pass = config.user_pass;
+        // var partner_id = config.partner_id;
+
+        // var headers = _getHeader();
+        // var body = '<?xml version="1.0" encoding="UTF-8"?>';
+        // body += '<SynnexB2B version="2.2">';
+        // body += '<Credential>';
+        // body += '<UserID>' + user_id + '</UserID>';
+        // body += '<Password>' + user_pass + '</Password>';
+        // body += '</Credential>';
+        // body += '<InvoiceRequest>';
+        // body += '<CustomerNumber>' + partner_id + '</CustomerNumber>';
+        // body += '<PONumber>' + tranid + '</PONumber>';
+        // body += '</InvoiceRequest>';
+        // body += '</SynnexB2B>';
+        // var objResponse = https.post({
+        //     url: url,
+        //     headers: headers,
+        //     body: body
+        // });
+        // log.debug('_getInvoiceDetails | response', objResponse);
+        // return objResponse.body;
     }
 
     function _extractInvoicesFromResponse(response) {
@@ -303,16 +352,21 @@ define(function (require) {
         return returnArr;
     }
     function processXml(recordId, config) {
-        log.debug(LOG_TITLE, 'processXml');
-        log.debug('Synnex', 'getOrderStatus');
-        var objPoRec = vc2_util.flatLookup({
-            type: search.Type.PURCHASE_ORDER,
-            id: recordId,
-            columns: ['tranid']
-        });
-        var tranid = objPoRec.tranid;
-        var response = _getInvoiceDetails(recordId, tranid, config);
-        return _extractInvoicesFromResponse(response);
+        var logTitle = [LogTitle, 'processXml'].join('::'),
+            returnValue;
+
+        vc2_util.log(logTitle, '// params: ', [recordId, config]);
+        var respInvoiceDetails = _getInvoiceDetails({ config: config, recordId: recordId });
+
+        // var objPoRec = vc2_util.flatLookup({
+        //     type: search.Type.PURCHASE_ORDER,
+        //     id: recordId,
+        //     columns: ['tranid']
+        // });
+        // var tranid = objPoRec.tranid;
+
+        // var response = _getInvoiceDetails(recordId, tranid, config);
+        // return _extractInvoicesFromResponse(response);
     }
 
     return {
