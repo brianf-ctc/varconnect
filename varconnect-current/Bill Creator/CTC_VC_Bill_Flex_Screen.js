@@ -522,6 +522,7 @@ define([
                 LINE_AMOUNT: BillData.Total.LineAmount,
                 TAX_AMOUNT: BillData.Total.Tax,
                 SHIPPING_AMT: BillData.Total.Shipping,
+                CHARGE_AMT: BillData.Total.Charges,
                 VARIANCE_AMT: BillData.Total.Variance || BillData.Total.LineVariance
             });
 
@@ -1139,7 +1140,7 @@ define([
 
             FormHelper.updateFieldValue({
                 name: 'CALC_VARIANCETOTAL',
-                value: Current.TOTALS_DATA.VARIANCE_AMT
+                value: Current.TOTALS_DATA.VARIANCE_AMT + Current.TOTALS_DATA.CHARGE_AMT
             });
         }
     };
@@ -1310,9 +1311,27 @@ define([
                     id: 'custpage_logs_top',
                     type: ns_ui.FieldType.TEXTAREA,
                     label: 'Latest Log Message',
-                    defaultValue: (function (logs) {
-                        return logs.split(/\n/g).pop();
-                    })(Current.BILLFILE_DATA.PROCESS_LOG)
+
+                    defaultValue: (function (data) {
+                        var content = data;
+                        try {
+                            content = JSON.parse(data);
+                            content = JSON.stringify(content, null, '\t');
+                        } catch (err) {
+                            content = data;
+                        }
+                        return [
+                            '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea">',
+                            '<textarea cols="100" rows="5" disabled="true" ',
+                            'style="border:none; color: #333 !important; background-color: #FFF !important;">',
+                            content.split(/\n/g).pop(),
+                            '</textarea>',
+                            '</div>'
+                        ].join(' ');
+                    })(Current.BILLFILE_DATA.PROCESS_LOG),
+                    // defaultValue: (function (logs) {
+                    //     return logs.split(/\n/g).pop();
+                    // })(Current.BILLFILE_DATA.PROCESS_LOG)
                 },
                 BILL_FILE_LINK: {
                     id: 'custpage_bill_file_link',
