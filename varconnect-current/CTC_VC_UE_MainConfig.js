@@ -24,9 +24,10 @@
 define([
     'N/runtime',
     'N/ui/serverWidget',
+    'N/ui/message',
     './CTC_VC2_Constants.js',
     './CTC_VC_Lib_LicenseValidator'
-], function (ns_runtime, ns_ui, vc2_constant, vc_license) {
+], function (ns_runtime, ns_ui, ns_msg, vc2_constant, vc_license) {
     var LogTitle = 'MainCFG';
 
     var MAINCFG = vc2_constant.RECORD.MAIN_CONFIG;
@@ -55,23 +56,31 @@ define([
             response = vc_license.callValidationSuitelet({
                 license: license,
                 external: true
-            }),
-            licenseText;
+            });
 
         log.debug(logTitle, '>> response: ' + JSON.stringify(response));
 
         if (response == 'valid') {
-            licenseText =
-                "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>";
-        } else if (response == 'invalid') {
-            licenseText =
-                "<span style='background-color:red; color: white;'><b>WARNING: Your License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.</b></span>";
-        }
+            newRecord.setValue({
+                fieldId: MAINCFG.FIELD.LICENSE_TEXT,
+                value: "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>"
+            });
+        } else {
+            newRecord.setValue({
+                fieldId: MAINCFG.FIELD.LICENSE_TEXT,
+                value:
+                    "<span style='background-color:red; color: white;'><b>ERROR: " +
+                    response +
+                    '.</b></span>'
+            });
 
-        newRecord.setValue({
-            fieldId: MAINCFG.FIELD.LICENSE_TEXT,
-            value: licenseText
-        });
+            options.form.addPageInitMessage({
+                title: 'WARNING',
+                message:
+                    'Your License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.',
+                type: ns_msg.Type.ERROR
+            });
+        }
     }
 
     /**
@@ -135,7 +144,7 @@ define([
             scriptContext.type === scriptContext.UserEventType.VIEW
         ) {
             var newRecord = scriptContext.newRecord;
-            _validateLicense({ newRecord: newRecord });
+            _validateLicense({ newRecord: newRecord, form: scriptContext.form });
         }
     }
 
