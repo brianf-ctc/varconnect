@@ -24,9 +24,9 @@ define([
     'N/runtime',
     'N/log',
     'N/https',
-    '../VO/CTC_VCSP_Response.js',
-    '../Library/CTC_VCSP_Lib_Log.js',
-    '../Library/CTC_VCSP_Constants.js'
+    '../VO/CTC_VCSP_Response',
+    '../Library/CTC_VCSP_Lib_Log',
+    '../Library/CTC_VCSP_Constants'
 ], function (search, record, runtime, log, https, response, vcLog, constants) {
     'use strict';
 
@@ -137,8 +137,7 @@ define([
         poDetails.ShipViaCode = 'ZZ'; // constant for arrow
         poDetails.ShipViaDescription = 'ELECTRONIC DISTRIBUTION'; // constant for arrow
         poDetails.PoCurrency = 'USD'; // constant -- for Arrow US
-        poDetails.ArrowQuote = {};
-        poDetails.ArrowQuote.ArrowQuoteNumber = poObj.items[0].quotenumber.toString();
+        poDetails.ArrowQuoteNumber = poObj.quoteNumber;
 
         var billToObj = getBillingInfo(poObj);
         //    	var shipToObj = getShippingInfo(poObj);

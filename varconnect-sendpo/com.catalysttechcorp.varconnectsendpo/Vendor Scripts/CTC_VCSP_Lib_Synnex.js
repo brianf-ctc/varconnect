@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  *
  */
@@ -16,230 +16,300 @@
 define([
     'N/search',
     'N/xml',
-    '../Library/CTC_VCSP_Constants.js',
-    '../Library/CTC_Lib_Utils.js'
-], function (ns_search, ns_xml, constants, ctc_util) {
-    var LogTitle = 'WS:Synnex';
+    'N/format',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_Lib_Utils'
+], function (NS_Search, NS_Xml, NS_Format, VCSP_Global, CTC_Util) {
+    let LogTitle = 'WS:Synnex';
+
+    let Helper = {};
+    Helper.leftPadString = function (str, padding, len) {
+        let tempStr = str + ''; // convert to string
+        while (tempStr.length < len) {
+            tempStr = padding + tempStr;
+        }
+        return tempStr.slice(len * -1);
+    };
+    Helper.formatToSynnexDate = function (option) {
+        let logTitle = [LogTitle, 'Helper', 'formatToSynnexDate'].join('::'),
+            dateToFormat = option.date || option,
+            formattedDate = dateToFormat;
+        if (dateToFormat && dateToFormat instanceof Date) {
+            // CCYY-MM-DDTHH:MM:SS
+            formattedDate = [
+                [
+                    dateToFormat.getFullYear(),
+                    Helper.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
+                    Helper.leftPadString(dateToFormat.getDate(), '0', 2)
+                ].join('-'),
+                [
+                    Helper.leftPadString(dateToFormat.getHours(), '0', 2),
+                    Helper.leftPadString(dateToFormat.getMinutes(), '0', 2),
+                    Helper.leftPadString(dateToFormat.getSeconds(), '0', 2)
+                ].join(':')
+            ].join('T');
+        }
+        return formattedDate;
+    };
+    Helper.formatFromSynnexDate = function (option) {
+        let logTitle = [LogTitle, 'Helper', 'formatFromSynnexDate'].join('::'),
+            dateStrToParse = option,
+            formattedDate = null;
+        if (dateStrToParse) {
+            try {
+                log.debug(logTitle, 'Parsing ' + dateStrToParse);
+                dateComponents = dateStrToParse.split(/\D+/);
+                let tempDate = null;
+                if (dateComponents.length >= 3) {
+                    tempDate = new Date();
+                    tempDate.setUTCFullYear(dateComponents[0]);
+                    tempDate.setUTCMonth(dateComponents[1] - 1);
+                    tempDate.setUTCDate(dateComponents[2]);
+                    if (dateComponents.length >= 6) {
+                        tempDate.setUTCHours(+dateComponents[3] + 7); // manually offset output to GMT
+                        tempDate.setUTCMinutes(dateComponents[4]);
+                        tempDate.setUTCSeconds(dateComponents[5]);
+                        if (dateComponents.length >= 7) {
+                            tempDate.setUTCMilliseconds(dateComponents[6]);
+                        } else {
+                            tempDate.setUTCMilliseconds(0);
+                        }
+                    } else {
+                        tempDate.setUTCHours(0);
+                        tempDate.setUTCMinutes(0);
+                        tempDate.setUTCSeconds(0);
+                        tempDate.setUTCMilliseconds(0);
+                    }
+                }
+                log.debug(logTitle, 'Parsed ' + dateStrToParse + ' as ' + tempDate);
+                if (tempDate) {
+                    formattedDate = NS_Format.format({
+                        value: tempDate,
+                        type: NS_Format.Type.DATETIME
+                    });
+                }
+                log.debug(logTitle, 'Reformatted ' + tempDate + ' as ' + formattedDate);
+            } catch (dateParseErr) {
+                log.error(logTitle, '## ERROR ##' + CTC_Util.extractError(dateParseErr));
+            }
+        }
+        return formattedDate;
+    };
 
     function processResponse(option) {
-        var logTitle = [LogTitle, 'processResponse'].join('::'),
-            returnValue = option.returnResponse;
-        var xmlDoc = ns_xml.Parser.fromString({
-            text: option.responseBody
-        });
-        var responseNodesArray = xmlDoc.getElementsByTagName({ tagName: 'OrderResponse' });
-        var orderStatus = {};
+        let logTitle = [LogTitle, 'processResponse'].join('::'),
+            record = option.record,
+            returnValue = option.returnResponse,
+            xmlDoc = NS_Xml.Parser.fromString({
+                text: option.responseBody
+            }),
+            lineUniqueKeys = [];
+        let responseNodesArray = xmlDoc.getElementsByTagName({ tagName: 'OrderResponse' });
+        let orderStatus = {};
+        let json_data = {};
+        orderStatus.ponumber = null;
+        orderStatus.errorMessage = null;
+        orderStatus.errorDetail = null;
+        orderStatus.items = [];
+        orderStatus.successLines = [];
+        orderStatus.errorLines = [];
+        orderStatus.lineNotes = [];
         if (
             responseNodesArray &&
             responseNodesArray.length &&
             responseNodesArray[0].hasChildNodes()
         ) {
-            var orderResponseNodes = responseNodesArray[0].childNodes;
-            for (var i = 0, len = orderResponseNodes.length, headerCtr = 0; i < len; i += 1) {
+            let orderResponseNodes = responseNodesArray[0].childNodes;
+            for (let i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
+                lineUniqueKeys.push(record.items[i].lineuniquekey);
+            }
+            for (let i = 0, len = orderResponseNodes.length; i < len; i += 1) {
                 switch (orderResponseNodes[i].nodeName) {
                     case 'PONumber':
                         orderStatus.ponumber = orderResponseNodes[i].textContent;
-                        headerCtr += 1;
                         break;
                     case 'Code':
                         orderStatus.order_status = orderResponseNodes[i].textContent;
-                        headerCtr += 1;
                         break;
                     case 'Reason':
                         orderStatus.note = orderResponseNodes[i].textContent;
-                        headerCtr += 1;
+                        break;
+                    case 'ResponseDateTime':
+                        orderStatus.order_date = Helper.formatFromSynnexDate(
+                            orderResponseNodes[i].textContent
+                        );
                         break;
                     case 'ErrorMessage':
                         orderStatus.errorMessage = orderResponseNodes[i].textContent;
-                        headerCtr += 1;
+                        returnValue.errorName = orderStatus.errorMessage;
+                        returnValue.errorId = record.id;
+                        returnValue.isError = true;
                         break;
                     case 'ErrorDetail':
                         orderStatus.errorDetail = orderResponseNodes[i].textContent;
-                        headerCtr += 1;
+                        returnValue.errorMsg = orderStatus.errorDetail;
+                        returnValue.errorId = record.id;
+                        returnValue.isError = true;
                         break;
                     default:
                         break;
                 }
-                if (headerCtr == 5) break;
+                if (orderResponseNodes[i].nodeName !== 'Items') {
+                    CTC_Util.xmlNodeToJson({
+                        node: orderResponseNodes[i],
+                        json: json_data
+                    });
+                    log.debug(
+                        logTitle,
+                        'Parsing ' +
+                            orderResponseNodes[i].nodeName +
+                            ': ' +
+                            JSON.stringify(json_data)
+                    );
+                }
             }
-
-            var itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
-            var orderDateTime = xmlDoc.getElementsByTagName({ tagName: 'PODatetime' });
+            let itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
             if (itemNodesArray && itemNodesArray.length) {
                 orderStatus.items = [];
-                for (var x = 0, xlen = itemNodesArray.length; x < xlen; x += 1) {
-                    var itemNode = itemNodesArray[x];
-                    var itemDetails = {
-                        line_number: itemNode.getAttribute({ name: 'lineNumber' }),
-                        order_number: 'NA',
-                        order_date:
-                            orderDateTime && orderDateTime[0] ? orderDateTime[0].textContent : 'NA',
-                        vendorSKU: 'NA',
+                for (let x = 0, xlen = itemNodesArray.length; x < xlen; x += 1) {
+                    let itemNode = itemNodesArray[x],
+                        lineUniqueKey = itemNode.getAttribute({ name: 'lineNumber' }),
+                        itemJsonData = JSON.parse(JSON.stringify(json_data));
+                    CTC_Util.xmlNodeToJson({
+                        node: itemNode,
+                        json: itemJsonData
+                    });
+                    let itemJsonDataStr = JSON.stringify(itemJsonData).replace(/,/g, ',<br>');
+                    if (itemJsonDataStr == '{}') itemJsonDataStr = 'NA';
+                    let itemDetails = {
+                        line_unique_key: lineUniqueKey,
+                        line_number: lineUniqueKeys.indexOf(lineUniqueKey) + 1,
+                        vendor_line: itemNode.getAttribute({ name: 'lineNumber' }),
+                        order_status: orderStatus.order_status || 'NA',
+                        order_type: 'NA',
+                        vendor_order_number: 'NA',
+                        customer_order_number: orderStatus.ponumber || 'NA',
+                        order_date: orderStatus.order_date || 'NA',
+                        vendor_sku: 'NA',
                         item_number: 'NA',
+                        note: 'NA',
                         quantity: 'NA',
-                        ship_qty: 'NA',
+                        rate: 'NA',
                         ship_date: 'NA',
-                        ship_method: 'NA',
+                        ship_qty: 'NA',
                         ship_from: 'NA',
+                        ship_method: 'NA',
                         carrier: 'NA',
                         eta_date: 'NA',
-                        tracking_num: 'NA',
                         serial_num: 'NA',
-                        order_status: 'NA',
-                        note: null
+                        tracking_num: 'NA',
+                        internal_reference_num: 'NA',
+                        json_data: itemJsonDataStr
                     };
-                    var itemChildNodes = itemNode.childNodes;
-                    for (var y = 0, ylen = itemChildNodes.length, colCtr = 0; y < ylen; y += 1) {
+                    let itemChildNodes = itemNode.childNodes;
+                    for (let y = 0, ylen = itemChildNodes.length; y < ylen; y += 1) {
                         switch (itemChildNodes[y].nodeName) {
-                            case 'OrderNumber':
-                                itemDetails.order_number = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'SKU':
-                                itemDetails.vendorSKU = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'MfgPN':
-                                itemDetails.item_number = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'OrderQuantity':
-                                itemDetails.quantity = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ShipQuantity':
-                                itemDetails.ship_qty = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ShipDatetime':
-                                itemDetails.ship_date = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ShipMethod':
-                                itemDetails.ship_method = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ShipMethodDescription':
-                                itemDetails.carrier = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ShipFromWarehouse':
-                                itemDetails.ship_from = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'ETADate':
-                                itemDetails.eta_date = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
-                                break;
-                            case 'Packages':
-                                var packageNodes = itemChildNodes[y].childNodes;
-                                for (var xx = 0; xx < packageNodes.length; xx++) {
-                                    if (packageNodes[xx].nodeName == 'Package') {
-                                        var packageChildNodes = packageNodes[xx].childNodes;
-                                        for (var yy = 0; yy < packageChildNodes.length; yy++) {
-                                            switch (packageChildNodes[yy].nodeName) {
-                                                case 'TrackingNumber':
-                                                    if (packageChildNodes[yy].textContent) {
-                                                        if (!itemDetails.tracking_num) {
-                                                            itemDetails.tracking_num =
-                                                                packageChildNodes[yy].textContent;
-                                                        } else {
-                                                            itemDetails.tracking_num +=
-                                                                ',' +
-                                                                packageChildNodes[yy].textContent;
-                                                        }
-                                                    }
-                                                    break;
-                                                case 'SerialNo':
-                                                    if (packageChildNodes[yy].textContent) {
-                                                        if (itemDetails.serial_num === 'NA')
-                                                            itemDetails.serial_num =
-                                                                packageChildNodes[yy].textContent;
-                                                        else
-                                                            itemDetails.serial_num +=
-                                                                ',' +
-                                                                packageChildNodes[yy].textContent;
-                                                    }
-                                                    break;
-                                                default:
-                                                    break;
-                                            }
-                                        }
-                                    }
-                                }
-                                colCtr += 1;
-                                break;
                             case 'Code':
                                 itemDetails.order_status = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
+                                break;
+                            case 'OrderType':
+                                itemDetails.order_type = itemChildNodes[y].textContent || 'NA';
+                                break;
+                            case 'OrderNumber':
+                                itemDetails.vendor_order_number =
+                                    itemChildNodes[y].textContent || 'NA';
+                                break;
+                            case 'SKU':
+                                itemDetails.vendor_sku = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'Reason':
                                 itemDetails.note = itemChildNodes[y].textContent || 'NA';
-                                colCtr += 1;
+                                break;
+                            case 'OrderQuantity':
+                                itemDetails.quantity = itemChildNodes[y].textContent || 'NA';
+                                break;
+                            case 'ShipFromWarehouse':
+                                itemDetails.ship_from = itemChildNodes[y].textContent || 'NA';
+                                break;
+                            case 'SynnexInternalReference':
+                                itemDetails.internal_reference_num =
+                                    itemChildNodes[y].textContent || 'NA';
                                 break;
                             default:
                                 break;
                         }
-                        if (colCtr >= 12) break;
                     }
                     orderStatus.items.push(itemDetails);
                 }
             }
         }
-        log.audit(logTitle, '>> Parsed response: ' + JSON.stringify(orderStatus));
         returnValue.transactionNum = orderStatus.ponumber;
-        if (orderStatus.errorMessage || orderStatus.errorDetail) {
-            var errorMessage = [];
-            if (orderStatus.errorDetail) {
-                errorMessage.push(orderStatus.errorMessage);
-            }
-            if (orderStatus.errorDetail) {
-                errorMessage.push(orderStatus.errorDetail);
-            }
-            throw 'Send PO Error - ' + errorMessage.join(': ');
-        }
         returnValue.message = 'Send PO successful';
-        if (orderStatus.note) {
-            if (orderStatus.order_status != 'accepted') {
-                throw 'Send PO Error - ' + orderStatus.order_status + ': ' + orderStatus.note;
+        if (!orderStatus.isError) {
+            if (orderStatus.code < 200 || orderStatus.code >= 300) {
+                returnValue.errorName = 'Unexpected Error';
+                if (!orderStatus.note) {
+                    returnValue.errorMsg = orderStatus.lineNotes.join('') || null;
+                } else {
+                    returnValue.errorMsg = orderStatus.note;
+                }
+                returnValue.errorId = record.id;
+                returnValue.isError = true;
+                returnValue.message = 'Send PO failed';
             } else {
-                throw (
-                    'Send PO Successful but with unexpected reply from Synnex: ' + orderStatus.note
-                );
+                orderStatus.items.forEach((itemDetails) => {
+                    if (itemDetails.order_status == 'accepted') {
+                        orderStatus.successLines.push(itemDetails);
+                    } else {
+                        orderStatus.errorLines.push(itemDetails);
+                        if (itemDetails.note && itemDetails.note != 'NA') {
+                            orderStatus.lineNotes.push(
+                                [
+                                    itemDetails.order_status,
+                                    '@',
+                                    itemDetails.vendor_line,
+                                    ': ',
+                                    itemDetails.note
+                                ].join('')
+                            );
+                        }
+                    }
+                });
+                if (orderStatus.successLines.length && orderStatus.errorLines.length) {
+                    returnValue.message =
+                        'With partial errors: ' +
+                        orderStatus.successLines.length +
+                        ' line item(s) succeeded and ' +
+                        orderStatus.errorLines.length +
+                        ' failed';
+                    if (orderStatus.lineNotes.length)
+                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
+                } else if (orderStatus.errorLines.length) {
+                    returnValue.isError = true;
+                    returnValue.message = 'Send PO failed.';
+                    returnValue.errorMsg = orderStatus.note;
+                    if (orderStatus.lineNotes.length) {
+                        returnValue.errorName = orderStatus.note;
+                        returnValue.errorMsg = orderStatus.lineNotes.join('\n');
+                    }
+                } else {
+                    returnValue.message = orderStatus.successLines.length + ' line item(s) sent';
+                }
             }
+        } else {
+            returnValue.message = 'Send PO failed';
         }
-        orderStatus.successLines = [];
-        orderStatus.errorLines = [];
-        orderStatus.lineNotes = [];
-        orderStatus.items.forEach(function (itemDetail) {
-            if (itemDetail.order_status == 'accepted') {
-                orderStatus.successLines.push(itemDetail);
-            } else {
-                orderStatus.errorLines.push(itemDetail);
-                orderStatus.lineNotes.push(itemDetail.order_status + ': ' + itemDetail.note);
-            }
-        });
-        if (orderStatus.errorLines.length) {
-            throw (
-                'Send PO successful with ' +
-                orderStatus.successLines.length +
-                ' line item(s) and ' +
-                orderStatus.errorLines.length +
-                ' failed line(s):<br />' +
-                orderStatus.lineNotes.join('<br />')
-            );
-        }
-        returnValue.message =
-            'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
+        log.audit(logTitle, '>> Parsed response: ' + JSON.stringify(orderStatus));
         returnValue.orderStatus = orderStatus;
         return returnValue;
     }
 
     function generateBody(option) {
-        var logTitle = [LogTitle, 'generateBody'].join('::'),
+        let logTitle = [LogTitle, 'generateBody'].join('::'),
             returnValue = '';
 
-        var record = option.record,
+        let record = option.record,
+            additionalVendorDetails = {},
             customerNo = option.customerNo,
             vendorConfig = option.vendorConfig,
             testRequest = option.testRequest,
@@ -248,11 +318,18 @@ define([
                 Password: vendorConfig.password
             };
 
-        var requestDetails = {
+        let requestDetails = {
             Credential: credentials,
             OrderRequest: {
                 CustomerNumber: customerNo,
                 PONumber: record.tranId,
+                PODateTime: Helper.formatToSynnexDate(
+                    NS_Format.parse({
+                        value: record.createdDate,
+                        type: NS_Format.Type.DATETIME
+                    })
+                ),
+                XMLPOSubmitDateTime: Helper.formatToSynnexDate(new Date()),
                 DropShipFlag: record.dropShipPO ? 'Y' : 'N',
                 EndUserPONumber: record.tranId,
                 Comment: record.memo,
@@ -272,60 +349,30 @@ define([
                         ContactName: record.shipAddressee,
                         PhoneNumber: record.shipPhone,
                         EmailAddress: record.shipEmail
-                    },
-                    ShipMethod: (function (option) {
-                        var record = option.record,
-                            vcid = option.vendorConfigId,
-                            shipMethodCode = {
-                                Code: record.synnexShippingCode
-                            };
-                        if (!shipMethodCode.Code) {
-                            var shipMethod = record.shipMethod;
-                            if (shipMethod) {
-                                var shipMethodCodeResults = ns_search
-                                    .create({
-                                        type: constants.Records.VENDOR_SHIPMETHOD,
-                                        filters: [
-                                            [
-                                                constants.Fields.VendorShipMethod.VENDOR_CONFIG,
-                                                'anyof',
-                                                vcid
-                                            ],
-                                            'and',
-                                            [
-                                                constants.Fields.VendorShipMethod.SHIP_METHOD,
-                                                'anyof',
-                                                shipMethod
-                                            ]
-                                        ],
-                                        columns: [constants.Fields.VendorShipMethod.CODE]
-                                    })
-                                    .run()
-                                    .getRange(0, 1);
-                                if (shipMethodCodeResults && shipMethodCodeResults.length) {
-                                    shipMethodCode.Code = shipMethodCodeResults[0].getValue(
-                                        constants.Fields.VendorShipMethod.CODE
-                                    );
-                                }
-                            }
-                            if (!shipMethod || !shipMethodCode.Code) {
-                                shipMethodCode = undefined;
-                            }
-                        }
-                        return shipMethodCode;
-                    })({ record: record, vendorConfigId: vendorConfig.id })
+                    }
+                    // ShipMethod: {
+                    //     Code: 'NA',
+                    // },
                 },
                 Payment: {
                     BillTo: {
                         '/attributes': {
                             code: customerNo
-                        }
+                        },
+                        AddressName1: record.billAttention,
+                        AddressName2: record.billAddressee,
+                        AddressLine1: record.billAddr1,
+                        AddressLine2: record.billAddr2,
+                        City: record.billCity,
+                        State: record.billState,
+                        ZipCode: record.billZip,
+                        Country: record.billCountry
                     }
                 },
                 Items: (function (record) {
-                    var items = [];
-                    for (var i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
-                        var lineItem = {
+                    let items = [];
+                    for (let i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
+                        let lineItem = {
                             Item: {
                                 '/attributes': {
                                     lineNumber: record.items[i].lineuniquekey
@@ -342,32 +389,32 @@ define([
                 })(record)
             },
             _toXmlAttributes: function (object) {
-                var xmlBody = '';
-                for (var property in object) {
+                let xmlBody = '';
+                for (let property in object) {
                     xmlBody += ' ' + property + '="' + object[property] + '"';
                 }
                 return xmlBody;
             },
             _toXml: function (object) {
-                var xmlBody = [];
-                for (var property in object) {
+                let xmlBody = [];
+                for (let property in object) {
                     if (object[property]) {
-                        var propertyIsArray = object[property] instanceof Array;
+                        let propertyIsArray = object[property] instanceof Array;
                         if (propertyIsArray) {
-                            var arrayTag = '<' + property;
-                            var arrayAttributes = object[property]['/attributes'];
+                            let arrayTag = '<' + property;
+                            let arrayAttributes = object[property]['/attributes'];
                             arrayTag += this._toXmlAttributes(arrayAttributes);
                             arrayTag += '>';
                             xmlBody.push(arrayTag);
-                            for (var i = 0, len = object[property].length; i < len; i += 1) {
+                            for (let i = 0, len = object[property].length; i < len; i += 1) {
                                 xmlBody.push(this._toXml(object[property][i]));
                             }
                             xmlBody.push('</' + property + '>');
                         } else if (typeof object[property] == 'object') {
-                            var isAttributesObject = property.indexOf('/') == 0;
+                            let isAttributesObject = property.indexOf('/') == 0;
                             if (!isAttributesObject) {
-                                var objectTag = '<' + property;
-                                var objectAttributes = object[property]['/attributes'];
+                                let objectTag = '<' + property;
+                                let objectAttributes = object[property]['/attributes'];
                                 objectTag += this._toXmlAttributes(objectAttributes);
                                 objectTag += '>';
                                 xmlBody.push(objectTag);
@@ -385,10 +432,10 @@ define([
                         }
                     }
                 }
-                return xmlBody.join('\n');
+                return xmlBody.join('');
             },
             toXml: function () {
-                var xmlBody = [
+                let xmlBody = [
                     '<?xml version="1.0" encoding="UTF-8" ?>',
                     '<SynnexB2B>',
                     '<Credential>',
@@ -398,78 +445,133 @@ define([
                     this._toXml(this.OrderRequest),
                     '</OrderRequest>',
                     '</SynnexB2B>'
-                ].join('\n');
+                ].join('');
                 return xmlBody;
             }
         };
+        if (record.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
+            if (additionalVendorDetails) {
+                for (let fieldId in additionalVendorDetails) {
+                    let fieldHierarchy = fieldId.split('.');
+                    let fieldContainer = requestDetails.OrderRequest;
+                    for (
+                        let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                        i < len;
+                        i += 1
+                    ) {
+                        let fieldIdComponent = fieldHierarchy[i];
+                        if (i == fieldIdIndex) {
+                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        } else {
+                            if (!fieldContainer[fieldIdComponent]) {
+                                fieldContainer[fieldIdComponent] = {};
+                            }
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        }
+                    }
+                    log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
+                }
+            }
+        }
         log.audit(logTitle, 'Order Request: ' + JSON.stringify(requestDetails.OrderRequest));
-        ctc_util.vcLog({
+        returnValue = requestDetails.toXml();
+        CTC_Util.vcLog({
             title: [LogTitle, 'Order Request Values'].join(' - '),
-            content: JSON.stringify(requestDetails.OrderRequest),
+            content: returnValue,
             transaction: record.id
         });
-        returnValue = requestDetails.toXml();
         return returnValue;
     }
 
+    function sendPOToSynnex(option) {
+        let logTitle = [LogTitle, 'sendPOToSynnex'].join('::'),
+            record = option.record,
+            vendorConfig = option.vendorConfig,
+            body = option.body;
+        let sendPOResponse = CTC_Util.sendRequest({
+            header: [LogTitle, 'Send PO'].join(' : '),
+            method: 'post',
+            recordId: record.id,
+            isXML: true,
+            query: {
+                url: vendorConfig.endPoint,
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Content-Length': body.length,
+                    Host: vendorConfig.endPoint.match(/(?:\w+\.)+\w+/)[0]
+                },
+                body: body
+            }
+        });
+        log.audit(logTitle, '>> Synnex: ' + JSON.stringify(sendPOResponse));
+        return sendPOResponse;
+    }
+
     function process(option) {
-        var logTitle = [LogTitle, 'process'].join('::'),
+        let logTitle = [LogTitle, 'process'].join('::'),
             vendorConfig = option.recVendorConfig,
             customerNo = vendorConfig.customerNo,
-            url = vendorConfig.endPoint,
             record = option.record || option.recPO,
             testRequest = vendorConfig.testRequest;
         log.audit(logTitle, '>> record : ' + JSON.stringify(record));
-        var returnResponse = {
-            transactionNum: record.tranId,
-            transactionId: record.id
-        };
-        var sendPOBody = generateBody({
-            record: record,
-            customerNo: customerNo,
-            vendorConfig: vendorConfig,
-            testRequest: testRequest
-        });
-        log.debug(logTitle, sendPOBody);
-        ctc_util.vcLog({
-            title: [LogTitle, 'PO Details'].join(' - '),
-            content: sendPOBody,
-            transaction: record.id
-        });
-        if (!sendPOBody) throw 'Unable to generate PO Body Request';
+        let sendPOResponse,
+            returnResponse = {
+                transactionNum: record.tranId,
+                transactionId: record.id
+            };
         try {
-            var sendPOReq = ctc_util.sendRequest({
-                header: [LogTitle, 'Send PO'].join(' : '),
-                method: 'post',
-                recordId: record.id,
-                isXML: true,
-                query: {
-                    url: url,
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Content-Length': sendPOBody.length,
-                        Host: url.match(/(?:\w+\.)+\w+/)[0]
-                    },
-                    body: sendPOBody
-                }
+            let sendPOBody = generateBody({
+                record: record,
+                customerNo: customerNo,
+                vendorConfig: vendorConfig,
+                testRequest: testRequest
             });
-            returnResponse.logId = sendPOReq.logId;
-            returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
-            returnResponse.responseCode = sendPOReq.RESPONSE.code;
-            // in the case of Synnex, a response is returned by vendor
-            var sendPoResp = returnResponse.responseBody;
-            if (sendPOReq.isError || !sendPoResp) {
-                throw 'Send PO Error - ' + sendPOReq.errorMsg;
-            } else {
-                returnResponse = processResponse({
-                    responseBody: sendPoResp,
-                    returnResponse: returnResponse
-                });
-            }
-        } catch (error) {
-            var errorMsg = ctc_util.extractError(error);
+            sendPOResponse = sendPOToSynnex({
+                record: record,
+                vendorConfig: vendorConfig,
+                body: sendPOBody
+            });
+            returnResponse = {
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                logId: sendPOResponse.logId,
+                responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
+                responseCode: sendPOResponse.RESPONSE.code,
+                isError: false,
+                error: null,
+                errorId: record.id,
+                errorName: null,
+                errorMsg: null
+            };
+
+            returnResponse = processResponse({
+                record: record,
+                responseBody: returnResponse.responseBody,
+                returnResponse: returnResponse
+            });
+        } catch (e) {
+            log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
+            returnResponse = returnResponse || {
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                isError: true,
+                error: e,
+                errorId: record.id,
+                errorName: e.name,
+                errorMsg: e.message
+            };
             returnResponse.isError = true;
-            returnResponse.message = errorMsg;
+            if (sendPOResponse) {
+                returnResponse.logId = sendPOResponse.logId || null;
+                returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;
+                if (sendPOResponse.RESPONSE) {
+                    if (!returnResponse.responseBody) {
+                        returnResponse.responseBody = sendPOResponse.RESPONSE.body || null;
+                    }
+                    returnResponse.responseCode = sendPOResponse.RESPONSE.code || null;
+                }
+            }
         } finally {
             log.audit(logTitle, '>> sendPoResp: ' + JSON.stringify(returnResponse));
         }

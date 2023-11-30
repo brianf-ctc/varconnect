@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 /**
@@ -18,14 +18,10 @@
  * 1.00		Mar 09, 2020	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Constants.js'], function (
-    search,
-    pref,
-    constants
-) {
-    var mainConfigFields = [
-        constants.Fields.MainConfig.ID, //0
-        constants.Fields.MainConfig.LICENSE //1
+define(['N/search', './CTC_VCSP_Constants'], function (NS_Search, VCSP_Global) {
+    let mainConfigFields = [
+        VCSP_Global.Fields.MainConfig.ID, //0
+        VCSP_Global.Fields.MainConfig.LICENSE //1
     ];
 
     function _generateMainConfig(recLookup) {
@@ -36,10 +32,10 @@ define(['N/search', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Constants.js'], fu
     }
 
     function getMainConfiguration() {
-        var result = {};
+        let result = {};
 
-        var recLookup = search.lookupFields({
-            type: constants.Records.MAIN_CONFIG,
+        let recLookup = NS_Search.lookupFields({
+            type: VCSP_Global.Records.MAIN_CONFIG,
             id: 1,
             columns: mainConfigFields
         });

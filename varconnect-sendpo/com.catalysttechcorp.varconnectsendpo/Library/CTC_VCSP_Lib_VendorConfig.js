@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 /**
@@ -18,54 +18,66 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Vendor Configuration
  *
  */
-define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'], function (
-    ns_search,
-    pref,
-    constant
+define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Constants'], function (
+    NS_Search,
+    NS_Record,
+    VCSP_Pref,
+    VCSP_Global
 ) {
-    var LogTitle = 'VC:SENDPO';
-    var vendorConfigFields = [
-        constant.Fields.VendorConfig.ID, //0
-        constant.Fields.VendorConfig.SUBSIDIARY, //1
-        constant.Fields.VendorConfig.API_VENDOR, //2
-        constant.Fields.VendorConfig.VENDOR, //3
-        constant.Fields.VendorConfig.WEBSERVICE_ENDPOINT, //4
-        constant.Fields.VendorConfig.USERNAME, //5
-        constant.Fields.VendorConfig.PASSWORD, //6
-        constant.Fields.VendorConfig.CUSTOMER_NO, //7
-        constant.Fields.VendorConfig.API_KEY, //8
-        constant.Fields.VendorConfig.API_SECRET, //9
-        constant.Fields.VendorConfig.ACCESS_ENDPOINT, //10
-        constant.Fields.VendorConfig.SKU_COLUMN, //11
-        constant.Fields.VendorConfig.Bill.ADDRESSEE, //12
-        constant.Fields.VendorConfig.Bill.ATTENTION, //13
-        constant.Fields.VendorConfig.Bill.ADDRESS_1, //14
-        constant.Fields.VendorConfig.Bill.ADDRESS_2, //15
-        constant.Fields.VendorConfig.Bill.CITY, //16
-        constant.Fields.VendorConfig.Bill.STATE, //17
-        constant.Fields.VendorConfig.Bill.ZIP, //18
-        constant.Fields.VendorConfig.Bill.COUNTRY, //19
-        constant.Fields.VendorConfig.TEST_REQUEST, //20
-        constant.Fields.VendorConfig.QA_WEBSERVICE_ENDPOINT, //21
-        constant.Fields.VendorConfig.QA_ACCESS_ENDPOINT, //22
-        constant.Fields.VendorConfig.QA_API_KEY, //23
-        constant.Fields.VendorConfig.QA_API_SECRET, //24
-        constant.Fields.VendorConfig.Bill.EMAIL, //25,
-        constant.Fields.VendorConfig.Bill.PHONENO, //26,
-        constant.Fields.VendorConfig.PAYMENT.MEAN, //26,
-        constant.Fields.VendorConfig.PAYMENT.OTHER, //26,
-        constant.Fields.VendorConfig.PAYMENT.TERM,
-        constant.Fields.VendorConfig.FIELDMAP,
-        constant.Fields.VendorConfig.EVENT_TYPE //5 //26,
+    let LogTitle = 'VC:SENDPO';
+    let VendorConfig = VCSP_Global.Fields.VendorConfig;
+    let vendorConfigFields = [
+        { name: VendorConfig.ID },
+        { name: VendorConfig.SUBSIDIARY },
+        { name: 'country', join: VendorConfig.SUBSIDIARY },
+        { name: VendorConfig.API_VENDOR },
+        { name: VendorConfig.VENDOR },
+        { name: VendorConfig.WEBSERVICE_ENDPOINT },
+        { name: VendorConfig.USERNAME },
+        { name: VendorConfig.PASSWORD },
+        { name: VendorConfig.CUSTOMER_NO },
+        { name: VendorConfig.API_KEY },
+        { name: VendorConfig.API_SECRET },
+        { name: VendorConfig.ACCESS_ENDPOINT },
+        { name: VendorConfig.SKU_COLUMN },
+        { name: VendorConfig.Bill.ID },
+        { name: VendorConfig.Bill.ADDRESSEE },
+        { name: VendorConfig.Bill.ATTENTION },
+        { name: VendorConfig.Bill.ADDRESS_1 },
+        { name: VendorConfig.Bill.ADDRESS_2 },
+        { name: VendorConfig.Bill.CITY },
+        { name: VendorConfig.Bill.STATE },
+        { name: VendorConfig.Bill.ZIP },
+        { name: VendorConfig.Bill.COUNTRY },
+        { name: VendorConfig.TEST_REQUEST },
+        { name: VendorConfig.SHOW_VENDOR_DETAILS },
+        { name: VendorConfig.QA_WEBSERVICE_ENDPOINT },
+        { name: VendorConfig.QA_ACCESS_ENDPOINT },
+        { name: VendorConfig.QA_API_KEY },
+        { name: VendorConfig.QA_API_SECRET },
+        { name: VendorConfig.Bill.EMAIL },
+        { name: VendorConfig.Bill.PHONENO },
+        { name: VendorConfig.PAYMENT.MEAN },
+        { name: VendorConfig.PAYMENT.OTHER },
+        { name: VendorConfig.PAYMENT.TERM },
+        { name: VendorConfig.FIELD_MAP },
+        { name: VendorConfig.EVENT_TYPE },
+        { name: VendorConfig.ADDITIONAL_PO_FIELDS },
+        { name: VendorConfig.PO_LINE_COLUMNS }, 
+        { name: VendorConfig.QUOTENO_FIELD }
     ];
 
     function _generateVendorConfig(result) {
         // log.debug('vendor config', JSON.stringify(result));
-
-        var VendorConfig = constant.Fields.VendorConfig;
+        let vendorConfigRecord = NS_Record.load({
+            type: VCSP_Global.Records.VENDOR_CONFIG,
+            id: result.id,
+            isDynamic: false
+        });
         return {
             id: result.getValue({ name: VendorConfig.ID }),
             subsidiary: result.getValue({ name: VendorConfig.SUBSIDIARY }),
+            country: result.getValue({ name: 'country', join: VendorConfig.SUBSIDIARY }),
             apiVendor: result.getValue({ name: VendorConfig.API_VENDOR }),
             vendor: result.getValue({ name: VendorConfig.VENDOR }),
             vendorName: result.getText({ name: VendorConfig.VENDOR }),
@@ -78,7 +90,10 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
             accessEndPoint: result.getValue({ name: VendorConfig.ACCESS_ENDPOINT }),
             skuColumn: result.getValue({ name: VendorConfig.SKU_COLUMN }),
             eventType: result.getValue({ name: VendorConfig.EVENT_TYPE }),
+            showVendorDetails: result.getValue({ name: VendorConfig.SHOW_VENDOR_DETAILS }),
+            quoteNoField: result.getValue({ name: VendorConfig.QUOTENO_FIELD }),
             Bill: {
+                id: result.getValue({ name: VendorConfig.Bill.ID }),
                 addressee: result.getValue({ name: VendorConfig.Bill.ADDRESSEE }),
                 attention: result.getValue({ name: VendorConfig.Bill.ATTENTION }),
                 address1: result.getValue({ name: VendorConfig.Bill.ADDRESS_1 }),
@@ -98,52 +113,63 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
             paymentMean: result.getText({ name: VendorConfig.PAYMENT.MEAN }),
             paymentOther: result.getText({ name: VendorConfig.PAYMENT.OTHER }),
             paymentTerm: result.getText({ name: VendorConfig.PAYMENT.TERM }),
-            fieldmap: result.getValue({ name: VendorConfig.FIELDMAP }),
-            Mapping: {
-                ponum: result.getValue({ name: VendorConfig.MAPPING.PONUM })
-            }
+            fieldMap: vendorConfigRecord.getValue(VendorConfig.FIELD_MAP),
+            additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
+            poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS)
         };
     }
 
     function getVendorConfiguration(options) {
-        var logTitle = [LogTitle, 'getVendorConfig'].join(':'),
+        let logTitle = [LogTitle, 'getVendorConfig'].join(':'),
             config = null,
+            vendorConfigId = options.vendorConfigId,
             vendor = options.vendor,
             subsidiary = options.subsidiary;
 
         log.debug(logTitle, 'Params: ' + JSON.stringify(options));
-        var filter = [];
-        filter.push(
-            ns_search.createFilter({
-                name: constant.Fields.VendorConfig.VENDOR,
-                operator: ns_search.Operator.ANYOF,
-                values: vendor
-            })
-        );
-        filter.push(
-            ns_search.createFilter({
-                name: 'isinactive',
-                operator: ns_search.Operator.IS,
-                values: false
-            })
-        );
-
-        if (pref.ENABLE_SUBSIDIARIES)
+        let filter = [];
+        if (vendorConfigId) {
             filter.push(
-                ns_search.createFilter({
-                    name: constant.Fields.VendorConfig.SUBSIDIARY,
-                    operator: ns_search.Operator.ANYOF,
-                    values: subsidiary
+                NS_Search.createFilter({
+                    name: VendorConfig.ID,
+                    operator: NS_Search.Operator.ANYOF,
+                    values: vendorConfigId
+                })
+            );
+        } else {
+            filter.push(
+                NS_Search.createFilter({
+                    name: VendorConfig.VENDOR,
+                    operator: NS_Search.Operator.ANYOF,
+                    values: vendor
+                })
+            );
+            filter.push(
+                NS_Search.createFilter({
+                    name: 'isinactive',
+                    operator: NS_Search.Operator.IS,
+                    values: false
                 })
             );
 
-        var vendorSearch = ns_search.create({
-            type: constant.Records.VENDOR_CONFIG,
+            if (VCSP_Pref.isSubsidiariesEnabled()) {
+                filter.push(
+                    NS_Search.createFilter({
+                        name: VendorConfig.SUBSIDIARY,
+                        operator: NS_Search.Operator.ANYOF,
+                        values: subsidiary
+                    })
+                );
+            }
+        }
+
+        let vendorSearch = NS_Search.create({
+            type: VCSP_Global.Records.VENDOR_CONFIG,
             filters: filter,
             columns: vendorConfigFields
         });
 
-        var result = vendorSearch.run().getRange({
+        let result = vendorSearch.run().getRange({
             start: 0,
             end: 1
         });
@@ -157,7 +183,111 @@ define(['N/search', './CTC_VCSP_Lib_Preferences.js', './CTC_VCSP_Constants.js'],
         return config;
     }
 
+    function getAvailableVendorList(options) {
+        let logTitle = [LogTitle, 'getAvailableVendorList'].join(':'),
+            vendorList = null,
+            subsidiary = options.subsidiary;
+
+        log.debug(logTitle, 'Params: ' + JSON.stringify(options));
+        let filter = [];
+        filter.push(
+            NS_Search.createFilter({
+                name: 'isinactive',
+                operator: NS_Search.Operator.IS,
+                values: false
+            })
+        );
+
+        if (VCSP_Pref.isSubsidiariesEnabled()) {
+            filter.push(
+                NS_Search.createFilter({
+                    name: VendorConfig.SUBSIDIARY,
+                    operator: NS_Search.Operator.ANYOF,
+                    values: subsidiary
+                })
+            );
+        }
+
+        let columns = [{ name: VendorConfig.VENDOR }];
+
+        let vendorSearch = NS_Search.create({
+            type: VCSP_Global.Records.VENDOR_CONFIG,
+            filters: filter,
+            columns: columns
+        });
+
+        let results = vendorSearch.run().getRange({
+            start: 0,
+            end: 1000
+        });
+
+        let vendorAdded = {};
+        if (results && results.length) {
+            vendorList = [];
+            results.forEach((result) => {
+                let vendorId = result.getValue(columns[0]);
+                if (vendorId && !vendorAdded[vendorId]) {
+                    vendorList.push({
+                        value: vendorId,
+                        text: result.getText(columns[0])
+                    });
+                    vendorAdded[vendorId] = true;
+                }
+                return true;
+            });
+        }
+
+        return vendorList;
+    }
+
+    function getVendorAdditionalPOFields(option) {
+        let logTitle = [LogTitle, 'getVendorAdditionalPOFields'].join(':'),
+            vendorConfigId = option.vendorConfig,
+            subsidiaryId = option.subsidiary,
+            vendorId = option.vendor,
+            returnValue = null;
+        // init search details
+        let searchColumns = [{ name: VendorConfig.ADDITIONAL_PO_FIELDS }],
+            searchDetails;
+        if (vendorConfigId) {
+            returnValue = getVendorConfiguration({
+                vendorConfigId: vendorConfigId
+            });
+        } else if (vendorId) {
+            returnValue = getVendorConfiguration({
+                vendor: vendorId,
+                subsidiary: subsidiaryId
+            });
+        }
+        if (returnValue) {
+            searchDetails = {
+                type: VCSP_Global.Records.VENDOR_CONFIG,
+                filters: [
+                    [VendorConfig.ID, NS_Search.Operator.ANYOF, returnValue.id],
+                    'AND',
+                    ['isinactive', NS_Search.Operator.IS, 'F']
+                ],
+                columns: searchColumns
+            };
+            log.debug(
+                logTitle,
+                'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails)
+            );
+            let vendorSearch = NS_Search.create(searchDetails);
+            let results = vendorSearch.run().getRange({
+                start: 0,
+                end: 1
+            });
+            if (results && results.length) {
+                returnValue.additionalPOFields = results[0].getValue(searchColumns[0]);
+            }
+        }
+        return returnValue;
+    }
+
     return {
-        getVendorConfiguration: getVendorConfiguration
+        getVendorConfiguration: getVendorConfiguration,
+        getAvailableVendorList: getAvailableVendorList,
+        getVendorAdditionalPOFields: getVendorAdditionalPOFields
     };
 });

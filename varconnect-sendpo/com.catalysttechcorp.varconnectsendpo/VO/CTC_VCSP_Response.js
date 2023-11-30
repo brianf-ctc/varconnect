@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 define([], function () {
@@ -30,6 +30,10 @@ define([], function () {
                     options.responseCode >= 300
                 );
             })(this);
+        this.error = options.error;
+        this.errorId = options.errorId;
+        this.errorName = options.errorName;
+        this.errorMsg = options.errorMsg;
     }
 
     return Response;

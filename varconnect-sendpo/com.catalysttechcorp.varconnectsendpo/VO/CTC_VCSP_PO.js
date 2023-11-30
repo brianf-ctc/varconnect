@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,38 +8,44 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
-define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, constants) {
+define([
+    'N/search',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_VCSP_Lib_VendorConfig'
+], function (ns_search, VCSP_Global, libVendorConfig) {
+    var VendorCFG = {};
+
     function _getFieldValue(options) {
-        var recPO = options.recPO,
+        let recPO = options.recPO,
             field = options.field;
 
         return recPO.getValue({ fieldId: field }) ? recPO.getValue({ fieldId: field }) : undefined;
     }
 
     function _getFieldText(options) {
-        var recPO = options.recPO,
+        let recPO = options.recPO,
             field = options.field;
 
         return recPO.getText({ fieldId: field }) ? recPO.getText({ fieldId: field }) : undefined;
     }
 
     function _getSubrecordValue(options) {
-        var recPO = options.recPO,
+        let recPO = options.recPO,
             subrecordId = options.subrecord,
             field = options.field,
             value;
 
-        var subrecord = recPO.getSubrecord({ fieldId: subrecordId });
+        let subrecord = recPO.getSubrecord({ fieldId: subrecordId });
         if (subrecord) value = subrecord.getValue({ fieldId: field });
 
         return value;
     }
 
     function _getSublistValue(options) {
-        var recPO = options.recPO,
+        let recPO = options.recPO,
             sublist = options.sublist,
             field = options.field,
             line = options.line,
@@ -55,7 +61,7 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
     }
 
     function _getSublistText(options) {
-        var recPO = options.recPO,
+        let recPO = options.recPO,
             sublist = options.sublist,
             field = options.field,
             line = options.line,
@@ -69,13 +75,11 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
     }
 
     function _getEmail(options) {
-        var entityId = options.entityId,
+        let entityId = options.entityId,
             email = null;
 
-        log.audit('_getEmail', options);
-
         if (entityId) {
-            var recLookup = ns_search.lookupFields({
+            let recLookup = ns_search.lookupFields({
                 type: 'entity',
                 id: entityId,
                 columns: 'email'
@@ -86,32 +90,45 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
         return email;
     }
 
-    function _getAdditionalLookupValues(options) {
-        var recPO = options.recPO,
-            columns = options.columns;
-        var values = ns_search.lookupFields({
-            type: ns_search.Type.PURCHASE_ORDER,
-            id: recPO.id,
-            columns: columns
-        });
-        return values ? values : undefined;
+    function _getSalesOrderValues(options) {
+        let salesOrderId = options.id || options,
+            returnValue = null;
+
+        if (salesOrderId) {
+            returnValue = ns_search.lookupFields({
+                type: ns_search.Type.SALES_ORDER,
+                id: salesOrderId,
+                columns: 'shipcomplete'
+            });
+        }
+        return returnValue || {};
     }
 
     function PurchaseOrder(recPO) {
-        this.id = recPO.id;
-        this.tranId = recPO.getValue({ fieldId: 'tranid' });
-
         this.entity = recPO.getValue({ fieldId: 'entity' });
         this.subsidiary = recPO.getValue({ fieldId: 'subsidiary' });
+
+        VendorCFG = libVendorConfig.getVendorConfiguration({
+            vendor: this.entity,
+            subsidiary: this.subsidiary
+        });
+        log.audit('PO Obj', VendorCFG);
+
+        this.id = recPO.id;
+        this.tranId = recPO.getValue({ fieldId: 'tranid' });
+        this.createdDate = recPO.getValue({ fieldId: 'createddate' });
         this.currency = recPO.getValue({ fieldId: 'currencysymbol' });
         this.total = recPO.getValue({ fieldId: 'total' });
         this.memo = recPO.getValue({ fieldId: 'memo' });
         this.tranDate = recPO.getText({ fieldId: 'trandate' });
         this.dropShipPO = recPO.getValue({ fieldId: 'dropshippo' });
-        this.custPO = recPO.getText({ fieldId: constants.Fields.Transaction.CUSTOMER_PO_NUMBER });
+        this.custPO = recPO.getText({ fieldId: VCSP_Global.Fields.Transaction.CUSTOMER_PO_NUMBER });
+        this.additionalVendorDetails = recPO.getValue({
+            fieldId: VCSP_Global.Fields.Transaction.VENDOR_DETAILS
+        });
 
-        var subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
-        var addressFields = [
+        let subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
+        let addressFields = [
             'attention',
             'addressee',
             'addrphone',
@@ -124,10 +141,10 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
             'countrycode'
         ];
 
-        log.audit('Sub Rec', subRecShipping);
+        log.emergency('Sub Rec', subRecShipping);
 
         if (subRecShipping) {
-            var shipAddr = {};
+            let shipAddr = {};
             addressFields.forEach(function (field) {
                 shipAddr[field] = subRecShipping.getValue({ fieldId: field });
                 return true;
@@ -167,21 +184,9 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
         this.shipState = _getFieldValue({ recPO: recPO, field: 'shipstate' });
         this.shipZip = _getFieldValue({ recPO: recPO, field: 'shipzip' });
         this.shipCountry = _getFieldValue({ recPO: recPO, field: 'shipcountry' });
-        this.shipMethod = _getFieldValue({ recPO: recPO, field: 'shipmethod' });
-        this.shipMethodCode = _getFieldValue({
-            recPO: recPO,
-            field: constants.Fields.Transaction.SHIP_CODE
-        });
+        this.shipMethod = _getFieldText({ recPO: recPO, field: 'shipmethod' });
 
         this.shipEmail = _getEmail({ entityId: _getFieldValue({ recPO: recPO, field: 'shipto' }) });
-
-        // var poLookupValues = _getAdditionalLookupValues({
-        //     recPO: recPO,
-        //     columns: [
-        //         [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.')
-        //     ]
-        // });
-        // this.shipFromSynnexWarehouse = poLookupValues[ [ 'location', constants.Fields.Location.SYNNEX_WAREHOUSE_CODE ].join('.') ];
 
         this.billAttention = _getSubrecordValue({
             recPO: recPO,
@@ -220,21 +225,18 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
         this.terms = _getFieldText({ recPO: recPO, field: 'terms' });
 
         this.createdFrom = _getFieldValue({ recPO: recPO, field: 'createdfrom' });
-        // created a more generic custom ship method code field, but not dispensing of specific method code fields in case needed
-        this.synnexShippingCode = this.shipMethodCode;
-        this.dellShippingCode =
-            _getFieldValue({
-                recPO: recPO,
-                field: 'custbody_ctc_vcsp_dell_ship_code'
-            }) || this.shipMethodCode;
+        this.dellShippingCode = _getFieldValue({
+            recPO: recPO,
+            field: 'custbody_ctc_vcsp_dell_ship_code'
+        });
 
         this.paymentTerms = _getFieldValue({ recPO: recPO, field: 'terms' });
 
         this.items = [];
 
-        var itemCount = recPO.getLineCount({ sublistId: 'item' });
+        let itemCount = recPO.getLineCount({ sublistId: 'item' });
 
-        for (var i = 0; i < itemCount; i++) {
+        for (let i = 0; i < itemCount; i++) {
             this.items.push({
                 lineuniquekey: _getSublistValue({
                     recPO: recPO,
@@ -271,35 +273,55 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
                 quotenumber: _getSublistText({
                     recPO: recPO,
                     sublist: 'item',
-                    field: 'custcol_ctc_vcsp_quote_no',
+                    field: VCSP_Global.Fields.Transaction.Item.QUOTE_NUMBER,
                     line: i
                 }),
+                quotenumber_ext: VendorCFG.quoteNoField
+                    ? _getSublistText({
+                          recPO: recPO,
+                          sublist: 'item',
+                          field: VendorCFG.quoteNoField,
+                          line: i
+                      })
+                    : null,
                 manufacturer: _getSublistValue({
                     recPO: recPO,
                     sublist: 'item',
-                    field: 'custcol_ctc_manufacturer',
+                    field: VCSP_Global.Fields.Transaction.Item.MANUFACTURER,
                     line: i
                 }),
                 synnexSKU: _getSublistValue({
                     recPO: recPO,
                     sublist: 'item',
-                    field: constants.Fields.Transaction.Item.SYNNEX_SKU,
+                    field: VCSP_Global.Fields.Transaction.Item.SYNNEX_SKU,
                     line: i
                 }),
                 dellSKU: _getSublistValue({
                     recPO: recPO,
                     sublist: 'item',
-                    field: 'custcol_ctc_vcsp_sku_dell',
+                    field: VCSP_Global.Fields.Transaction.Item.DELL_SKU,
+                    line: i
+                }),
+                ingramSKU: _getSublistValue({
+                    recPO: recPO,
+                    sublist: 'item',
+                    field: VCSP_Global.Fields.Transaction.Item.INGRAM_SKU,
+                    line: i
+                }),
+                dandhSKU: _getSublistValue({
+                    recPO: recPO,
+                    sublist: 'item',
+                    field: VCSP_Global.Fields.Transaction.Item.DANDH_SKU,
                     line: i
                 })
             });
         }
 
         this.setQuote = function (options) {
-            var columnId = options.columnId,
+            let columnId = options.columnId,
                 nativePO = options.nativePO;
 
-            for (var i = 0; i < this.items.length; i++) {
+            for (let i = 0; i < this.items.length; i++) {
                 this.items[i].quote = _getSublistValue({
                     recPO: nativePO,
                     sublist: 'item',
@@ -310,20 +332,21 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
         };
 
         this.setValuesFromVendorConfig = function (options) {
-            var nativePO = options.nativePO,
+            let nativePO = options.nativePO,
                 recVendorConfig = options.recVendorConfig;
 
             log.debug('recVendorConfig.Bill', recVendorConfig.Bill);
 
-            this.billAttention = recVendorConfig.Bill.attention;
-            this.billAddressee = recVendorConfig.Bill.addressee;
-            this.billEmail = recVendorConfig.Bill.email;
-            this.billAddr1 = recVendorConfig.Bill.address1;
-            this.billAddr2 = recVendorConfig.Bill.address2;
-            this.billCity = recVendorConfig.Bill.city;
-            this.billState = recVendorConfig.Bill.state;
-            this.billZip = recVendorConfig.Bill.zip;
-            this.billCountry = recVendorConfig.Bill.country;
+            this.billAttention = this.billAttention || recVendorConfig.Bill.attention;
+            this.billAddressee = this.billAddressee || recVendorConfig.Bill.addressee;
+            this.billEmail = this.billEmail || recVendorConfig.Bill.email;
+            this.billAddr1 = this.billAddr1 || recVendorConfig.Bill.address1;
+            this.billAddr2 = this.billAddr2 || recVendorConfig.Bill.address2;
+            this.billCity = this.billCity || recVendorConfig.Bill.city;
+            this.billState = this.billState || recVendorConfig.Bill.state;
+            this.billZip = this.billZip || recVendorConfig.Bill.zip;
+            this.billCountry = this.billCountry || recVendorConfig.Bill.country;
+            this.billPhone = this.billPhone || recVendorConfig.Bill.phoneno;
 
             if (recVendorConfig.skuColumn)
                 this.setQuote({
@@ -331,6 +354,12 @@ define(['N/search', '../Library/CTC_VCSP_Constants.js'], function (ns_search, co
                     nativePO: nativePO
                 });
         };
+
+        // set values from sales order
+        if (this.createdFrom) {
+            let salesOrderValues = _getSalesOrderValues(this.createdFrom);
+            this.shipComplete = salesOrderValues.shipcomplete;
+        }
     }
 
     return PurchaseOrder;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,21 +8,22 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
-define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.js'], function (
-    NS_Runtime,
-    NS_Format,
-    NS_Record,
-    NS_Search,
-    CTC_Global
-) {
-    var LogTitle = 'CTC_Util',
+define([
+    'N/runtime',
+    'N/format',
+    'N/record',
+    'N/search',
+    'N/xml',
+    './CTC_VCSP_Constants'
+], function (NS_Runtime, NS_Format, NS_Record, NS_Search, NS_Xml, VCSP_Global) {
+    let LogTitle = 'CTC_Util',
         LogPrefix;
 
-    var CTC_Util = {
+    let CTC_Util = {
         CACHE: {},
         isEmpty: function (stValue) {
             return (
@@ -31,22 +32,23 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 stValue == undefined ||
                 stValue == 'undefined' ||
                 stValue == 'null' ||
+                (util.isString(stValue) && stValue.trim() === '') ||
                 (util.isArray(stValue) && stValue.length == 0) ||
                 (util.isObject(stValue) &&
                     (function (v) {
-                        for (var k in v) return false;
+                        for (let k in v) return false;
                         return true;
                     })(stValue))
             );
         },
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
+            for (let i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
         uniqueArray: function (arrVar) {
-            var arrNew = [];
-            for (var i = 0, j = arrVar.length; i < j; i++) {
+            let arrNew = [];
+            for (let i = 0, j = arrVar.length; i < j; i++) {
                 if (CTC_Util.inArray(arrVar[i], arrNew)) continue;
                 arrNew.push(arrVar[i]);
             }
@@ -54,14 +56,14 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return arrNew;
         },
         searchAllPaged: function (option) {
-            var objSearch,
+            let objSearch,
                 arrResults = [],
                 logTitle = 'CTC_Utils:searchAllPaged';
             option = option || {};
 
             try {
-                var searchId = option.id || option.searchId;
-                var searchType = option.recordType || option.type;
+                let searchId = option.id || option.searchId;
+                let searchType = option.recordType || option.type;
 
                 objSearch = option.searchObj
                     ? option.searchObj
@@ -83,18 +85,18 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 if (option.filterExpression) objSearch.filterExpression = option.filterExpression;
                 if (option.columns) objSearch.columns = objSearch.columns.concat(option.columns);
 
-                var maxResults = option.maxResults || 0;
-                var pageSize = maxResults && maxResults <= 1000 ? maxResults : 1000;
+                let maxResults = option.maxResults || 0;
+                let pageSize = maxResults && maxResults <= 1000 ? maxResults : 1000;
 
                 // run the search
-                var objPagedResults = objSearch.runPaged({
+                let objPagedResults = objSearch.runPaged({
                     pageSize: pageSize
                 });
                 // set the max results to the search length, if not defined;
                 maxResults = maxResults || objPagedResults.count;
 
-                for (var i = 0, j = objPagedResults.pageRanges.length; i < j; i++) {
-                    var pagedResults = objPagedResults.fetch({
+                for (let i = 0, j = objPagedResults.pageRanges.length; i < j; i++) {
+                    let pagedResults = objPagedResults.fetch({
                         index: objPagedResults.pageRanges[i].index
                     });
 
@@ -124,24 +126,24 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
         },
         isUndefined: function (value) {
             // Obtain `undefined` value that's guaranteed to not have been re-assigned
-            var undefined = void 0;
+            let undefined = void 0;
             return value === undefined;
         },
         parseFloat: function (stValue) {
             return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
         },
         parseDate: function (option) {
-            var logTitle = [LogTitle, 'parseDate'].join('::');
+            let logTitle = [LogTitle, 'parseDate'].join('::');
             log.audit(logTitle, '>> option: ' + JSON.stringify(option));
 
-            var dateString = option.dateString || option,
+            let dateString = option.dateString || option,
                 dateFormat = CTC_Util.CACHE.DATE_FORMAT,
                 date = '';
 
             if (!dateFormat) {
                 try {
                     require(['N/config'], function (config) {
-                        var generalPref = config.load({
+                        let generalPref = config.load({
                             type: config.Type.COMPANY_PREFERENCES
                         });
                         dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
@@ -161,17 +163,17 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
 
             if (dateString && dateString.length > 0 && dateString != 'NA') {
                 try {
-                    var stringToProcess = dateString
+                    let stringToProcess = dateString
                         .replace(/-/g, '/')
                         .replace(/\n/g, ' ')
                         .split(' ');
 
-                    for (var i = 0; i < stringToProcess.length; i++) {
-                        var singleString = stringToProcess[i];
+                    for (let i = 0; i < stringToProcess.length; i++) {
+                        let singleString = stringToProcess[i];
                         if (singleString) {
-                            var stringArr = singleString.split('T'); //handle timestamps with T
+                            let stringArr = singleString.split('T'); //handle timestamps with T
                             singleString = stringArr[0];
-                            var convertedDate = new Date(singleString);
+                            let convertedDate = new Date(singleString);
 
                             if (!date || convertedDate > date) date = convertedDate;
                         }
@@ -184,7 +186,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             //Convert to string
             if (date) {
                 //set date
-                var year = date.getFullYear();
+                let year = date.getFullYear();
                 if (year < 2000) {
                     year += 100;
                     date.setFullYear(year);
@@ -200,7 +202,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return date;
         },
         forceInt: function (stValue) {
-            var intValue = parseInt(stValue, 10);
+            let intValue = parseInt(stValue, 10);
 
             if (isNaN(intValue) || stValue == Infinity) {
                 return 0;
@@ -209,7 +211,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return intValue;
         },
         forceFloat: function (stValue) {
-            var flValue = this.parseFloat(stValue);
+            let flValue = this.parseFloat(stValue);
 
             if (isNaN(flValue) || stValue == Infinity) {
                 return 0.0;
@@ -218,7 +220,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return flValue;
         },
         flatLookup: function (option) {
-            var arrData = null,
+            let arrData = null,
                 arrResults = null;
 
             arrResults = NS_Search.lookupFields(option);
@@ -226,7 +228,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
 
             if (arrResults) {
                 arrData = {};
-                for (var fld in arrResults) {
+                for (let fld in arrResults) {
                     arrData[fld] = util.isArray(arrResults[fld])
                         ? arrResults[fld][0]
                         : arrResults[fld];
@@ -235,15 +237,15 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return arrData;
         },
         waitMs: function (waitms) {
-            var logTitle = [LogTitle, 'waitMs'].join('::');
+            let logTitle = [LogTitle, 'waitMs'].join('::');
             waitms = waitms || 5000;
 
             log.audit(logTitle, 'waiting for ' + waitms);
 
-            var nowDate = new Date(),
+            let nowDate = new Date(),
                 isDone = false;
             while (!isDone) {
-                var deltaMs = new Date() - nowDate;
+                let deltaMs = new Date() - nowDate;
                 isDone = deltaMs >= waitms;
                 if (deltaMs % 1000 == 0) {
                     log.audit(logTitle, '...' + deltaMs);
@@ -253,17 +255,17 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return true;
         },
         waitRandom: function (max) {
-            var logTitle = [LogTitle, 'waitRandom'].join('::');
+            let logTitle = [LogTitle, 'waitRandom'].join('::');
 
-            var waitTimeMS = Math.floor(Math.random() * Math.floor(max));
+            let waitTimeMS = Math.floor(Math.random() * Math.floor(max));
             max = max || 5000;
 
             log.audit(logTitle, 'waiting for ' + waitTimeMS);
-            var nowDate = new Date(),
+            let nowDate = new Date(),
                 isDone = false;
 
             while (!isDone) {
-                var deltaMs = new Date() - nowDate;
+                let deltaMs = new Date() - nowDate;
                 isDone = deltaMs >= waitTimeMS;
                 if (deltaMs % 1000 == 0) {
                     log.audit(logTitle, '...' + deltaMs);
@@ -274,26 +276,26 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
         },
         randomStr: function (len) {
             len = len || 5;
-            var str = new Date().getTime().toString();
+            let str = new Date().getTime().toString();
             return str.substring(str.length - len, str.length);
         },
         roundOff: function (value) {
-            var flValue = this.forceFloat(value || '0');
+            let flValue = this.forceFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
         },
         vcLog: function (option) {
-            var logTitle = [LogTitle, 'vcLog'].join('::');
+            let logTitle = [LogTitle, 'vcLog'].join('::');
             // log.audit(logTitle, option);
 
-            var VC_LOG_ID = CTC_Global.Records.VC_LOG,
-                VC_LOG_FIELDS = CTC_Global.Fields.VarConnectLog,
-                LOG_STATUS = CTC_Global.Lists.VC_LOG_STATUS;
+            let VC_LOG_ID = VCSP_Global.Records.VC_LOG,
+                VC_LOG_FIELDS = VCSP_Global.Fields.VarConnectLog,
+                LOG_STATUS = VCSP_Global.Lists.VC_LOG_STATUS;
 
             try {
-                var logOption = {};
-                logOption.APPLICATION = option.appName || CTC_Global.LOG_APPLICATION;
+                let logOption = {};
+                logOption.APPLICATION = option.appName || VCSP_Global.LOG_APPLICATION;
                 logOption.HEADER = option.title || logOption.APPLICATION;
                 logOption.BODY =
                     option.body ||
@@ -328,9 +330,9 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 log.audit(logTitle, logOption);
 
                 // create the log
-                var recLog = NS_Record.create({ type: VC_LOG_ID });
-                for (var field in VC_LOG_FIELDS) {
-                    var fieldName = VC_LOG_FIELDS[field];
+                let recLog = NS_Record.create({ type: VC_LOG_ID });
+                for (let field in VC_LOG_FIELDS) {
+                    let fieldName = VC_LOG_FIELDS[field];
                     recLog.setValue({
                         fieldId: fieldName,
                         value: logOption[field] || ''
@@ -344,7 +346,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return null;
         },
         extractError: function (option) {
-            var errorMessage = util.isString(option)
+            let errorMessage = util.isString(option)
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
@@ -356,42 +358,41 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
         convertToQuery: function (json) {
             if (typeof json !== 'object') return;
 
-            var qry = [];
-            for (var key in json) {
-                var qryVal = encodeURIComponent(json[key]);
-                var qryKey = encodeURIComponent(key);
+            let qry = [];
+            for (let key in json) {
+                let qryVal = encodeURIComponent(json[key]);
+                let qryKey = encodeURIComponent(key);
                 qry.push([qryKey, qryVal].join('='));
             }
 
             return qry.join('&');
         },
         loadModule: function (mod) {
-            var returnValue;
+            let returnValue;
             require([mod], function (modObj) {
                 returnValue = modObj;
                 return true;
             });
             return returnValue;
         },
-
         sendRequest: function (option) {
-            var logTitle = [LogTitle, 'sendRequest'].join('::'),
+            let logTitle = [LogTitle, 'sendRequest'].join('::'),
                 returnValue = {};
 
-            var VALID_RESP_CODE = [200, 207, 201]; // Added 201 for INGRAM
+            let VALID_RESP_CODE = [200, 207, 201]; // Added 201 for INGRAM
 
-            var _DEFAULT = {
+            let _DEFAULT = {
                 validMethods: ['post', 'get'],
                 maxRetries: 3,
                 maxWaitMs: 3000
             };
-            var ns_https = CTC_Util.loadModule('N/https');
+            let ns_https = CTC_Util.loadModule('N/https');
 
-            var queryOption = option.query || option.queryOption;
+            let queryOption = option.query || option.queryOption;
             if (!queryOption || CTC_Util.isEmpty(queryOption)) throw 'Missing query option';
 
             option.method = (option.method || 'get').toLowerCase();
-            var response,
+            let response,
                 responseBody,
                 parsedResponse,
                 param = {
@@ -417,7 +418,7 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
 
             if (option.isXML) param.isJSON = false;
             log.audit(logTitle, '>> param: ' + JSON.stringify(param));
-            var LOG_STATUS = CTC_Global.Lists.VC_LOG_STATUS;
+            let LOG_STATUS = VCSP_Global.Lists.VC_LOG_STATUS;
 
             try {
                 if (!param.noLogs) {
@@ -461,10 +462,10 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
 
                 ////////////////////////////
             } catch (error) {
-                var errorMsg = CTC_Util.extractError(error);
+                let errorMsg = CTC_Util.extractError(error);
                 returnValue.isError = true;
                 returnValue.errorMsg = errorMsg;
-                returnValue.error = error;
+                returnValue.errorName = error.name;
                 returnValue.details = parsedResponse || response;
 
                 CTC_Util.vcLog({
@@ -500,12 +501,15 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return returnValue;
         },
         safeParse: function (response) {
-            var logTitle = [LogTitle, 'safeParse'].join('::'),
+            let logTitle = [LogTitle, 'safeParse'].join('::'),
+                strToParse = (response ? response.body : response) || response,
                 returnValue;
 
-            // log.audit(logTitle, response);
+            // log.audit(logTitle, strToParse);
             try {
-                returnValue = JSON.parse(response.body || response);
+                if (strToParse) {
+                    returnValue = JSON.parse(strToParse);
+                }
             } catch (error) {
                 log.error(logTitle, '## ERROR ##' + CTC_Util.extractError(error));
                 returnValue = null;
@@ -519,17 +523,17 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
         },
 
         getFileContent: function (option) {
-            var returnValue = null;
-            var logTitle = [LogTitle, 'getFileContent'];
+            let returnValue = null;
+            let logTitle = [LogTitle, 'getFileContent'];
 
             try {
-                var fileId = option.fileId;
+                let fileId = option.fileId;
                 if (!fileId) {
-                    var fileName = option.filename || option.name;
+                    let fileName = option.filename || option.name;
                     if (!fileName) return false;
 
-                    var folderId = option.folder || option.folderId || this.getCurrentFolder();
-                    var fileInfo = this.searchFile({
+                    let folderId = option.folder || option.folderId || this.getCurrentFolder();
+                    let fileInfo = this.searchFile({
                         name: fileName,
                         folder: folderId
                     });
@@ -539,8 +543,8 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 }
 
                 // load the file
-                var NS_File = this.loadModule('N/file');
-                var fileObj = NS_File.load({
+                let NS_File = this.loadModule('N/file');
+                let fileObj = NS_File.load({
                     id: fileId
                 });
 
@@ -552,35 +556,35 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             return returnValue;
         },
         searchFolder: function (option) {
-            var folderName = option.folderName || option.name;
+            let folderName = option.folderName || option.name;
             if (!folderName) return false;
 
-            var arrCols = ['name', 'parent', 'foldersize', 'parent', 'internalid'];
-            var searchOption = {
+            let arrCols = ['name', 'parent', 'foldersize', 'parent', 'internalid'];
+            let searchOption = {
                 type: 'folder',
                 columns: arrCols,
                 filters: [['name', 'is', folderName]]
             };
 
-            var parentId = option.parent || option.parentFolder;
+            let parentId = option.parent || option.parentFolder;
             if (parentId) {
                 searchOption.filters.push('AND');
                 searchOption.filters.push(['parent', 'anyof', parentId]);
             }
 
-            var returnValue = null;
+            let returnValue = null;
 
-            var cacheKey = ['FileLib.searchFolder', JSON.stringify(searchOption)].join('::');
-            var folderInfo = this.CACHE[cacheKey];
+            let cacheKey = ['FileLib.searchFolder', JSON.stringify(searchOption)].join('::');
+            let folderInfo = this.CACHE[cacheKey];
 
             if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                var objSearch = NS_Search.create(searchOption);
+                let objSearch = NS_Search.create(searchOption);
                 folderInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
-                    var fInfo = {};
+                    let fInfo = {};
 
-                    for (var i = 0, j = row.columns.length; i < j; i++) {
-                        var col = row.columns[i];
+                    for (let i = 0, j = row.columns.length; i < j; i++) {
+                        let col = row.columns[i];
                         fInfo[col.name] = row.getValue(col);
                     }
                     fInfo.id = row.id;
@@ -596,10 +600,10 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 : folderInfo.shift();
         },
         searchFile: function (option) {
-            var fileName = option.filename || option.name;
+            let fileName = option.filename || option.name;
             if (!fileName) return false;
 
-            var arrCols = [
+            let arrCols = [
                 'name',
                 'folder',
                 'documentsize',
@@ -608,31 +612,31 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 'modified',
                 'filetype'
             ];
-            var searchOption = {
+            let searchOption = {
                 type: 'file',
                 columns: arrCols,
                 filters: [['name', 'is', fileName]]
             };
 
-            var folderId = option.folder || option.folderId;
+            let folderId = option.folder || option.folderId;
             if (folderId) {
                 searchOption.filters.push('AND');
                 searchOption.filters.push(['folder', 'is', folderId]);
             }
 
-            var returnValue = null;
+            let returnValue = null;
 
-            var cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
-            var fileInfo = this.CACHE[cacheKey];
+            let cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
+            let fileInfo = this.CACHE[cacheKey];
 
             if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                var objSearch = NS_Search.create(searchOption);
+                let objSearch = NS_Search.create(searchOption);
                 fileInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
-                    var fInfo = {};
+                    let fInfo = {};
 
-                    for (var i = 0, j = row.columns.length; i < j; i++) {
-                        var col = row.columns[i];
+                    for (let i = 0, j = row.columns.length; i < j; i++) {
+                        let col = row.columns[i];
                         fInfo[col.name] = row.getValue(col);
                     }
                     fInfo.folderName = row.getText({
@@ -652,16 +656,16 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                 : fileInfo.shift();
         },
         getCurrentFolder: function (option) {
-            var returnValue = null,
+            let returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
             option = option || {};
 
             try {
-                var cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
+                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
                 returnValue = this.CACHE[cacheKey];
 
                 if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                    var scriptId = option.scriptId;
+                    let scriptId = option.scriptId;
                     if (!scriptId) {
                         if (!option.currentScript) {
                             if (!option.runtime) option.runtime = this.loadModule('N/runtime');
@@ -671,20 +675,20 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
                     }
                     if (!scriptId) return false;
 
-                    var objSearch = NS_Search.create({
+                    let objSearch = NS_Search.create({
                         type: 'script',
                         filters: [['scriptid', 'is', scriptId]],
                         columns: ['scriptfile', 'name']
                     });
 
-                    var fileId = null;
+                    let fileId = null;
                     objSearch.run().each(function (row) {
                         fileId = row.getValue('scriptfile');
                         return true;
                     });
 
-                    var NS_File = this.loadModule('N/file');
-                    var fileObj = NS_File.load({
+                    let NS_File = this.loadModule('N/file');
+                    let fileObj = NS_File.load({
                         id: fileId
                     });
 
@@ -698,6 +702,166 @@ define(['N/runtime', 'N/format', 'N/record', 'N/search', './CTC_VCSP_Constants.j
             }
 
             return returnValue;
+        },
+        log: function (option, title, message) {
+            let logType = option.type || option,
+                logTitle = option.title || title,
+                tempMessage = new String(option.message || message || '');
+            do {
+                let messagePortion = tempMessage.slice(0, 3999);
+                tempMessage = tempMessage.slice(3999);
+                switch (logType) {
+                    case 'DEBUG':
+                        log.debug(logTitle, messagePortion);
+                        break;
+                    case 'AUDIT':
+                        log.audit(logTitle, messagePortion);
+                        break;
+                    case 'ERROR':
+                        log.error(logTitle, messagePortion);
+                        break;
+                    default:
+                        break;
+                }
+            } while (tempMessage.length > 0);
+        },
+        leftPadString: function (str, padding, len) {
+            let tempStr = str + '';
+            let pad = padding + '';
+            for (let i = tempStr.length; i < len; i += pad.length) {
+                tempStr = pad + tempStr;
+            }
+            return tempStr.slice(len * -1);
+        },
+        formatToSynnexDate: function (option) {
+            let dateToFormat = option.date || option,
+                formattedDate = dateToFormat;
+            if (dateToFormat && dateToFormat instanceof Date) {
+                // CCYY-MM-DDTHH:MM:SS
+                formattedDate = [
+                    [
+                        dateToFormat.getFullYear(),
+                        this.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
+                        this.leftPadString(dateToFormat.getDate(), '0', 2)
+                    ].join('-'),
+                    [
+                        this.leftPadString(dateToFormat.getHours(), '0', 2),
+                        this.leftPadString(dateToFormat.getMinutes(), '0', 2),
+                        this.leftPadString(dateToFormat.getSeconds(), '0', 2)
+                    ].join(':')
+                ].join('T');
+            }
+            return formattedDate;
+        },
+        parseFromSynnexDate: function (option) {
+            let dateToParse = option.date || option,
+                parsedDate = dateToParse;
+            if (dateToParse) {
+                // CCYY-MM-DDTHH:MM:SS
+                let dateTimeComponents = dateToParse.split('T'),
+                    dateComponents = dateTimeComponents[0].split('-'),
+                    timeComponents = dateTimeComponents[1].split(':');
+                parsedDate = new Date(
+                    dateComponents[0],
+                    dateComponents[1] - 1,
+                    dateComponents[2],
+                    timeComponents[0],
+                    timeComponents[1],
+                    timeComponents[2]
+                );
+            }
+            return parsedDate;
+        },
+        parseISOString: function (option) {
+            let date = option.date || option,
+                dateComponents = date.split(/\D+/);
+            return new Date(
+                Date.UTC(
+                    dateComponents[0],
+                    --dateComponents[1],
+                    dateComponents[2],
+                    dateComponents[3],
+                    dateComponents[4],
+                    dateComponents[5],
+                    dateComponents[6]
+                )
+            );
+        },
+        xmlNodeToJson: function (option) {
+            let xmlNode = option.node || option,
+                json = option.json;
+            if (xmlNode) {
+                let mainKey = xmlNode.nodeName;
+                if (xmlNode.nodeType == NS_Xml.NodeType.TEXT_NODE) {
+                    let value = xmlNode.textContent;
+                    if (!this.isEmpty(value)) {
+                        json[mainKey] = value;
+                    }
+                } else {
+                    let jsonNode = {};
+                    if (!json) json = {};
+                    if (json[mainKey]) {
+                        if (!util.isArray(json[mainKey])) {
+                            json[mainKey] = [json[mainKey]];
+                        }
+                        json[mainKey].push(jsonNode);
+                    } else {
+                        json[mainKey] = jsonNode;
+                    }
+                    if (xmlNode.hasAttributes()) {
+                        let nodeAttributes = xmlNode.attributes;
+                        for (let attribKey in nodeAttributes) {
+                            let attrib = nodeAttributes[attribKey],
+                                attribName = ['#', attrib.name].join(''),
+                                attribValue = attrib.value;
+                            jsonNode[attribName] = attribValue;
+                        }
+                    }
+                    if (
+                        xmlNode.hasChildNodes() &&
+                        (xmlNode.childNodes.length > 1 ||
+                            xmlNode.childNodes[0].nodeType != NS_Xml.NodeType.TEXT_NODE)
+                    ) {
+                        let childNodes = xmlNode.childNodes;
+                        for (let i = 0, x = childNodes.length; i < x; i += 1) {
+                            let childNode = childNodes[i];
+                            this.xmlNodeToJson({
+                                node: childNode,
+                                json: jsonNode
+                            });
+                        }
+                    } else {
+                        let value = xmlNode.textContent;
+                        if (this.isEmpty(value)) {
+                            delete json[mainKey];
+                        } else {
+                            if (xmlNode.hasAttributes()) {
+                                jsonNode['#text'] = value;
+                            } else {
+                                delete json[mainKey];
+                                json[mainKey] = value;
+                            }
+                        }
+                    }
+                }
+            }
+            return json;
+        },
+        xmlToJson: function (option) {
+            let xmlDoc = option.xml || option,
+                json = option.json;
+            if (xmlDoc && xmlDoc.documentElement) {
+                if (!json) json = {};
+                let childNodes = xmlDoc.documentElement.childNodes;
+                for (let i = 0, len = childNodes.length; i < len; i += 1) {
+                    let node = childNodes[i];
+                    this.xmlNodeToJson({
+                        node: node,
+                        json: json
+                    });
+                }
+            }
+            return json;
         }
     };
 
