@@ -421,6 +421,8 @@ define([
         }
 
         try {
+            if (!myArr || !myArr.length) throw 'Empty response';
+            
             for (var i = 0; i < myArr.length; i++) {
                 var currentOrder = myArr[i].ordObj;
                 LogPrefix = '[bill:' + currentOrder.invoice + '] ';
