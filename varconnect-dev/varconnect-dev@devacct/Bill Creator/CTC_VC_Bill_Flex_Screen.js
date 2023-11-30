@@ -1311,9 +1311,27 @@ define([
                     id: 'custpage_logs_top',
                     type: ns_ui.FieldType.TEXTAREA,
                     label: 'Latest Log Message',
-                    defaultValue: (function (logs) {
-                        return logs.split(/\n/g).pop();
+
+                    defaultValue: (function (data) {
+                        var content = data;
+                        try {
+                            content = JSON.parse(data);
+                            content = JSON.stringify(content, null, '\t');
+                        } catch (err) {
+                            content = data;
+                        }
+                        return [
+                            '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea">',
+                            '<textarea cols="100" rows="5" disabled="true" ',
+                            'style="border:none; color: #333 !important; background-color: #FFF !important;">',
+                            content.split(/\n/g).pop(),
+                            '</textarea>',
+                            '</div>'
+                        ].join(' ');
                     })(Current.BILLFILE_DATA.PROCESS_LOG)
+                    // defaultValue: (function (logs) {
+                    //     return logs.split(/\n/g).pop();
+                    // })(Current.BILLFILE_DATA.PROCESS_LOG)
                 },
                 BILL_FILE_LINK: {
                     id: 'custpage_bill_file_link',

@@ -258,8 +258,8 @@ define([
             tranDate = option.tranDate,
             xmlVendorText = option.xmlVendorText;
 
-        var dtStartDate = parseDate(startDate),
-            dtTranDate = parseDate(tranDate);
+        var dtStartDate = vc2_util.parseDate(startDate),
+            dtTranDate = vc2_util.parseDate(tranDate);
 
         vc2_util.log(logTitle, '>> check dates: ', [
             dtStartDate,

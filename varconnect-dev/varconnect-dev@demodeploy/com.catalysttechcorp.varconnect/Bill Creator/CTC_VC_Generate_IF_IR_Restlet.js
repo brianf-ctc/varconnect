@@ -56,7 +56,6 @@ define([
         'custcol_ctc_vc_eta_date',
         'custcol_ctc_xml_ship_date',
         'custcol_ctc_xml_eta',
-        //
         'custcol_ctc_xml_carrier',
         'custcol_ctc_xml_tracking_num',
         'custcol_ctc_xml_inb_tracking_num',

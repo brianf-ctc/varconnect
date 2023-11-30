@@ -325,7 +325,29 @@ define([
 
                     vc2_util.log(logTitle, '>> line data: ', orderItem);
 
-                    itemArray.push(orderItem);
+                    // check for any duplicates
+                    var dupLinData = vc2_util.findMatching({
+                        list: itemArray,
+                        findAll: true,
+                        filter: {
+                            line_num: orderItem.line_num,
+                            item_num: orderItem.item_num,
+                            vendorSKU: orderItem.vendorSKU,
+                            order_num: orderItem.order_num,
+                            order_status: orderItem.order_status,
+                            line_status: orderItem.line_status,
+                            ship_qty: orderItem.ship_qty,
+                            tracking_num: orderItem.tracking_num,
+                            serial_num: orderItem.serial_num
+                        }
+                    });
+
+                    vc2_util.log(logTitle, '.... has dup?: ', [
+                        dupLinData,
+                        vc2_util.isEmpty(dupLinData)
+                    ]);
+
+                    if (!dupLinData) itemArray.push(orderItem);
                 }
 
                 returnValue = itemArray;
