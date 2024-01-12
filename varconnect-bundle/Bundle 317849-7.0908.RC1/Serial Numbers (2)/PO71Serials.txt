@@ -1,0 +1,1 @@
+{"poId":"10836","soId":"10834","items":[{"itemId":"25543","serials":[]},{"itemId":"27353","serials":[]},{"itemId":"27354","serials":[]},{"itemId":"27355","serials":[]},{"itemId":"27356","serials":[]},{"itemId":"27357","serials":[]},{"itemId":"27358","serials":["S124FPTF21002078","S124FPTF21002357"]}]}

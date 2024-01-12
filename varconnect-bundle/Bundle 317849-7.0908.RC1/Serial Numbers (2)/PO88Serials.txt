@@ -1,0 +1,1 @@
+{"poId":"13769","soId":"13768","items":[{"itemId":"25543","serials":[]},{"itemId":"25494","serials":["FP231FTF21043128"," FP231FTF21043122"," FP231FTF21043048"," FP231FTF21043312"," FP231FTF21043076"," FP231FTF21043105"," FP231FTF21043055"," FP231FTF21043043"]},{"itemId":"30361","serials":[]},{"itemId":"27557","serials":[]}]}
