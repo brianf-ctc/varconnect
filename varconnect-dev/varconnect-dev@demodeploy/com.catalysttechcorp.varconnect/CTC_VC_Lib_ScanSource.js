@@ -22,8 +22,9 @@
 define([
     './CTC_VC2_Lib_Utils.js',
     './CTC_VC2_Constants.js',
-    './Bill Creator/Libraries/moment'
-], function (vc2_util, vc2_constant, moment) {
+    './Bill Creator/Libraries/moment',
+    'N/cache'
+], function (vc2_util, vc2_constant, moment, cache) {
     'use strict';
 
     var LogTitle = 'WS:ScanSource',
@@ -124,6 +125,19 @@ define([
                 throw error;
             }
             return returnValue;
+        },
+        getTokenCache: function () {
+            log.debug('getTokenCache | CURRENT.accessToken', CURRENT.accessToken);
+            var tokenCache = cache.getCache({
+                name: 'vc_token',
+                scope: cache.Scope.PROTECTED
+            });
+            var token = tokenCache.get({
+                key: 'scansource_token',
+                loader: this.generateToken()
+            });
+            CURRENT.accessToken = token;
+            log.debug('getTokenCache | token', token);
         }
     };
 
@@ -160,7 +174,8 @@ define([
 
             if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-            LibScansource.generateToken();
+            // LibScansource.generateToken();
+            LibScansource.getTokenCache();
             if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
             CURRENT.Headers = {

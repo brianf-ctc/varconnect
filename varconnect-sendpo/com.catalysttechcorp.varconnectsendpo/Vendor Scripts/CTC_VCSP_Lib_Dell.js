@@ -251,7 +251,16 @@ define([
                     });
 
                 let shippingContactObj = {
-                    company: addrInfo.addressee.value,
+                    company:
+                        addrInfo.addressee && addrInfo.addressee.value
+                            ? addrInfo.attention && addrInfo.attention.value
+                                ? [addrInfo.attention.value, addrInfo.addressee.value].join(' \n ')
+                                : addrInfo.addressee.value
+                            : addrInfo.attention && addrInfo.attention.value
+                            ? addrInfo.attention.value
+                            : null,
+
+                    // addrInfo.addressee.value || addrInfo.attention.value,
                     contactName: contactInfo.entityid,
                     email: contactInfo.email,
                     telephone: addrInfo.addrphone.value,

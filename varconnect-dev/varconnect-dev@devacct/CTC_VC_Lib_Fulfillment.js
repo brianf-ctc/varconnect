@@ -256,7 +256,8 @@ define(function (require) {
                         lineItemCount
                     );
 
-                    var arrFFItems = [];
+                    var arrFFItems = [],
+                        uniqueItemIds = [];
                     for (line = 0; line < lineItemCount; line++) {
                         var lineFFItem = vc2_record.extractLineValues({
                             record: recItemFF,
@@ -264,6 +265,40 @@ define(function (require) {
                             columns: ['item']
                         });
                         arrFFItems.push(lineFFItem);
+                        if (uniqueItemIds.indexOf(lineFFItem.item) == -1) {
+                            uniqueItemIds.push(lineFFItem.item);
+                        }
+                    }
+                    // get alt item name
+                    var itemAltNameColId =
+                            Current.VendorCFG.itemColumnIdToMatch ||
+                            Current.MainCFG.itemColumnIdToMatch,
+                        lineCols = [
+                            'item',
+                            'sitemname',
+                            'quantity',
+                            'quantityremaining',
+                            'itemreceive',
+                            'poline',
+                            'binitem',
+                            'inventorydetailreq',
+                            'isserial',
+                            'createdpo',
+                            'location',
+                            vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                            vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                            vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                            vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                        ],
+                        altItemNames;
+                    if (itemAltNameColId) {
+                        lineCols.push(itemAltNameColId);
+                    } else {
+                        altItemNames = vc2_record.extractAlternativeItemName({
+                            item: uniqueItemIds,
+                            mainConfig: Current.MainCFG,
+                            vendorConfig: Current.VendorCFG
+                        });
                     }
                     var arrVendorItemNames = vc2_record.extractVendorItemNames({
                         lines: arrFFItems
@@ -273,23 +308,7 @@ define(function (require) {
                             lineFF = vc2_record.extractLineValues({
                                 record: recItemFF,
                                 line: line,
-                                columns: [
-                                    'item',
-                                    'sitemname',
-                                    'quantity',
-                                    'quantityremaining',
-                                    'itemreceive',
-                                    'poline',
-                                    'binitem',
-                                    'inventorydetailreq',
-                                    'isserial',
-                                    'createdpo',
-                                    'location',
-                                    vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
-                                    vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                                    vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
-                                ]
+                                columns: lineCols
                             });
                             lineFF.line = line;
                             lineFF.availqty = lineFF.quantityremaining;
@@ -297,20 +316,42 @@ define(function (require) {
                                 arrVendorItemNames[line][
                                     vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                                 ];
+                            if (altItemNames) {
+                                lineFF.alternativeItemName = altItemNames[lineFF.item];
+                            } else if (itemAltNameColId) {
+                                lineFF.alternativeItemName = lineFF[itemAltNameColId];
+                            }
                             vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
 
-                            // get the
+                            // get the po lines values
                             if (lineFF.poline) {
+                                var poLineCols = [
+                                    'item',
+                                    vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                    vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                                ];
+                                if (itemAltNameColId) {
+                                    poLineCols.push(itemAltNameColId);
+                                }
                                 lineFF.poLineData = vc2_record.extractLineValues({
                                     record: Current.PO_REC,
                                     line: parseInt(lineFF.poline, 10) - 1,
-                                    columns: [
-                                        'item',
-                                        vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
-                                        vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                                        vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
-                                    ]
+                                    columns: poLineCols
                                 });
+                                // inherit po line values
+                                if (lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY]) {
+                                    lineFF.poLineData[
+                                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                    ] = lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+                                }
+                                if (altItemNames) {
+                                    lineFF.poLineData.alternativeItemName =
+                                        altItemNames[lineFF.poline.item];
+                                } else if (itemAltNameColId) {
+                                    lineFF.poLineData.alternativeItemName =
+                                        lineFF.poLineData[itemAltNameColId];
+                                }
                                 vc2_util.log(logTitle, '*** PO Line: ***', lineFF.poLineData);
                             }
 
@@ -987,6 +1028,7 @@ define(function (require) {
             return true;
         },
         addNativePackages: function (data) {
+            var logTitle = [LogTitle, 'addNativePackages'].join('::');
             var ifRec = data.record;
             var arrTrackingNums = data.trackingnumbers;
             log.audit(

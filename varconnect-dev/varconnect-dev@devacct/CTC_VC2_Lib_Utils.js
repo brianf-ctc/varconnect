@@ -18,6 +18,7 @@ define(function (require) {
         ns_format = require('N/format'),
         ns_record = require('N/record'),
         ns_search = require('N/search'),
+        ns_cache = require('N/cache'),
         ns_xml = null,
         ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
@@ -53,6 +54,23 @@ define(function (require) {
             // Obtain `undefined` value that's guaranteed to not have been re-assigned
             var undefined = void 0;
             return value === undefined;
+        },
+        paramCheck: function (option) {
+            if (!option.params || util.isObject(option.params)) return false;
+            if (!option.reqd) return true; // no required fields
+
+            if (!util.isArray(option.reqd)) option.reqd = [option.reqd];
+            var hasMissing = false;
+
+            option.reqd.forEach(function (field) {
+                if (util.isArray(field)) {
+                } else {
+                    if (!option.params[field]) {
+                        hasMissing = true;
+                        return false;
+                    }
+                }
+            });
         }
     });
 
@@ -64,6 +82,85 @@ define(function (require) {
         },
         setCache: function (cacheKey, objVar) {
             vc2_util.CACHE[cacheKey] = objVar;
+        },
+
+        NSCACHE_NAME: vc2_constant.CACHE_NAME,
+        NSCACHE_KEY: 'VC_12232023',
+        NSCACHE_TTL: 86400, // 1 whole day
+        getNSCache: function (option) {
+            var returnValue;
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+
+                returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
+                if (option.isJSON && returnValue) returnValue = vc2_util.safeParse(returnValue);
+
+                vc2_util.log('## NS CACHE ##', '// CACHE fetch: ', [cacheName, cacheKey, cacheTTL]);
+            } catch (error) {
+                vc2_util.logError('getNSCache', error);
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        setNSCache: function (option) {
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheValue = option.value || option.cacheValue;
+                if (vc2_util.isEmpty(cacheValue)) throw 'Missing cache value!';
+                if (!util.isString(cacheValue)) cacheValue = JSON.stringify(cacheValue);
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+                cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
+
+                vc2_util.log('## NS CACHE ##', '// CACHE stored: ', [
+                    cacheName,
+                    cacheKey,
+                    cacheTTL
+                ]);
+            } catch (error) {
+                vc2_util.logError('setNSCache', error);
+            }
+        },
+        removeCache: function (option) {
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+                cacheObj.remove({ key: cacheKey });
+
+                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
+                    cacheName,
+                    cacheKey,
+                    cacheTTL
+                ]);
+            } catch (error) {
+                vc2_util.logError('removeNSCache', error);
+            }
         }
     });
 
@@ -126,9 +223,13 @@ define(function (require) {
             return flValue;
         },
         getNodeTextContent: function (node) {
-            // log.debug('node', node);
-            if (!vc2_util.isUndefined(node)) return node.textContent || node.shift().textContent;
-            else return null;
+            var textContent;
+            try {
+                textContent = node.textContent || node.shift().textContent;
+            } catch (err) {
+                vc2_util.log('getNodeTextContent', err);
+            }
+            return textContent;
         },
         getNodeContent: function (node) {
             var returnValue;
@@ -160,9 +261,7 @@ define(function (require) {
                         var generalPref = config.load({
                             type: config.Type.COMPANY_PREFERENCES
                         });
-                        dateFormat = generalPref.getValue({
-                            fieldId: 'DATEFORMAT'
-                        });
+                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
                         return true;
                     });
                 } catch (e) {}
@@ -704,10 +803,7 @@ define(function (require) {
             //OrderInfo/ErrorMsg - TechData
             var respErrorInfo =
                 vc2_util.getNodeContent(
-                    ns_xml.XPath.select({
-                        node: xmlDoc,
-                        xpath: '//OrderInfo/ErrorMsg'
-                    })
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderInfo/ErrorMsg' })
                 ) ||
                 vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' }));
             if (respErrorInfo) throw respErrorInfo;

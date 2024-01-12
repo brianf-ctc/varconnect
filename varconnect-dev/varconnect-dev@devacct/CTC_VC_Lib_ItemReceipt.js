@@ -196,9 +196,8 @@ define(function (require) {
                     var hasReceivableLine = false,
                         receivablesLines = [],
                         arrLineRRData = [],
-                        matchingLine,
-                        line,
-                        lineRRData;
+                        uniqueItemIds = [];
+                    matchingLine, line, lineRRData;
                     for (line = 0; line < lineItemCount; line++) {
                         lineRRData = vc2_record.extractLineValues({
                             record: record,
@@ -206,10 +205,24 @@ define(function (require) {
                             columns: ['item']
                         });
                         arrLineRRData.push(lineRRData);
+                        if (uniqueItemIds.indexOf(lineRRData.item) == -1) {
+                            uniqueItemIds.push(lineRRData.item);
+                        }
                     }
                     var arrVendorItemNames = vc2_record.extractVendorItemNames({
                         lines: arrLineRRData
                     });
+                    var itemAltNameColId =
+                            Current.VendorCFG.itemColumnIdToMatch ||
+                            Current.MainCFG.itemColumnIdToMatch,
+                        altItemNames;
+                    if (!itemAltNameColId) {
+                        altItemNames = vc2_record.extractAlternativeItemName({
+                            item: uniqueItemIds,
+                            mainConfig: Current.MainCFG,
+                            vendorConfig: Current.VendorCFG
+                        });
+                    }
 
                     /// REMOVE any items that is not in the XML  Line Data /////////////
                     Helper.log(logTitle, '**** Prepare item receipt lines ****');
@@ -256,6 +269,15 @@ define(function (require) {
                             arrVendorItemNames[line][
                                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                             ];
+                        if (altItemNames) {
+                            lineRRData.alternativeItemName = altItemNames[lineRRData.item];
+                        } else if (itemAltNameColId) {
+                            lineRRData.alternativeItemName = record.getSublistText({
+                                sublistId: 'item',
+                                fieldId: itemAltNameColId,
+                                line: line
+                            });
+                        }
 
                         Helper.log(logTitle, '// receipt line', lineRRData);
 
@@ -419,12 +441,22 @@ define(function (require) {
                             arrVendorItemNames[line][
                                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                             ];
+                        if (altItemNames) {
+                            lineRRData.alternativeItemName = altItemNames[lineRRData.item];
+                        } else if (itemAltNameColId) {
+                            lineRRData.alternativeItemName = record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: itemAltNameColId
+                            });
+                        }
 
                         for (ii = 0; ii < UniqueLineItems.length; ii++) {
                             var itemToShip = UniqueLineItems[ii];
                             Helper.log(logTitle, '// item to Ship', itemToShip);
 
                             var isMatchingLine =
+                                (lineRRData.alternativeItemName &&
+                                    lineRRData.alternativeItemName == itemToShip.item_num) ||
                                 lineRRData.item == itemToShip.item_num ||
                                 (lineRRData.vendorSKU &&
                                     lineRRData.vendorSKU == itemToShip.vendorSKU) ||
@@ -997,6 +1029,30 @@ define(function (require) {
                 // log.audit(logTitle,  vc_util.getUsage() + LogPrefix + ' // isMatchingLine: ' + JSON.stringify(option));
 
                 var LineItemCheck = {
+                    altItemCheck: function (itemType) {
+                        var _logPrefix = logPrefix + ' // altItemCheck:[' + itemType + ']: ',
+                            returnValue = false;
+
+                        try {
+                            if (!dataToFind[itemType] || !dataToTest[itemType])
+                                throw '[' + itemType + '] not present';
+
+                            if (
+                                !dataToFind.alternativeItemName ||
+                                dataToFind.alternativeItemName != dataToTest[itemType]
+                            )
+                                throw ' not matched.';
+
+                            returnValue = true;
+                            log.audit(logTitle, _logPrefix + ' >> matched. <<');
+                        } catch (check_error) {
+                            // log.audit(
+                            //     logTitle,
+                            //     _logPrefix + '... skipped: ' + vc_util.extractError(check_error)
+                            // );
+                        }
+                        return returnValue;
+                    },
                     ingramCheck: function (itemType) {
                         var _logPrefix = logPrefix + ' // ingramCheck:[' + itemType + ']: ',
                             returnValue = false;
@@ -1104,6 +1160,7 @@ define(function (require) {
                 ['item_num', 'sku_name'].forEach(function (fld) {
                     if (!hasMatch && (!fieldToTest || fieldToTest == fld)) {
                         hasMatch =
+                            LineItemCheck.altItemCheck(fld) ||
                             LineItemCheck.itemCheck(fld) ||
                             LineItemCheck.ingramCheck(fld) ||
                             LineItemCheck.dnhCheck(fld) ||

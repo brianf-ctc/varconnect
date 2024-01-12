@@ -70,106 +70,6 @@ define([
         formatDate: function (date) {
             return date ? ns_format.format({ value: date, type: ns_format.Type.DATE }) : null;
         },
-        findMatchingOrderLine: function (option) {
-            var logTitle = [LogTitle, 'findMatchingOrderLine'].join('::'),
-                returnValue;
-
-            try {
-                var vendorLine = option.vendorLine || option.lineData,
-                    orderLines = option.orderLines,
-                    record = option.record;
-
-                var mainConfig = option.mainConfig,
-                    vendorConfig = option.vendorConfig;
-
-                var VendorList = vc2_constant.LIST.XML_VENDOR,
-                    GlobalVar = vc2_constant.GLOBAL;
-
-                if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({ record: record });
-                }
-                if (vc2_util.isEmpty(vendorLine)) throw ERROR_MSG.MISSING_VENDOR_LINE;
-                if (vc2_util.isEmpty(orderLines)) throw ERROR_MSG.MISSING_LINES;
-
-                var matchedLines = vc2_util.findMatching({
-                    list: orderLines,
-                    findAll: true,
-                    filter: {
-                        item_text: function (value) {
-                            var orderLine = this;
-                            var skuValue = orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
-                                dnhValue = orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN];
-
-                            var matchedValue = null,
-                                returnValue = false;
-
-                            matchedValue = VC_RecordLib.isVendorLineMatched({
-                                orderLine: orderLine,
-                                vendorLine: vendorLine,
-                                mainConfig: mainConfig,
-                                vendorConfig: vendorConfig
-                            });
-                            returnValue = !!matchedValue;
-
-                            return returnValue;
-                        }
-                    }
-                });
-
-                var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
-
-                if (!matchedLines || !matchedLines.length) {
-                    // lineValue.LINE_MATCH = false;
-                    vendorLine.ORDER_LINE = null;
-                    vc2_util.log(logTitle, '// no matching order line');
-                } else if (matchedLines.length > 1) {
-                    vc2_util.log(logTitle, '// multiple matches found: ', matchedLines.length);
-                    // more than one matched line
-                    var matching = {
-                        qtyLine: vc2_util.findMatching({
-                            list: matchedLines,
-                            findAll: true,
-                            filter: {
-                                // MATCHED: function (value) {
-                                //     return value !== true;
-                                // },
-                                quantity: vc2_util.parseFloat(vendorLine.ship_qty),
-                                line: !vc2_util.isEmpty(vendorLine.line_no)
-                                    ? vendorLine.line_no - 1
-                                    : -1
-                            }
-                        }),
-                        line: vc2_util.findMatching({
-                            list: matchedLines,
-                            findAll: true,
-                            filter: {
-                                // MATCHED: function (value) {
-                                //     return value !== true;
-                                // },
-                                line: !vc2_util.isEmpty(vendorLine.line_no)
-                                    ? vendorLine.line_no - 1
-                                    : -1
-                            }
-                        }),
-                        qty: vc2_util.findMatching({
-                            list: matchedLines,
-                            findAll: true,
-                            filter: {
-                                // MATCHED: function (value) {
-                                //     return value !== true;
-                                // },
-                                quantity: vc2_util.parseFloat(vendorLine.ship_qty)
-                            }
-                        })
-                    };
-                }
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                throw error;
-            }
-
-            return returnValue;
-        },
         buildVendorStatus: function (vendorLine) {
             var vendorStatus = [];
 
@@ -364,8 +264,8 @@ define([
             LIST: [
                 'custcol_ctc_xml_dist_order_num',
                 'custcol_ctc_xml_date_order_placed',
-                'custcol_ctc_xml_ship_date'
-                // 'custcol_ctc_xml_carrier'
+                'custcol_ctc_xml_ship_date',
+                'custcol_ctc_xml_carrier'
                 // 'custcol_ctc_xml_tracking_num',
                 // 'custcol_ctc_xml_inb_tracking_num'
             ]
@@ -412,10 +312,9 @@ define([
             Helper.getDateFormat();
 
             // extract lines from the PO
-            Current.OrderLines = vc2_record.extractRecordLines({
-                record: Current.PO_REC,
-                findAll: true,
-                columns: [
+            var itemAltNameColId =
+                    Current.VendorCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                poColumns = [
                     'item',
                     'quantity',
                     'rate',
@@ -425,7 +324,16 @@ define([
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
                     vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
                     vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                ]
+                ];
+            if (itemAltNameColId) {
+                poColumns.push(itemAltNameColId);
+            }
+            Current.OrderLines = vc2_record.extractRecordLines({
+                record: Current.PO_REC,
+                findAll: true,
+                mainConfig: Current.MainCFG,
+                vendorConfig: Current.VendorCFG,
+                columns: poColumns
             });
 
             // clean up the order lines

@@ -185,28 +185,32 @@ define([
                     description: 'VC | Tax Charges',
                     item: Current.Config.taxItem,
                     applied: Current.Config.applyTax ? 'T' : 'F',
-                    enabled: Current.Config.applyTax
+                    enabled: Current.Config.applyTax,
+                    autoproc: Current.Config.autoprocTaxVar
                 },
                 shipping: {
                     name: 'Shipping',
                     description: 'VC | Shipping Charges',
                     item: Current.Config.shipItem,
                     applied: Current.Config.applyShip ? 'T' : 'F',
-                    enabled: Current.Config.applyShip
+                    enabled: Current.Config.applyShip,
+                    autoproc: Current.Config.autoprocShipVar
                 },
                 other: {
                     name: 'Other Charges',
                     description: 'VC | Other Charges',
                     item: Current.Config.otherItem,
                     applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther
+                    enabled: Current.Config.applyOther,
+                    autoproc: Current.Config.autoprocOtherVar
                 },
                 miscCharges: {
                     name: 'Misc Charges',
                     description: 'VC | Misc Charges',
                     item: Current.Config.otherItem,
                     applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther
+                    enabled: Current.Config.applyOther,
+                    autoproc: Current.Config.autoprocOtherVar
                 }
             };
 
@@ -534,6 +538,7 @@ define([
             );
 
             BillData.Charges.forEach(function (chargeLine, i) {
+                vc2_util.log(logTitle, '// chargeLine: ', chargeLine);
                 var lineData = {
                     is_active: chargeLine.enabled ? 'T' : 'F',
                     applied: chargeLine.applied,
@@ -542,6 +547,10 @@ define([
                     itemname: Helper.getItemName(chargeLine.item),
                     description: chargeLine.description,
                     nsitem: chargeLine.item,
+                    autoprocess:
+                        chargeLine.amount && chargeLine.autoProc
+                            ? '<span style="color: red;font-size:1em;"> ** Auto Processed ** </span>'
+                            : '',
                     amount: chargeLine.amount,
                     amounttax: chargeLine.amount
                 };
@@ -1068,7 +1077,11 @@ define([
                 applyOther: mainConfig.isVarianceOnOther,
                 otherItem: mainConfig.defaultOtherItem,
                 allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
-                allowAdjustLine: mainConfig.allowAdjustLine
+                allowAdjustLine: mainConfig.allowAdjustLine,
+                autoprocPriceVar: mainConfig.autoprocPriceVar,
+                autoprocTaxVar: mainConfig.autoprocTaxVar,
+                autoprocShipVar: mainConfig.autoprocShipVar,
+                autoprocOtherVar: mainConfig.autoprocOtherVar
             };
         },
         loadVendorConfig: function (option) {
@@ -1311,9 +1324,27 @@ define([
                     id: 'custpage_logs_top',
                     type: ns_ui.FieldType.TEXTAREA,
                     label: 'Latest Log Message',
-                    defaultValue: (function (logs) {
-                        return logs.split(/\n/g).pop();
+
+                    defaultValue: (function (data) {
+                        var content = data;
+                        try {
+                            content = JSON.parse(data);
+                            content = JSON.stringify(content, null, '\t');
+                        } catch (err) {
+                            content = data;
+                        }
+                        return [
+                            '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea">',
+                            '<textarea cols="100" rows="5" disabled="true" ',
+                            'style="border:none; color: #333 !important; background-color: #FFF !important;">',
+                            content.split(/\n/g).pop(),
+                            '</textarea>',
+                            '</div>'
+                        ].join(' ');
                     })(Current.BILLFILE_DATA.PROCESS_LOG)
+                    // defaultValue: (function (logs) {
+                    //     return logs.split(/\n/g).pop();
+                    // })(Current.BILLFILE_DATA.PROCESS_LOG)
                 },
                 BILL_FILE_LINK: {
                     id: 'custpage_bill_file_link',
@@ -1790,6 +1821,11 @@ define([
 
                             return arrOptions;
                         })(Current.PO_REC)
+                    },
+                    autoprocess: {
+                        label: ' ',
+                        type: ns_ui.FieldType.TEXT,
+                        displayType: ns_ui.FieldDisplayType.INLINE
                     },
                     amount: {
                         label: 'Amount',

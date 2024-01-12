@@ -58,7 +58,13 @@ define(function (require) {
                 VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
                 DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
                 DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled',
-                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num'
+                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num',
+                AUTOPROC_PRICEVAR: 'custrecord_ctc_vcbc_autopr_pricevar',
+                AUTOPROC_TAXVAR: 'custrecord_ctc_vcbc_autopr_taxvar',
+                AUTOPROC_SHIPVAR: 'custrecord_ctc_vcbc_autopr_shipvar',
+                AUTOPROC_OTHERVAR: 'custrecord_ctc_vcbc_autopr_othervar',
+                CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_col_id',
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id'
             }
         },
         VENDOR_CONFIG: {
@@ -81,7 +87,9 @@ define(function (require) {
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
-                USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate'
+                USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
+                CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld'
             }
         },
         VC_LOG: {
@@ -494,6 +502,15 @@ define(function (require) {
         POHANDLING: 'Drop', // Special | Drop (default) | Both
         EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1',
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
+    };
+
+    VC2_CONSTANT.CACHE_NAME = 'VC_20231221';
+    VC2_CONSTANT.CACHE_KEY = {
+        LICENSE: 'VC_LICENSE',
+        MAIN_CONFIG: 'VC_MAIN_CONFIG',
+        VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
+        BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
+        PO_DATA: 'VC_PODATA'
     };
 
     return VC2_CONSTANT;

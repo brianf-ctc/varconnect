@@ -107,16 +107,14 @@ define([
                     'PurchOrd:F' // PendingBill
                 ],
                 'AND',
-                ['mainline', 'is', 'T']
+                ['mainline', 'is', 'T'],
+                'AND',
+                ['custbody_ctc_bypass_vc', 'is', 'F']
             ],
             columns: [
                 'internalid',
                 'tranid',
                 'custbody_ctc_vc_override_ponum',
-                // ns_search.createColumn({
-                //     name: 'country',
-                //     join: 'subsidiary'
-                // }),
                 ns_search.createColumn({
                     name: 'custentity_vc_bill_config',
                     join: 'vendor'
@@ -124,8 +122,8 @@ define([
             ]
         };
         if (paramOrderId) {
-            searchOption.filters.push('AND');
-            searchOption.filters.push(['internalid', 'anyof', paramOrderId]);
+            // searchOption.filters.push('AND');
+            searchOption.filters = [['internalid', 'anyof', paramOrderId]];
         }
 
         if (vc2_util.isOneWorld()) {

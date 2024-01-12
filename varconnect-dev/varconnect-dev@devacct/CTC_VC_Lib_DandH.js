@@ -117,13 +117,12 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     itemArray = [];
 
                 if (!xmlDoc) throw 'Unable to parse XML';
-                var arrItemNodes = ns_xml.XPath.select({
-                    node: xmlDoc,
-                    xpath: '//DETAILITEM'
-                });
+                var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
                 if (!arrItemNodes || !arrItemNodes.length) throw 'XML: Missing Item Details';
 
                 for (var i = 0; i < arrItemNodes.length; i++) {
+                    var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
+
                     var orderItem = {
                         line_num: 'NA',
                         item_num: 'NA',
@@ -139,79 +138,68 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                         is_shipped: false
                     };
 
-                    var itemNum = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: arrItemNodes[i],
-                            xpath: 'ITEMNO'
-                        })[0]
-                    );
-                    if (itemNum != null && itemNum.length > 0) {
-                        orderItem.item_num = itemNum;
-                    }
+                    orderItem.order_status =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: orderStatusNode,
+                                xpath: 'MESSAGE'
+                            })[0]
+                        ) || 'NA';
+
+                    if (!orderItem.order_status || orderItem.order_status.match(/CANCELLED/gi))
+                        continue; // skip this order
+
+                    orderItem.item_num =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: arrItemNodes[i],
+                                xpath: 'ITEMNO'
+                            })[0]
+                        ) || orderItem.item_num;
 
                     //D&H does not support a separate vendorSKU as of Jan 9 2019
+                    orderItem.ship_qty =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: arrItemNodes[i],
+                                xpath: 'QUANTITY'
+                            })[0]
+                        ) || orderItem.ship_qty;
 
-                    var shipQty = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: arrItemNodes[i],
-                            xpath: 'QUANTITY'
-                        })[0]
-                    );
-                    if (shipQty != null && shipQty.length > 0) {
-                        orderItem.ship_qty = shipQty;
-                    }
+                    orderItem.order_eta =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: arrItemNodes[i],
+                                xpath: 'ETA'
+                            })[0]
+                        ) || orderItem.order_eta;
 
-                    var etaDate = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: arrItemNodes[i],
-                            xpath: 'ETA'
-                        })[0]
-                    );
-                    if (etaDate != null && etaDate.length > 0) {
-                        orderItem.order_eta = etaDate;
-                    }
+                    orderItem.order_num =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: orderStatusNode,
+                                xpath: 'ORDERNUM'
+                            })[0]
+                        ) || orderItem.order_num;
 
-                    var orderStatusNode = arrItemNodes[i].parentNode.parentNode;
-
-                    var orderNum = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: orderStatusNode,
-                            xpath: 'ORDERNUM'
-                        })[0]
-                    );
-                    if (orderNum != null && orderNum.length > 0) {
-                        orderItem.order_num = orderNum;
-                    }
-
-                    var invoice = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: orderStatusNode,
-                            xpath: 'INVOICE'
-                        })[0]
-                    );
-                    var orderStatusMessage = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: orderStatusNode,
-                            xpath: 'MESSAGE'
-                        })[0]
-                    );
-                    orderItem.order_status = orderStatusMessage;
-
-                    var orderDateTime = vc2_util.getNodeTextContent(
-                        ns_xml.XPath.select({
-                            node: orderStatusNode,
-                            xpath: 'DATE'
-                        })[0]
-                    );
-                    if (orderDateTime != null && orderDateTime.length > 0) {
-                        orderItem.order_date = orderDateTime;
-                    }
+                    orderItem.order_date =
+                        vc2_util.getNodeTextContent(
+                            ns_xml.XPath.select({
+                                node: orderStatusNode,
+                                xpath: 'DATE'
+                            })[0]
+                        ) || orderItem.order_date;
 
                     var packageNodes = ns_xml.XPath.select({
                         node: orderStatusNode,
                         xpath: 'PACKAGE'
                     });
                     if (packageNodes != null && packageNodes.length > 0) {
+                        var carrierList = [],
+                            trackingNumList = [],
+                            dateShippedList = [],
+                            serialNumList = [];
+
                         for (var ii = 0; ii < packageNodes.length; ii++) {
                             var itemInPackage = false;
                             var shipItemNodes = ns_xml.XPath.select({
@@ -238,9 +226,11 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                             })[0]
                                         );
                                         if (serialNum != null && serialNum.length > 0) {
-                                            if (orderItem.serial_num == 'NA')
-                                                orderItem.serial_num = serialNum;
-                                            else orderItem.serial_num += ',' + serialNum;
+                                            // add it to serial num list
+                                            serialNumList.push(serialNum);
+                                            // if (orderItem.serial_num == 'NA')
+                                            //     orderItem.serial_num = serialNum;
+                                            // else orderItem.serial_num += ',' + serialNum;
                                         }
                                     }
                                 }
@@ -259,16 +249,22 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                             xpath: 'SERVICE'
                                         })[0]
                                     );
+
                                     if (carrierService != null && carrierService.length > 0) {
-                                        if (orderItem.carrier == 'NA')
-                                            orderItem.carrier = carrier + ' - ' + carrierService;
-                                        else
-                                            orderItem.carrier +=
-                                                ',' + carrier + ' - ' + carrierService;
+                                        carrierList.push([carrier, carrierService].join(' - '));
                                     } else {
-                                        if (orderItem.carrier == 'NA') orderItem.carrier = carrier;
-                                        else orderItem.carrier += ',' + carrier;
+                                        carrierList.push(carrier);
                                     }
+                                    // if (carrierService != null && carrierService.length > 0) {
+                                    //     if (orderItem.carrier == 'NA')
+                                    //         orderItem.carrier = carrier + ' - ' + carrierService;
+                                    //     else
+                                    //         orderItem.carrier +=
+                                    //             ',' + carrier + ' - ' + carrierService;
+                                    // } else {
+                                    //     if (orderItem.carrier == 'NA') orderItem.carrier = carrier;
+                                    //     else orderItem.carrier += ',' + carrier;
+                                    // }
                                 }
                                 var trackingNum = vc2_util.getNodeTextContent(
                                     ns_xml.XPath.select({
@@ -277,9 +273,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                     })[0]
                                 );
                                 if (trackingNum != null && trackingNum.length > 0) {
-                                    if (orderItem.tracking_num == 'NA')
-                                        orderItem.tracking_num = trackingNum;
-                                    else orderItem.tracking_num += ',' + trackingNum;
+                                    trackingNumList.push(trackingNum);
+                                    // if (orderItem.tracking_num == 'NA')
+                                    //     orderItem.tracking_num = trackingNum;
+                                    // else orderItem.tracking_num += ',' + trackingNum;
                                 }
 
                                 var dateShipped = vc2_util.getNodeTextContent(
@@ -289,20 +286,41 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                     })[0]
                                 );
                                 if (dateShipped != null && dateShipped.length > 0) {
-                                    if (orderItem.ship_date == 'NA')
-                                        orderItem.ship_date = dateShipped;
-                                    else orderItem.ship_date += ',' + dateShipped;
+                                    dateShippedList.push(dateShipped);
+                                    // if (orderItem.ship_date == 'NA')
+                                    //     orderItem.ship_date = dateShipped;
+                                    // else orderItem.ship_date += ',' + dateShipped;
                                 }
                             }
                         }
 
+                        if (serialNumList && serialNumList.length) {
+                            serialNumList = vc2_util.uniqueArray(serialNumList);
+                            orderItem.serial_num = serialNumList.join(',');
+                        }
+
+                        if (carrierList && carrierList.length) {
+                            carrierList = vc2_util.uniqueArray(carrierList);
+                            orderItem.carrier = carrierList.join(',');
+                        }
+
+                        if (trackingNumList && trackingNumList.length) {
+                            trackingNumList = vc2_util.uniqueArray(trackingNumList);
+                            orderItem.tracking_num = trackingNumList.join(',');
+                        }
+
+                        if (dateShippedList) {
+                            dateShippedList = vc2_util.uniqueArray(dateShippedList);
+                            orderItem.ship_date = dateShippedList;
+                        }
+
                         // brianff 12/14
                         // use the same shipdate
-                        if (orderItem.ship_date) {
-                            orderItem.ship_date = orderItem.ship_date.split(/,/g)[0];
-                            // assume everything without a shipdate has NOT shipped
-                            // orderItem.is_shipped = true;
-                        }
+                        // if (orderItem.ship_date) {
+                        //     orderItem.ship_date = orderItem.ship_date.split(/,/g)[0];
+                        //     // assume everything without a shipdate has NOT shipped
+                        //     // orderItem.is_shipped = true;
+                        // }
                         // else, an order with no PACKAGE node but is invoiced will contain non-inventory items
                     }
 
@@ -311,7 +329,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     // }
 
                     // if order status message is "IN PROCESS", then package/ship info is being waited on
-                    if (orderStatusMessage && orderStatusMessage.toUpperCase() !== 'IN PROCESS') {
+                    if (
+                        orderItem.order_status &&
+                        orderItem.order_status.toUpperCase() !== 'IN PROCESS'
+                    ) {
                         orderItem.is_shipped = false;
                     }
 

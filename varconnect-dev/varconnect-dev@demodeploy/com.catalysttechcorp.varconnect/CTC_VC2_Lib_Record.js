@@ -13,6 +13,7 @@
  */
 define(function (require) {
     var ns_record = require('N/record'),
+        ns_search = require('N/search'),
         ns_error = require('N/error'),
         vc2_constant = require('./CTC_VC2_Constants'),
         vc2_util = require('./CTC_VC2_Lib_Utils');
@@ -147,10 +148,63 @@ define(function (require) {
 
             return returnValue;
         },
+        extractAlternativeItemName: function (option) {
+            var logTitle = [LogTitle, 'extractAlternativeItemName'].join('::'),
+                itemIds = option.item,
+                mainCfg = option.mainConfig,
+                vendorCfg = option.vendorConfig,
+                itemField = null,
+                returnValue = null;
+            try {
+                // vendorCfg.itemColumnIdToMatch > vendorCfg.itemFieldIdToMatch > mainCfg.itemColumnIdToMatch > mainCfg.itemFieldIdToMatch
+                if (vendorCfg && !vendorCfg.itemColumnIdToMatch) {
+                    itemField = vendorCfg.itemFieldIdToMatch;
+                }
+                if (
+                    !itemField &&
+                    (!vendorCfg || !vendorCfg.itemColumnIdToMatch) &&
+                    mainCfg &&
+                    !mainCfg.itemColumnIdToMatch
+                ) {
+                    itemField = mainCfg.itemFieldIdToMatch;
+                }
+                log.debug(logTitle, 'Lookup alt name (' + itemField + ')...');
+                if (itemField && itemIds.length) {
+                    var searchOption = {
+                        type: ns_search.Type.ITEM,
+                        filterExpression: [
+                            ['internalid', 'anyof', itemIds],
+                            'and',
+                            ['isinactive', 'is', 'F']
+                        ],
+                        columns: [itemField]
+                    };
+                    var searchResults = vc2_util.searchAllPaged(searchOption);
+                    if (searchResults && searchResults.length) {
+                        var altItemNames = {};
+                        searchResults.forEach(function (result) {
+                            var altItemName = result.getValue({ name: itemField }),
+                                itemId = result.id;
+                            altItemNames[itemId] = altItemName;
+                            return true;
+                        });
+                        returnValue = altItemNames;
+                    }
+                    log.debug(logTitle, 'Alt item names=' + JSON.stringify(returnValue));
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+
+                throw ns_error.create({
+                    name: 'Unable to extract alternative item names',
+                    message: vc2_util.extractError(error)
+                });
+            }
+            return returnValue;
+        },
         extractVendorItemNames: function (option) {
             var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
                 returnValue = option.lines || option;
-
             try {
                 var GlobalVar = vc2_constant.GLOBAL,
                     ItemMapRecordVar = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
@@ -196,6 +250,10 @@ define(function (require) {
                                         vendorItemNames.join('\n');
                                 }
                             }
+                            log.debug(
+                                logTitle,
+                                'Vendor item names=' + JSON.stringify(vendorItemMap)
+                            );
                         }
                     }
                 }
@@ -211,11 +269,20 @@ define(function (require) {
         },
         extractRecordLines: function (option) {
             var logTitle = [LogTitle, 'extractRecordLines'].join('::'),
+                mainCfg = option.mainConfig,
+                vendorCfg = option.vendorConfig,
                 returnValue;
 
             try {
                 var GlobalVar = vc2_constant.GLOBAL;
                 var record = option.record;
+                var itemAltNameColId = null;
+                if (vendorCfg) {
+                    itemAltNameColId = vendorCfg.itemColumnIdToMatch;
+                }
+                if (!itemAltNameColId && mainCfg) {
+                    itemAltNameColId = mainCfg.itemColumnIdToMatch;
+                }
                 var columns = option.columns || [
                     'item',
                     'rate',
@@ -228,6 +295,9 @@ define(function (require) {
                     'taxrate2',
                     GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ];
+                if (itemAltNameColId && columns.indexOf(itemAltNameColId) == -1) {
+                    columns.push(itemAltNameColId);
+                }
                 var sublistId = option.sublistId || 'item';
                 if (!record) return false;
                 var includeItemMappingIndex = columns.indexOf(
@@ -239,6 +309,7 @@ define(function (require) {
                 }
 
                 var lineCount = record.getLineCount({ sublistId: sublistId }),
+                    uniqueItemIds = [],
                     arrRecordLines = [];
                 for (var line = 0; line < lineCount; line++) {
                     var lineData = VC_RecordLib.extractLineValues({
@@ -248,7 +319,9 @@ define(function (require) {
                         columns: columns
                     });
                     lineData.line = line;
-
+                    if (!vc2_util.inArray(lineData.item, uniqueItemIds)) {
+                        uniqueItemIds.push(lineData.item);
+                    }
                     // log.audit(logTitle, lineData);
                     if (!option.filter) {
                         arrRecordLines.push(lineData);
@@ -282,8 +355,22 @@ define(function (require) {
                             ? arrRecordLines
                             : arrRecordLines.shift()
                         : false;
-
-                if (includeItemMappingIndex >= 0) {
+                var altItemNames = VC_RecordLib.extractAlternativeItemName({
+                    item: uniqueItemIds,
+                    mainConfig: mainCfg,
+                    vendorConfig: vendorCfg
+                });
+                returnValue.forEach(function (lineData) {
+                    if (lineData && lineData.item) {
+                        if (altItemNames) {
+                            lineData.alternativeItemName = altItemNames[lineData.item];
+                        } else if (itemAltNameColId) {
+                            lineData.alternativeItemName = lineData[itemAltNameColId];
+                        }
+                    }
+                    return true;
+                });
+                if (returnValue && includeItemMappingIndex >= 0) {
                     columns.splice(
                         includeItemMappingIndex,
                         0,
@@ -436,7 +523,11 @@ define(function (require) {
                     GlobalVar = vc2_constant.GLOBAL;
 
                 if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({ record: record });
+                    orderLines = VC_RecordLib.extractRecordLines({
+                        record: record,
+                        mainConfig: mainConfig,
+                        vendorConfig: vendorConfig
+                    });
                 }
                 if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
                 if (vc2_util.isEmpty(orderLines)) throw 'Order lines is required';
@@ -568,6 +659,7 @@ define(function (require) {
             if (vc2_util.isEmpty(orderLine)) throw 'Order line is required';
 
             var item = {
+                forcedValue: option.alternativeItemName || orderLine.alternativeItemName,
                 text: option.itemText || orderLine.item_text || orderLine.itemname,
                 altValue: option.itemAlt || orderLine[GlobalVar.ITEM_FUL_ID_LOOKUP_COL],
                 altText:
@@ -597,7 +689,9 @@ define(function (require) {
 
             var matchedValue;
             try {
-                if (
+                if (item.forcedValue && vendorLine.item_num == item.forcedValue) {
+                    matchedValue = 'AltItemName';
+                } else if (
                     vc2_util.inArray(vendorLine.item_num, [
                         item.text,
                         item.altValue,
@@ -816,6 +910,7 @@ define(function (require) {
             try {
                 var arrOrderLines = option.orderLines,
                     arrVendorLines = option.vendorLines,
+                    includeZeroQtyLines = option.includeZeroQtyLines || false,
                     orderRecord = option.record || option.recOrder;
 
                 if (vc2_util.isEmpty(arrOrderLines)) {
@@ -860,7 +955,8 @@ define(function (require) {
                 arrVendorLines.forEach(function (vendorLine) {
                     try {
                         // look for required cols
-                        if (!vendorLine.itemId || !vendorLine.quantity) return;
+                        if (!vendorLine.itemId) return; // skip vendorlines that dont have item id
+                        if (!includeZeroQtyLines && !vendorLine.quantity) return;
 
                         var vendorItemNameFilter = {
                             AVAILQTY: function (val) {
@@ -883,6 +979,18 @@ define(function (require) {
                                     dataSet: arrOrderLines,
                                     findAll: true,
                                     filter: {
+                                        alternativeItemName: vendorLine.itemId,
+                                        quantity: vendorLine.quantity,
+                                        rate: vendorLine.rate,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) ||
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
                                         itemId: vendorLine.itemId,
                                         quantity: vendorLine.quantity,
                                         rate: vendorLine.rate,
@@ -890,22 +998,46 @@ define(function (require) {
                                             return val > 0;
                                         }
                                     }
-                                }) || [],
+                                }) ||
+                                [],
                             // item rate match
                             itemRate:
                                 vc2_util.findMatching({
                                     dataSet: arrOrderLines,
                                     findAll: true,
                                     filter: {
+                                        alternativeItemName: vendorLine.itemId,
+                                        rate: vendorLine.rate,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) ||
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
                                         itemId: vendorLine.itemId,
                                         rate: vendorLine.rate,
                                         AVAILQTY: function (val) {
                                             return val > 0;
                                         }
                                     }
-                                }) || [],
+                                }) ||
+                                [],
                             // item qty
                             itemQty:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        alternativeItemName: vendorLine.itemId,
+                                        quantity: vendorLine.quantity,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) ||
                                 vc2_util.findMatching({
                                     dataSet: arrOrderLines,
                                     findAll: true,
@@ -916,10 +1048,20 @@ define(function (require) {
                                             return val > 0;
                                         }
                                     }
-                                }) || [],
-
+                                }) ||
+                                [],
                             // just match the items
                             itemOnly:
+                                vc2_util.findMatching({
+                                    dataSet: arrOrderLines,
+                                    findAll: true,
+                                    filter: {
+                                        alternativeItemName: vendorLine.itemId,
+                                        AVAILQTY: function (val) {
+                                            return val > 0;
+                                        }
+                                    }
+                                }) ||
                                 vc2_util.findMatching({
                                     dataSet: arrOrderLines,
                                     findAll: true,

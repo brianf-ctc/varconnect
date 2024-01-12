@@ -18,9 +18,11 @@ define([
     'N/format',
     'N/config',
     'N/https',
+    'N/error',
     './../../CTC_VC2_Constants',
     './../../CTC_VC2_Lib_Utils',
     './../../CTC_VC_Lib_MainConfiguration',
+    './../../CTC_VC_Lib_VendorConfig',
     './moment'
 ], function (
     ns_search,
@@ -28,9 +30,11 @@ define([
     ns_format,
     ns_config,
     ns_https,
+    ns_error,
     vc2_constant,
     vc2_util,
     vc_mainCfg,
+    vc_vendorcfg,
     moment
 ) {
     var LogTitle = 'LIB::BillFiles',
@@ -105,6 +109,59 @@ define([
             }
             return returnValue;
         },
+        extractAlternativeItemName: function (option) {
+            var logTitle = [LogTitle, 'extractAlternativeItemName'].join('::'),
+                itemIds = option.item,
+                vendorCfg = option.vendorConfig,
+                itemField = null,
+                returnValue = null;
+            try {
+                // vendorCfg.itemColumnIdToMatch > vendorCfg.itemFieldIdToMatch > MainConfig.itemColumnIdToMatch > MainConfig.itemFieldIdToMatch
+                if (vendorCfg && !vendorCfg.itemColumnIdToMatch) {
+                    itemField = vendorCfg.itemFieldIdToMatch;
+                }
+                if (
+                    !itemField &&
+                    (!vendorCfg || !vendorCfg.itemColumnIdToMatch) &&
+                    MainConfig &&
+                    !MainConfig.itemColumnIdToMatch
+                ) {
+                    itemField = MainConfig.itemFieldIdToMatch;
+                }
+                if (itemField && itemIds.length) {
+                    log.debug(logTitle, 'Lookup alt names for items... ' + itemIds.join(', '));
+                    var searchOption = {
+                        type: ns_search.Type.ITEM,
+                        filterExpression: [
+                            ['internalid', 'anyof', itemIds],
+                            'and',
+                            ['isinactive', 'is', 'F']
+                        ],
+                        columns: [itemField]
+                    };
+                    var searchResults = vc2_util.searchAllPaged(searchOption);
+                    if (searchResults && searchResults.length) {
+                        var altItemNames = {};
+                        searchResults.forEach(function (result) {
+                            var altItemName = result.getValue({ name: itemField }),
+                                itemId = result.id;
+                            altItemNames[itemId] = altItemName;
+                            return true;
+                        });
+                        returnValue = altItemNames;
+                    }
+                    log.debug(logTitle, 'Alt item names=' + JSON.stringify(returnValue));
+                }
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+
+                throw ns_error.create({
+                    name: 'Unable to extract alternative item names',
+                    message: vc2_util.extractError(error)
+                });
+            }
+            return returnValue;
+        },
         extractVendorItemNames: function (option) {
             var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
                 returnValue = option.lines || option;
@@ -169,10 +226,23 @@ define([
         },
         searchPO: function (poName) {
             var logTitle = [LogTitle, 'searchPO'].join('::'),
+                poColumns = [
+                    'trandate',
+                    'postingperiod',
+                    'type',
+                    MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
+                    'tranid',
+                    'entity',
+                    'amount',
+                    'internalid'
+                ],
                 returnValue;
 
             log.audit(logTitle, LogPrefix + '// search for existing PO: ' + poName);
 
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                poColumns.push('subsidiary');
+            }
             var searchObj = ns_search.create({
                 type: 'purchaseorder',
                 filters: [
@@ -188,16 +258,7 @@ define([
                     'AND',
                     ['type', 'anyof', 'PurchOrd']
                 ],
-                columns: [
-                    'trandate',
-                    'postingperiod',
-                    'type',
-                    MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
-                    'tranid',
-                    'entity',
-                    'amount',
-                    'internalid'
-                ]
+                columns: poColumns
             });
 
             var poData = false;
@@ -207,9 +268,14 @@ define([
                 poData = {
                     id: searchResult.getValue({ name: 'internalid' }),
                     entityId: searchResult.getValue({ name: 'entity' }),
+                    entityName: searchResult.getText({ name: 'entity' }),
                     tranId: searchResult.getValue({ name: 'tranid' }),
-                    date: searchResult.getValue({ name: 'trandate' })
+                    date: searchResult.getValue({ name: 'trandate' }),
+                    subsidiary: null
                 };
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                    poData.subsidiary = searchResult.getValue({ name: 'subsidiary' });
+                }
             }
             returnValue = poData;
             log.audit(logTitle, LogPrefix + '... PO Data : ' + JSON.stringify(poData));
@@ -238,24 +304,39 @@ define([
         },
         collectItemsFromPO: function (option) {
             var logTitle = [LogTitle, 'collectItemsFromPO'],
-                returnValue = [];
-
-            if (!option.poId) return false;
-
-            var itemSearch = ns_search.create({
-                type: 'transaction',
-                filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
-                columns: [
+                poColumns = [
                     ns_search.createColumn({
                         name: 'item',
                         summary: 'GROUP'
                     })
-                ]
+                ],
+                returnValue = [];
+
+            if (!option.poId) return false;
+            var itemAltNameColId = null;
+            if (option.vendorConfig) {
+                itemAltNameColId = option.vendorConfig.itemColumnIdToMatch;
+            }
+            if (!itemAltNameColId && MainConfig) {
+                itemAltNameColId = MainConfig.itemColumnIdToMatch;
+            }
+            if (itemAltNameColId) {
+                poColumns.push(
+                    ns_search.createColumn({
+                        name: itemAltNameColId,
+                        summary: 'GROUP'
+                    })
+                );
+            }
+            var itemSearch = ns_search.create({
+                type: 'transaction',
+                filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
+                columns: poColumns
             });
 
             var arrSKUs = [];
             itemSearch.run().each(function (result) {
-                arrSKUs.push({
+                var poLine = {
                     text: result.getText({
                         name: 'item',
                         summary: 'GROUP'
@@ -268,24 +349,44 @@ define([
                         name: 'item',
                         summary: 'GROUP'
                     })
-                });
+                };
+                if (itemAltNameColId) {
+                    poLine.alternativeItemName = result.getValue({
+                        name: itemAltNameColId,
+                        summary: 'GROUP'
+                    });
+                    if (poLine.alternativeItemName == '- None -') {
+                        poLine.alternativeItemName = null;
+                    }
+                }
+                arrSKUs.push(poLine);
                 return true;
             });
             returnValue = arrSKUs;
 
-            var arrPOItems = [];
+            var arrPOItems = [],
+                uniqueItemIds = [];
             arrSKUs.forEach(function (skuDetails) {
                 arrPOItems.push({ item: skuDetails.value });
+                if (uniqueItemIds.indexOf(skuDetails.value) == -1) {
+                    uniqueItemIds.push(skuDetails.value);
+                }
                 return true;
             });
             var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
-            vc2_util.log(logTitle, '// arrSKUsVendorNames: ', arrSKUsVendorNames);
+            var altItemNames = Helper.extractAlternativeItemName({
+                item: uniqueItemIds,
+                vendorConfig: option.vendorConfig
+            });
 
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
                 arrSKUs[i].vendorItemName =
                     arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
-                // return true;
+                if (altItemNames) {
+                    arrSKUs[i].alternativeItemName = altItemNames[arrSKUs[i].value];
+                }
             }
+            vc2_util.log(logTitle, '// arrSKUs: ', arrSKUs);
 
             return returnValue;
         },
@@ -360,6 +461,26 @@ define([
             }
 
             return returnValue;
+        },
+        loadOrderStatusVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
+
+            var vendor = option.vendor,
+                vendorName = option.vendorName,
+                subsidiary = option.subsidiary,
+                vendorConfig = vc_vendorcfg.getVendorConfiguration({
+                    vendor: vendor,
+                    subsidiary: subsidiary
+                });
+
+            if (!vendorConfig) {
+                vc2_util.log(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
+            }
+
+            return vendorConfig;
         }
     };
 
@@ -421,6 +542,8 @@ define([
         }
 
         try {
+            if (!myArr || !myArr.length) throw 'Empty response';
+
             for (var i = 0; i < myArr.length; i++) {
                 var currentOrder = myArr[i].ordObj;
                 LogPrefix = '[bill:' + currentOrder.invoice + '] ';
@@ -463,6 +586,11 @@ define([
                     // load the vendor config
                     var vendorCfg = Helper.loadVendorConfig({
                         entity: poData.entityId
+                    });
+                    var ordStatVendorCfg = Helper.loadOrderStatusVendorConfig({
+                        vendor: poData.entityId,
+                        vendorName: poData.entityName,
+                        subsidiary: poData.subsidiary
                     });
 
                     billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
@@ -512,7 +640,8 @@ define([
                 if (poData.id) {
                     // match payload items to transaction items
                     var availableSkus = Helper.collectItemsFromPO({
-                        poId: poData.id
+                        poId: poData.id,
+                        vendorConfig: ordStatVendorCfg
                     });
                     var arrMatchedSKU = [];
 
@@ -525,6 +654,7 @@ define([
 
                         for (var iii = 0; iii < availableSkus.length; iii++) {
                             if (
+                                availableSkus[iii].alternativeItemName == itemNo ||
                                 availableSkus[iii].text == itemNo ||
                                 availableSkus[iii].vendorItemName == itemNo
                             ) {

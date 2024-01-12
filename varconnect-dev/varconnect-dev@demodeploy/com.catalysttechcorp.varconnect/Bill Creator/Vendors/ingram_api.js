@@ -196,6 +196,16 @@ define([
                     for (var ii = 0, jj = orderInfo.subOrders.length; ii < jj; ii++) {
                         var subOrderInfo = orderInfo.subOrders[ii];
 
+                        // auto skip cancelled orders
+                        if (
+                            subOrderInfo.subOrderStatus &&
+                            vc2_util.inArray(subOrderInfo.subOrderStatus.toUpperCase(), [
+                                'CANCELLED'
+                            ])
+                        ) {
+                            continue;
+                        }
+
                         for (var iii = 0, jjj = subOrderInfo.links.length; iii < jjj; iii++) {
                             var subOrderLink = subOrderInfo.links[iii];
 
@@ -213,7 +223,7 @@ define([
                     break;
                 } else {
                     pageNum++;
-                    vc2_util.waitMs(1000);
+                    vc2_util.waitMs(500);
                 }
             }
 
@@ -311,7 +321,7 @@ define([
                     });
                 }
 
-                vc2_util.waitMs(1200);
+                vc2_util.waitMs(500);
             }
         } catch (error) {
             vc2_util.logError(logTitle, error);
@@ -411,9 +421,17 @@ define([
                     };
 
                 vc2_util.log(logTitle, '>> Invoice Data (initial): ', invoiceData);
-                vc2_util.log(logTitle, '>> Processing lines: ', invoiceInfo.lines.length);
+                vc2_util.log(
+                    logTitle,
+                    '>> Processing lines: ',
+                    invoiceInfo && invoiceInfo.lines ? invoiceInfo.lines.length : 0
+                );
 
-                for (var ii = 0, jj = invoiceInfo.lines.length; ii < jj; ii++) {
+                for (
+                    var ii = 0, jj = invoiceInfo.lines ? invoiceInfo.lines.length : 0;
+                    ii < jj;
+                    ii++
+                ) {
                     var lineInfo = invoiceInfo.lines[ii];
                     vc2_util.log(logTitle, '>> ...Line Info: ', lineInfo);
 

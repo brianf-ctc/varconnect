@@ -38,8 +38,6 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     var LogTitle = 'UE_SerialUpdate',
         LogPrefix = '';
 
-    var dateFormat;
-
     //  TODO put these field IDs in VCGlobals
     var xmlFields = [
         'custcol_ctc_xml_carrier', //0
@@ -492,42 +490,72 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         return i > -1;
     }
 
-    function parseDate(options) {
+    function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(options));
 
-        // //4.01
-        if (!dateFormat) {
-            var generalPref = ns_config.load({
-                type: ns_config.Type.COMPANY_PREFERENCES
-            });
-            dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, LogPrefix + '>> dateFormat: ' + JSON.stringify(dateFormat));
-        }
-
-        var dateString = options.dateString,
-            date = '';
+        var dateString = option.dateString || option,
+            date = null;
 
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
-                var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
-
-                for (var i = 0; i < stringToProcess.length; i++) {
-                    var singleString = stringToProcess[i];
-                    if (singleString) {
-                        var stringArr = singleString.split('T'); //handle timestamps with T
-                        singleString = stringArr[0];
-                        var convertedDate = new Date(singleString);
-
-                        if (!date || convertedDate > date) date = convertedDate;
+                var multipleDateStrArr = dateString.replace(/\n/g, ' ').split(' ');
+                for (var i = 0; i < multipleDateStrArr.length; i++) {
+                    var singleDateStr = multipleDateStrArr[i];
+                    if (singleDateStr) {
+                        var stringArr = singleDateStr.split('T'); //handle timestamps with T
+                        var dateComponent = stringArr[0];
+                        var convertedDate = null;
+                        try {
+                            convertedDate = ns_format.parse({
+                                value: singleDateStr,
+                                type: ns_format.Type.DATE
+                            });
+                        } catch (dateParseErr) {
+                            try {
+                                convertedDate = ns_format.parse({
+                                    value: dateComponent,
+                                    type: ns_format.Type.DATE
+                                });
+                            } catch (dateParseErr) {
+                                // do nothing
+                            }
+                        }
+                        if (!convertedDate) {
+                            try {
+                                convertedDate = new Date(singleDateStr);
+                            } catch (dateParseErr) {
+                                try {
+                                    convertedDate = new Date(dateComponent);
+                                } catch (dateParseErr) {
+                                    // do nothing
+                                }
+                            }
+                        }
+                        if (!convertedDate) {
+                            try {
+                                singleDateStr = singleDateStr.replace(/-/g, '/');
+                                convertedDate = new Date(singleDateStr);
+                            } catch (dateParseErr) {
+                                try {
+                                    dateComponent = dateComponent.replace(/-/g, '/');
+                                    convertedDate = new Date(dateComponent);
+                                } catch (dateParseErr) {
+                                    // do nothing
+                                }
+                            }
+                        }
+                        if (!convertedDate) {
+                            vc2_util.logError('Unable to recognize date format.', e);
+                            date = dateString;
+                        } else {
+                            date = convertedDate;
+                        }
                     }
                 }
             } catch (e) {
-                log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
+                vc2_util.logError(logTitle, e);
             }
         }
-        log.audit(logTitle, 'Parsed Date :' + dateString + '---' + JSON.stringify(date));
-        // return date;
 
         //Convert to string
         if (date) {
@@ -540,7 +568,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
 
             date = ns_format.format({
                 value: date,
-                type: dateFormat ? dateFormat : ns_format.Type.DATE
+                type: ns_format.Type.DATE
             });
         }
 

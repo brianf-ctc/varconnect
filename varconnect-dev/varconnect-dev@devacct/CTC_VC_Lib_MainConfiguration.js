@@ -60,7 +60,13 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
         MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31,
         MainCFG.FIELD.ALLOW_ADJUSTLINE, //32
-        MainCFG.FIELD.OVERRIDE_PO_NUM
+        MainCFG.FIELD.OVERRIDE_PO_NUM,
+        MainCFG.FIELD.AUTOPROC_PRICEVAR,
+        MainCFG.FIELD.AUTOPROC_TAXVAR,
+        MainCFG.FIELD.AUTOPROC_SHIPVAR,
+        MainCFG.FIELD.AUTOPROC_OTHERVAR,
+        MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
+        MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
     ];
 
     var mainConfigMap = {
@@ -97,7 +103,13 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         isVarianceOnOther: MainCFG.FIELD.VARIANCE_ON_OTHER, //29
         defaultOtherItem: MainCFG.FIELD.DEFAULT_OTHER_ITEM, //30
         isBillCreationDisabled: MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION, //31
-        overridePONum: MainCFG.FIELD.OVERRIDE_PO_NUM
+        overridePONum: MainCFG.FIELD.OVERRIDE_PO_NUM,
+        autoprocPriceVar: MainCFG.FIELD.AUTOPROC_PRICEVAR,
+        autoprocTaxVar: MainCFG.FIELD.AUTOPROC_TAXVAR,
+        autoprocShipVar: MainCFG.FIELD.AUTOPROC_SHIPVAR,
+        autoprocOtherVar: MainCFG.FIELD.AUTOPROC_OTHERVAR,
+        itemColumnIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
+        itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
     };
 
     function _generateMainConfig(recLookup) {

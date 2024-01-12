@@ -126,23 +126,8 @@ define([
             } else {
                 var activeVendors = Helper.fetchActiveVendors();
                 var searchOption = {
-                    type: 'purchaseorder',
-                    filters: [
-                        ['mainline', 'is', 'T'],
-                        'AND',
-                        ['type', 'anyof', 'PurchOrd'],
-                        'AND',
-                        [
-                            'status',
-                            'noneof',
-                            'PurchOrd:C',
-                            'PurchOrd:G',
-                            'PurchOrd:H',
-                            'PurchOrd:F'
-                        ],
-                        'AND',
-                        ['custbody_ctc_bypass_vc', 'is', 'F']
-                    ],
+                    type: searchRec.searchType,
+                    filters: searchRec.filterExpression,
                     columns: [
                         'trandate',
                         'type',
@@ -318,10 +303,7 @@ define([
                 (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
             ) {
                 throw outputObj.isError && outputObj.errorMessage
-                    ? {
-                          message: outputObj.errorMessage,
-                          logStatus: LOG_STATUS.WS_ERROR
-                      }
+                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
                     : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
                           details: outputObj
                       });
@@ -379,13 +361,9 @@ define([
 
                 if (Params.use_fulfill_rl === true || Params.use_fulfill_rl == 'T') {
                     // Helper.processItemFulfillment_restlet({ orderLines: outputObj.itemArray });
-                    Helper.processItemFulfillment({
-                        orderLines: outputObj.itemArray
-                    });
+                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
                 } else {
-                    Helper.processItemFulfillment({
-                        orderLines: outputObj.itemArray
-                    });
+                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
                 }
             } else {
                 if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
@@ -403,9 +381,7 @@ define([
                 // Move the searches outside of the for loop for governance issues
                 /// IF SEARCH ///////////////
                 var arrFulfillments = [];
-                var objSearchIF = ns_search.load({
-                    id: 'customsearch_ctc_if_vendor_orders'
-                });
+                var objSearchIF = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
                 objSearchIF.filters.push(
                     ns_search.createFilter({
                         name: 'custbody_ctc_if_vendor_order_match',
@@ -414,9 +390,7 @@ define([
                     })
                 );
 
-                var ItemFFSearchAll = vc2_util.searchAllPaged({
-                    searchObj: objSearchIF
-                });
+                var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
                 vc2_util.log(logTitle, '>> Total Results [IF]: ', ItemFFSearchAll.length);
 
                 ItemFFSearchAll.forEach(function (result) {
@@ -432,9 +406,7 @@ define([
 
                 /// IR SEARCH /////////////////
                 var arrReceipts = [];
-                var objSearchIR = ns_search.load({
-                    id: 'customsearch_ctc_ir_vendor_orders'
-                });
+                var objSearchIR = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
                 objSearchIR.filters.push(
                     ns_search.createFilter({
                         name: 'custbody_ctc_if_vendor_order_match',
@@ -442,9 +414,7 @@ define([
                         values: Current.NumPrefix
                     })
                 );
-                var ItemRcptSearchAll = vc2_util.searchAllPaged({
-                    searchObj: objSearchIR
-                });
+                var ItemRcptSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIR });
 
                 ItemRcptSearchAll.forEach(function (result) {
                     arrReceipts.push({
@@ -582,10 +552,10 @@ define([
         if (!currentData.mainConfig) throw 'Main Configuration not found';
         if (!currentData.vendorConfig) throw 'Vendor Config not found';
 
-        var arrOrderLines = vc2_record.extractRecordLines({
-            record: po_record,
-            findAll: true,
-            columns: [
+        var itemAltNameColId =
+                currentData.vendorConfig.itemColumnIdToMatch ||
+                currentData.mainConfig.itemColumnIdToMatch,
+            poColumns = [
                 'item',
                 'quantity',
                 'rate',
@@ -594,7 +564,16 @@ define([
                 vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                 vc2_constant.FIELD.TRANSACTION.DH_MPN,
                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-            ]
+            ];
+        if (itemAltNameColId) {
+            poColumns.push(itemAltNameColId);
+        }
+        var arrOrderLines = vc2_record.extractRecordLines({
+            record: po_record,
+            findAll: true,
+            mainConfig: currentData.mainConfig,
+            vendorConfig: currentData.vendorConfig,
+            columns: poColumns
         });
 
         var matchedOrderLine = vc2_record.findMatchingOrderLine({
