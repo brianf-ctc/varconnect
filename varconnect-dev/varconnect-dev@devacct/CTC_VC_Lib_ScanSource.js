@@ -74,6 +74,20 @@ define([
 
             return returnValue;
         },
+        getTokenCache: function () {
+            var token = vc2_util.getNSCache({ key: 'VC_SCANSOURCE_TOKEN' });
+            if (vc2_util.isEmpty(token)) token = this.generateToken();
+
+            if (!vc2_util.isEmpty(token)) {
+                vc2_util.setNSCache({
+                    key: 'VC_SCANSOURCE_TOKEN',
+                    cacheTTL: 14400,
+                    value: token
+                });
+                CURRENT.accessToken = token;
+            }
+            return token;
+        },
         getOrders: function (option) {
             var logTitle = [LogTitle, 'getOrders'].join('::'),
                 returnValue;
@@ -125,19 +139,6 @@ define([
                 throw error;
             }
             return returnValue;
-        },
-        getTokenCache: function () {
-            log.debug('getTokenCache | CURRENT.accessToken', CURRENT.accessToken);
-            var tokenCache = cache.getCache({
-                name: 'vc_token',
-                scope: cache.Scope.PROTECTED
-            });
-            var token = tokenCache.get({
-                key: 'scansource_token',
-                loader: this.generateToken()
-            });
-            CURRENT.accessToken = token;
-            log.debug('getTokenCache | token', token);
         }
     };
 

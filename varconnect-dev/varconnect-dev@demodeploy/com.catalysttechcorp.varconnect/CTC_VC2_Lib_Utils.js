@@ -74,7 +74,6 @@ define(function (require) {
         }
     });
 
-    // CACHE
     util.extend(vc2_util, {
         CACHE: {},
         getCache: function (cacheKey) {
@@ -82,10 +81,14 @@ define(function (require) {
         },
         setCache: function (cacheKey, objVar) {
             vc2_util.CACHE[cacheKey] = objVar;
-        },
+        }
+    });
 
+    ns_cache = require('N/cache');
+    // CACHE
+    util.extend(vc2_util, {
         NSCACHE_NAME: vc2_constant.CACHE_NAME,
-        NSCACHE_KEY: 'VC_12232023',
+        NSCACHE_KEY: 'VC_20240101',
         NSCACHE_TTL: 86400, // 1 whole day
         getNSCache: function (option) {
             var returnValue;
@@ -164,7 +167,6 @@ define(function (require) {
         }
     });
 
-    // UTILS
     util.extend(vc2_util, {
         uniqueArray: function (arrVar) {
             var arrNew = [];

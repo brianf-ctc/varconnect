@@ -19,10 +19,22 @@ define(function (require) {
         ns_record = require('N/record'),
         ns_search = require('N/search'),
         ns_cache = require('N/cache'),
+        ns_config = require('N/config'),
+        // momentLib = require('./Bill Creator/Libraries/moment'),
         ns_xml = null,
         ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
 
+    // define([
+    //     'N/runtime',
+    //     'N/format',
+    //     'N/record',
+    //     'N/search',
+    //     'N/cache',
+    //     './CTC_VC2_Constants.js',
+    //     './Bill Creator/Libraries/moment'
+    // ], function (ns_runtime, ns_format, ns_record, ns_search, ns_cache, vc2_constant, momentLib) {
+    var ns_xml, ns_url;
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
@@ -74,7 +86,6 @@ define(function (require) {
         }
     });
 
-    // CACHE
     util.extend(vc2_util, {
         CACHE: {},
         getCache: function (cacheKey) {
@@ -82,10 +93,14 @@ define(function (require) {
         },
         setCache: function (cacheKey, objVar) {
             vc2_util.CACHE[cacheKey] = objVar;
-        },
+        }
+    });
 
+    ns_cache = require('N/cache');
+    // CACHE
+    util.extend(vc2_util, {
         NSCACHE_NAME: vc2_constant.CACHE_NAME,
-        NSCACHE_KEY: 'VC_12232023',
+        NSCACHE_KEY: 'VC_20240101',
         NSCACHE_TTL: 86400, // 1 whole day
         getNSCache: function (option) {
             var returnValue;
@@ -164,7 +179,6 @@ define(function (require) {
         }
     });
 
-    // UTILS
     util.extend(vc2_util, {
         uniqueArray: function (arrVar) {
             var arrNew = [];
@@ -246,6 +260,39 @@ define(function (require) {
             require([mod], function (nsMod) {
                 returnValue = nsMod;
             });
+            return returnValue;
+        },
+        getDateFormat: function () {
+            var logTitle = [LogTitle, 'getDateFormat'].join('::');
+            var dateFormat = vc2_util.CACHE.DATE_FORMAT;
+
+            try {
+                var generalPref = ns_config.load({
+                    type: ns_config.Type.COMPANY_PREFERENCES
+                });
+                dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+            } catch (e) {}
+
+            if (!dateFormat) {
+                try {
+                    dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+                } catch (e) {}
+            }
+            vc2_util.CACHE.DATE_FORMAT = dateFormat;
+            vc2_util.log(logTitle, '// date format: ', dateFormat);
+
+            return dateFormat;
+        },
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseDateStr'].join('::'),
+                returnValue;
+
+            var dateFormat = vc2_util.getDateFormat();
+            returnValue = ns_format.format({
+                // value: momentLib(dateStr),
+                type: dateFormat ? dateFormat : ns_format.Type.DATE
+            });
+
             return returnValue;
         },
         parseDate: function (option) {

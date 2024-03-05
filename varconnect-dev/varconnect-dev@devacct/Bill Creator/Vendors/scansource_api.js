@@ -35,7 +35,7 @@ define(function (require) {
 
         var objHeaders = {
             'Ocp-Apim-Subscription-Key': config.subscription_key,
-            Authorization: getToken(config),
+            Authorization: getTokenCache(config),
             'Content-Type': 'application/json'
         };
 
@@ -88,6 +88,20 @@ define(function (require) {
 
         log.debug(TransId + ' | ' + stLogTitle + ' | tokenResponse', tokenResponse);
         return tokenResponse;
+    }
+
+    function getTokenCache(config) {
+        var token = vc2_util.getNSCache({ key: 'VC_BC_SCANSOURCE_TOKEN' });
+        if (vc2_util.isEmpty(token)) token = getToken(config);
+
+        if (!vc2_util.isEmpty(token)) {
+            vc2_util.setNSCache({
+                key: 'VC_BC_SCANSOURCE_TOKEN',
+                cacheTTL: 14400,
+                value: token
+            });
+        }
+        return token;
     }
 
     function formatJson(responseBody) {

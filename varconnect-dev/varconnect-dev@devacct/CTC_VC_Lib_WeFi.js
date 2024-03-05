@@ -244,7 +244,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             WEFI.init();
 
             // Request for token
-            WEFI.generateToken();
+            WEFI.getTokenCache();
 
             if (!CURRENT.accessToken) {
                 throw error.create({
@@ -326,6 +326,21 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         }
 
         return returnValue;
+    };
+
+    WEFI.getTokenCache = function () {
+        var token = v2_util.getNSCache({ key: 'VC_WEFI_TOKEN' });
+        if (v2_util.isEmpty(token)) token = this.generateToken();
+
+        if (v2_util.isEmpty(token)) {
+            v2_util.setNSCache({
+                key: 'VC_WEFI_TOKEN',
+                cacheTTL: 14400,
+                value: token
+            });
+            CURRENT.accessToken = token;
+        }
+        return token;
     };
 
     /**

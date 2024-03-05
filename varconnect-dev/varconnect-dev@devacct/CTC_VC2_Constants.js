@@ -79,7 +79,7 @@ define(function (require) {
                 USERNAME: 'custrecord_ctc_vc_user',
                 PASSWORD: 'custrecord_ctc_vc_password',
                 CUSTOMER_NO: 'custrecord_ctc_vc_customer_number',
-                XML_REQUEST: 'custrecord_ctc_vc_xml_req',
+                // XML_REQUEST: 'custrecord_ctc_vc_xml_req',
                 PROCESS_DROPSHIPS: 'custrecord_ctc_vc_process_dropship_vend',
                 PROCESS_SPECIAL_ORDERS: 'custrecord_ctc_vc_process_spec_ord_vend',
                 FULFILLMENT_PREFIX: 'custrecord_ctc_vc_prefix',
@@ -492,6 +492,7 @@ define(function (require) {
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
             feature: 'pickpackship'
         }),
+        DATE_FORMAT: 'YYYY-MM-DD',
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',
@@ -504,13 +505,22 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20231221';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240124.03';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
         PO_DATA: 'VC_PODATA'
+    };
+
+    VC2_CONSTANT.LICENSE = {
+        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+        PRODUCT_CODE: 2,
+        MAX_RETRY: 3,
+        KEY: 'LICENSE_KEY.20240124',
+        CACHE_NAME: 'VC_LICENSE',
+        CACHE_TTL: 86400 // 24 hrs
     };
 
     return VC2_CONSTANT;

@@ -22,7 +22,7 @@ define(function (require) {
 
     var LineColField = vc2_constant.FIELD.TRANSACTION;
 
-    var VC_RecordLib = {
+    var VC2_RecordLib = {
         transform: function (option) {
             var logTitle = [LogTitle, 'transform'].join('::'),
                 returnValue;
@@ -160,7 +160,12 @@ define(function (require) {
                 if (vendorCfg && !vendorCfg.itemColumnIdToMatch) {
                     itemField = vendorCfg.itemFieldIdToMatch;
                 }
-                if (!itemField && mainCfg && !mainCfg.itemColumnIdToMatch) {
+                if (
+                    !itemField &&
+                    (!vendorCfg || !vendorCfg.itemColumnIdToMatch) &&
+                    mainCfg &&
+                    !mainCfg.itemColumnIdToMatch
+                ) {
                     itemField = mainCfg.itemFieldIdToMatch;
                 }
                 log.debug(logTitle, 'Lookup alt name (' + itemField + ')...');
@@ -307,7 +312,7 @@ define(function (require) {
                     uniqueItemIds = [],
                     arrRecordLines = [];
                 for (var line = 0; line < lineCount; line++) {
-                    var lineData = VC_RecordLib.extractLineValues({
+                    var lineData = VC2_RecordLib.extractLineValues({
                         record: record,
                         sublistId: sublistId,
                         line: line,
@@ -350,7 +355,9 @@ define(function (require) {
                             ? arrRecordLines
                             : arrRecordLines.shift()
                         : false;
-                var altItemNames = VC_RecordLib.extractAlternativeItemName({
+
+                
+                var altItemNames = VC2_RecordLib.extractAlternativeItemName({
                     item: uniqueItemIds,
                     mainConfig: mainCfg,
                     vendorConfig: vendorCfg
@@ -371,7 +378,7 @@ define(function (require) {
                         0,
                         GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                     );
-                    returnValue = VC_RecordLib.extractVendorItemNames({
+                    returnValue = VC2_RecordLib.extractVendorItemNames({
                         lines: returnValue
                     });
                 }
@@ -518,7 +525,7 @@ define(function (require) {
                     GlobalVar = vc2_constant.GLOBAL;
 
                 if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({
+                    orderLines = VC2_RecordLib.extractRecordLines({
                         record: record,
                         mainConfig: mainConfig,
                         vendorConfig: vendorConfig
@@ -545,7 +552,7 @@ define(function (require) {
                             var matchedValue = null,
                                 returnValue = false;
 
-                            matchedValue = VC_RecordLib.isVendorLineMatched({
+                            matchedValue = VC2_RecordLib.isVendorLineMatched({
                                 orderLine: orderLine,
                                 vendorLine: vendorLine,
                                 mainConfig: mainConfig,
@@ -764,7 +771,7 @@ define(function (require) {
                 if (!vendorLines) throw 'Vendor Lines are missing';
                 if (!orderLine) {
                     if (!vc2_util.isEmpty(record) && !vc2_util.isEmpty(line)) {
-                        orderLine = VC_RecordLib.extractLineValues({
+                        orderLine = VC2_RecordLib.extractLineValues({
                             record: record,
                             line: line,
                             columns: [
@@ -790,7 +797,7 @@ define(function (require) {
                             var vendorLine = this;
 
                             // vc2_util.log(logTitle, '>> vendorLine', vendorLine);
-                            var matchedValue = VC_RecordLib.isVendorLineMatched({
+                            var matchedValue = VC2_RecordLib.isVendorLineMatched({
                                 orderLine: orderLine,
                                 vendorLine: vendorLine,
                                 mainConfig: option.mainConfig || option.mainCfg || null,
@@ -897,7 +904,7 @@ define(function (require) {
     };
 
     // line item matching
-    util.extend(VC_RecordLib, {
+    util.extend(VC2_RecordLib, {
         matchOrderLines: function (option) {
             var logTitle = [LogTitle, 'matchOrderLines'].join('::'),
                 returnValue;
@@ -911,7 +918,7 @@ define(function (require) {
                 if (vc2_util.isEmpty(arrOrderLines)) {
                     if (!orderRecord) throw 'Missing record or order lines';
 
-                    arrOrderLines = VC_RecordLib.extractRecordLines({
+                    arrOrderLines = VC2_RecordLib.extractRecordLines({
                         record: orderRecord,
                         columns: ['item', 'quantity', 'rate'],
                         findAll: true
@@ -952,6 +959,7 @@ define(function (require) {
                         // look for required cols
                         if (!vendorLine.itemId) return; // skip vendorlines that dont have item id
                         if (!includeZeroQtyLines && !vendorLine.quantity) return;
+
                         var vendorItemNameFilter = {
                             AVAILQTY: function (val) {
                                 return val > 0;
@@ -1124,5 +1132,5 @@ define(function (require) {
         }
     });
 
-    return VC_RecordLib;
+    return VC2_RecordLib;
 });

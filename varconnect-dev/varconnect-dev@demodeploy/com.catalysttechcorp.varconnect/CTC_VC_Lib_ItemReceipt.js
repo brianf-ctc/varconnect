@@ -455,7 +455,10 @@ define(function (require) {
 
                             var isMatchingLine =
                                 (lineRRData.alternativeItemName &&
-                                    lineRRData.alternativeItemName == itemToShip.item_num) ||
+                                    vc2_util.inArray(lineRRData.alternativeItemName, [
+                                        itemToShip.item_num,
+                                        itemToShip.vendorSKU
+                                    ])) ||
                                 lineRRData.item == itemToShip.item_num ||
                                 (lineRRData.vendorSKU &&
                                     lineRRData.vendorSKU == itemToShip.vendorSKU) ||
@@ -1038,7 +1041,10 @@ define(function (require) {
 
                             if (
                                 !dataToFind.alternativeItemName ||
-                                dataToFind.alternativeItemName != dataToTest[itemType]
+                                !vc2_util.inArray(dataToFind.alternativeItemName, [
+                                    dataToTest[itemType],
+                                    dataToTest.vendorSKU
+                                ])
                             )
                                 throw ' not matched.';
 

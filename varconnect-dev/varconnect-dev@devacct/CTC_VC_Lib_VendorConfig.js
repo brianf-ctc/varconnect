@@ -15,8 +15,8 @@
 /**
  * Module Description
  *
- * Version	Date            Author		Remarks
- * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
+ * Version  Date            Author      Remarks
+ * 1.00     July 25, 2019   paolodl     Library for retrieving Vendor Configuration
  */
 define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
     ns_search,
@@ -88,6 +88,38 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                 name: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
             })
         };
+    }
+
+    function getVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
+    }
+    function getMultipleConfigurationsCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_MULTIPLE_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getMultipleConfigurations(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({
+                key: 'VC_MULTIPLE_VENDOR_CONFIG',
+                cacheTTL: 14400,
+                value: config
+            });
+        }
+        return config;
+    }
+    function getDebugVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getDebugVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
     }
 
     function getVendorConfiguration(options) {
@@ -308,8 +340,8 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
     }
 
     return {
-        getVendorConfiguration: getVendorConfiguration,
-        getMultipleConfigurations: getMultipleConfigurations,
-        getDebugVendorConfiguration: getDebugVendorConfiguration
+        getVendorConfiguration: getVendorConfigurationCache,
+        getMultipleConfigurations: getMultipleConfigurationsCache,
+        getDebugVendorConfiguration: getDebugVendorConfigurationCache
     };
 });

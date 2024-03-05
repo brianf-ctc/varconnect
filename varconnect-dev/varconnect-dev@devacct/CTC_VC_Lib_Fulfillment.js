@@ -290,15 +290,13 @@ define(function (require) {
                             vc2_constant.FIELD.TRANSACTION.DH_MPN,
                             vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
                         ],
-                        altItemNames;
-                    if (itemAltNameColId) {
-                        lineCols.push(itemAltNameColId);
-                    } else {
                         altItemNames = vc2_record.extractAlternativeItemName({
                             item: uniqueItemIds,
                             mainConfig: Current.MainCFG,
                             vendorConfig: Current.VendorCFG
                         });
+                    if (itemAltNameColId) {
+                        lineCols.push(itemAltNameColId);
                     }
                     var arrVendorItemNames = vc2_record.extractVendorItemNames({
                         lines: arrFFItems
@@ -679,12 +677,6 @@ define(function (require) {
                                 trackingnumbers: arrAllTrackingNumbers
                             });
                         }
-
-                        vc2_util.log(
-                            logTitle,
-                            '/// Package line count',
-                            recItemFF.getLineCount({ sublistId: 'package' })
-                        );
                     } catch (package_error) {
                         vc2_util.logError(logTitle, package_error);
                         vc2_util.vcLog({
@@ -1031,41 +1023,59 @@ define(function (require) {
             var logTitle = [LogTitle, 'addNativePackages'].join('::');
             var ifRec = data.record;
             var arrTrackingNums = data.trackingnumbers;
+            var sublistId = 'package',
+                sublistIdSuffix = '';
             log.audit(
                 'Create-ItemFF::addNativePackages',
                 '>> Tracking Nums List: ' + JSON.stringify(arrTrackingNums)
             );
 
             if (!vc2_util.isEmpty(arrTrackingNums)) {
+                var sublists = ifRec.getSublists();
+                if (sublists) {
+                    for (var i = 0, len = sublists.length; i < len; i += 1) {
+                        if (sublists[i] == sublistId) {
+                            break;
+                        } else if (sublists[i].indexOf(sublistId) == 0) {
+                            sublistIdSuffix = sublists[i].slice(sublistId.length);
+                            sublistId = sublists[i];
+                            log.debug(
+                                logTitle,
+                                'package+carrier=' + sublistId + '/' + sublistIdSuffix
+                            );
+                            break;
+                        }
+                    }
+                }
                 for (var i = 0; i < arrTrackingNums.length; i++) {
                     // log.audit("Create-ItemFF::addNativePackages", '>> Tracking Num: ' + JSON.stringify(arrTrackingNums[i]));
 
                     try {
                         if (i === 0) {
                             ifRec.selectLine({
-                                sublistId: 'package',
+                                sublistId: sublistId,
                                 line: i
                             });
                         } else {
                             ifRec.selectNewLine({
-                                sublistId: 'package'
+                                sublistId: sublistId
                             });
                         }
 
                         ifRec.setCurrentSublistValue({
-                            sublistId: 'package',
-                            fieldId: 'packageweight',
+                            sublistId: sublistId,
+                            fieldId: 'packageweight' + sublistIdSuffix,
                             value: 1.0
                         });
 
                         ifRec.setCurrentSublistValue({
-                            sublistId: 'package',
-                            fieldId: 'packagetrackingnumber',
+                            sublistId: sublistId,
+                            fieldId: 'packagetrackingnumber' + sublistIdSuffix,
                             value: arrTrackingNums[i]
                         });
 
                         ifRec.commitLine({
-                            sublistId: 'package'
+                            sublistId: sublistId
                         });
                     } catch (package_error) {
                         vc2_util.logError(logTitle, package_error);
@@ -1081,7 +1091,10 @@ define(function (require) {
 
             log.audit(
                 'Create-ItemFF::addNativePackages',
-                '>> ifRec: ' + JSON.stringify(ifRec.getSublist({ sublistId: 'package' }))
+                '/// Package line count=' +
+                    ifRec.getLineCount({ sublistId: sublistId }) +
+                    ' >> ifRec: ' +
+                    JSON.stringify(ifRec.getSublist({ sublistId: sublistId }))
             );
             return ifRec;
         },

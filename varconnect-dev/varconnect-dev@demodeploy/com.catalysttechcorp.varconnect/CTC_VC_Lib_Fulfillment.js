@@ -77,7 +77,10 @@ define(function (require) {
         try {
             Current.Features = {
                 MULTISHIPTO: ns_runtime.isFeatureInEffect({ feature: 'MULTISHIPTO' }),
-                MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' })
+                MULTILOCINVT: ns_runtime.isFeatureInEffect({ feature: 'MULTILOCINVT' }),
+                ENABLE_CROSS_SUB_FULFILLMENT: ns_runtime.isFeatureInEffect({
+                    feature: 'crosssubsidiaryfulfillment'
+                })
             };
 
             Current.MainCFG = option.mainConfig;
@@ -210,7 +213,8 @@ define(function (require) {
                     });
 
                     var defaultItemFFValues = {},
-                        recordIsChanged = false;
+                        inventoryLocations = [],
+                        successfulIFs = [];
 
                     if (Current.Features.MULTISHIPTO) {
                         var defaultShipGroup = Helper.getShipGroup({
@@ -221,505 +225,564 @@ define(function (require) {
                             defaultItemFFValues.shipgroup = defaultShipGroup;
                         }
                     }
+                    if (Current.Features.ENABLE_CROSS_SUB_FULFILLMENT) {
+                        inventoryLocations = Helper.getInventoryLocations({
+                            recSalesOrd: Current.SO_REC,
+                            recPurchOrd: Current.PO_REC
+                        });
+                    }
+                    if (!inventoryLocations.length) {
+                        inventoryLocations.push(null);
+                    }
 
                     //// TRANSFORM recordfindMatchingVendorLine
-                    vc2_util.log(logTitle, '/// Start Transform Record ...');
-                    var recItemFF = vc2_record.transform({
-                        fromType: ns_record.Type.SALES_ORDER,
-                        fromId: Current.SO_ID,
-                        toType: ns_record.Type.ITEM_FULFILLMENT,
-                        isDynamic: true,
-                        defaultValues: defaultItemFFValues
-                    });
-                    if (!recItemFF) throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR);
-
-                    vc2_util.log(logTitle, '... record transform success');
-
-                    ///////////////
-                    var recordIsChanged,
-                        lineFF,
-                        line,
-                        updateFFData = {},
-                        recordLines = [],
-                        arrFulfillableLines = [];
-
-                    if (vc2_constant.GLOBAL.PICK_PACK_SHIP) {
-                        updateFFData['shipstatus'] = 'C';
-                        // recItemFF.setValue({ fieldId: 'shipstatus', value: 'C' });
-                    }
-
-                    var lineItemCount = recItemFF.getLineCount({ sublistId: 'item' });
-
-                    vc2_util.log(
-                        logTitle,
-                        '/// VALIDATE orderlines/fulfillment lines..',
-                        lineItemCount
-                    );
-
-                    var arrFFItems = [],
-                        uniqueItemIds = [];
-                    for (line = 0; line < lineItemCount; line++) {
-                        var lineFFItem = vc2_record.extractLineValues({
-                            record: recItemFF,
-                            line: line,
-                            columns: ['item']
-                        });
-                        arrFFItems.push(lineFFItem);
-                        if (uniqueItemIds.indexOf(lineFFItem.item) == -1) {
-                            uniqueItemIds.push(lineFFItem.item);
+                    for (
+                        var locCtr = 0, locationCount = inventoryLocations.length;
+                        locCtr < locationCount;
+                        locCtr += 1
+                    ) {
+                        var defaultInventoryLocation = inventoryLocations[locCtr];
+                        if (defaultInventoryLocation) {
+                            defaultItemFFValues.inventorylocation = defaultInventoryLocation;
                         }
-                    }
-                    // get alt item name
-                    var itemAltNameColId =
-                            Current.VendorCFG.itemColumnIdToMatch ||
-                            Current.MainCFG.itemColumnIdToMatch,
-                        lineCols = [
-                            'item',
-                            'sitemname',
-                            'quantity',
-                            'quantityremaining',
-                            'itemreceive',
-                            'poline',
-                            'binitem',
-                            'inventorydetailreq',
-                            'isserial',
-                            'createdpo',
-                            'location',
-                            vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
-                            vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                            vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                            vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
-                        ],
-                        altItemNames = vc2_record.extractAlternativeItemName({
-                            item: uniqueItemIds,
-                            mainConfig: Current.MainCFG,
-                            vendorConfig: Current.VendorCFG
-                        });
-                    if (itemAltNameColId) {
-                        lineCols.push(itemAltNameColId);
-                    }
-                    var arrVendorItemNames = vc2_record.extractVendorItemNames({
-                        lines: arrFFItems
-                    });
-                    for (line = 0; line < lineItemCount; line++) {
-                        try {
-                            lineFF = vc2_record.extractLineValues({
-                                record: recItemFF,
-                                line: line,
-                                columns: lineCols
-                            });
-                            lineFF.line = line;
-                            lineFF.availqty = lineFF.quantityremaining;
-                            lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
-                                arrVendorItemNames[line][
-                                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                                ];
-                            if (altItemNames) {
-                                lineFF.alternativeItemName = altItemNames[lineFF.item];
-                            } else if (itemAltNameColId) {
-                                lineFF.alternativeItemName = lineFF[itemAltNameColId];
-                            }
-                            vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
-
-                            // get the po lines values
-                            if (lineFF.poline) {
-                                var poLineCols = [
-                                    'item',
-                                    vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
-                                    vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
-                                ];
-                                if (itemAltNameColId) {
-                                    poLineCols.push(itemAltNameColId);
-                                }
-                                lineFF.poLineData = vc2_record.extractLineValues({
-                                    record: Current.PO_REC,
-                                    line: parseInt(lineFF.poline, 10) - 1,
-                                    columns: poLineCols
-                                });
-                                // inherit po line values
-                                if (lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY]) {
-                                    lineFF.poLineData[
-                                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                                    ] = lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
-                                }
-                                if (altItemNames) {
-                                    lineFF.poLineData.alternativeItemName =
-                                        altItemNames[lineFF.poline.item];
-                                } else if (itemAltNameColId) {
-                                    lineFF.poLineData.alternativeItemName =
-                                        lineFF.poLineData[itemAltNameColId];
-                                }
-                                vc2_util.log(logTitle, '*** PO Line: ***', lineFF.poLineData);
-                            }
-
-                            lineFF.matchedVendorLines = [];
-                            if (!lineFF.createdpo || lineFF.createdpo != Current.PO_ID)
-                                throw 'Not same PO';
-
-                            // if (!lineFF.itemreceive) throw 'not yet received';
-
-                            // find matching vendor line
-                            var matchingVendorLine = Helper.findMatchingVendorLine({
-                                vendorLines: vendorOrderLines,
-                                orderLine: lineFF,
-                                mainConfig: Current.MainCFG,
-                                vendorConfig: Current.VendorCFG
-                            });
-
-                            if (!matchingVendorLine) ERROR_MSG.LINE_NOT_MATCHED;
-
-                            vc2_util.log(logTitle, '/// matched vendor line: ', matchingVendorLine);
-
-                            if (!util.isArray(matchingVendorLine))
-                                matchingVendorLine = [matchingVendorLine];
-
-                            var totalQty = 0;
-                            matchingVendorLine.forEach(function (vendorLine) {
-                                // skip this vendor line
-                                if (!vendorLine.ship_qty) return false;
-
-                                // check how many qty this vendor line can use
-                                var qtyToUse =
-                                    vendorLine.AVAILQTY >= lineFF.availqty
-                                        ? lineFF.availqty // this is our ceiling qty
-                                        : vendorLine.AVAILQTY; // fulfill everything
-
-                                if (!qtyToUse) return false;
-
-                                totalQty += qtyToUse;
-
-                                vendorLine.AVAILQTY -= qtyToUse;
-                                vendorLine.APPLIEDLINES.push(lineFF.line + 1);
-
-                                lineFF.availqty -= qtyToUse;
-                                lineFF.matchedVendorLines.push(vendorLine);
-
-                                return true;
-                            });
-
-                            if (!totalQty) throw 'No quantity to fulfill';
-
-                            // add to fulfillment
-                            Helper.addFulfillmentLine({
-                                record: recItemFF,
-                                line: line,
-                                quantity: totalQty
-                            });
-
-                            // adjust the AVAILQTY
-                            arrFulfillableLines.push(lineFF);
-                            recordIsChanged = true;
-                        } catch (line_error) {
-                            vc2_util.logError(logTitle, line_error);
-                            Helper.removeFulfillmentLine({ record: recItemFF, line: line });
-                            recordIsChanged = true;
-                        }
-                    }
-
-                    if (vc2_util.isEmpty(arrFulfillableLines))
-                        throw util.extend(ERROR_MSG.NO_MATCHINGITEMS_TO_FULFILL, {
-                            details: vendorOrderLines
-                        });
-
-                    /// CHECK for unfulfilled or over fulfilled vendor lines for this order /////////////
-                    var fulfillError = [];
-                    vendorOrderLines.forEach(function (vendorLine) {
-                        if (vendorLine.AVAILQTY == 0) return false;
-                        fulfillError.push(
-                            '#' +
-                                ('Unfulfilled qty - ' + vendorLine.item_num) +
-                                (', qty: ' + vendorLine.ship_qty)
+                        vc2_util.log(
+                            logTitle,
+                            '/// Start Transform Record ...',
+                            defaultInventoryLocation
                         );
-                        return true;
-                    });
-
-                    if (fulfillError && fulfillError.length) {
-                        throw vc2_util.extend(ERROR_MSG.UNABLE_TO_FULFILL, {
-                            details: fulfillError.join('\n')
-                        });
-                    }
-
-                    //////////////////////
-                    if (Current.Features.MULTILOCINVT) {
-                        // set on the same location
-                        Helper.setSameLocation({ record: recItemFF });
-                    }
-
-                    updateFFData.custbody_ctc_if_vendor_order_match = vendorOrderNum;
-                    updateFFData.custbody_ctc_vc_createdby_vc = true;
-
-                    ////////////////////////////////////
-                    vc2_util.log(logTitle, '//// UPDATE fulfillment lines from vendor line data');
-                    for (line = 0; line < lineItemCount; line++) {
+                        var recItemFF;
                         try {
-                            recItemFF.selectLine({ sublistId: 'item', line: line });
-                            vc2_util.log(logTitle, '**** Selecting line #' + line + '****');
-
-                            // get the matched fulfilled line
-                            var matchedFFLine = vc2_util.findMatching({
-                                list: arrFulfillableLines,
-                                filter: { line: line },
-                                findAll: true
+                            recItemFF = vc2_record.transform({
+                                fromType: ns_record.Type.SALES_ORDER,
+                                fromId: Current.SO_ID,
+                                toType: ns_record.Type.ITEM_FULFILLMENT,
+                                isDynamic: true,
+                                defaultValues: defaultItemFFValues
                             });
-
-                            if (!matchedFFLine) {
-                                vc2_util.log(logTitle, '... Not fulfilled yet');
+                        } catch (transformErr) {
+                            vc2_util.logError(logTitle, transformErr);
+                            recItemFF = null;
+                        }
+                        if (!recItemFF) {
+                            if (defaultInventoryLocation) {
+                                if (locCtr + 1 == locationCount && successfulIFs.length == 0) {
+                                    inventoryLocations.push(null);
+                                    locationCount += 1;
+                                }
                                 continue;
-                            }
-
-                            matchedFFLine = matchedFFLine[0] || matchedFFLine;
-                            vc2_util.log(logTitle, '.... fulfilled line', matchedFFLine);
-
-                            var matchedVendorLine = matchedFFLine.matchedVendorLines;
-                            if (!matchedVendorLine) throw 'No vendor lines found';
-
-                            if (!util.isArray(matchedVendorLine))
-                                matchedVendorLine = [matchedVendorLine];
-
-                            // get the current value
-                            var lineFFData = vc2_record.extractLineValues({
-                                record: recItemFF,
-                                line: line,
-                                columns: [
-                                    'itemreceive',
-                                    'binitem',
-                                    'inventorydetailreq',
-                                    'isserial',
-                                    'location'
-                                ]
-                            });
-
-                            if (!lineFFData.itemreceive) {
-                                vc2_util.log(logTitle, '... not received');
-                                continue;
-                            }
-
-                            var updateLineValues = {},
-                                uniqVendorLine = {},
-                                allTrackingNum = '',
-                                allSerialNums = '',
-                                totalQty = 0,
-                                FFLineMap = vc_record.FieldMapping;
-
-                            matchedVendorLine.forEach(function (vendorLine) {
-                                for (var fld in vendorLine) {
-                                    var value = vendorLine[fld];
-                                    uniqVendorLine[fld] = value;
-                                }
-
-                                totalQty += vendorLine.ship_qty;
-
-                                var tmpTrackingNos = Helper.uniqueList({
-                                        value: vendorLine.tracking_num
-                                    }),
-                                    tmpSerialNos = Helper.uniqueList({
-                                        value: vendorLine.serial_num
-                                    });
-
-                                allTrackingNum =
-                                    (allTrackingNum ? allTrackingNum + '\n' : '') + tmpTrackingNos;
-
-                                allSerialNums =
-                                    (allSerialNums ? allSerialNums + '\n' : '') + tmpSerialNos;
-
-                                return true;
-                            });
-                            uniqVendorLine.all_tracking_nums = allTrackingNum;
-                            uniqVendorLine.all_serial_nums = allSerialNums;
-                            uniqVendorLine.totalShipped = totalQty;
-
-                            vc2_util.log(logTitle, '// uniqVendorLine: ', uniqVendorLine);
-
-                            // create the update fulfillment line
-                            for (var col in FFLineMap.lineColumn) {
-                                var vendorCol = FFLineMap.lineColumn[col],
-                                    orderValue = uniqVendorLine[vendorCol];
-                                if (vc2_util.isEmpty(orderValue)) continue;
-
-                                if (vc2_util.inArray(col, FFLineMap.columnType.DATE)) {
-                                    // vc2_util.log(logTitle, '... skipping ', col);
-                                    // continue;
-                                    orderValue = vc_record.parseDate({ dateString: orderValue });
-                                }
-                                updateLineValues[col] = orderValue;
-                            }
-                            updateLineValues.custcol_ctc_xml_tracking_num = allTrackingNum
-                                ? allTrackingNum.substr(0, _TEXT_AREA_MAX_LENGTH)
-                                : '';
-                            updateLineValues.custcol_ctc_xml_serial_num = allSerialNums
-                                ? allSerialNums.substr(0, _TEXT_AREA_MAX_LENGTH)
-                                : '';
-
-                            /// update the fulfillment trandate
-                            if (
-                                (Current.VendorCFG.useShipDate == true ||
-                                    Current.VendorCFG.useShipDate == 'T') &&
-                                uniqVendorLine.ship_date &&
-                                uniqVendorLine.ship_date != 'NA'
-                            ) {
-                                updateFFData['trandate'] = vc_record.parseDate({
-                                    dateString: uniqVendorLine.ship_date
-                                });
-                            }
-
-                            /// UPDATE fulfillment lines
-                            vc2_util.log(logTitle, '// updateLineValues: ', updateLineValues);
-                            if (!vc2_util.isEmpty(updateLineValues)) {
-                                Helper.setLineValues({
-                                    record: recItemFF,
-                                    values: updateLineValues
-                                });
-                            }
-                            recItemFF.commitLine({ sublistId: 'item' });
-
-                            ////////////////////////////////////
-                            vc2_util.log(
-                                logTitle,
-                                '//// UPDATE fulfillment lines for Inventory Details'
-                            );
-
-                            // //// SERIALS DETECTION ////////////////
-                            var arrSerials = allSerialNums ? allSerialNums.split(/\n/) : [];
-                            vc2_util.log(logTitle, '... serials: ', arrSerials);
-
-                            if (
-                                lineFFData.isserial === 'T' &&
-                                arrSerials.length &&
-                                Helper.validateSerials({ serials: arrSerials })
-                            ) {
-                                var resultSerials;
-                                if (arrSerials.length == totalQty) {
-                                    resultSerials = Helper.addNativeSerials({
-                                        record: recItemFF,
-                                        serials: arrSerials,
-                                        line: line,
-                                        doCommit: true
-                                    });
-                                } else {
-                                    throw util.extend(ERROR_MSG.INSUFFICIENT_SERIALS, {
-                                        details: [
-                                            'Quantity:' + totalQty,
-                                            'Serials count: ' + arrSerials.length
-                                        ].join(' ')
-                                    });
-
-                                    // if (!resultSerials || arrSerials.length != totalQty) {
-                                    //     // only prevent inventory detail from being required after location changes
-                                    //     // do not clear location as some fulfillments fail when there is more than one loc
-                                    //     // blanks are counted as another location
-                                    //     //
-                                    //     recItemFF.setCurrentSublistValue({
-                                    //         sublistId: 'item',
-                                    //         fieldId: 'inventorydetailreq',
-                                    //         value: lineFFData.inventorydetailreq
-                                    //     });
-                                    // }
-                                }
-                            }
-                            recordLines.push(uniqVendorLine);
-
-                            recordIsChanged = true;
-                        } catch (line_error) {
-                            vc2_util.logError(logTitle, line_error);
-                            vc2_util.vcLog({
-                                title: 'Fulfillment | Line Error',
-                                error: line_error,
-                                status: LOG_STATUS.RECORD_ERROR,
-                                recordId: Current.PO_ID
-                            });
-
-                            Helper.setLineValues({
-                                record: recItemFF,
-                                values: { itemreceive: false },
-                                doCommit: true
-                            });
-                            continue;
-                        }
-                    }
-
-                    vc2_util.log(logTitle, ' ///  updateFFData', updateFFData);
-                    if (!vc2_util.isEmpty(updateFFData)) {
-                        for (var fld in updateFFData) {
-                            recItemFF.setValue({ fieldId: fld, value: updateFFData[fld] });
-                        }
-                    }
-
-                    ////////////////////
-                    vc2_util.log(logTitle, '>> record lines', recordLines);
-                    if (vc2_util.isEmpty(recordLines)) {
-                        vc2_util.log(logTitle, '*** No lines to fulfill ****');
-                        vc2_util.vcLog({
-                            title: 'Fulfillment Lines',
-                            message: 'No Matching Lines To Fulfill:  ' + vendorOrderNum,
-                            recordId: Current.PO_ID
-                        });
-                        continue;
-                    }
-
-                    /*** Start Clemen - Package ***/
-                    var arrAllTrackingNumbers = [];
-                    try {
-                        for (var ii = 0; ii < recordLines.length; ii++) {
-                            var strTrackingNums = recordLines[ii].all_tracking_nums;
-
-                            if (!vc2_util.isEmpty(strTrackingNums)) {
-                                var arrTrackingNums = strTrackingNums.split('\n');
-                                arrAllTrackingNumbers =
-                                    arrAllTrackingNumbers.concat(arrTrackingNums);
+                            } else {
+                                throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR);
                             }
                         }
-                        vc2_util.log(logTitle, '/// tracking numbers', arrAllTrackingNumbers);
 
-                        if (!vc2_util.isEmpty(arrAllTrackingNumbers)) {
-                            recItemFF = Helper.addNativePackages({
-                                record: recItemFF,
-                                trackingnumbers: arrAllTrackingNumbers
-                            });
+                        vc2_util.log(logTitle, '... record transform success');
+
+                        ///////////////
+                        var recordIsChanged,
+                            lineFF,
+                            line,
+                            updateFFData = {},
+                            recordLines = [],
+                            arrFulfillableLines = [];
+
+                        if (vc2_constant.GLOBAL.PICK_PACK_SHIP) {
+                            updateFFData['shipstatus'] = 'C';
+                            // recItemFF.setValue({ fieldId: 'shipstatus', value: 'C' });
                         }
-                    } catch (package_error) {
-                        vc2_util.logError(logTitle, package_error);
-                        vc2_util.vcLog({
-                            title: 'Fulfillment | Set Package Error',
-                            error: package_error,
-                            status: LOG_STATUS.RECORD_ERROR,
-                            recordId: Current.PO_ID
-                        });
-                    }
-                    /*** End Clemen - Package ***/
 
-                    // try to save the record
-                    var itemffId;
-                    try {
-                        itemffId = recItemFF.save({
-                            enableSourcing: true,
-                            ignoreMandatoryFields: true
-                        });
-                        responseData.push({ id: itemffId, orderNum: orderNum });
+                        var lineItemCount = recItemFF.getLineCount({ sublistId: 'item' });
 
                         vc2_util.log(
                             logTitle,
-                            '## Created Item FF: [itemfulfillment:' + itemffId + ']'
+                            '/// VALIDATE orderlines/fulfillment lines..',
+                            lineItemCount
                         );
 
-                        vc2_util.vcLog({
-                            title: 'Fulfillment | Successfully Created:',
-                            message:
-                                '##' +
-                                ('Created Fulfillment (' + itemffId + ') \n') +
-                                Helper.printerFriendlyLines({ recordLines: recordLines }),
-                            recordId: Current.PO_ID,
-                            isSuccess: true
+                        var arrFFItems = [],
+                            uniqueItemIds = [];
+                        for (line = 0; line < lineItemCount; line++) {
+                            var lineFFItem = vc2_record.extractLineValues({
+                                record: recItemFF,
+                                line: line,
+                                columns: ['item']
+                            });
+                            arrFFItems.push(lineFFItem);
+                            if (uniqueItemIds.indexOf(lineFFItem.item) == -1) {
+                                uniqueItemIds.push(lineFFItem.item);
+                            }
+                        }
+                        // get alt item name
+                        var itemAltNameColId =
+                                Current.VendorCFG.itemColumnIdToMatch ||
+                                Current.MainCFG.itemColumnIdToMatch,
+                            lineCols = [
+                                'item',
+                                'sitemname',
+                                'quantity',
+                                'quantityremaining',
+                                'itemreceive',
+                                'poline',
+                                'binitem',
+                                'inventorydetailreq',
+                                'isserial',
+                                'createdpo',
+                                'location',
+                                vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                                vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                            ],
+                            altItemNames = vc2_record.extractAlternativeItemName({
+                                item: uniqueItemIds,
+                                mainConfig: Current.MainCFG,
+                                vendorConfig: Current.VendorCFG
+                            });
+                        if (itemAltNameColId) {
+                            lineCols.push(itemAltNameColId);
+                        }
+                        var arrVendorItemNames = vc2_record.extractVendorItemNames({
+                            lines: arrFFItems
                         });
-                    } catch (itemff_err) {
-                        vc2_util.log(logTitle, '/// FULFILLMENT Create error', itemff_err, 'error');
+                        for (line = 0; line < lineItemCount; line++) {
+                            try {
+                                lineFF = vc2_record.extractLineValues({
+                                    record: recItemFF,
+                                    line: line,
+                                    columns: lineCols
+                                });
+                                lineFF.line = line;
+                                lineFF.availqty = lineFF.quantityremaining;
+                                lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
+                                    arrVendorItemNames[line][
+                                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                    ];
+                                if (altItemNames) {
+                                    lineFF.alternativeItemName = altItemNames[lineFF.item];
+                                } else if (itemAltNameColId) {
+                                    lineFF.alternativeItemName = lineFF[itemAltNameColId];
+                                }
+                                vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
 
-                        vc2_util.vcLog({
-                            title: 'Fulfillment | Save Fulfillment Error',
-                            error: itemff_err,
-                            status: LOG_STATUS.RECORD_ERROR
+                                // get the po lines values
+                                if (lineFF.poline) {
+                                    var poLineCols = [
+                                        'item',
+                                        vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
+                                        vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                                        vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
+                                    ];
+                                    if (itemAltNameColId) {
+                                        poLineCols.push(itemAltNameColId);
+                                    }
+                                    lineFF.poLineData = vc2_record.extractLineValues({
+                                        record: Current.PO_REC,
+                                        line: parseInt(lineFF.poline, 10) - 1,
+                                        columns: poLineCols
+                                    });
+                                    // inherit po line values
+                                    if (
+                                        lineFF[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY]
+                                    ) {
+                                        lineFF.poLineData[
+                                            vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                        ] =
+                                            lineFF[
+                                                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                                            ];
+                                    }
+                                    if (altItemNames) {
+                                        lineFF.poLineData.alternativeItemName =
+                                            altItemNames[lineFF.poline.item];
+                                    } else if (itemAltNameColId) {
+                                        lineFF.poLineData.alternativeItemName =
+                                            lineFF.poLineData[itemAltNameColId];
+                                    }
+                                    vc2_util.log(logTitle, '*** PO Line: ***', lineFF.poLineData);
+                                }
+
+                                lineFF.matchedVendorLines = [];
+                                if (!lineFF.createdpo || lineFF.createdpo != Current.PO_ID)
+                                    throw 'Not same PO';
+
+                                // if (!lineFF.itemreceive) throw 'not yet received';
+
+                                // find matching vendor line
+                                var matchingVendorLine = Helper.findMatchingVendorLine({
+                                    vendorLines: vendorOrderLines,
+                                    orderLine: lineFF,
+                                    mainConfig: Current.MainCFG,
+                                    vendorConfig: Current.VendorCFG
+                                });
+
+                                if (!matchingVendorLine) ERROR_MSG.LINE_NOT_MATCHED;
+
+                                vc2_util.log(
+                                    logTitle,
+                                    '/// matched vendor line: ',
+                                    matchingVendorLine
+                                );
+
+                                if (!util.isArray(matchingVendorLine))
+                                    matchingVendorLine = [matchingVendorLine];
+
+                                var totalQty = 0;
+                                matchingVendorLine.forEach(function (vendorLine) {
+                                    // skip this vendor line
+                                    if (!vendorLine.ship_qty) return false;
+
+                                    // check how many qty this vendor line can use
+                                    var qtyToUse =
+                                        vendorLine.AVAILQTY >= lineFF.availqty
+                                            ? lineFF.availqty // this is our ceiling qty
+                                            : vendorLine.AVAILQTY; // fulfill everything
+
+                                    if (!qtyToUse) return false;
+
+                                    totalQty += qtyToUse;
+
+                                    vendorLine.AVAILQTY -= qtyToUse;
+                                    vendorLine.APPLIEDLINES.push(lineFF.line + 1);
+
+                                    lineFF.availqty -= qtyToUse;
+                                    lineFF.matchedVendorLines.push(vendorLine);
+
+                                    return true;
+                                });
+
+                                if (!totalQty) throw 'No quantity to fulfill';
+
+                                // add to fulfillment
+                                Helper.addFulfillmentLine({
+                                    record: recItemFF,
+                                    line: line,
+                                    quantity: totalQty
+                                });
+
+                                // adjust the AVAILQTY
+                                arrFulfillableLines.push(lineFF);
+                                recordIsChanged = true;
+                            } catch (line_error) {
+                                vc2_util.logError(logTitle, line_error);
+                                Helper.removeFulfillmentLine({ record: recItemFF, line: line });
+                                recordIsChanged = true;
+                            }
+                        }
+
+                        if (vc2_util.isEmpty(arrFulfillableLines))
+                            throw util.extend(ERROR_MSG.NO_MATCHINGITEMS_TO_FULFILL, {
+                                details: vendorOrderLines
+                            });
+
+                        /// CHECK for unfulfilled or over fulfilled vendor lines for this order /////////////
+                        var fulfillError = [];
+                        vendorOrderLines.forEach(function (vendorLine) {
+                            if (vendorLine.AVAILQTY == 0) return false;
+                            fulfillError.push(
+                                '#' +
+                                    ('Unfulfilled qty - ' + vendorLine.item_num) +
+                                    (', qty: ' + vendorLine.ship_qty)
+                            );
+                            return true;
                         });
-                        throw itemff_err;
+
+                        if (fulfillError && fulfillError.length) {
+                            throw vc2_util.extend(ERROR_MSG.UNABLE_TO_FULFILL, {
+                                details: fulfillError.join('\n')
+                            });
+                        }
+
+                        //////////////////////
+                        if (Current.Features.MULTILOCINVT) {
+                            // set on the same location
+                            Helper.setSameLocation({ record: recItemFF });
+                        }
+
+                        updateFFData.custbody_ctc_if_vendor_order_match = vendorOrderNum;
+                        updateFFData.custbody_ctc_vc_createdby_vc = true;
+
+                        ////////////////////////////////////
+                        vc2_util.log(
+                            logTitle,
+                            '//// UPDATE fulfillment lines from vendor line data'
+                        );
+                        for (line = 0; line < lineItemCount; line++) {
+                            try {
+                                recItemFF.selectLine({ sublistId: 'item', line: line });
+                                vc2_util.log(logTitle, '**** Selecting line #' + line + '****');
+
+                                // get the matched fulfilled line
+                                var matchedFFLine = vc2_util.findMatching({
+                                    list: arrFulfillableLines,
+                                    filter: { line: line },
+                                    findAll: true
+                                });
+
+                                if (!matchedFFLine) {
+                                    vc2_util.log(logTitle, '... Not fulfilled yet');
+                                    continue;
+                                }
+
+                                matchedFFLine = matchedFFLine[0] || matchedFFLine;
+                                vc2_util.log(logTitle, '.... fulfilled line', matchedFFLine);
+
+                                var matchedVendorLine = matchedFFLine.matchedVendorLines;
+                                if (!matchedVendorLine) throw 'No vendor lines found';
+
+                                if (!util.isArray(matchedVendorLine))
+                                    matchedVendorLine = [matchedVendorLine];
+
+                                // get the current value
+                                var lineFFData = vc2_record.extractLineValues({
+                                    record: recItemFF,
+                                    line: line,
+                                    columns: [
+                                        'itemreceive',
+                                        'binitem',
+                                        'inventorydetailreq',
+                                        'isserial',
+                                        'location'
+                                    ]
+                                });
+
+                                if (!lineFFData.itemreceive) {
+                                    vc2_util.log(logTitle, '... not received');
+                                    continue;
+                                }
+
+                                var updateLineValues = {},
+                                    uniqVendorLine = {},
+                                    allTrackingNum = '',
+                                    allSerialNums = '',
+                                    totalQty = 0,
+                                    FFLineMap = vc_record.FieldMapping;
+
+                                matchedVendorLine.forEach(function (vendorLine) {
+                                    for (var fld in vendorLine) {
+                                        var value = vendorLine[fld];
+                                        uniqVendorLine[fld] = value;
+                                    }
+
+                                    totalQty += vendorLine.ship_qty;
+
+                                    var tmpTrackingNos = Helper.uniqueList({
+                                            value: vendorLine.tracking_num
+                                        }),
+                                        tmpSerialNos = Helper.uniqueList({
+                                            value: vendorLine.serial_num
+                                        });
+
+                                    allTrackingNum =
+                                        (allTrackingNum ? allTrackingNum + '\n' : '') +
+                                        tmpTrackingNos;
+
+                                    allSerialNums =
+                                        (allSerialNums ? allSerialNums + '\n' : '') + tmpSerialNos;
+
+                                    return true;
+                                });
+                                uniqVendorLine.all_tracking_nums = allTrackingNum;
+                                uniqVendorLine.all_serial_nums = allSerialNums;
+                                uniqVendorLine.totalShipped = totalQty;
+
+                                vc2_util.log(logTitle, '// uniqVendorLine: ', uniqVendorLine);
+
+                                // create the update fulfillment line
+                                for (var col in FFLineMap.lineColumn) {
+                                    var vendorCol = FFLineMap.lineColumn[col],
+                                        orderValue = uniqVendorLine[vendorCol];
+                                    if (vc2_util.isEmpty(orderValue)) continue;
+
+                                    if (vc2_util.inArray(col, FFLineMap.columnType.DATE)) {
+                                        // vc2_util.log(logTitle, '... skipping ', col);
+                                        // continue;
+                                        orderValue = vc_record.parseDate({
+                                            dateString: orderValue
+                                        });
+                                    }
+                                    updateLineValues[col] = orderValue;
+                                }
+                                updateLineValues.custcol_ctc_xml_tracking_num = allTrackingNum
+                                    ? allTrackingNum.substr(0, _TEXT_AREA_MAX_LENGTH)
+                                    : '';
+                                updateLineValues.custcol_ctc_xml_serial_num = allSerialNums
+                                    ? allSerialNums.substr(0, _TEXT_AREA_MAX_LENGTH)
+                                    : '';
+
+                                /// update the fulfillment trandate
+                                if (
+                                    (Current.VendorCFG.useShipDate == true ||
+                                        Current.VendorCFG.useShipDate == 'T') &&
+                                    uniqVendorLine.ship_date &&
+                                    uniqVendorLine.ship_date != 'NA'
+                                ) {
+                                    updateFFData['trandate'] = vc_record.parseDate({
+                                        dateString: uniqVendorLine.ship_date
+                                    });
+                                }
+
+                                /// UPDATE fulfillment lines
+                                vc2_util.log(logTitle, '// updateLineValues: ', updateLineValues);
+                                if (!vc2_util.isEmpty(updateLineValues)) {
+                                    Helper.setLineValues({
+                                        record: recItemFF,
+                                        values: updateLineValues
+                                    });
+                                }
+                                recItemFF.commitLine({ sublistId: 'item' });
+
+                                ////////////////////////////////////
+                                vc2_util.log(
+                                    logTitle,
+                                    '//// UPDATE fulfillment lines for Inventory Details'
+                                );
+
+                                // //// SERIALS DETECTION ////////////////
+                                var arrSerials = allSerialNums ? allSerialNums.split(/\n/) : [];
+                                vc2_util.log(logTitle, '... serials: ', arrSerials);
+
+                                if (
+                                    lineFFData.isserial === 'T' &&
+                                    arrSerials.length &&
+                                    Helper.validateSerials({ serials: arrSerials })
+                                ) {
+                                    var resultSerials;
+                                    if (arrSerials.length == totalQty) {
+                                        resultSerials = Helper.addNativeSerials({
+                                            record: recItemFF,
+                                            serials: arrSerials,
+                                            line: line,
+                                            doCommit: true
+                                        });
+                                    } else {
+                                        throw util.extend(ERROR_MSG.INSUFFICIENT_SERIALS, {
+                                            details: [
+                                                'Quantity:' + totalQty,
+                                                'Serials count: ' + arrSerials.length
+                                            ].join(' ')
+                                        });
+
+                                        // if (!resultSerials || arrSerials.length != totalQty) {
+                                        //     // only prevent inventory detail from being required after location changes
+                                        //     // do not clear location as some fulfillments fail when there is more than one loc
+                                        //     // blanks are counted as another location
+                                        //     //
+                                        //     recItemFF.setCurrentSublistValue({
+                                        //         sublistId: 'item',
+                                        //         fieldId: 'inventorydetailreq',
+                                        //         value: lineFFData.inventorydetailreq
+                                        //     });
+                                        // }
+                                    }
+                                }
+                                recordLines.push(uniqVendorLine);
+
+                                recordIsChanged = true;
+                            } catch (line_error) {
+                                vc2_util.logError(logTitle, line_error);
+                                vc2_util.vcLog({
+                                    title: 'Fulfillment | Line Error',
+                                    error: line_error,
+                                    status: LOG_STATUS.RECORD_ERROR,
+                                    recordId: Current.PO_ID
+                                });
+
+                                Helper.setLineValues({
+                                    record: recItemFF,
+                                    values: { itemreceive: false },
+                                    doCommit: true
+                                });
+                                continue;
+                            }
+                        }
+
+                        vc2_util.log(logTitle, ' ///  updateFFData', updateFFData);
+                        if (!vc2_util.isEmpty(updateFFData)) {
+                            for (var fld in updateFFData) {
+                                recItemFF.setValue({ fieldId: fld, value: updateFFData[fld] });
+                            }
+                        }
+
+                        ////////////////////
+                        vc2_util.log(logTitle, '>> record lines', recordLines);
+                        if (vc2_util.isEmpty(recordLines)) {
+                            vc2_util.log(logTitle, '*** No lines to fulfill ****');
+                            vc2_util.vcLog({
+                                title: 'Fulfillment Lines',
+                                message: 'No Matching Lines To Fulfill:  ' + vendorOrderNum,
+                                recordId: Current.PO_ID
+                            });
+                            break;
+                        }
+
+                        /*** Start Clemen - Package ***/
+                        var arrAllTrackingNumbers = [];
+                        try {
+                            for (var ii = 0; ii < recordLines.length; ii++) {
+                                var strTrackingNums = recordLines[ii].all_tracking_nums;
+
+                                if (!vc2_util.isEmpty(strTrackingNums)) {
+                                    var arrTrackingNums = strTrackingNums.split('\n');
+                                    arrAllTrackingNumbers =
+                                        arrAllTrackingNumbers.concat(arrTrackingNums);
+                                }
+                            }
+                            vc2_util.log(logTitle, '/// tracking numbers', arrAllTrackingNumbers);
+
+                            if (!vc2_util.isEmpty(arrAllTrackingNumbers)) {
+                                recItemFF = Helper.addNativePackages({
+                                    record: recItemFF,
+                                    trackingnumbers: arrAllTrackingNumbers
+                                });
+                            }
+                        } catch (package_error) {
+                            vc2_util.logError(logTitle, package_error);
+                            vc2_util.vcLog({
+                                title: 'Fulfillment | Set Package Error',
+                                error: package_error,
+                                status: LOG_STATUS.RECORD_ERROR,
+                                recordId: Current.PO_ID
+                            });
+                        }
+                        /*** End Clemen - Package ***/
+
+                        // try to save the record
+                        var itemffId;
+                        try {
+                            itemffId = recItemFF.save({
+                                enableSourcing: true,
+                                ignoreMandatoryFields: true
+                            });
+                            responseData.push({ id: itemffId, orderNum: orderNum });
+
+                            vc2_util.log(
+                                logTitle,
+                                '## Created Item FF: [itemfulfillment:' + itemffId + ']'
+                            );
+
+                            vc2_util.vcLog({
+                                title: 'Fulfillment | Successfully Created:',
+                                message:
+                                    '##' +
+                                    ('Created Fulfillment (' + itemffId + ') \n') +
+                                    Helper.printerFriendlyLines({ recordLines: recordLines }),
+                                recordId: Current.PO_ID,
+                                isSuccess: true
+                            });
+                        } catch (itemff_err) {
+                            vc2_util.log(
+                                logTitle,
+                                '/// FULFILLMENT Create error',
+                                itemff_err,
+                                'error'
+                            );
+
+                            vc2_util.vcLog({
+                                title: 'Fulfillment | Save Fulfillment Error',
+                                error: itemff_err,
+                                status: LOG_STATUS.RECORD_ERROR
+                            });
+                            throw itemff_err;
+                        }
                     }
                 } catch (orderNum_error) {
                     vc2_util.logError(logTitle, orderNum_error);
@@ -1263,6 +1326,38 @@ define(function (require) {
                 }
             }
             return shipgroup;
+        },
+        getInventoryLocations: function (option) {
+            var logTitle = [LogTitle, 'getInventoryLocations'].join('::'),
+                recPurchOrd = option.recPurchOrd,
+                recSalesOrd = option.recSalesOrd,
+                inventoryLocations = [];
+            if (recSalesOrd && recPurchOrd) {
+                var poId = recPurchOrd.id;
+                for (
+                    var i = 0, len = recSalesOrd.getLineCount({ sublistId: 'item' });
+                    i < len;
+                    i += 1
+                ) {
+                    var soInvLoc = recSalesOrd.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'inventorylocation',
+                        line: i,
+                        value: poId
+                    });
+                    var soCreatedPO = recSalesOrd.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'createdpo',
+                        line: i,
+                        value: poId
+                    });
+                    if (soCreatedPO == poId && inventoryLocations.indexOf(soInvLoc) == -1) {
+                        inventoryLocations.push(soInvLoc);
+                    }
+                }
+                log.debug(logTitle, '///inventory locations=' + inventoryLocations.join());
+            }
+            return inventoryLocations;
         },
         validateDate: function (option) {
             var logTitle = [LogTitle, 'validateDate'].join('::'),

@@ -689,7 +689,10 @@ define(function (require) {
 
             var matchedValue;
             try {
-                if (item.forcedValue && vendorLine.item_num == item.forcedValue) {
+                if (
+                    item.forcedValue &&
+                    vc2_util.inArray(item.forcedValue, [vendorLine.item_num, vendorLine.vendorSKU])
+                ) {
                     matchedValue = 'AltItemName';
                 } else if (
                     vc2_util.inArray(vendorLine.item_num, [

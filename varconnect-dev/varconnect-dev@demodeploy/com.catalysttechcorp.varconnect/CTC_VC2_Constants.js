@@ -79,7 +79,7 @@ define(function (require) {
                 USERNAME: 'custrecord_ctc_vc_user',
                 PASSWORD: 'custrecord_ctc_vc_password',
                 CUSTOMER_NO: 'custrecord_ctc_vc_customer_number',
-                XML_REQUEST: 'custrecord_ctc_vc_xml_req',
+                // XML_REQUEST: 'custrecord_ctc_vc_xml_req',
                 PROCESS_DROPSHIPS: 'custrecord_ctc_vc_process_dropship_vend',
                 PROCESS_SPECIAL_ORDERS: 'custrecord_ctc_vc_process_spec_ord_vend',
                 FULFILLMENT_PREFIX: 'custrecord_ctc_vc_prefix',
@@ -504,7 +504,7 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20231221';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240111.01';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',

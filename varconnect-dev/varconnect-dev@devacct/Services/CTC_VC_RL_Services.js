@@ -20,13 +20,18 @@ define(function (require) {
         vc2_constant = require('./../CTC_VC2_Constants.js');
 
     const SERVICES_MAP = {
-        vendorWS: {
-            // lib: './ctc_svclib_vendorws',
-            actions: ['orderstatus', 'getbill']
+        processV1: {
+            lib: require('./ctc_svclib_process-v1.js')
+        },
+        webserviceLibV1: {
+            lib: require('./ctc_svclib_webservice-v1.js')
         },
         recordsLib: {
             lib: require('./ctc_svclib_records'),
             actions: ['itemSearch', 'fetchItemsPO', 'searchPO']
+        },
+        configLib: {
+            lib: require('./ctc_svclib_configlib.js')
         },
         billcreateLib: {
             lib: require('./ctc_svclib_billcreate')
@@ -68,7 +73,7 @@ define(function (require) {
 
                 if (!moduleLib[actionName]) throw 'Missing or Invalid method name - ' + actionName;
 
-                returnObj = moduleLib[actionName].call(null, context.parameters);
+                returnObj = moduleLib[actionName].call(null, context.parameters || {});
 
                 // look for service module
             } catch (error) {
@@ -76,6 +81,7 @@ define(function (require) {
 
                 returnObj = {
                     status: 'error',
+                    isError: true,
                     message: vc2_util.extractError(error),
                     details: error
                 };

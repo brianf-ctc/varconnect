@@ -45,7 +45,7 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
         var headers = {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            Authorization: generateToken(config),
+            Authorization: getTokenCache(config),
             'dandh-tenant': Helper.getTenant(config),
             accountNumber: config.vendorConfig.customerNo
         };
@@ -79,6 +79,18 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
 
         log.debug(LogTitle + ' | objResponse.RESPONSE.body', objResponse.RESPONSE.body);
         return objResponse.RESPONSE.body;
+    }
+
+    function getTokenCache(config) {
+        var token = vc2_util.getNSCache({ key: 'VC_DANDH_TOKEN' });
+        if (vc2_util.isEmpty(token)) {
+            token = generateToken(config);
+            vc2_util.setNSCache({
+                key: 'VC_DANDH_TOKEN',
+                value: token
+            });
+        }
+        return token;
     }
 
     function generateToken(config) {

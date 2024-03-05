@@ -65,6 +65,20 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
             return returnValue;
         },
+        getTokenCache: function () {
+            var token = vc2_util.getNSCache({ key: 'VC_ARROW_TOKEN' });
+            if (vc2_util.isEmpty(token)) token = this.generateToken();
+
+            if (!vc2_util.isEmpty(token)) {
+                vc2_util.setNSCache({
+                    key: 'VC_ARROW_TOKEN',
+                    cacheTTL: 14400,
+                    value: token
+                });
+                CURRENT.accessToken = token;
+            }
+            return token;
+        },
         getOrderStatus: function (option) {
             var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
                 returnValue;
@@ -162,7 +176,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-                LibArrowAPI.generateToken();
+                LibArrowAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
                 returnValue = LibArrowAPI.getOrderStatus();

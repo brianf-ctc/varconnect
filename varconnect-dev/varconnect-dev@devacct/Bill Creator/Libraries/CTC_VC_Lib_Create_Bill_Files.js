@@ -120,7 +120,12 @@ define([
                 if (vendorCfg && !vendorCfg.itemColumnIdToMatch) {
                     itemField = vendorCfg.itemFieldIdToMatch;
                 }
-                if (!itemField && MainConfig && !MainConfig.itemColumnIdToMatch) {
+                if (
+                    !itemField &&
+                    (!vendorCfg || !vendorCfg.itemColumnIdToMatch) &&
+                    MainConfig &&
+                    !MainConfig.itemColumnIdToMatch
+                ) {
                     itemField = MainConfig.itemFieldIdToMatch;
                 }
                 if (itemField && itemIds.length) {

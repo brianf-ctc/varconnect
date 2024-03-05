@@ -74,6 +74,20 @@ define([
 
             return returnValue;
         },
+        getTokenCache: function () {
+            var token = vc2_util.getNSCache({ key: 'VC_DELL_TOKEN' });
+            if (vc2_util.isEmpty(token)) token = this.generateToken();
+
+            if (!vc2_util.isEmpty(token)) {
+                vc2_util.setNSCache({
+                    key: 'VC_DELL_TOKEN',
+                    cacheTTL: 14400,
+                    value: token
+                });
+                CURRENT.accessToken = token;
+            }
+            return token;
+        },
         handleResponse: function (request) {
             var returnValue = true;
 
@@ -228,15 +242,17 @@ define([
                     }
 
                     // check is_shipped from status
-                    orderItem.is_shipped =
-                        vc2_util.inArray(
-                            orderItem.line_status.toUpperCase(),
-                            LibDellAPI.ValidShippedStatus
-                        ) ||
-                        vc2_util.inArray(
-                            orderItem.order_status.toUpperCase(),
-                            LibDellAPI.ValidShippedStatus
-                        );
+                    orderItem.is_shipped = orderItem.line_status
+                        ? vc2_util.inArray(
+                              orderItem.line_status.toUpperCase(),
+                              LibDellAPI.ValidShippedStatus
+                          )
+                        : orderItem.order_status
+                        ? vc2_util.inArray(
+                              orderItem.order_status.toUpperCase(),
+                              LibDellAPI.ValidShippedStatus
+                          )
+                        : false;
 
                     // check is_shipped from shipped date
                     if (
@@ -281,7 +297,7 @@ define([
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
-                LibDellAPI.generateToken();
+                LibDellAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
                 returnValue = LibDellAPI.searchPO();

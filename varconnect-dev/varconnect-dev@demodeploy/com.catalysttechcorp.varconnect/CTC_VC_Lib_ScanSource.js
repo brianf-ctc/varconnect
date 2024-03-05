@@ -134,9 +134,8 @@ define([
             });
             var token = tokenCache.get({
                 key: 'scansource_token',
-                loader: this.generateToken()
+                loader: this.generateToken
             });
-            CURRENT.accessToken = token;
             log.debug('getTokenCache | token', token);
         }
     };
@@ -251,7 +250,9 @@ define([
                                 ) * 1,
                             vendorSKU: lineItem.ItemNumber,
                             ship_qty: parseInt(lineItem.QuantityShipped),
-                            ship_date: moment(deliveryLine.ShippedDate).format('MM/DD/YYYY'),
+                            ship_date: deliveryLine.ShippedDate
+                                ? moment(deliveryLine.ShippedDate).format('MM/DD/YYYY')
+                                : '',
                             order_eta: '',
                             carrier: shipment.carrier,
                             tracking_num: shipment.tracking.join(', ')

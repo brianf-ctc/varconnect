@@ -20,13 +20,15 @@ define(function (require) {
         vc2_constant = require('./../CTC_VC2_Constants.js');
 
     const SERVICES_MAP = {
-        vendorWS: {
-            // lib: './ctc_svclib_vendorws',
-            actions: ['orderstatus', 'getbill']
+        webserviceLib: {
+            lib: require('./ctc_svclib_webservice.js')
         },
         recordsLib: {
             lib: require('./ctc_svclib_records'),
             actions: ['itemSearch', 'fetchItemsPO', 'searchPO']
+        },
+        configLib: {
+            lib: require('./ctc_svclib_configlib.js')
         },
         billcreateLib: {
             lib: require('./ctc_svclib_billcreate')

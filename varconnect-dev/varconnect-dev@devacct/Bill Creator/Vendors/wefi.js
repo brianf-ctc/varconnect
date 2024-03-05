@@ -220,7 +220,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
                 query: {
                     url: url,
                     headers: {
-                        Authorization: 'Bearer ' + WEFI_BC.generateToken(),
+                        Authorization: 'Bearer ' + WEFI_BC.getTokenCache(),
                         Accept: 'application/json',
                         'Content-Type': 'application/json'
                     }
@@ -333,6 +333,20 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
         } finally {
         }
         return returnValue;
+    };
+
+    WEFI_BC.getTokenCache = function () {
+        var token = vc2_util.getNSCache({ key: 'VC_BC_WEFI_TOKEN' });
+        if (vc2_util.isEmpty(token)) token = this.generateToken();
+
+        if (!vc2_util.isEmpty(token)) {
+            vc2_util.setNSCache({
+                key: 'VC_BC_WEFI_TOKEN',
+                cacheTTL: 14400,
+                value: token
+            });
+        }
+        return token;
     };
 
     return {

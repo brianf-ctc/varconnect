@@ -21,7 +21,8 @@ define([
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants',
     './CTC_VC_Lib_MainConfiguration',
-    './CTC_VC_Lib_VendorConfig'
+    './CTC_VC_Lib_VendorConfig',
+    './Services/ctc_svclib_configlib'
 ], function (
     ns_runtime,
     ns_search,
@@ -31,7 +32,8 @@ define([
     vc2_util,
     vc2_constant,
     vc_maincfg,
-    vc_vendorcfg
+    vc_vendorcfg,
+    vcs_configLib
 ) {
     var LogTitle = 'VC:BILLFILE';
 
@@ -40,7 +42,7 @@ define([
             if (!arrFields || !arrFields.length) return;
             arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
 
-            log.audit('displayAsInlineTextarea', arrFields);
+            vc2_util.log('displayAsInlineTextarea', arrFields);
 
             arrFields.forEach(function (fieldId) {
                 var fldObj = form.getField({ id: fieldId });
@@ -51,10 +53,10 @@ define([
             if (!arrFields || !arrFields.length) return;
             arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
 
-            log.audit('displayAsInlineTextarea', arrFields);
+            // vc2_util.log('displayAsInlineTextarea', arrFields);
 
             arrFields.forEach(function (fieldId) {
-                log.audit('displayAsInlineTextarea', fieldId);
+                vc2_util.log('displayAsInlineTextarea', fieldId);
                 if (!fieldId) return true;
 
                 try {
@@ -68,8 +70,8 @@ define([
                         type: 'inlinehtml'
                     });
 
-                    log.audit('displayAsInlineTextarea', fldOrig);
-                    log.audit('displayAsInlineTextarea', fldNew);
+                    vc2_util.log('displayAsInlineTextarea', fldOrig);
+                    vc2_util.log('displayAsInlineTextarea', fldNew);
 
                     var strValue = fldOrig.defaultValue;
 
@@ -78,7 +80,7 @@ define([
                         var jsonObj = JSON.parse(strValue);
                         strValue = JSON.stringify(jsonObj, null, '    ');
                     } catch (err) {
-                        log.audit('json log test', vc2_util.extractError(err));
+                        vc2_util.log('json log test', vc2_util.extractError(err));
                     }
 
                     fldNew.defaultValue = [
@@ -99,19 +101,63 @@ define([
                     form.insertField({ field: fldNew, nextfield: fldOrig.id });
                     fldOrig.updateDisplayType({ displayType: 'hidden' });
                 } catch (errfld) {
-                    log.audit('displayAsInlineTextarea', errfld);
+                    vc2_util.log('displayAsInlineTextarea', errfld);
                 }
                 return true;
             }); // end: arrFields.forEach
         }
+        // addToActionMenu: function (form, arrButtons) {
+        //     if (!arrButtons || !arrButtons.length) return;
+        //     arrButtons = util.isArray(arrButtons) ? arrButtons : [arrButtons];
+
+        //     var JSCode =
+        //         'window.NS_Button = function () {' +
+        //         'var delay = window.menusAreOpen ? 0 : 100;' +
+        //         "window.rolloverDelay = setTimeout(\"showMenu('spn_PRINT_d1', true, 'PRINT', 0, 2);\",delay);" +
+        //         "resetNavMenuTimer('PRINT');" +
+        //         'setTimeout(\'startTimer("PRINT")\', delay);' +
+        //         'return {' +
+        //         'addToMenu: function (arrBtnNames) {' +
+        //         'var jq = window.jQuery || jQuery;' +
+        //         'if (!jq) return;' +
+        //         'arrBtnNames = arrBtnNames.constructor == Array ? arrBtnNames : [arrBtnNames];' +
+        //         'console.log(arrBtnNames, jq);' +
+        //         'for (var i = 0, j = arrBtnNames.length; i < j; i += 1) {' +
+        //         'var btnName = arrBtnNames[i];' +
+        //         "var btnElem = jq('input[name=\"' + btnName + '\"]')[0];" +
+        //         'if (!btnElem) continue;' +
+        //         'console.log(btnName, btnElem);' +
+        //         'var btnMenu = [' +
+        //         '\'<tr><td class="ac_text">\',' +
+        //         "'<a class=\"ddmAnchor\" href=\"javascript:NLInvokeButton(getButton('' + btnName + ''))\">'," +
+        //         '\'<img class="record-icon-small" src="/uirefresh/img/print.png" alt="">\',' +
+        //         "'<span class=\"ac_text_pad\">' + btnElem.value + '</span>'," +
+        //         "'</td></tr>'" +
+        //         " ].join('');" +
+        //         "jq('table.ac_table tbody').append(btnMenu);" +
+        //         "var btnParent = jq(btnElem).parents('table')[0]; " +
+        //         'jq(btnParent).hide(); ' +
+        //         '}}};};';
+
+        //     JSCode += 'NS_Button().addToMenu(' + JSON.stringify(arrButtons) + ');';
+
+        //     var fldJSActionMenu = form.addField({
+        //         id: 'custpage_jscont_addtoaction',
+        //         label: 'SOME CONTENT',
+        //         type: 'inlinehtml'
+        //     });
+
+        //     fldJSActionMenu.defaultValue = '<script type="text/javascript">' + JSCode + '</script>';
+        //     // ];
+        // }
     };
 
-    EventRouter.Action['customrecord_ctc_vc_bills'] = {
+    EventRouter.Action[vc2_constant.RECORD.BILLFILE.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
-                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
@@ -134,6 +180,15 @@ define([
                         flexScreenUrl +
                         '")'
                 });
+                // add button to the flex screen
+                // scriptContext.form.addButton({
+                //     id: 'custpage_reloadpo',
+                //     label: 'Reload PO/Items',
+                //     functionName:
+                //         '(function(url){window.location.href=url;})("' +
+                //         EventRouter.addActionURL('reloadBillFile') +
+                //         '")'
+                // });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -141,12 +196,12 @@ define([
         }
     };
 
-    EventRouter.Action['customrecord_vc_bill_vendor_config'] = {
+    EventRouter.Action[vc2_constant.RECORD.BILLCREATE_CONFIG.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
-                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
                 Helper.hideFields(scriptContext.form, ['custrecord_vc_bc_maincfg']);
 
@@ -159,12 +214,43 @@ define([
         }
     };
 
+    EventRouter.Action[vc2_constant.RECORD.MAIN_CONFIG.ID] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+            try {
+                vc2_util.log(logTitle, '>> Current: ', Current);
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+
+                var mainConfig = vcs_configLib.mainConfig();
+                vc2_util.log(logTitle, 'mainConfig>> ', mainConfig);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        },
+        onAfterSubmit: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+
+            try {
+                vc2_util.log(logTitle, '>> Current: ', Current);
+                // if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+
+                var mainConfig = vcs_configLib.mainConfig({ forced: true });
+                vc2_util.log(logTitle, 'mainConfig>> ', mainConfig);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        }
+    };
+
     EventRouter.Action[vc2_constant.RECORD.VC_LOG.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
-                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
@@ -193,10 +279,10 @@ define([
                 )
                     return;
 
-                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 var mainCfg = vc_maincfg.getMainConfiguration();
-                log.audit(logTitle, '// Main Confg: ' + JSON.stringify(mainCfg));
+                vc2_util.log(logTitle, '// Main Confg: ' + JSON.stringify(mainCfg));
                 if (!mainCfg) return;
 
                 var currentRecord = scriptContext.newRecord;
@@ -207,11 +293,30 @@ define([
                         fieldId: 'subsidiary'
                     })
                 });
-                log.audit(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
+                vc2_util.log(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
 
                 if (!mainCfg.overridePONum) {
                     Helper.hideFields(scriptContext.form, ['custbody_ctc_vc_override_ponum']);
                 }
+
+                // // add button to the flex screen
+                // scriptContext.form.addButton({
+                //     id: 'custpage_orderstatus',
+                //     label: 'VC | Order Status',
+                //     functionName:
+                //         '(function(url){window.location.href=url;})("' +
+                //         EventRouter.addActionURL('actionOrderStatus') +
+                //         '")'
+                // });
+
+                // scriptContext.form.addButton({
+                //     id: 'custpage_fetchbill',
+                //     label: 'VC | Fetch Bills',
+                //     functionName:
+                //         '(function(url){window.location.href=url;})("' +
+                //         EventRouter.addActionURL('actionFetchBills') +
+                //         '")'
+                // });
 
                 // VENDOR LINE INFO /////
                 var lineCount = currentRecord.getLineCount({
@@ -281,10 +386,22 @@ define([
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         triggerOrderStatus: function (scriptContext, Current) {
-            log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+            vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
             return true;
+        },
+        reloadBillFile: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'reloadBillFile'].join('::'),
+                returnValue;
         }
     };
+
+    var mapRecordNames = {};
+    mapRecordNames[ns_record.Type.PURCHASE_ORDER] = 'PO';
+    mapRecordNames[vc2_constant.RECORD.VC_LOG.ID] = 'VCLOG';
+    mapRecordNames[vc2_constant.RECORD.MAIN_CONFIG.ID] = 'MAINCFG';
+    mapRecordNames[vc2_constant.RECORD.VENDOR_CONFIG.ID] = 'VENDORCFG';
+    mapRecordNames[vc2_constant.RECORD.BILLCREATE_CONFIG.ID] = 'BILLVCFG';
+    mapRecordNames[vc2_constant.RECORD.BILLFILE.ID] = 'BILLFILE';
 
     var USER_EVENT = {
         beforeLoad: function (scriptContext) {
@@ -293,7 +410,14 @@ define([
 
             EventRouter.initialize(scriptContext);
 
-            log.audit(logTitle, EventRouter.Type);
+            var Current = EventRouter.Current;
+            vc2_util.LogPrefix = [
+                mapRecordNames[Current.recordType],
+                Current.recordId || '_new_',
+                Current.eventType
+            ].join(':');
+            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+
             try {
                 EventRouter.execute(EventRouter.Type.CUSTOM);
                 EventRouter.execute(EventRouter.Type.BEFORE_LOAD);
@@ -311,7 +435,14 @@ define([
 
             EventRouter.initialize(scriptContext);
 
-            log.audit(logTitle, EventRouter.Type);
+            var Current = EventRouter.Current;
+            vc2_util.LogPrefix = [
+                mapRecordNames[Current.recordType],
+                Current.recordId || '_new_',
+                Current.eventType
+            ].join(':');
+            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+
             try {
                 EventRouter.execute(EventRouter.Type.BEFORE_SUBMIT);
             } catch (error) {
@@ -328,7 +459,14 @@ define([
 
             EventRouter.initialize(scriptContext);
 
-            log.audit(logTitle, EventRouter.Type);
+            var Current = EventRouter.Current;
+            vc2_util.LogPrefix = [
+                mapRecordNames[Current.recordType],
+                Current.recordId || '_new_',
+                Current.eventType
+            ].join(':');
+            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+
             try {
                 EventRouter.execute(EventRouter.Type.AFTER_SUBMIT);
             } catch (error) {

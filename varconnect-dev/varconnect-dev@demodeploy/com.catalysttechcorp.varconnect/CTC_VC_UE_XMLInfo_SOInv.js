@@ -243,23 +243,42 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
 
                             if (!isEmpty(fieldValue)) {
                                 if (fieldType == 'DATE') {
-                                    fieldValue = parseDate({ dateString: fieldValue });
-                                }
+                                    var sublistDateColumn = soRec.getCurrentSublistField({
+                                        sublistId: 'item',
+                                        fieldId: xmlFields[xmlField]
+                                    });
+                                    if (sublistDateColumn && sublistDateColumn.isDisplay) {
+                                        fieldValue = parseDate({ dateString: fieldValue });
+                                        log.debug({
+                                            title: 'Update SO V2',
+                                            details: JSON.stringify({
+                                                field: xmlFields[xmlField],
+                                                type: fieldType,
+                                                value: fieldValue
+                                            })
+                                        });
+                                        soRec.setCurrentSublistValue({
+                                            sublistId: 'item',
+                                            fieldId: xmlFields[xmlField],
+                                            value: fieldValue
+                                        });
+                                    }
+                                } else {
+                                    log.debug({
+                                        title: 'Update SO V2',
+                                        details: JSON.stringify({
+                                            field: xmlFields[xmlField],
+                                            type: fieldType,
+                                            value: fieldValue
+                                        })
+                                    });
 
-                                log.debug({
-                                    title: 'Update SO V2',
-                                    details: JSON.stringify({
-                                        field: xmlFields[xmlField],
-                                        type: fieldType,
+                                    soRec.setCurrentSublistValue({
+                                        sublistId: 'item',
+                                        fieldId: xmlFields[xmlField],
                                         value: fieldValue
-                                    })
-                                });
-
-                                soRec.setCurrentSublistValue({
-                                    sublistId: 'item',
-                                    fieldId: xmlFields[xmlField],
-                                    value: fieldValue
-                                });
+                                    });
+                                }
                             } else if (!isEmpty(currentValue)) {
                                 soRec.setCurrentSublistValue({
                                     sublistId: 'item',
@@ -558,21 +577,21 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         }
 
         //Convert to string
-        if (date) {
-            //set date
-            var year = date.getFullYear();
-            if (year < 2000) {
-                year += 100;
-                date.setFullYear(year);
-            }
+        // if (date) {
+        //     //set date
+        //     var year = date.getFullYear();
+        //     if (year < 2000) {
+        //         year += 100;
+        //         date.setFullYear(year);
+        //     }
 
-            date = ns_format.format({
-                value: date,
-                type: ns_format.Type.DATE
-            });
-        }
+        //     date = ns_format.format({
+        //         value: date,
+        //         type: ns_format.Type.DATE
+        //     });
+        // }
 
-        log.audit(logTitle, 'return value :' + JSON.stringify(date));
+        log.audit(logTitle, 'return value :' + date);
 
         return date;
     }
@@ -685,10 +704,10 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
             return recUpdated;
         }
         /* 		log.debug({
-        			title: 'CTC Update PO ',
-        			details: 'Leaving updateFieldLIST '+fieldID
-        		});
-         */
+                 title: 'CTC Update PO ',
+                 details: 'Leaving updateFieldLIST '+fieldID
+             });
+      */
     }
     //**********************************************************************************************
 

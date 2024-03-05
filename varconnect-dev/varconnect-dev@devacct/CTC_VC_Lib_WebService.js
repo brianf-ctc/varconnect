@@ -172,7 +172,7 @@ define([
         var logTitle = [LogTitle, 'parseDate'].join('::');
 
         var dateString = option.dateString || option,
-            date = '';
+            date = null;
 
         if (dateString && dateString.length > 0 && dateString != 'NA') {
             try {
@@ -224,7 +224,8 @@ define([
                         }
                         if (!convertedDate) {
                             vc2_util.logError('Unable to recognize date format.', e);
-                        } else if (!date || convertedDate > date) {
+                            date = dateString;
+                        } else {
                             date = convertedDate;
                         }
                     }
@@ -232,20 +233,6 @@ define([
             } catch (e) {
                 vc2_util.logError(logTitle, e);
             }
-        }
-        //Convert to string
-        if (date) {
-            //set date
-            var year = date.getFullYear();
-            if (year < 2000) {
-                year += 100;
-                date.setFullYear(year);
-            }
-
-            date = ns_format.format({
-                value: date,
-                type: ns_format.Type.DATE
-            });
         }
         return date;
     }
@@ -258,8 +245,8 @@ define([
             tranDate = option.tranDate,
             xmlVendorText = option.xmlVendorText;
 
-        var dtStartDate = vc2_util.parseDate(startDate),
-            dtTranDate = vc2_util.parseDate(tranDate);
+        var dtStartDate = parseDate(startDate),
+            dtTranDate = parseDate(tranDate);
 
         vc2_util.log(logTitle, '>> check dates: ', [
             dtStartDate,

@@ -16,96 +16,21 @@ var hlFolder = 'SuiteScripts/VAR Connect/highlight';
 define([
     'N/search',
     'N/currentRecord',
-    '../CTC_VC_Lib_VendorConfig.js',
-    '../CTC_VC_Lib_WebService.js',
-    '../CTC_VC2_Constants.js',
+    'N/url',
+    'N/https',
     hlFolder + '/highlight.js',
     hlFolder + '/languages/xml.min.js',
     hlFolder + '/languages/json.min.js'
-], function (
-    ns_search,
-    ns_currentRecord,
-    vc_vendorcfg,
-    vc_websvc,
-    vc2_constant,
-    hljs,
-    hljsXml,
-    hljsJson
-) {
-    // get current folder
-    if (hljs) {
-        hljs.registerLanguage('xml', hljsXml);
-        hljs.registerLanguage('json', hljsJson);
-    }
-
-    var Helper = {
-        getPODetails: function (poNum) {
-            var columns = [ns_search.createColumn({ name: 'entity' })];
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
-                columns.push(ns_search.createColumn({ name: 'subsidiary' }));
-
-            var poObj = {},
-                purchaseorderSearchObj = ns_search.create({
-                    type: 'purchaseorder',
-                    filters: [
-                        ['type', 'anyof', 'PurchOrd'],
-                        'AND',
-                        ['numbertext', 'is', poNum],
-                        'AND',
-                        ['mainline', 'is', true]
-                    ],
-                    columns: columns
-                });
-            var searchResultCount = purchaseorderSearchObj.runPaged().count;
-            log.debug('purchaseorderSearchObj result count', searchResultCount);
-            purchaseorderSearchObj.run().each(function (result) {
-                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
-                    poObj['subsidiary'] = result.getValue('subsidiary');
-                poObj['vendor'] = result.getValue('entity');
-                poObj['id'] = result.id;
-                // ?
-                //            if (vcGlobals.ENABLE_SUBSIDIARIES)
-                //            	poObj['subsidiary'] = result.getValue('subsidiary');
-
-                return false;
-            });
-
-            return poObj;
-        },
-
-        loadDebugVendorConfig: function (options) {
-            var xmlVendor = options.xmlVendor,
-                xmlSubsidiary = options.xmlSubsidiary,
-                vendorConfig = vc_vendorcfg.getDebugVendorConfiguration({
-                    xmlVendor: xmlVendor,
-                    subsidiary: xmlSubsidiary
-                });
-
-            if (!vendorConfig) {
-                log.debug('No configuration set up for xml vendor ' + xmlVendor);
-            } else return vendorConfig;
-        },
-        extractError: function (option) {
-            option = option || {};
-            var errorMessage = util.isString(option)
-                ? option
-                : option.message || option.error || JSON.stringify(option);
-
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
-
-            return errorMessage;
-        }
+], function (ns_search, ns_currentRecord, ns_url, ns_https, hljs, hljsXml, hljsJson) {
+    const RL_SERVICES = {
+        scriptId: 'customscript_ctc_vc_rl_services',
+        deploymentId: 'customdeploy_ctc_rl_services'
     };
 
-    var DebugToolHelper = {
-        pageInit: function () {
-            console.log('load page');
-        },
-        showResults: function () {
+    var Helper = {
+        resetDisplay: function () {
             var xmlViewer = jQuery('#custpage_xml_viewer_frame').contents();
             jQuery('#custpage_xml__loader').show();
-
             if (hljs) {
                 xmlViewer.find('#custpage_xml__viewer').hide();
                 xmlViewer.find('#custpage_json__viewer').hide();
@@ -113,102 +38,116 @@ define([
             } else {
                 jQuery('#vcdebugcontent').hide().get(0).value = '';
             }
+        },
 
-            var thisRecord = ns_currentRecord.get();
+        updateDisplay: function (option) {
+            var xmlViewer = jQuery('#custpage_xml_viewer_frame').contents();
+            var content = option.content || option.body,
+                elementIdToHide,
+                elementIdToShow;
 
-            var internalId = thisRecord.getValue({ fieldId: 'custpage_vendor' }),
-                poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' });
-
-            setTimeout(function () {
-                try {
-                    // set the content
-                    var promiseObj = new Promise(function (resolve) {
-                        var outputObj;
-
-                        try {
-                            var objPO = Helper.getPODetails(poNum),
-                                vendorConfig = vc_vendorcfg.getDebugVendorConfiguration({
-                                    internalid: internalId,
-                                    xmlSubsidiary: objPO.subsidiary
-                                });
-                            if (!objPO || !poNum) throw 'Valid PO Number is required';
-
-                            outputObj = vc_websvc.handleRequest({
-                                vendorConfig: vendorConfig,
-                                poNum: poNum,
-                                poId: objPO.id,
-                                country:
-                                    vendorConfig.country == 'CA'
-                                        ? vc2_constant.LIST.COUNTRY.CA
-                                        : vc2_constant.LIST.COUNTRY.US,
-                                countryCode: vendorConfig.country
-                            });
-                        } catch (processErr) {
-                            outputObj =
-                                'Error while handling request. Please make sure Vendor configuration was setup correctly.<br/><br/> [' +
-                                (Helper.extractError(processErr) + ']');
-                            // (processErr.name + ': ') +
-                            // (processErr.message +
-
-                            console.log(
-                                'debug lib: ' +
-                                    (processErr.name + '- ') +
-                                    (processErr.message + '==\n' + processErr.stack)
-                            );
-                        }
-                        resolve(outputObj);
-                    });
-                    promiseObj.then(function (outputObj) {
-                        var xmlContent = outputObj;
-
-                        try {
-                            if (util.isString(outputObj)) throw outputObj;
-                            xmlContent = JSON.stringify(outputObj);
-                            xmlContent = vkbeautify.json(xmlContent, 4);
-
-                            if (hljs) {
-                                xmlContent = hljs.highlight(xmlContent, { language: 'JSON' }).value;
-                                elementIdToShow = 'custpage_json__viewer';
-                                elementIdToHide = 'custpage_xml__viewer';
-                            }
-                        } catch (err) {
-                            xmlContent = vkbeautify.xml(outputObj, 4);
-                            if (hljs) {
-                                xmlContent = hljs.highlight(xmlContent, { language: 'xml' }).value;
-                                elementIdToShow = 'custpage_xml__viewer';
-                                elementIdToHide = 'custpage_json__viewer';
-                            }
-                        }
-
-                        if (hljs) {
-                            xmlViewer.find('#' + elementIdToShow).show();
-                            xmlViewer.find('#' + elementIdToHide).hide();
-
-                            xmlViewer.find('#' + [elementIdToHide, '_content'].join('')).hide();
-                            xmlViewer
-                                .find('#' + [elementIdToShow, '_content'].join(''))
-                                .show()
-                                .get(0).innerHTML = xmlContent;
-                        } else {
-                            xmlViewer.find('#custpage_xml__viewer').hide();
-                            xmlViewer.find('#custpage_json__viewer').hide();
-
-                            jQuery('#vcdebugcontent').show().get(0).value = xmlContent;
-                            jQuery('#custpage_xml_viewer_frame').hide();
-                        }
-
-                        return true;
-                    });
-                } finally {
-                    jQuery('#custpage_xml__loader').hide();
+            if (util.isString(content)) {
+                // XML //
+                content = vkbeautify.xml(content, 4);
+                if (hljs) {
+                    content = hljs.highlight(content, { language: 'xml' }).value;
+                    elementIdToShow = 'custpage_xml__viewer';
+                    elementIdToHide = 'custpage_json__viewer';
                 }
-            }, 500);
+            } else {
+                // JSON //
+                content = JSON.stringify(content);
+                content = vkbeautify.json(content, 4);
+
+                if (hljs) {
+                    content = hljs.highlight(content, { language: 'JSON' }).value;
+                    elementIdToShow = 'custpage_json__viewer';
+                    elementIdToHide = 'custpage_xml__viewer';
+                }
+            }
+
+            if (hljs) {
+                xmlViewer.find('#' + elementIdToShow).show();
+                xmlViewer.find('#' + elementIdToHide).hide();
+
+                xmlViewer.find('#' + [elementIdToHide, '_content'].join('')).hide();
+                xmlViewer
+                    .find('#' + [elementIdToShow, '_content'].join(''))
+                    .show()
+                    .get(0).innerHTML = content;
+            } else {
+                xmlViewer.find('#custpage_xml__viewer').hide();
+                xmlViewer.find('#custpage_json__viewer').hide();
+
+                jQuery('#vcdebugcontent').show().get(0).value = content;
+                jQuery('#custpage_xml_viewer_frame').hide();
+            }
+
+            jQuery('#custpage_xml__loader').hide();
 
             return true;
         }
     };
 
-    //////////////////////////////////////////////////////////////////////////////
+    var DebugToolHelper = {
+        // pageInit: function () {
+        //     console.log('load page');
+        // },
+
+        showResults: function (scriptContext) {
+            Helper.resetDisplay();
+
+            var thisRecord = ns_currentRecord.get();
+            try {
+                var poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' }),
+                    vendorConfigId = thisRecord.getValue({ fieldId: 'custpage_vendor' });
+
+                if (!poNum) throw 'PO Number is required';
+
+                var requestOption = {
+                    url: ns_url.resolveScript(RL_SERVICES),
+                    body: {
+                        moduleName: 'webserviceLib',
+                        action: 'OrderStatusDebug',
+                        parameters: {
+                            poNum: poNum,
+                            vendorConfigId: vendorConfigId
+                        }
+                    },
+                    method: 'POST'
+                };
+
+                // send the request
+                ns_https.request
+                    .promise(requestOption)
+                    .then(function (option) {
+                        var displayOption = {};
+                        try {
+                            if (!option.body) throw 'Unable to receive a response content';
+                            displayOption.content = JSON.parse(option.body);
+                        } catch (error) {
+                            displayOption.content = error;
+                            displayOption.isError = true;
+                        }
+                        Helper.updateDisplay(displayOption);
+                    })
+                    .catch(function (reason) {
+                        Helper.updateDisplay({ content: reason, isError: true });
+                    });
+            } catch (error) {
+                // update the display
+                Helper.updateDisplay({
+                    content: error,
+                    isError: true
+                });
+            } finally {
+            }
+
+            return true;
+        }
+    };
+    //////////////////////////////////////////////////////////////////////////
+
     (function () {
         function createShiftArr(step) {
             var space = '    ';
@@ -550,7 +489,6 @@ define([
 
         window.vkbeautify = new vkbeautify();
     })();
-    //////////////////////////////////////////////////////////////////////////////
 
     return DebugToolHelper;
 });

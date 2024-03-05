@@ -196,8 +196,10 @@ define(function (require) {
                     var hasReceivableLine = false,
                         receivablesLines = [],
                         arrLineRRData = [],
-                        uniqueItemIds = [];
-                    matchingLine, line, lineRRData;
+                        uniqueItemIds = [],
+                        matchingLine,
+                        line,
+                        lineRRData;
                     for (line = 0; line < lineItemCount; line++) {
                         lineRRData = vc2_record.extractLineValues({
                             record: record,
@@ -213,16 +215,13 @@ define(function (require) {
                         lines: arrLineRRData
                     });
                     var itemAltNameColId =
-                            Current.VendorCFG.itemColumnIdToMatch ||
-                            Current.MainCFG.itemColumnIdToMatch,
-                        altItemNames;
-                    if (!itemAltNameColId) {
-                        altItemNames = vc2_record.extractAlternativeItemName({
-                            item: uniqueItemIds,
-                            mainConfig: Current.MainCFG,
-                            vendorConfig: Current.VendorCFG
-                        });
-                    }
+                        Current.VendorCFG.itemColumnIdToMatch ||
+                        Current.MainCFG.itemColumnIdToMatch;
+                    var altItemNames = vc2_record.extractAlternativeItemName({
+                        item: uniqueItemIds,
+                        mainConfig: Current.MainCFG,
+                        vendorConfig: Current.VendorCFG
+                    });
 
                     /// REMOVE any items that is not in the XML  Line Data /////////////
                     Helper.log(logTitle, '**** Prepare item receipt lines ****');
