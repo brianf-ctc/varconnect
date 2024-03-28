@@ -58,7 +58,13 @@ define(function (require) {
                 VARIANCE_ON_OTHER: 'custrecord_ctc_vc_bill_other_var',
                 DEFAULT_OTHER_ITEM: 'custrecord_ctc_vc_bill_other_item',
                 DISABLE_VENDOR_BILL_CREATION: 'custrecord_ctc_vc_bill_is_disabled',
-                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num'
+                OVERRIDE_PO_NUM: 'custrecord_ctc_vc_override_po_num',
+                AUTOPROC_PRICEVAR: 'custrecord_ctc_vcbc_autopr_pricevar',
+                AUTOPROC_TAXVAR: 'custrecord_ctc_vcbc_autopr_taxvar',
+                AUTOPROC_SHIPVAR: 'custrecord_ctc_vcbc_autopr_shipvar',
+                AUTOPROC_OTHERVAR: 'custrecord_ctc_vcbc_autopr_othervar',
+                CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_col_id',
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id'
             }
         },
         VENDOR_CONFIG: {
@@ -73,7 +79,7 @@ define(function (require) {
                 USERNAME: 'custrecord_ctc_vc_user',
                 PASSWORD: 'custrecord_ctc_vc_password',
                 CUSTOMER_NO: 'custrecord_ctc_vc_customer_number',
-                XML_REQUEST: 'custrecord_ctc_vc_xml_req',
+                // XML_REQUEST: 'custrecord_ctc_vc_xml_req',
                 PROCESS_DROPSHIPS: 'custrecord_ctc_vc_process_dropship_vend',
                 PROCESS_SPECIAL_ORDERS: 'custrecord_ctc_vc_process_spec_ord_vend',
                 FULFILLMENT_PREFIX: 'custrecord_ctc_vc_prefix',
@@ -81,7 +87,9 @@ define(function (require) {
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
-                USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate'
+                USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
+                CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld'
             }
         },
         VC_LOG: {
@@ -207,7 +215,9 @@ define(function (require) {
             TECH_DATA_API: '12',
             JENNE: '13',
             SCANSOURCE: '14',
-            WEFI: '16'
+            WEFI: '16',
+            DandH_API: '17',
+            CARAHSOFT: '18'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',
@@ -226,18 +236,22 @@ define(function (require) {
         }
     };
     VC2_CONSTANT.SCRIPT = {
+        ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
         VIEW_SERIALS_SL: 'customscript_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customscript_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customscript_ctc_vc_sl_print_serial',
         SERIAL_UPDATE_MR: 'customscript_ctc_vc_mr_serial_manip',
         SERIAL_UPDATE_ALL_MR: 'customscript_ctc_vc_mr_serial_manip_so',
-        ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch'
+        ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch',
+        SERVICES_RL: 'customscript_ctc_vc_rl_services'
     };
     VC2_CONSTANT.DEPLOYMENT = {
+        ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
         VIEW_SERIALS_SL: 'customdeploy_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customdeploy_ctc_vc_sl_print_serial',
-        ITEM_MATCH_RL: 'customdeploy_ctc_vc_fuse_itemmatch'
+        ITEM_MATCH_RL: 'customdeploy_ctc_vc_fuse_itemmatch',
+        SERVICES_RL: 'customdeploy_ctc_rl_services'
     };
 
     VC2_CONSTANT.ERRORMSG = {
@@ -280,7 +294,7 @@ define(function (require) {
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         MATCH_NOT_FOUND: {
-            message: 'Could not find matching order line',
+            message: 'Could not find matching item',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         MISSING_ORDERNUM: {
@@ -484,6 +498,7 @@ define(function (require) {
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
             feature: 'pickpackship'
         }),
+        DATE_FORMAT: 'YYYY-MM-DD',
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',
@@ -494,6 +509,24 @@ define(function (require) {
         POHANDLING: 'Drop', // Special | Drop (default) | Both
         EMAIL_LIST_FIELD_ID: 'custbody_ctc_email_shipping_info_1',
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
+    };
+
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240124.03';
+    VC2_CONSTANT.CACHE_KEY = {
+        LICENSE: 'VC_LICENSE',
+        MAIN_CONFIG: 'VC_MAIN_CONFIG',
+        VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
+        BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
+        PO_DATA: 'VC_PODATA'
+    };
+
+    VC2_CONSTANT.LICENSE = {
+        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+        PRODUCT_CODE: 2,
+        MAX_RETRY: 3,
+        KEY: 'LICENSE_KEY.20240124',
+        CACHE_NAME: 'VC_LICENSE',
+        CACHE_TTL: 86400 // 24 hrs
     };
 
     return VC2_CONSTANT;

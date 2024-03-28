@@ -255,6 +255,7 @@ define([
                     }
                 } else {
                     var isAlreadyProcessed = false;
+
                     if (!param.skipfilecheck) {
                         for (var e = 0; e < existingFiles.length; e++) {
                             if (list[i].name == existingFiles[e]) {

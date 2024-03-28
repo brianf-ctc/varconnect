@@ -48,6 +48,7 @@ define([
     vc2_constant
 ) {
     var LogTitle = 'VC|D&H Item Request';
+    var Current = {};
 
     var Helper = {
         flatLookup: function (option) {
@@ -204,6 +205,17 @@ define([
             itemName = options.itemName,
             itemNumbers;
 
+        log.audit(
+            logTitle,
+            '//item values: ' +
+                JSON.stringify({
+                    vendorConfig: vendorConfig,
+                    itemName: itemName,
+                    itemNumbers: itemNumbers,
+                    options: options
+                })
+        );
+
         var responseXML = _processItemInquiryRequest({
             vendorConfig: vendorConfig,
             itemNum: itemName,
@@ -284,6 +296,16 @@ define([
                 vendor: vendor,
                 subsidiary: subsidiary
             });
+
+        log.audit(
+            logTitle,
+            '>> get vendor: ' +
+                JSON.stringify({
+                    vendor: vendor,
+                    subsidiary: subsidiary,
+                    vendorConfig: vendorConfig
+                })
+        );
 
         if (!vendorConfig) {
             log.debug(
@@ -369,7 +391,19 @@ define([
             requestURL = vendorConfig.endPoint,
             userName = vendorConfig.user,
             password = vendorConfig.password;
-        log.debug(logTitle, 'Sending item inquiry to D&H ...');
+
+        log.debug(
+            logTitle,
+            'Sending item inquiry to D&H ...' +
+                JSON.stringify({
+                    itemNum: itemNum,
+                    vendorConfig: vendorConfig,
+                    lookupType: lookupType,
+                    requestURL: requestURL,
+                    userName: userName,
+                    password: password
+                })
+        );
 
         var xmlItemInquiry;
         var xmlInvoiceByPOStatus;

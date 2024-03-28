@@ -185,28 +185,32 @@ define([
                     description: 'VC | Tax Charges',
                     item: Current.Config.taxItem,
                     applied: Current.Config.applyTax ? 'T' : 'F',
-                    enabled: Current.Config.applyTax
+                    enabled: Current.Config.applyTax,
+                    autoproc: Current.Config.autoprocTaxVar
                 },
                 shipping: {
                     name: 'Shipping',
                     description: 'VC | Shipping Charges',
                     item: Current.Config.shipItem,
                     applied: Current.Config.applyShip ? 'T' : 'F',
-                    enabled: Current.Config.applyShip
+                    enabled: Current.Config.applyShip,
+                    autoproc: Current.Config.autoprocShipVar
                 },
                 other: {
                     name: 'Other Charges',
                     description: 'VC | Other Charges',
                     item: Current.Config.otherItem,
                     applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther
+                    enabled: Current.Config.applyOther,
+                    autoproc: Current.Config.autoprocOtherVar
                 },
                 miscCharges: {
                     name: 'Misc Charges',
                     description: 'VC | Misc Charges',
                     item: Current.Config.otherItem,
                     applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther
+                    enabled: Current.Config.applyOther,
+                    autoproc: Current.Config.autoprocOtherVar
                 }
             };
 
@@ -429,13 +433,83 @@ define([
                 vc2_util.log(logTitle, '>> lineData: ', lineData);
 
                 if (Current.IS_ACTIVE_EDIT) {
-                    if (lineData.nsrate != lineData.rate)
-                        lineData.variancerate =
-                            '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+                    var htmlError = '';
+                    var ERROR_MSG = {
+                        UNMATCHED_ITEMS: ['I', 'Item not found'],
+                        INSUFFICIENT_QUANTITY: ['Q', 'Insufficient quantity to bill'],
+                        Price: ['P', 'Mismatched Rates']
+                    };
 
-                    if (lineData.remainingqty < lineData.quantity)
-                        lineData.varianceqty =
-                            '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+                    var arrLineErrors = (function () {
+                        return (
+                            billLine.Errors && billLine.Errors.length ? billLine.Errors : []
+                        ).concat(
+                            billLine.Variance && billLine.Variance.length ? billLine.Variance : null
+                        );
+                    })();
+
+                    log.audit(logTitle, '** LINE ERRORS: ' + JSON.stringify(arrLineErrors));
+
+                    arrLineErrors.forEach(function (errorCode) {
+                        var errMsg = ERROR_MSG[errorCode];
+                        if (!errMsg) return true;
+                        htmlError += errMsg[1] + '. ';
+                        return true;
+                    });
+                    if (htmlError) {
+                        var css = [
+                            'text-decoration:none;',
+                            'color:red;',
+                            'background-color:#faf1f1;',
+                            'padding:0 2px;'
+                            // 'margin:2px 2px 0 0;'
+                        ].join('');
+
+                        lineData.lineerror =
+                            '<div style="font-weight:bold; color: red;font-size:1.2em;text-align:center;margin: auto;width:50%;"> ' +
+                            '<a href="javascript:void(0);" style="' +
+                            css +
+                            '" title="' +
+                            htmlError +
+                            '">&nbsp;!&nbsp;</a></div>';
+                    }
+
+                    //  ERROR v2
+                    // arrLineErrors.forEach(function (errorCode) {
+                    //     var errMsg = ERROR_MSG[errorCode];
+                    //     if (!errMsg) return true;
+                    //     var css = [
+                    //         'text-decoration:none;',
+                    //         'color:red;',
+                    //         // 'background-color:#f8e4e4;',
+                    //         // 'padding:0 5px;',
+                    //         // 'margin:2px 2px 0 0;'
+                    //     ].join('');
+                    //     // htmlError += '&nbsp;' + errMsg[0] + '&nbsp;'
+                    //     htmlError +=
+                    //         // '<span style="font-weight:bold; color: red;font-size:1em;">' +
+                    //         '<a href="#" ' +
+                    //         ('style="' + css + '" ') +
+                    //         ('title="' + errMsg[1] + '"') +
+                    //         ('>&nbsp;**' + errMsg[0] + '&nbsp;</a>');
+                    //     // '</span>';
+                    //     return true;
+                    // });
+                    // if (htmlError)
+                    //     lineData.lineerror =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> ' +
+                    //         htmlError +
+                    //         ' </span> ';
+                    //
+
+                    // ERROR v1:
+                    // if (lineData.nsrate != lineData.rate)
+                    //     lineData.variancerate =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+
+                    // if (lineData.remainingqty < lineData.quantity)
+                    //     lineData.varianceqty =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
                 }
 
                 /// SET THE LINE DATA /////////////
@@ -453,6 +527,7 @@ define([
             if (Current.IS_ACTIVE_EDIT) {
                 // REPORT Error
                 if (!vc2_util.isEmpty(BillData.Error)) {
+                    var arrErrorMsg = [];
                     for (var errorCode in BillData.Error) {
                         var errorMsg = BILL_CREATOR.Code[errorCode]
                             ? BILL_CREATOR.Code[errorCode].msg
@@ -464,12 +539,14 @@ define([
                                     ? BillData.Error[errorCode].join(', ')
                                     : BillData.Error[errorCode]);
 
-                        Current.ErrorMessage = errorMsg;
+                        arrErrorMsg.push(errorMsg);
                     }
+                    Current.ErrorMessage = arrErrorMsg.join('<br/>');
                     AllowToBill = false;
                 }
+
                 // report VARIANCE
-                else if (
+                if (
                     !vc2_util.isEmpty(BillData.VarianceList) &&
                     !vc2_util.inArray(BillData.BillFile.PROC_VARIANCE, ['T', 't', true])
                 ) {
@@ -504,11 +581,11 @@ define([
                                     value: BillData.MainCFG.allowedThreshold,
                                     type: ns_format.Type.CURRENCY
                                 }),
-                                ', variance: ' +
-                                    ns_format.format({
-                                        value: totalVariance,
-                                        type: ns_format.Type.CURRENCY
-                                    })
+                                // ', variance: ' +
+                                //     ns_format.format({
+                                //         value: totalVariance,
+                                //         type: ns_format.Type.CURRENCY
+                                //     })
                             ].join('')
                         );
                         AllowToBill = exceedThreshold ? false : true;
@@ -534,6 +611,7 @@ define([
             );
 
             BillData.Charges.forEach(function (chargeLine, i) {
+                vc2_util.log(logTitle, '// chargeLine: ', chargeLine);
                 var lineData = {
                     is_active: chargeLine.enabled ? 'T' : 'F',
                     applied: chargeLine.applied,
@@ -542,7 +620,11 @@ define([
                     itemname: Helper.getItemName(chargeLine.item),
                     description: chargeLine.description,
                     nsitem: chargeLine.item,
-                    amount: chargeLine.amount,
+                    autoprocess:
+                        chargeLine.amount && chargeLine.autoProc
+                            ? '<span style="color: red;font-size:1em;"> ** Auto Processed ** </span>'
+                            : '',
+                    amount: chargeLine.amount || chargeLine.chargeAmount,
                     amounttax: chargeLine.amount
                 };
 
@@ -771,7 +853,7 @@ define([
             var errorMessage = vc2_util.extractError(error);
 
             FormHelper.Form.addPageInitMessage({
-                title: 'Error ' + errorMessage,
+                title: 'Error Found ', // + errorMessage,
                 message: util.isString(error) ? error : JSON.stringify(error),
                 type: ns_msg.Type.ERROR
             });
@@ -1068,7 +1150,11 @@ define([
                 applyOther: mainConfig.isVarianceOnOther,
                 otherItem: mainConfig.defaultOtherItem,
                 allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
-                allowAdjustLine: mainConfig.allowAdjustLine
+                allowAdjustLine: mainConfig.allowAdjustLine,
+                autoprocPriceVar: mainConfig.autoprocPriceVar,
+                autoprocTaxVar: mainConfig.autoprocTaxVar,
+                autoprocShipVar: mainConfig.autoprocShipVar,
+                autoprocOtherVar: mainConfig.autoprocOtherVar
             };
         },
         loadVendorConfig: function (option) {
@@ -1328,7 +1414,7 @@ define([
                             '</textarea>',
                             '</div>'
                         ].join(' ');
-                    })(Current.BILLFILE_DATA.PROCESS_LOG),
+                    })(Current.BILLFILE_DATA.PROCESS_LOG)
                     // defaultValue: (function (logs) {
                     //     return logs.split(/\n/g).pop();
                     // })(Current.BILLFILE_DATA.PROCESS_LOG)
@@ -1553,31 +1639,31 @@ define([
                 CALC_TOTAL: {
                     id: 'custpage_calctotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Bill Amount',
+                    label: 'Calc. Bill Amount',
                     defaultValue: Current.TOTALS_DATA.AMOUNT || 0
                 },
                 CALC_LINETOTAL: {
                     id: 'custpage_linetotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Line Amount',
+                    label: 'Calc. Line Amount',
                     defaultValue: Current.TOTALS_DATA.LINE_AMOUNT || 0
                 },
                 CALC_TAXTOTAL: {
                     id: 'custpage_polinetaxtotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Tax',
+                    label: 'Calc. Tax',
                     defaultValue: Current.TOTALS_DATA.TAX_AMOUNT || 0
                 },
                 CALC_SHIPTOTAL: {
                     id: 'custpage_poshiptotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Shipping ',
+                    label: 'Calc. Shipping ',
                     defaultValue: Current.TOTALS_DATA.SHIPPING_AMT || 0
                 },
                 CALC_VARIANCETOTAL: {
                     id: 'custpage_variancetotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Variance Amount',
+                    label: 'Calc. Variance',
                     defaultValue: Current.TOTALS_DATA.VARIANCE_AMT || 0
                 }
             });
@@ -1593,6 +1679,12 @@ define([
                 label: 'Invoice Lines',
                 type: ns_ui.SublistType.LIST,
                 fields: {
+                    lineerror: {
+                        type: ns_ui.FieldType.TEXT,
+                        size: { w: 3, h: 100 },
+                        label: ' '
+                    },
+
                     // BILL FILE:item value
                     item: { type: ns_ui.FieldType.TEXT, label: 'Item' },
                     // BILL FILE: nsitem value
@@ -1668,12 +1760,12 @@ define([
                         type: ns_ui.FieldType.CURRENCY
                     },
 
-                    // variance indicator
-                    varianceqty: {
-                        type: ns_ui.FieldType.TEXT,
-                        size: { w: 3, h: 100 },
-                        label: ' '
-                    },
+                    // // variance indicator
+                    // varianceqty: {
+                    //     type: ns_ui.FieldType.TEXT,
+                    //     size: { w: 3, h: 100 },
+                    //     label: ' '
+                    // },
 
                     // BILLFILE: rate value
                     rate: {
@@ -1691,11 +1783,11 @@ define([
                     },
 
                     // variance indicator
-                    variancerate: {
-                        type: ns_ui.FieldType.TEXT,
-                        size: { w: 3, h: 100 },
-                        label: ' '
-                    },
+                    // variancerate: {
+                    //     type: ns_ui.FieldType.TEXT,
+                    //     size: { w: 3, h: 100 },
+                    //     label: ' '
+                    // },
 
                     // BILLFILE: quantity * rate
                     amount: {
@@ -1808,6 +1900,11 @@ define([
 
                             return arrOptions;
                         })(Current.PO_REC)
+                    },
+                    autoprocess: {
+                        label: ' ',
+                        type: ns_ui.FieldType.TEXT,
+                        displayType: ns_ui.FieldDisplayType.INLINE
                     },
                     amount: {
                         label: 'Amount',

@@ -29,23 +29,29 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
     var VendorCFG = vc2_constant.RECORD.VENDOR_CONFIG;
 
     var vendorConfigFields = [
-        VendorCFG.FIELD.ID, //0
-        VendorCFG.FIELD.SUBSIDIARY, //1
-        VendorCFG.FIELD.XML_VENDOR, //2
-        VendorCFG.FIELD.VENDOR, //3
-        VendorCFG.FIELD.WEBSERVICE_ENDPOINT, //4
-        VendorCFG.FIELD.START_DATE, //5
-        VendorCFG.FIELD.USERNAME, //6
-        VendorCFG.FIELD.PASSWORD, //7
-        VendorCFG.FIELD.CUSTOMER_NO, //8
-        VendorCFG.FIELD.PROCESS_DROPSHIPS, //9
-        VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS, //10
-        VendorCFG.FIELD.FULFILLMENT_PREFIX, //11
-        VendorCFG.FIELD.ACCESS_ENDPOINT, //12
-        VendorCFG.FIELD.API_KEY, //13
-        VendorCFG.FIELD.API_SECRET, //14
-        VendorCFG.FIELD.OATH_SCOPE, //15
-        VendorCFG.FIELD.USE_SHIPDATE //16
+        VendorCFG.FIELD.ID,
+        VendorCFG.FIELD.SUBSIDIARY,
+        VendorCFG.FIELD.XML_VENDOR,
+        VendorCFG.FIELD.VENDOR,
+        VendorCFG.FIELD.WEBSERVICE_ENDPOINT,
+        VendorCFG.FIELD.START_DATE,
+        VendorCFG.FIELD.USERNAME,
+        VendorCFG.FIELD.PASSWORD,
+        VendorCFG.FIELD.CUSTOMER_NO,
+        VendorCFG.FIELD.PROCESS_DROPSHIPS,
+        VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS,
+        VendorCFG.FIELD.FULFILLMENT_PREFIX,
+        VendorCFG.FIELD.ACCESS_ENDPOINT,
+        VendorCFG.FIELD.API_KEY,
+        VendorCFG.FIELD.API_SECRET,
+        VendorCFG.FIELD.OATH_SCOPE,
+        {
+            name: 'country',
+            join: VendorCFG.FIELD.SUBSIDIARY
+        },
+        VendorCFG.FIELD.USE_SHIPDATE,
+        VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
+        VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
     ];
 
     function _generateVendorConfig(result) {
@@ -53,35 +59,67 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
         // log.audit(logTitle, LogPrefix + '>> result: ' + JSON.stringify(result));
 
         return {
-            id: result.getValue({ name: vendorConfigFields[0] }),
-            subsidiary: result.getValue({ name: vendorConfigFields[1] }),
-            xmlVendor: result.getValue({ name: vendorConfigFields[2] }),
-            xmlVendorText: result.getText({ name: vendorConfigFields[2] }),
-            vendor: result.getValue({ name: vendorConfigFields[3] }),
-            endPoint: result.getValue({ name: vendorConfigFields[4] }),
-            startDate: result.getValue({ name: vendorConfigFields[5] }),
-            user: result.getValue({ name: vendorConfigFields[6] }),
-            password: result.getValue({ name: vendorConfigFields[7] }),
-            customerNo: result.getValue({ name: vendorConfigFields[8] }),
-            processDropships: result.getValue({ name: vendorConfigFields[9] }),
-            processSpecialOrders: result.getValue({
-                name: vendorConfigFields[10]
-            }),
-            fulfillmentPrefix: result.getValue({
-                name: vendorConfigFields[11]
-            }),
-            accessEndPoint: result.getValue({ name: vendorConfigFields[12] }),
-            apiKey: result.getValue({ name: vendorConfigFields[13] }),
-            apiSecret: result.getValue({ name: vendorConfigFields[14] }),
-            oauthScope: result.getValue({ name: vendorConfigFields[15] }),
-            useShipDate: result.getValue({
-                name: VendorCFG.FIELD.USE_SHIPDATE
-            }),
+            id: result.getValue({ name: VendorCFG.FIELD.ID }),
+            subsidiary: result.getValue({ name: VendorCFG.FIELD.SUBSIDIARY }),
+            xmlVendor: result.getValue({ name: VendorCFG.FIELD.XML_VENDOR }),
+            xmlVendorText: result.getText({ name: VendorCFG.FIELD.XML_VENDOR }),
+            vendor: result.getValue({ name: VendorCFG.FIELD.VENDOR }),
+            endPoint: result.getValue({ name: VendorCFG.FIELD.WEBSERVICE_ENDPOINT }),
+            startDate: result.getValue({ name: VendorCFG.FIELD.START_DATE }),
+            user: result.getValue({ name: VendorCFG.FIELD.USERNAME }),
+            password: result.getValue({ name: VendorCFG.FIELD.PASSWORD }),
+            customerNo: result.getValue({ name: VendorCFG.FIELD.CUSTOMER_NO }),
+            processDropships: result.getValue({ name: VendorCFG.FIELD.PROCESS_DROPSHIPS }),
+            processSpecialOrders: result.getValue({ name: VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS }),
+            fulfillmentPrefix: result.getValue({ name: VendorCFG.FIELD.FULFILLMENT_PREFIX }),
+            accessEndPoint: result.getValue({ name: VendorCFG.FIELD.ACCESS_ENDPOINT }),
+            apiKey: result.getValue({ name: VendorCFG.FIELD.API_KEY }),
+            apiSecret: result.getValue({ name: VendorCFG.FIELD.API_SECRET }),
+            oauthScope: result.getValue({ name: VendorCFG.FIELD.OATH_SCOPE }),
+            useShipDate: result.getValue({ name: VendorCFG.FIELD.USE_SHIPDATE }),
             country: result.getValue({
                 name: 'country',
-                join: 'custrecord_ctc_vc_vendor_subsidiary'
+                join: VendorCFG.FIELD.SUBSIDIARY
+            }),
+            itemColumnIdToMatch: result.getValue({
+                name: VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH
+            }),
+            itemFieldIdToMatch: result.getValue({
+                name: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
             })
         };
+    }
+
+    function getVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_VENDOR_CONFIG_0326' });
+        if (vc2_util.isEmpty(config)) config = getVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
+    }
+    function getMultipleConfigurationsCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_MULTIPLE_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getMultipleConfigurations(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({
+                key: 'VC_MULTIPLE_VENDOR_CONFIG',
+                cacheTTL: 14400,
+                value: config
+            });
+        }
+        return config;
+    }
+    function getDebugVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getDebugVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
     }
 
     function getVendorConfiguration(options) {
@@ -116,23 +154,6 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                     values: subsidiary
                 })
             );
-
-        // log.audit(
-        //     logTitle,
-        //     '>> search option: ' +
-        //         JSON.stringify({
-        //             type: VendorCFG.ID,
-        //             filters: filter,
-        //             columns: vendorConfigFields
-        //         })
-        // );
-
-        vendorConfigFields.push(
-            ns_search.createColumn({
-                name: 'country',
-                join: 'custrecord_ctc_vc_vendor_subsidiary'
-            })
-        );
 
         var vendorSearch = ns_search.create({
             type: VendorCFG.ID,
@@ -309,8 +330,8 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
     }
 
     return {
-        getVendorConfiguration: getVendorConfiguration,
-        getMultipleConfigurations: getMultipleConfigurations,
-        getDebugVendorConfiguration: getDebugVendorConfiguration
+        getVendorConfiguration: getVendorConfigurationCache,
+        getMultipleConfigurations: getMultipleConfigurationsCache,
+        getDebugVendorConfiguration: getDebugVendorConfigurationCache
     };
 });

@@ -24,12 +24,18 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
             hostKey: config.host_key
         });
 
-        var downloadedFile = connection.download({ filename: input });
+        var downloadedFile = connection.download({
+            filename: input
+        });
+
         var xmlStr = downloadedFile.getContents();
 
-        var xmlObj = papa.parse(xmlStr, { delimiter: '^' }).data;
+        var xmlObj = papa.parse(xmlStr, {
+            delimiter: '^'
+        }).data;
 
         var returnArr = [];
+
         var returnObj = {};
 
         returnObj.xmlStr = xmlStr;

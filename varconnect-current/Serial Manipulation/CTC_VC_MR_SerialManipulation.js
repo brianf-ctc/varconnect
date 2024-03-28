@@ -160,7 +160,9 @@ define([
                             sublistId: 'item',
                             fieldId: 'podoc',
                             line: line
-                        })
+                        }),
+                        serialArr: null,
+                        updateSerialArr: null
                     };
 
                     if (lineData.serialStr) lineData.serialArr = Helper.split(lineData.serialStr);

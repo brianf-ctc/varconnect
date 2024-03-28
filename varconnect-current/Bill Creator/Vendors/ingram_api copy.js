@@ -25,6 +25,11 @@ define([
         LogPrefix,
         CURRENT = {};
 
+    var PO_LOAD = {
+        '60-DRQJ0-12':
+            '{"serviceresponse":{"responsepreamble":{"responsestatus":"SUCCESS","statuscode":"200","responsemessage":"Invoice Found"},"invoicedetailresponse":{"invoicenumber":"DRQJ0-12","customerordernumber":"126074","totaltaxamount":"0","totalamount":"87329.58","shiptosuffix":null,"billtosuffix":"000","billto":{"name1":"AQUEDUCT TECHNOLOGIES INC","addressline1":"150 ROYALL ST","city":"CANTON","state":"MA","postalcode":"020211031","countrycode":"US"},"paymentterms":"600","orderdate":"2023-12-01","carrier":"GR","carrierdescription":"GRVL","discountamount":"0.00","enduserponumber":"10-CT254","freightforwardercode":null,"creditmemoreasoncode":null,"holdreason":null,"shipcomplete":null,"shipdate":"2023-12-26","companycurrency":"USD","currencycode":"USD","currencyrate":"1.000000","globalorderid":"60-DRQJ0-12","originalshipcode":null,"orderstatus":"I","shiptoaddress":{"attention":"EUGENE WOODS","name1":"INGRAM MICRO EXPRESS WAREHOUSING","addressline1":"12510 MICRO DR","addressline2":"PO# 10-CT254","city":"EASTVALE","state":"CA","postalcode":"917521024","countrycode":"US"},"totalsales":"87329.58","weight":"0.00","lines":[{"linenumber":"6","globallinenumber":"1","partnumber":"9BA946","vendorpartnumber":"ASF-CORE-TE-USERS","partdescription":"CISCO THOUSANDEYES             SVCS || IMPLEMENTATION SVC FOR USERS","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"1","backorderquantity":"1","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"5184.28","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || VIA:  NONE || VIA:  CUSTOMER-Default-Standard"}]},{"linenumber":"6","globallinenumber":"6","vendorpartnumber":null,"partdescription":"TRK#: Not Available || TRK#: NOTAVAILABLE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"0","backorderquantity":"0","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"0","unitofmeasure":null,"productextendedspecs":[{"attributename":"commenttext","attributevalue":"VIA:  FDEN-PARCEL-GROUND || TRK#: 640607195986 || TRK#: 640607196000"}]},{"linenumber":"7","globallinenumber":"2","partnumber":"9BA944","vendorpartnumber":"ASF-CORE-TE-UNITS","partdescription":"CISCO THOUSANDEYES             SVCS || IMPLEMENTATION SVC FOR UNITS","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"1","backorderquantity":"1","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"5184.28","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || VIA:  NONE"}]},{"linenumber":"8","globallinenumber":"8","partnumber":"8WD784","vendorpartnumber":"SVS-CDNA-T1-A3Y","partdescription":"3YR SOLUTION SUP FOR SW DNA    SVCS || ADVANTAGE CLOUD LICS T1","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"4","backorderquantity":"4","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"609.33","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:2023-10-29 2026-10-28 036MOS || VIA:  NONE"}]},{"linenumber":"9","globallinenumber":"9","partnumber":"8NC538","vendorpartnumber":"DNA-C-T1-A-3Y","partdescription":"3YR DNA ADVANTAGE CLD LICS UP  LICS || TO 100M AGGR 200M","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"4","backorderquantity":"4","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"0","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:2023-10-29 2026-10-28 036MOS || VIA:  NONE"}]},{"linenumber":"15","globallinenumber":"37","partnumber":"JF3704","vendorpartnumber":"CON-L1NOS-C8304T2X","partdescription":"NW RNW CXLVL1 8X5XNBDOS CISCO  DOWN || CATALYST C8300-1N1S-4T2X ROUTER","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"12","backorderquantity":"12","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"5215","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:                      036MOS || VIA:  NONE"}]},{"linenumber":"16","globallinenumber":"38","partnumber":"8NA728","vendorpartnumber":"C8300-1N1S-4T2X","partdescription":"CISCO CATALYST C8300-1N1S-4T2X PERP || ROUTER","shipfrombranch":"89","shippedquantity":"6","orderedquantity":"12","backorderquantity":"6","extendedprice":"37260.90","specialbidnumber":null,"ordersuffix":"12","unitprice":"6210.15","unitofmeasure":"EA","serialnumberdetails":[{"serialnumber":"FLM275110XC"},{"serialnumber":"FLM275110XG"},{"serialnumber":"FLM275110X7"},{"serialnumber":"FLM275110X9"}],"productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-003666230 DELAWARE LIFE INSURAN || MC#C || VIA:  CUSTOMER || RE 02 89-AKM20 016      6 1227 3122"}]},{"linenumber":"17","globallinenumber":"52","partnumber":"HW7113","vendorpartnumber":"CON-L14OS-C8304T2X","partdescription":"NW RNW CX LVL1 24X7X4OS CISCO  DOWN || CATALYST C8300-1N1S-4T2X ROUTER","shipfrombranch":"89","shippedquantity":"6","orderedquantity":"6","backorderquantity":"0","extendedprice":"50068.68","specialbidnumber":null,"ordersuffix":"12","unitprice":"8344.78","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:                      036MOS || VIA:  NONE"}]},{"linenumber":"17","globallinenumber":"17","vendorpartnumber":null,"partdescription":"RE 02 89-AKM20 017      6 1227 3122","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"0","backorderquantity":"0","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"0","unitofmeasure":null},{"linenumber":"18","globallinenumber":"53","partnumber":"8NA728","vendorpartnumber":"C8300-1N1S-4T2X","partdescription":"CISCO CATALYST C8300-1N1S-4T2X PERP || ROUTER","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"6","backorderquantity":"6","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"6210.15","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || VIA:  CUSTOMER || VIA:  FDEN-PARCEL-GROUND"}]},{"linenumber":"18","globallinenumber":"18","vendorpartnumber":null,"partdescription":"TRK#: 640607195986 || TRK#: 640607195975","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"0","backorderquantity":"0","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"0","unitofmeasure":null,"productextendedspecs":[{"attributename":"commenttext","attributevalue":"TRK#: 640607195997 || TRK#: 640607196000 || TRK#: 640607195964 || TRK#: 640607196011"}]},{"linenumber":"19","globallinenumber":"54","partnumber":"4T3915","vendorpartnumber":"GLC-TE","partdescription":"1000BASE-T SFP TRANSCEIVER MOD PERP || FOR CATEGORY 5 COPPER WIRE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"6","backorderquantity":"6","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"189.39","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || VIA:  CUSTOMER"}]},{"linenumber":"20","globallinenumber":"55","partnumber":"Q45379","vendorpartnumber":"SFP-10G-SR","partdescription":"10GBASESR SFP+ MODULE          PERP || EU#-004046111 DELAWARE LIFE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"4","backorderquantity":"4","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"378.36","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"MC#C || VIA:  CUSTOMER"}]},{"linenumber":"21","globallinenumber":"65","partnumber":"HW7106","vendorpartnumber":"CON-L14OS-C8500L8X","partdescription":"NW RNW CX LVL1 24X7X4OS CISCO  DOWN || CATALYST 8500 SERIES 4X SFP+ AND 8","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"2","backorderquantity":"2","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"14511.82","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:                      036MOS"}]},{"linenumber":"22","globallinenumber":"66","partnumber":"8WG949","vendorpartnumber":"C8500L-8S4X","partdescription":"CISCO CATALYST 8500 SERIES     PERP || 12PORT SFP+ 8X1GE 4X10GE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"2","backorderquantity":"2","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"13282.62","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || VIA:  CUSTOMER"}]},{"linenumber":"23","globallinenumber":"67","partnumber":"Q45379","vendorpartnumber":"SFP-10G-SR","partdescription":"10GBASESR SFP+ MODULE          PERP || EU#-004046111 DELAWARE LIFE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"8","backorderquantity":"8","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"378.36","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"MC#C || VIA:  CUSTOMER"}]},{"linenumber":"24","globallinenumber":"77","partnumber":"HW7115","vendorpartnumber":"CON-L14OS-C85012X5","partdescription":"NW RNW CX LVL1 24X7X4OS CISCO  DOWN || CATALYST 8500-12X EDGE PLATFORM","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"2","backorderquantity":"2","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"44098.19","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"EU#-004046111 DELAWARE LIFE || MC#C || TERMS:                      036MOS"}]},{"linenumber":"25","globallinenumber":"78","partnumber":"8NA975","vendorpartnumber":"C8500-12X","partdescription":"C8500-12X10GE SYST             PERP || EU#-004046111 DELAWARE LIFE","shipfrombranch":"89","shippedquantity":"0","orderedquantity":"2","backorderquantity":"2","extendedprice":"0.00","specialbidnumber":null,"ordersuffix":"12","unitprice":"38957.84","unitofmeasure":"EA","productextendedspecs":[{"attributename":"commenttext","attributevalue":"MC#C || VIA:  CUSTOMER"}]}],"extendedspecs":[{"attributename":"commenttext","attributevalue":"////ORDER COMMENTS"},{"attributename":"commenttext","attributevalue":"//DN-PROVISIONING"},{"attributename":"commenttext","attributevalue":"CONTACT: AQUEDUCTCSP@AQUEDUCTTECH.C"},{"attributename":"commenttext","attributevalue":"OM"},{"attributename":"commenttext","attributevalue":"SCOTT.WISHART@GROUP1001.COM"}]}}}'
+    };
+
     function processXml(recordId, config) {
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
@@ -39,7 +44,7 @@ define([
         //     columns: ['tranid', 'subsidiary']
         // });
 
-        var token = getTokenCache({
+        var token = generateToken({
             recordId: recordId,
             config: config,
             tranId: config.poNum
@@ -356,40 +361,62 @@ define([
                 }
                 log.audit(logTitle, '// invoiceLink: ' + invoiceLink);
 
-                var invoiceDetailsReq = vc2_util.sendRequest({
-                    header: [LogTitle, 'Invoice Details'].join(' '),
-                    recordId: recordId,
-                    query: {
-                        url:
-                            config.url +
-                            invoiceLink +
-                            ('?customerNumber=' + config.partner_id) +
-                            ('&isoCountryCode=' + config.country),
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: '*/*',
-                            Authorization: 'Bearer ' + token,
-                            'IM-CustomerNumber': config.partner_id,
-                            // customerNumber: config.partner_id,
-                            'IM-CountryCode': config.country,
-                            'IM-CorrelationID': config.poNum,
-                            'IM-ApplicationID': ns_runtime.accountId
-                        }
+                var loadResponse = false;
+                for (var invNum in PO_LOAD) {
+                    var invNumRgx = new RegExp(invNum, 'i');
+
+                    if (invoiceLink.match(invNumRgx)) {
+                        loadResponse = vc2_util.safeParse(PO_LOAD[invNum]) || PO_LOAD[invNum];
                     }
-                });
-                vc2_util.handleJSONResponse(invoiceDetailsReq);
-                vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
+                    vc2_util.log(logTitle, '// is matching??', [
+                        invNum,
+                        invoiceLink,
+                        invNumRgx,
+                        invoiceLink.match(invNumRgx),
+                        !!loadResponse
+                    ]);
+                }
 
-                var invoiceDetailsResp =
-                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+                var invoiceDetailsReq, invoiceDetailsResp;
 
-                if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
-                    throw (
-                        invoiceDetailsReq.errorMsg +
-                        (invoiceDetailsReq.details
-                            ? '\n' + JSON.stringify(invoiceDetailsReq.details)
-                            : '')
-                    );
+                if (!loadResponse) {
+                    invoiceDetailsReq = vc2_util.sendRequest({
+                        header: [LogTitle, 'Invoice Details'].join(' '),
+                        recordId: recordId,
+                        query: {
+                            url:
+                                config.url +
+                                invoiceLink +
+                                ('?customerNumber=' + config.partner_id) +
+                                ('&isoCountryCode=' + config.country),
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: '*/*',
+                                Authorization: 'Bearer ' + token,
+                                'IM-CustomerNumber': config.partner_id,
+                                // customerNumber: config.partner_id,
+                                'IM-CountryCode': config.country,
+                                'IM-CorrelationID': config.poNum,
+                                'IM-ApplicationID': ns_runtime.accountId
+                            }
+                        }
+                    });
+                    vc2_util.handleJSONResponse(invoiceDetailsReq);
+                    vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
+
+                    var invoiceDetailsResp =
+                        invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+
+                    if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
+                        throw (
+                            invoiceDetailsReq.errorMsg +
+                            (invoiceDetailsReq.details
+                                ? '\n' + JSON.stringify(invoiceDetailsReq.details)
+                                : '')
+                        );
+                    }
+                } else {
+                    invoiceDetailsResp = loadResponse;
                 }
 
                 if (
@@ -440,7 +467,7 @@ define([
                     var lineData = {
                         ITEMNO: lineInfo.vendorpartnumber,
                         PRICE: vc2_util.parseFloat(lineInfo.unitprice),
-                        QUANTITY: vc2_util.forceInt(lineInfo.shippedquantity),
+                        QUANTITY: vc2_util.forceInt(lineInfo.orderedquantity),
                         DESCRIPTION: lineInfo.partdescription
                     };
 
@@ -554,21 +581,6 @@ define([
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;
-    }
-
-    function getTokenCache(option) {
-        var token = vc2_util.getNSCache({ key: 'VC_BC_INGRAM_TOKEN' });
-        if (vc2_util.isEmpty(token)) token = generateToken(option);
-
-        if (!vc2_util.isEmpty(token)) {
-            vc2_util.setNSCache({
-                key: 'VC_BC_INGRAM_TOKEN',
-                cacheTTL: 14400,
-                value: token
-            });
-            CURRENT.accessToken = token;
-        }
-        return token;
     }
 
     // // Add the return statement that identifies the entry point function.

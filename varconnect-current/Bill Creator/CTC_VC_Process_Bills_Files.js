@@ -81,8 +81,8 @@ define([
                 filters: [
                     ['isinactive', 'is', 'F'],
                     'AND',
-                    [BILLFILE_FLD.BILL_LINK, 'anyof', '@NONE@'],
-                    'AND',
+                    // [BILLFILE_FLD.BILL_LINK, 'anyof', '@NONE@'],
+                    // 'AND',
                     [BILLFILE_FLD.PO_LINK, 'noneof', '@NONE@'],
                     'AND',
                     [BILLFILE_FLD.PO_LINK + '.mainline', 'is', 'T'],
@@ -146,8 +146,8 @@ define([
                     }
                 });
 
-                searchOption.filters.push('AND');
-                searchOption.filters.push(['internalid', 'anyof', ScriptParam.billFileID]);
+                // searchOption.filters.push('AND');
+                searchOption.filters = ['internalid', 'anyof', ScriptParam.billFileID];
             }
             log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
 
@@ -181,13 +181,23 @@ define([
                     ReturnObj = { msg: '' };
 
                 vc2_util.log(logTitle, '/// === START =====================================///');
-
                 vc2_util.log(logTitle, '/// CURRENT VALUES: ', currentValues);
 
                 try {
                     vc_billprocess.resetValues();
+
+                    var isFullyBilled = vc2_util.inArray(
+                        currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].value,
+                        ['fullyBilled', 'closed']
+                    );
+
+                    if (isFullyBilled) {
+                        return util.extend(ReturnObj, BILL_CREATOR.Code.FULLY_BILLED);
+                    }
+
                     vc_billprocess.loadBillFile({ id: currentValues.id });
                     var BillFileData = vc_billprocess.FlexData.BillFile;
+                    vc2_util.log(logTitle, '... bill file data: ', BillFileData);
 
                     if (vc_billprocess.FlexData.HasErrors) {
                         return util.extend(
@@ -196,7 +206,6 @@ define([
                         );
                     }
 
-                    vc2_util.log(logTitle, '... bill file data: ', BillFileData);
                     util.extend(CurrentData, {
                         PO_ID: currentValues.values[BILLFILE_FLD.PO_LINK].value,
                         entity: currentValues.values['entity.' + BILLFILE_FLD.PO_LINK].value,

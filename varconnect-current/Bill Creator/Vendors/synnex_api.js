@@ -206,20 +206,12 @@ define(function (require) {
             .replace(/\\n|\n/gm, '');
         return JSON.parse(jsonText);
     }
-    function _getHeader() {
-        var headers = {
-            Accept: '*/*',
-            'Content-Type': 'application/xml'
-        };
-        return headers;
-    }
     function _getInvoiceDetails(option) {
         var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
             returnValue;
 
         var config = option.config,
-            recordId = option.recordId,
-            invoiceDetResp;
+            recordId = option.recordId;
 
         vc2_util.log(logTitle, '// params: ', option);
 
@@ -229,6 +221,7 @@ define(function (require) {
                 header: [LogTitle, 'Invoice Details'].join(' '),
                 method: 'post',
                 recordId: recordId,
+                isXML: true,
                 query: {
                     url: config.url,
                     headers: {
@@ -240,117 +233,97 @@ define(function (require) {
                         '<SynnexB2B version="2.2">' +
                         '<Credential>' +
                         ('<UserID>' + config.user_id + '</UserID>') +
-                        ('<Password>XX' + config.user_pass + '</Password>') +
+                        ('<Password>' + config.user_pass + '</Password>') +
                         '</Credential>' +
                         '<InvoiceRequest>' +
                         ('<CustomerNumber>' + config.partner_id + '</CustomerNumber>') +
                         ('<PONumber>' + config.poNum + '</PONumber>') +
-                        '</SynnexB2B>' +
-                        '</InvoiceRequest>'
+                        '</InvoiceRequest>' +
+                        '</SynnexB2B>'
                 }
             });
 
-            vc2_util.handleJSONResponse(invoiceDetReq);
-            invoiceDetResp = invoiceDetReq.PARSED_RESPONSE || invoiceDetReq.RESPONSE || {};
+            vc2_util.handleXMLResponse(invoiceDetReq);
 
+            if (invoiceDetReq.isError) throw invoiceDetReq.errorMsg;
+            var invoiceDetResp = invoiceDetReq.RESPONSE.body;
+            if (!invoiceDetResp) throw 'Unable to fetch server response';
+            returnValue = invoiceDetResp;
         } catch (error) {
             vc2_util.logError(logTitle, error);
-        } finally {
-            returnValue = {
-                invoiceLinks: arrInvoiceLinks || [],
-                orderNumbers: arrOrderNums || [],
-                miscCharges: orderMiscCharges
-            };
         }
 
-        // var url = config.url;
-        // var user_id = config.user_id;
-        // var user_pass = config.user_pass;
-        // var partner_id = config.partner_id;
-
-        // var headers = _getHeader();
-        // var body = '<?xml version="1.0" encoding="UTF-8"?>';
-        // body += '<SynnexB2B version="2.2">';
-        // body += '<Credential>';
-        // body += '<UserID>' + user_id + '</UserID>';
-        // body += '<Password>' + user_pass + '</Password>';
-        // body += '</Credential>';
-        // body += '<InvoiceRequest>';
-        // body += '<CustomerNumber>' + partner_id + '</CustomerNumber>';
-        // body += '<PONumber>' + tranid + '</PONumber>';
-        // body += '</InvoiceRequest>';
-        // body += '</SynnexB2B>';
-        // var objResponse = https.post({
-        //     url: url,
-        //     headers: headers,
-        //     body: body
-        // });
-        // log.debug('_getInvoiceDetails | response', objResponse);
-        // return objResponse.body;
+        return returnValue;
     }
 
     function _extractInvoicesFromResponse(response) {
-        log.debug('_extractInvoicesFromResponse | response', response);
+        var logTitle = [LogTitle, 'extractInvoice'].join('::'),
+            returnValue;
+
         var returnArr = [];
-
-        var xmlObj = xml.Parser.fromString(response);
-        var xmlInvoice = xml.XPath.select({
-            node: xmlObj,
-            xpath: '//SynnexB2B/InvoiceResponse/Invoice'
-        });
-
-        var xmlInvoiceResponse = xml.XPath.select({
-            node: xmlObj,
-            xpath: '//SynnexB2B/InvoiceResponse'
-        });
-
-        var stPoNumber = '';
-        if (Array.isArray(xmlInvoiceResponse) && typeof xmlInvoiceResponse[0] !== 'undefined') {
-            var objInvoiceResponse = _xml2json(xmlInvoiceResponse[0]);
-            stPoNumber = objInvoiceResponse['InvoiceResponse'].CustomerPONumber;
-        }
-
-        for (var i = 0; i < xmlInvoice.length; i++) {
-            var jsonObj = _xml2json(xmlInvoice[i], '');
-            var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
-
-            var myObj = {
-                po: invoiceData.CustomerPONumber || stPoNumber,
-                date: invoiceData.InvoiceDate,
-                invoice: invoiceData.InvoiceNumber,
-                charges: {
-                    tax: parseFloat(invoiceData.Summary.SalesTax),
-                    other:
-                        parseFloat(invoiceData.Summary.MinOrderFee) +
-                        parseFloat(invoiceData.Summary.ProcessingFee) +
-                        parseFloat(invoiceData.Summary.BoxCharge),
-                    shipping: parseFloat(invoiceData.Summary.Freight)
-                },
-                total: parseFloat(invoiceData.Summary.TotalInvoiceAmount),
-                lines: []
-            };
-
-            if (!util.isArray(invoiceData.Items.Item)) {
-                invoiceData.Items.Item = [invoiceData.Items.Item];
-            }
-            for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
-                var itemData = invoiceData.Items.Item[ii];
-
-                myObj.lines.push({
-                    processed: false,
-                    ITEMNO: itemData.ManuafacturerPartNumber,
-                    PRICE: parseFloat(itemData.UnitPrice),
-                    QUANTITY: parseFloat(itemData.ShipQuantity),
-                    DESCRIPTION: itemData.ProductDescription
-                });
-            }
-
-            returnArr.push({
-                ordObj: myObj
+        try {
+            var xmlObj = xml.Parser.fromString(response);
+            var xmlInvoice = xml.XPath.select({
+                node: xmlObj,
+                xpath: '//SynnexB2B/InvoiceResponse/Invoice'
             });
+
+            var xmlInvoiceResponse = xml.XPath.select({
+                node: xmlObj,
+                xpath: '//SynnexB2B/InvoiceResponse'
+            });
+
+            var stPoNumber = '';
+            if (util.isArray(xmlInvoiceResponse) && !vc2_util.isEmpty(xmlInvoiceResponse[0])) {
+                var objInvoiceResponse = _xml2json(xmlInvoiceResponse[0]);
+                stPoNumber = objInvoiceResponse['InvoiceResponse'].CustomerPONumber;
+            }
+
+            for (var i = 0; i < xmlInvoice.length; i++) {
+                var jsonObj = _xml2json(xmlInvoice[i], '');
+                var invoiceData = jsonObj && jsonObj.Invoice ? jsonObj.Invoice : {};
+
+                var myObj = {
+                    po: invoiceData.CustomerPONumber || stPoNumber,
+                    date: invoiceData.InvoiceDate,
+                    invoice: invoiceData.InvoiceNumber,
+                    charges: {
+                        tax: vc2_util.parseFloat(invoiceData.Summary.SalesTax),
+                        other:
+                            vc2_util.parseFloat(invoiceData.Summary.MinOrderFee) +
+                            vc2_util.parseFloat(invoiceData.Summary.ProcessingFee) +
+                            vc2_util.parseFloat(invoiceData.Summary.RecyclingFee) +
+                            vc2_util.parseFloat(invoiceData.Summary.BoxCharge),
+                        shipping: vc2_util.parseFloat(invoiceData.Summary.Freight)
+                    },
+                    total: vc2_util.parseFloat(invoiceData.Summary.TotalInvoiceAmount),
+                    lines: []
+                };
+
+                if (!util.isArray(invoiceData.Items.Item)) {
+                    invoiceData.Items.Item = [invoiceData.Items.Item];
+                }
+                for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
+                    var itemData = invoiceData.Items.Item[ii];
+
+                    myObj.lines.push({
+                        processed: false,
+                        ITEMNO: itemData.ManuafacturerPartNumber,
+                        PRICE: vc2_util.parseFloat(itemData.UnitPrice),
+                        QUANTITY: vc2_util.parseFloat(itemData.ShipQuantity),
+                        DESCRIPTION: itemData.ProductDescription
+                    });
+                }
+
+                returnArr.push({ ordObj: myObj, xmlStr: response });
+            }
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
         }
+
         return returnArr;
     }
+
     function processXml(recordId, config) {
         var logTitle = [LogTitle, 'processXml'].join('::'),
             returnValue;
@@ -358,15 +331,7 @@ define(function (require) {
         vc2_util.log(logTitle, '// params: ', [recordId, config]);
         var respInvoiceDetails = _getInvoiceDetails({ config: config, recordId: recordId });
 
-        // var objPoRec = vc2_util.flatLookup({
-        //     type: search.Type.PURCHASE_ORDER,
-        //     id: recordId,
-        //     columns: ['tranid']
-        // });
-        // var tranid = objPoRec.tranid;
-
-        // var response = _getInvoiceDetails(recordId, tranid, config);
-        // return _extractInvoicesFromResponse(response);
+        return _extractInvoicesFromResponse(respInvoiceDetails);
     }
 
     return {

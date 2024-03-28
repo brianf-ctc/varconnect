@@ -24,7 +24,8 @@ define([
     '../Vendors/synnex_sftp',
     '../Vendors/jenne_api',
     '../Vendors/scansource_api',
-    '../Vendors/synnex_api'
+    '../Vendors/synnex_api',
+    '../Vendors/carahsoft_api'
 ], function (
     vc2_util,
     vc2_constant,
@@ -37,7 +38,8 @@ define([
     SYNNEX,
     JENNE,
     SCANSOURCE,
-    SYNNEX_API
+    SYNNEX_API,
+    CARAHSOFT_API
 ) {
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
@@ -283,6 +285,28 @@ define([
         return returnValue;
     }
 
+    function carahsoft_api(input, config) {
+        var returnValue;
+        try {
+            returnValue = CARAHSOFT_API.getInvoice(input, config);
+            if (returnValue)
+                vc2_util.vcLog({
+                    title: 'API Bill File | CARAHSOFT API',
+                    message: 'Downloaded file - ' + input,
+                    details: returnValue,
+                    status: LOG_STATUS.SUCCESS
+                });
+        } catch (error) {
+            vc2_util.vcLog({
+                title: 'API Error',
+                error: error,
+                status: LOG_STATUS.API_ERROR,
+                details: config
+            });
+        }
+        return returnValue;
+    }
+
     // Add the return statement that identifies the entry point function.
     return {
         dh_sftp: dh_sftp,
@@ -294,6 +318,7 @@ define([
         synnex_sftp: synnex_sftp,
         jenne_api: jenne_api,
         scansource_api: scansource_api,
-        synnex_api: synnex_api
+        synnex_api: synnex_api,
+        carahsoft_api: carahsoft_api
     };
 });

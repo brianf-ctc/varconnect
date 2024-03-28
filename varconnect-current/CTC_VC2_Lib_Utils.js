@@ -18,10 +18,14 @@ define(function (require) {
         ns_format = require('N/format'),
         ns_record = require('N/record'),
         ns_search = require('N/search'),
+        ns_cache = require('N/cache'),
+        ns_config = require('N/config'),
+        // momentLib = require('./Bill Creator/Libraries/moment'),
         ns_xml = null,
         ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
 
+    var ns_xml, ns_url;
     var LogTitle = 'VC2_UTILS',
         LogPrefix;
 
@@ -53,10 +57,26 @@ define(function (require) {
             // Obtain `undefined` value that's guaranteed to not have been re-assigned
             var undefined = void 0;
             return value === undefined;
+        },
+        paramCheck: function (option) {
+            if (!option.params || util.isObject(option.params)) return false;
+            if (!option.reqd) return true; // no required fields
+
+            if (!util.isArray(option.reqd)) option.reqd = [option.reqd];
+            var hasMissing = false;
+
+            option.reqd.forEach(function (field) {
+                if (util.isArray(field)) {
+                } else {
+                    if (!option.params[field]) {
+                        hasMissing = true;
+                        return false;
+                    }
+                }
+            });
         }
     });
 
-    // CACHE
     util.extend(vc2_util, {
         CACHE: {},
         getCache: function (cacheKey) {
@@ -67,7 +87,89 @@ define(function (require) {
         }
     });
 
-    // UTILS
+    ns_cache = require('N/cache');
+    // CACHE
+    util.extend(vc2_util, {
+        NSCACHE_NAME: vc2_constant.CACHE_NAME,
+        NSCACHE_KEY: 'VC_20240101',
+        NSCACHE_TTL: 86400, // 1 whole day
+        getNSCache: function (option) {
+            var returnValue;
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+
+                returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
+                if (option.isJSON && returnValue) returnValue = vc2_util.safeParse(returnValue);
+
+                vc2_util.log('## NS CACHE ##', '// CACHE fetch: ', [cacheName, cacheKey, cacheTTL]);
+            } catch (error) {
+                vc2_util.logError('getNSCache', error);
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        setNSCache: function (option) {
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheValue = option.value || option.cacheValue;
+                if (vc2_util.isEmpty(cacheValue)) throw 'Missing cache value!';
+                if (!util.isString(cacheValue)) cacheValue = JSON.stringify(cacheValue);
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+                cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
+
+                // vc2_util.log('## NS CACHE ##', '// CACHE stored: ', [
+                //     cacheName,
+                //     cacheKey,
+                //     cacheTTL
+                // ]);
+            } catch (error) {
+                vc2_util.logError('setNSCache', error);
+            }
+        },
+        removeCache: function (option) {
+            try {
+                var cacheName = vc2_constant.CACHE_NAME,
+                    cacheTTL = option.cacheTTL || vc2_util.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || vc2_util.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = ns_cache.getCache({
+                    name: cacheName,
+                    scope: ns_cache.Scope.PROTECTED
+                });
+                cacheObj.remove({ key: cacheKey });
+
+                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
+                    cacheName,
+                    cacheKey,
+                    cacheTTL
+                ]);
+            } catch (error) {
+                vc2_util.logError('removeNSCache', error);
+            }
+        }
+    });
+
     util.extend(vc2_util, {
         uniqueArray: function (arrVar) {
             var arrNew = [];
@@ -126,9 +228,13 @@ define(function (require) {
             return flValue;
         },
         getNodeTextContent: function (node) {
-            // log.debug('node', node);
-            if (!vc2_util.isUndefined(node)) return node.textContent || node.shift().textContent;
-            else return null;
+            var textContent;
+            try {
+                textContent = node.textContent || node.shift().textContent;
+            } catch (err) {
+                // vc2_util.logError('getNodeTextContent', err);
+            }
+            return textContent;
         },
         getNodeContent: function (node) {
             var returnValue;
@@ -147,6 +253,74 @@ define(function (require) {
             });
             return returnValue;
         },
+        getDateFormat: function () {
+            var logTitle = [LogTitle, 'getDateFormat'].join('::');
+            var dateFormat = vc2_util.CACHE.DATE_FORMAT;
+
+            try {
+                var generalPref = ns_config.load({
+                    type: ns_config.Type.COMPANY_PREFERENCES
+                });
+                dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+            } catch (e) {}
+
+            if (!dateFormat) {
+                try {
+                    dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+                } catch (e) {}
+            }
+            vc2_util.CACHE.DATE_FORMAT = dateFormat;
+            vc2_util.log(logTitle, '// date format: ', dateFormat);
+
+            return dateFormat;
+        },
+        parseToNSDate: function (dateObj) {
+            var logTitle = [LogTitle, 'parseDateStr'].join('::'),
+                returnValue;
+
+            returnValue = ns_format.format({
+                value: dateObj,
+                type: ns_format.Type.DATE
+            });
+            vc2_util.log(logTitle, '// date values', [dateObj, returnValue]);
+
+            return returnValue;
+        },
+        formatToNSDate: function (option) {
+            var logTitle = [LogTitle, 'formatToNSDate'].join('::');
+
+            var dateObj = util.isObject(option)
+                    ? option.date || option.value || option.dateObj
+                    : option,
+                dateStr;
+
+            vc2_util.log(logTitle, 'FORMAT DATE', {
+                option: option,
+                dateObj: dateObj,
+                dateStr: dateStr
+            });
+            try {
+                dateStr = ns_format.format({ value: dateObj, type: ns_format.Type.DATE });
+            } catch (err) {}
+
+            vc2_util.log(logTitle, 'FORMAT DATE', { dateObj: dateObj, dateStr: dateStr });
+
+            return dateStr;
+        },
+        parseNSDate: function (option) {
+            var logTitle = [LogTitle, 'parseNSDate'].join('::');
+
+            var dateString = util.isString(option)
+                    ? option
+                    : option.dateString || option.value || option.dateStr,
+                dateObj;
+            try {
+                dateObj = ns_format.parse({ value: dateString, type: ns_format.Type.DATE });
+            } catch (err) {}
+
+            vc2_util.log(logTitle, 'PARSE DATE', { dateStr: dateString, dateObj: dateObj });
+            return dateObj;
+        },
         parseDate: function (option) {
             var logTitle = [LogTitle, 'parseDate'].join('::');
 
@@ -160,9 +334,7 @@ define(function (require) {
                         var generalPref = config.load({
                             type: config.Type.COMPANY_PREFERENCES
                         });
-                        dateFormat = generalPref.getValue({
-                            fieldId: 'DATEFORMAT'
-                        });
+                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
                         return true;
                     });
                 } catch (e) {}
@@ -270,6 +442,16 @@ define(function (require) {
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
+        },
+        searchGetAllResult: function (searchObject) {
+            var arrResults = [],
+                pagedResults = searchObject.runPaged();
+
+            pagedResults.pageRanges.forEach(function (pageRange) {
+                arrResults = arrResults.concat(pagedResults.fetch({ index: pageRange.index }).data);
+            });
+
+            return arrResults;
         }
     });
 
@@ -607,6 +789,30 @@ define(function (require) {
             return returnValue;
         },
 
+        serviceRequest: function (option) {
+            var requestOption = {},
+                serviceQuery = option.query || option;
+
+            if (option.query) requestOption = option;
+            if (option.moduleName || option.action) serviceQuery = option;
+
+            // build the serviceQuery
+            util.extend(requestOption, {
+                method: 'POST',
+                isJSON: true
+            });
+            requestOption.query = {
+                scriptId: vc2_constant.SCRIPT.SERVICES_RL,
+                deploymentId: vc2_constant.DEPLOYMENT.SERVICES_RL,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestOption)
+            };
+
+            vc2_util.log('serviceRequest', 'request: ', requestOption);
+
+            return vc2_util.sendRequestRestlet(requestOption);
+        },
+
         // Parses the response body into a JSON object.
         safeParse: function (response) {
             var logTitle = [LogTitle, 'safeParse'].join('::'),
@@ -704,10 +910,7 @@ define(function (require) {
             //OrderInfo/ErrorMsg - TechData
             var respErrorInfo =
                 vc2_util.getNodeContent(
-                    ns_xml.XPath.select({
-                        node: xmlDoc,
-                        xpath: '//OrderInfo/ErrorMsg'
-                    })
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderInfo/ErrorMsg' })
                 ) ||
                 vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' }));
             if (respErrorInfo) throw respErrorInfo;

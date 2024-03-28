@@ -15,12 +15,13 @@
 
 define([
     'N/ui/serverWidget',
+    'N/ui/message',
     'N/runtime',
     'N/search',
     'N/url',
     'N/file',
     '../CTC_VC2_Lib_Utils'
-], function (ns_ui, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
+], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
     var LogTitle = 'VC DebugTool';
     var Helper = {
         getActiveVendors: function () {
@@ -80,7 +81,7 @@ define([
                         currentfolder: vc2_util.getCurrentFolder()
                     };
 
-                    /// VENDOR CONFIG LIST ///
+                    ///// VENDOR CONFIG LIST ///////////////////////////////
                     var fldVendors = Current.Form.addField({
                         id: 'custpage_vendor',
                         type: ns_ui.FieldType.SELECT,
@@ -98,7 +99,9 @@ define([
                         return true;
                     });
 
-                    /// PO NUM ///
+                    ////////////////////////////////////////////////////////
+
+                    ///// PO NUM ///////////////////////////////////////////
                     var fldPONum = Current.Form.addField({
                         id: 'custpage_ponum',
                         type: ns_ui.FieldType.TEXT,
@@ -165,6 +168,21 @@ define([
                         '" width=100% height=100% scrolling=yes allowTransparency="true" ></iframe>',
                         '</div>'
                     ].join('');
+
+                    // fldContent.defaultValue = [
+                    //     '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea" id="vcdebug_container">',
+                    //     '<span class="smallgraytextnolink uir-label">',
+                    //     '<span class="smallgraytextnolink">',
+                    //     '<a class="smallgraytextnolink">Retrieved Order Status</a>',
+                    //     '</span></span>',
+
+                    //     '<textarea cols="250" rows="30" disabled="true" id="vcdebugcontent" ',
+                    //     'style="padding: 5px 10px; margin: 5px; border:1px solid #CCC !important; background-color: #EEE; color: #363636 !important;">',
+                    //     'Your PO',
+                    //     '</textarea>',
+                    //     '</div>'
+                    // ].join('');
+
                     //////////////////////////////
 
                     for (var fld in hiddenFields) {

@@ -127,6 +127,17 @@ define([
             if (!vc2_util.isEmpty(errMsgNode)) throw errMsgNode[0].textContent;
 
             return returnValue;
+        },
+
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr).toDate() : null;
+            } catch (err) {}
+
+            return dateObj;
         }
     };
 
@@ -140,7 +151,7 @@ define([
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
                 vc2_util.LogPrefix = LogPrefix;
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
@@ -163,7 +174,7 @@ define([
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
                 vc2_util.LogPrefix = LogPrefix;
 
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
@@ -269,7 +280,7 @@ define([
                     for (var ii = 0, jj = packagesNode.length; ii < jj; ii++) {
                         var trackingNo = Helper.getNodeValue(packagesNode[ii], 'TrackingNumber');
                         // serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
-                        vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
+                        // vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
 
                         if (
                             trackingNo &&
@@ -285,7 +296,7 @@ define([
 
                         for (var iii = 0, jjj = serialNodes.length; iii < jjj; iii++) {
                             var serialNo = vc2_util.getNodeTextContent(serialNodes[iii]);
-                            vc2_util.log(logTitle, '// serialNo: ', serialNo);
+                            // vc2_util.log(logTitle, '// serialNo: ', serialNo);
 
                             serialNumList.push(serialNo);
                         }
@@ -346,6 +357,11 @@ define([
                         dupLinData,
                         vc2_util.isEmpty(dupLinData)
                     ]);
+
+                    orderItem.ship_nsdate = LibSynnexAPI.parseToNSDate(orderItem.ship_date);
+                    orderItem.eta_nsdate = LibSynnexAPI.parseToNSDate(orderItem.order_eta);
+                    orderItem.ship_nsdate = LibSynnexAPI.parseToNSDate(orderItem.ship_date);
+                    orderItem.order_nsdate = LibSynnexAPI.parseToNSDate(orderItem.order_date);
 
                     if (!dupLinData) itemArray.push(orderItem);
                 }

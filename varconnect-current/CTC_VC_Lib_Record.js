@@ -264,8 +264,8 @@ define([
             LIST: [
                 'custcol_ctc_xml_dist_order_num',
                 'custcol_ctc_xml_date_order_placed',
-                'custcol_ctc_xml_ship_date'
-                // 'custcol_ctc_xml_carrier'
+                'custcol_ctc_xml_ship_date',
+                'custcol_ctc_xml_carrier'
                 // 'custcol_ctc_xml_tracking_num',
                 // 'custcol_ctc_xml_inb_tracking_num'
             ]
@@ -312,10 +312,9 @@ define([
             Helper.getDateFormat();
 
             // extract lines from the PO
-            Current.OrderLines = vc2_record.extractRecordLines({
-                record: Current.PO_REC,
-                findAll: true,
-                columns: [
+            var itemAltNameColId =
+                    Current.VendorCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                poColumns = [
                     'item',
                     'quantity',
                     'rate',
@@ -325,7 +324,16 @@ define([
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
                     vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
                     vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                ]
+                ];
+            if (itemAltNameColId) {
+                poColumns.push(itemAltNameColId);
+            }
+            Current.OrderLines = vc2_record.extractRecordLines({
+                record: Current.PO_REC,
+                findAll: true,
+                mainConfig: Current.MainCFG,
+                vendorConfig: Current.VendorCFG,
+                columns: poColumns
             });
 
             // clean up the order lines

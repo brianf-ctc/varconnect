@@ -152,12 +152,21 @@ define([
                         ]
                     })
                 );
-
                 /// =====================================
+
+                vc2_util.log(logTitle, '>> Settings: ', {
+                    AllowBill: BillData.AllowBill,
+                    processVariance: Current.processVariance,
+                    ignoreVariance: Current.ignoreVariance,
+                    hasVariance: BillData.HasVariance,
+                    notAllowed: !BillData.AllowBill && !Current.processVariance
+                });
 
                 /// VALIDATE BEFORE BILL CREATE =========
                 if (!BillData.AllowBill && !Current.processVariance) {
-                    if (BillData.HasVariance) {
+                    if (BillData.HasVariance && !Current.ignoreVariance) {
+                        vc2_util.log(logTitle, '>> Has Variances - ', BillData.VarianceList);
+
                         return util.extend(
                             util.extend(returnObj, {
                                 details: BillData.VarianceList.join(', ')
@@ -474,13 +483,12 @@ define([
                 applyOther: mainConfig.isVarianceOnOther || false,
                 otherItem: mainConfig.defaultOtherItem,
 
-                // hasTaxVariance: mainConfig.isVarianceOnTax || false,
-                // taxItem: mainConfig.defaultTaxItem,
-                // hasShippingVariance: mainConfig.isVarianceOnShipping || false,
-                // shipItem: mainConfig.defaultShipItem,
-                // hasOtherVariance: mainConfig.isVarianceOnOther || false,
-                // otherItem: mainConfig.defaultOtherItem,
-                dontSaveBill: mainConfig.isBillCreationDisabled || false
+                dontSaveBill: mainConfig.isBillCreationDisabled || false,
+
+                autoprocPriceVar: mainConfig.autoprocPriceVar || false,
+                autoprocTaxVar: mainConfig.autoprocTaxVar || false,
+                autoprocShipVar: mainConfig.autoprocShipVar || false,
+                autoprocOtherVar: mainConfig.autoprocOtherVar || false
             };
         },
         loadVendorConfig: function (option) {

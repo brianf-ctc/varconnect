@@ -12,12 +12,18 @@
  * @NModuleScope Public
  */
 
-define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
-    ns_https,
-    ns_search,
-    moment,
-    lodash
-) {
+define([
+    'N/https',
+    'N/search',
+    '../../CTC_VC2_Lib_Utils',
+    '../Libraries/moment',
+    '../Libraries/lodash'
+], function (ns_https, ns_search, vc2_util, moment, lodash) {
+    'use strict';
+    var LogTitle = 'WS:ArrowAPI',
+        LogPrefix,
+        CURRENT = {};
+
     function processXml(input, config) {
         //var config = JSON.parse(configStr)
 
@@ -162,8 +168,224 @@ define(['N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], fu
         return myArr;
     }
 
-    // Add the return statement that identifies the entry point function.
+    var LibArrowAPI = {
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var tokenReq = vc2_util.sendRequest({
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'post',
+                    recordId: option.recordId,
+                    doRetry: true,
+                    maxRetry: 3,
+                    query: {
+                        url: option.config.url + '/api/oauth/token',
+                        body: vc2_util.convertToQuery({
+                            client_id: option.config.user_id,
+                            client_secret: option.config.user_pass,
+                            grant_type: 'client_credentials'
+                        }),
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            Accept: '*/*'
+                        }
+                    }
+                });
+
+                // vc2_util.handleJSONResponse(tokenReq);
+                var tokenResp = tokenReq.PARSED_RESPONSE;
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+
+                returnValue = tokenResp.access_token;
+                CURRENT.accessToken = tokenResp.access_token;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+        getTokenCache: function (option) {
+            var token = vc2_util.getNSCache({ key: 'VC_ARROW_TOKEN' });
+            if (vc2_util.isEmpty(token)) token = this.generateToken(option);
+
+            if (!vc2_util.isEmpty(token)) {
+                vc2_util.setNSCache({
+                    key: 'VC_ARROW_TOKEN',
+                    cacheTTL: 14400,
+                    value: token
+                });
+                CURRENT.accessToken = token;
+            }
+            return token;
+        },
+        getInvoiceDetails: function (option) {
+            var logTitle = [LogTitle, 'getInvoiceDetails'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var reqInvoice = vc2_util.sendRequest({
+                    header: [LogTitle, 'Invoice Details'].join(' '),
+                    recordId: option.recordId,
+                    method: 'post',
+                    query: {
+                        url: option.config.url + '/ArrowECS/Invoice_RS/Status',
+                        body: JSON.stringify({
+                            Header: {
+                                TransactionType: 'RESELLER_INV_SEARCH',
+                                Region: 'NORTH_AMERICAS',
+                                Country: 'US',
+                                PartnerID: option.config.partner_id
+                            },
+                            InvoiceRequest: {
+                                CUSTPONUMBERS: {
+                                    CustPONumbers: [
+                                        {
+                                            PONumber: option.config.poNum
+                                        }
+                                    ]
+                                }
+                            }
+                        })
+                    },
+                    headers: {
+                        Authorization: 'Bearer ' + option.accessToken,
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                vc2_util.handleJSONResponse(reqInvoice);
+                LibArrowAPI.validateResponse(reqInvoice.PARSED_RESPONSE);
+
+                returnValue = reqInvoice.PARSED_RESPONSE;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+        validateResponse: function (parsedResponse) {
+            if (!parsedResponse) throw 'Unable to read the response';
+            var respHeader = parsedResponse.ResponseHeader;
+
+            if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
+            var hasErrors,
+                errorMsgs = [];
+
+            respHeader.forEach(function (header) {
+                if (!header.TransactionStatus || header.TransactionStatus == 'ERROR') {
+                    hasErrors = true;
+                    errorMsgs.push(header.TransactionMessage);
+                }
+                return true;
+            });
+
+            if (hasErrors && errorMsgs.length) throw errorMsgs.join(', ');
+            return true;
+        }
+    };
+
+    // // Add the return statement that identifies the entry point function.
+    // return {
+    //     processXml: processXml
+    // };
     return {
-        processXml: processXml
+        processXml: function (recordId, config) {
+            var logTitle = [LogTitle, 'processXml'].join('::'),
+                returnValue;
+
+            LogPrefix = '[' + [ns_search.Type.PURCHASE_ORDER, recordId].join(':') + '] ';
+            vc2_util.LogPrefix = LogPrefix;
+            vc2_util.log(logTitle, '>> current: ', [recordId, config]);
+
+            var accessToken = LibArrowAPI.getTokenCache({
+                recordId: recordId,
+                config: config,
+                tranId: config.poNum
+            });
+            vc2_util.log(logTitle, '>> access token: ', token);
+            if (!accessToken) throw 'Unable to generate access token';
+
+            var parsedResponse = LibArrowAPI.getInvoiceDetails({
+                recordId: recordId,
+                config: config,
+                poNum: config.poNum,
+                accessToken: accessToken
+            });
+            if (!parsedResponse) throw 'Empty response';
+
+            var arrEntries = [];
+
+            for (var i = 0, j = parsedResponse.InvoiceResponse.length; i < j; i++) {
+                var invoiceResp = parsedResponse.InvoiceResponse[i];
+
+                for (var ii = 0, jj = invoiceResp.InvoiceDetails.length; ii < jj; ii++) {
+                    var invDetail = invoiceResp.InvoiceDetails[ii];
+
+                    vc2_util.log(logTitle, '>> Invoice Detail: ', invDetail);
+
+                    var invoiceObj = {
+                        po: config.poNum,
+                        date: invDetail.InvoiceDate
+                            ? moment(invDetail.InvoiceDate, 'DD-MMM-YY').format('MM/DD/YYYY')
+                            : 'NA',
+
+                        invoice: invDetail.InvoiceNumber || 'NA',
+                        total: (invDetail.TotalInvAmount || 0) * 1,
+                        charges: {
+                            tax: (invDetail.TotalTaxAmount || 0) * 1,
+                            shipping: (invDetail.TotalFrieghtAmt || 0) * 1,
+                            other:
+                                (invDetail.TotalPSTAmount || 0) * 1 +
+                                (invDetail.TotalHSTAmount || 0) * 1 +
+                                (invDetail.TotalGSTAmount || 0) * 1
+                        },
+                        lines: []
+                    };
+                    vc2_util.log(logTitle, '.. bill data: ', invoiceObj);
+
+                    var arrLineDetails =
+                        invDetail.LineDetails && invDetail.LineDetails.DetailRecord
+                            ? invDetail.LineDetails.DetailRecord
+                            : [];
+
+                    for (var iii = 0, jjj = arrLineDetails.length; iii < jjj; iii++) {
+                        var lineDetail = arrLineDetails[iii];
+
+                        var lineObj = {
+                            processed: false,
+                            ITEMNO: lineDetail.CustPartNumber,
+                            PRICE: (lineDetail.UnitPrice || 0) * 1,
+                            QUANTITY: (lineDetail.QuantityShipped || 0) * 1,
+                            DESCRIPTION: lineDetail.PartDescription
+                        };
+
+                        if (vc2_util.isEmpty(lineObj.ITEMNO)) continue;
+
+                        // check if this already exists
+                        var foundIndex = lodash.findIndex(invoiceObj.lines, {
+                            ITEMNO: lineObj.ITEMNO,
+                            PRICE: lineObj.PRICE
+                        });
+
+                        if (foundIndex > 0) {
+                            invoiceObj.lines[foundIndex].QUANTITY += lineObj.QUANTITY;
+                        } else {
+                            invoiceObj.lines.push(lineObj);
+                        }
+                    }
+
+                    arrEntries.push({
+                        ordObj: invoiceObj,
+                        xmlStr: invDetail
+                    });
+                }
+            }
+
+            return arrEntries;
+        }
     };
 });
