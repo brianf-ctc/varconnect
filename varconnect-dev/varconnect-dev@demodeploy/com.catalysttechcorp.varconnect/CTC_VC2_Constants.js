@@ -64,7 +64,11 @@ define(function (require) {
                 AUTOPROC_SHIPVAR: 'custrecord_ctc_vcbc_autopr_shipvar',
                 AUTOPROC_OTHERVAR: 'custrecord_ctc_vcbc_autopr_othervar',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_col_id',
-                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id'
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id',
+                MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_cust_item_match_strict',
+                CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_col_id',
+                CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_fld_id',
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax'
             }
         },
         VENDOR_CONFIG: {
@@ -89,7 +93,11 @@ define(function (require) {
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
                 USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
-                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld'
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld',
+                MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_item_match_strict',
+                CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_mpn_match_col_id',
+                CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_mpn_match_fld_id',
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_mpn_match_is_lax'
             }
         },
         VC_LOG: {
@@ -178,6 +186,37 @@ define(function (require) {
                 NAME: 'name',
                 ITEM: 'custrecord_ctc_vc_itemmap_item'
             }
+        },
+        VAR_CONNECT_PO_LINE: {
+            ID: '',
+            FIELD: {
+                PURCHASE_ORDER: 'custrecord_ctc_vc_poline_po',
+                LINE_UNIQUE_KEY: 'custrecord_ctc_vc_poline_lineuniquekey',
+                LINE: 'custrecord_ctc_vc_poline_line',
+                VENDOR_LINE: 'custrecord_ctc_vc_poline_vendorline',
+                STATUS: 'custrecord_ctc_vc_poline_status',
+                TYPE: 'custrecord_ctc_vc_poline_type',
+                VENDOR_ORDER_NUMBER: 'custrecord_ctc_vc_poline_vendorordernum',
+                CUSTOMER_ORDER_NUMBER: 'custrecord_ctc_vc_poline_customerordnum',
+                ORDER_DATE: 'custrecord_ctc_vc_poline_orderdate',
+                SKU: 'custrecord_ctc_vc_poline_itemname',
+                MPN: 'custrecord_ctc_vc_poline_mpn',
+                NOTE: 'custrecord_ctc_vc_poline_note',
+                QUANTITY: 'custrecord_ctc_vc_poline_quantity',
+                RATE: 'custrecord_ctc_vc_poline_rate',
+                SHIP_DATE: 'custrecord_ctc_vc_poline_shipdate',
+                QTY_SHIPPED: 'custrecord_ctc_vc_poline_qtyshipped',
+                SHIP_FROM: 'custrecord_ctc_vc_poline_shipfrom',
+                SHIP_METHOD: 'custrecord_ctc_vc_poline_shipmethod',
+                CARRIER: 'custrecord_ctc_vc_poline_carrier',
+                ETA_DATE: 'custrecord_ctc_vc_poline_etadate',
+                SERIAL_NUMBERS: 'custrecord_ctc_vc_poline_serialnumbers',
+                TRACKING_NUMBERS: 'custrecord_ctc_vc_poline_trackingnumber',
+                INTERNAL_REFERENCE: 'custrecord_ctc_vc_poline_internalref',
+                JSON_DATA: 'custrecord_ctc_vc_poline_full_response',
+                CREATE_LOG: 'custrecord_ctc_vc_poline_vccreatelog',
+                UPDATE_LOG: 'custrecord_ctc_vc_poline_vcupdatelog'
+            }
         }
     };
 
@@ -215,7 +254,9 @@ define(function (require) {
             TECH_DATA_API: '12',
             JENNE: '13',
             SCANSOURCE: '14',
-            WEFI: '16'
+            WEFI: '16',
+            DandH_API: '17',
+            CARAHSOFT: '18'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',
@@ -234,18 +275,22 @@ define(function (require) {
         }
     };
     VC2_CONSTANT.SCRIPT = {
+        ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
         VIEW_SERIALS_SL: 'customscript_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customscript_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customscript_ctc_vc_sl_print_serial',
         SERIAL_UPDATE_MR: 'customscript_ctc_vc_mr_serial_manip',
         SERIAL_UPDATE_ALL_MR: 'customscript_ctc_vc_mr_serial_manip_so',
-        ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch'
+        ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch',
+        SERVICES_RL: 'customscript_ctc_vc_rl_services'
     };
     VC2_CONSTANT.DEPLOYMENT = {
+        ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
         VIEW_SERIALS_SL: 'customdeploy_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customdeploy_ctc_vc_sl_print_serial',
-        ITEM_MATCH_RL: 'customdeploy_ctc_vc_fuse_itemmatch'
+        ITEM_MATCH_RL: 'customdeploy_ctc_vc_fuse_itemmatch',
+        SERVICES_RL: 'customdeploy_ctc_rl_services'
     };
 
     VC2_CONSTANT.ERRORMSG = {
@@ -288,7 +333,7 @@ define(function (require) {
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         MATCH_NOT_FOUND: {
-            message: 'Could not find matching order line',
+            message: 'Could not find matching item',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         MISSING_ORDERNUM: {
@@ -492,6 +537,7 @@ define(function (require) {
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
             feature: 'pickpackship'
         }),
+        DATE_FORMAT: 'YYYY-MM-DD',
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',
@@ -504,13 +550,22 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240111.01';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240124.03';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
         PO_DATA: 'VC_PODATA'
+    };
+
+    VC2_CONSTANT.LICENSE = {
+        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+        PRODUCT_CODE: 2,
+        MAX_RETRY: 3,
+        KEY: 'LICENSE_KEY.20240124',
+        CACHE_NAME: 'VC_LICENSE',
+        CACHE_TTL: 86400 // 24 hrs
     };
 
     return VC2_CONSTANT;

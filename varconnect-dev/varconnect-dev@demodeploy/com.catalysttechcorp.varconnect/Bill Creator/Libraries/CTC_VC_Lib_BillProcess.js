@@ -30,6 +30,7 @@ define([
             BillFile: {},
             VendorData: {},
             VendorCFG: {},
+            OrderStatusVendorCFG: {},
             Charges: [],
             Total: {
                 Shipping: 0,
@@ -72,29 +73,39 @@ define([
                 var vendorConfig = option.vendorConfig;
                 if (!vendorConfig) throw 'Missing vendor Config';
 
+                var orderStatusVendorConfig = option.orderStatusVendorConfig;
+                if (!orderStatusVendorConfig) throw 'Missing order status vendor Config';
+
                 Current.VendorCFG = vendorConfig;
+                Current.OrderStatusVendorCFG = orderStatusVendorConfig;
                 // this.resetValues();
                 this.loadVarianceConfig();
 
                 // load the variance config
                 this.loadOrderData(option);
-                this.loadBillFile(option);
+                if (vc2_util.isEmpty(Current.OrderData)) throw 'MISSING_PO';
+                // if (Current.OrderData.isClosed)
+                //     throw Current.OrderData.isFullyBilled ? 'FULLY_BILLED' : 'CLOSED_PO';
 
+                this.loadBillFile(option);
                 if (!Current.OrderData) throw ' Missing PO Data';
                 if (!Current.OrderLines) throw ' Missing PO Line';
                 if (!Current.BillFile) throw ' Missing Bill File Data';
                 if (!Current.VendorData) throw ' Missing Vendor Data';
 
-                // if (Current.OrderData.isClosed)
-                //     throw Current.OrderData.isFullyBilled ? 'FULLY_BILLED' : 'CLOSED_PO';
-
                 /// MATCH the orderLines ///
 
-                Current.MatchedLines = vc2_record.matchOrderLines({
-                    orderLines: Current.OrderLines,
-                    includeZeroQtyLines: true,
-                    vendorLines: Current.VendorData.lines
-                });
+                Current.MatchedLines = [];
+                if (!vc2_util.isEmpty(Current.OrderLines)) {
+                    Current.MatchedLines = vc2_record.matchOrderLines({
+                        orderLines: Current.OrderLines,
+                        includeZeroQtyLines: true,
+                        vendorLines: Current.VendorData.lines,
+                        vendorConfig: Current.OrderStatusVendorCFG,
+                        mainConfig: Current.MainCFG
+                    });
+                }
+
                 vc2_util.log(logTitle, '/// Matched Lines ', Current.MatchedLines);
 
                 /// SETUP the Bill Lines
@@ -196,6 +207,10 @@ define([
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
+
+                Helper.setError({
+                    code: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -341,6 +356,7 @@ define([
                         : doIgnoreVariance
                         ? chargeData.chargeAmount
                         : chargeData.rate || chargeData.amount;
+                    chargeAmount = vc2_util.parseFloat(chargeAmount);
 
                     if (!chargeAmount) return;
                     if (
@@ -352,7 +368,12 @@ define([
                     chargeData.amount = chargeAmount;
                     chargeData.quantity = 1;
 
-                    vc2_util.log(logTitle, '... add charge: ', chargeData);
+                    vc2_util.log(logTitle, '... add charge: ', {
+                        chargeData: chargeData,
+                        chargeAmount: chargeAmount,
+                        doIgnoreVariance: doIgnoreVariance,
+                        doProcessVariance: doProcessVariance
+                    });
                     var newLine;
                     try {
                         newLine = vc2_record.addLine({
@@ -390,14 +411,14 @@ define([
                     orderId = option.orderId || option.poId || option.internalId;
 
                 if (!recOrder) {
-                    if (!orderId) throw 'Missing PO Id';
+                    if (!orderId) throw 'MISSING_PO';
                     recOrder = vc2_record.load({
                         type: 'purchaseorder',
                         id: orderId,
                         isDynamic: false
                     });
                 }
-                if (!recOrder) throw 'Missing PO record';
+                if (!recOrder) throw 'MISSING_PO';
 
                 // Get PO Data
                 Current.OrderData = vc2_record.extractValues({
@@ -440,7 +461,9 @@ define([
                         'taxrate',
                         'taxrate1',
                         'taxrate2'
-                    ]
+                    ],
+                    vendorConfig: option.orderStatusVendorConfig,
+                    mainConfig: Current.MainCFG
                 });
 
                 /// PREPARE THE Data ///
@@ -452,6 +475,10 @@ define([
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
+
+                Helper.setError({
+                    code: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -508,7 +535,6 @@ define([
                             return true;
                         });
                         vendorLine.QUANTITY = vc2_util.forceInt(vendorLine.QUANTITY);
-                        if (!vendorLine.NSITEM) throw 'UNMATCHED_ITEMS';
 
                         util.extend(vendorLine, {
                             quantity: vendorLine.QUANTITY,
@@ -517,6 +543,7 @@ define([
                         });
 
                         if (vendorLine.quantity) arrNonZeroLines.push(vendorLine);
+                        if (!vendorLine.NSITEM) throw 'UNMATCHED_ITEMS';
                     } catch (vendorLine_error) {
                         vc2_util.logError(logTitle, vendorLine_error);
                         Helper.setError({
@@ -662,14 +689,21 @@ define([
 
                 var ChargeLines = [];
 
+                vc2_util.log(logTitle, '// varianceLines: ', Current.VendorData.variances);
                 for (var chargeType in ChargesCFG) {
                     var chargeParam = ChargesCFG[chargeType],
                         chargeAmount = Current.VendorData.charges[chargeType] || 0,
                         varianceLine = vc2_util.findMatching({
                             // dataSet: Current.VendorData.varianceLines || [],
-                            dataSet: Current.VendorData.variances || [],
-                            filter: { type: chargeType }
+                            dataSet: Current.VendorData.varianceLines || [],
+                            filter: { type: chargeParam.name || chargeType }
                         });
+                    // vc2_util.log(logTitle, '## charge data: ', [
+                    //     chargeType,
+                    //     chargeParam,
+                    //     chargeAmount,
+                    //     varianceLine
+                    // ]);
 
                     var chargeLine = vc2_util.extend(
                         { type: chargeType, chargeAmount: chargeAmount },
@@ -735,6 +769,7 @@ define([
                     }
                 }
                 Current.Charges = ChargeLines;
+                vc2_util.log(logTitle, 'ChargeLines: ', ChargeLines);
 
                 this.calcuateTotals();
             } catch (error) {
@@ -747,7 +782,7 @@ define([
             try {
                 // calculate totals first
                 this.calcuateTotals();
-                vc2_util.log(logTitle, '>> Totals: ', Current.Total);
+                // vc2_util.log(logTitle, '>> Totals: ', Current.Total);
 
                 var VendorData = Current.VendorData,
                     Total = Current.Total;
@@ -765,7 +800,9 @@ define([
                 });
 
                 Total.Variance = vc2_util.roundOff(Total.BillAmount - Total.TxnAmount);
-                var varianceAmount = Math.abs(Total.Variance) || Math.abs(Total.LineVariance);
+                var varianceAmount =
+                    (Math.abs(Total.Variance) || Math.abs(Total.LineVariance)) +
+                    Total.AppliedCharges;
 
                 vc2_util.log(logTitle, '... Variance Amount: ', varianceAmount);
 
@@ -777,6 +814,7 @@ define([
 
                     vc2_util.log(logTitle, '... Has Variance!!: ', {
                         variance: varianceAmount,
+                        totals: Total,
                         allowedTreshold: Current.MainCFG.allowedThreshold,
                         totalCharges: Total.Charges > Current.MainCFG.allowedThreshold,
                         varianceAmount: varianceAmount > Current.MainCFG.allowedThreshold
@@ -810,7 +848,7 @@ define([
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
             }
-            vc2_util.log(logTitle, '>> Totals: ', Current.Total);
+            // vc2_util.log(logTitle, '>> Totals: ', Current.Total);
         },
         reportError: function (option) {
             var logTitle = [LogTitle, 'setError'].join(': ');
@@ -909,7 +947,9 @@ define([
                 autoprocPriceVar: mainConfig.autoprocPriceVar,
                 autoprocTaxVar: mainConfig.autoprocTaxVar,
                 autoprocShipVar: mainConfig.autoprocShipVar,
-                autoprocOtherVar: mainConfig.autoprocOtherVar
+                autoprocOtherVar: mainConfig.autoprocOtherVar,
+                itemColumnIdToMatch: mainConfig.itemColumnIdToMatch,
+                itemMPNColumnIdToMatch: mainConfig.itemMPNColumnIdToMatch
             };
         },
         calculateLineTax: function (option) {

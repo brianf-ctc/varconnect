@@ -65,7 +65,11 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         autoprocShipVar: MainCFG.FIELD.AUTOPROC_SHIPVAR,
         autoprocOtherVar: MainCFG.FIELD.AUTOPROC_OTHERVAR,
         itemColumnIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
-        itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+        itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+        matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+        itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+        itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+        matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
     };
 
     function getMainConfiguration() {

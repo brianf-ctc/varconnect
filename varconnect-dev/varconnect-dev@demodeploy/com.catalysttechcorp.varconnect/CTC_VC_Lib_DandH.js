@@ -73,6 +73,22 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             }
 
             return returnValue;
+        },
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr, 'MM/DD/YY').toDate() : null;
+            } catch (err) {}
+
+            // vc2_util.log(logTitle, '// dateStr: ', {
+            //     dateStr: dateStr,
+            //     dateObj: dateObj,
+            //     isDate: util.isDate(dateObj)
+            // });
+
+            return dateObj;
         }
     };
 
@@ -311,7 +327,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
 
                         if (dateShippedList) {
                             dateShippedList = vc2_util.uniqueArray(dateShippedList);
-                            orderItem.ship_date = dateShippedList;
+                            orderItem.ship_date =
+                                dateShippedList.length > 1
+                                    ? dateShippedList.shift() /// TODO: find the latest value
+                                    : dateShippedList.shift();
                         }
 
                         // brianff 12/14
@@ -353,6 +372,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                         if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
                             orderItem.is_shipped = true;
                     }
+
+                    orderItem.eta_nsdate = LibDnH.parseToNSDate(orderItem.order_eta);
+                    orderItem.ship_nsdate = LibDnH.parseToNSDate(orderItem.ship_date);
+                    orderItem.order_nsdate = LibDnH.parseToNSDate(orderItem.order_date);
 
                     vc2_util.log(logTitle, '>> line data: ', orderItem);
 

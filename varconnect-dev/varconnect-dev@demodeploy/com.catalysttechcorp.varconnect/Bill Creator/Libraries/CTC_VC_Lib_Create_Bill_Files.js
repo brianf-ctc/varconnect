@@ -114,6 +114,7 @@ define([
                 itemIds = option.item,
                 vendorCfg = option.vendorConfig,
                 itemField = null,
+                mpnField = null,
                 returnValue = null;
             try {
                 // vendorCfg.itemColumnIdToMatch > vendorCfg.itemFieldIdToMatch > MainConfig.itemColumnIdToMatch > MainConfig.itemFieldIdToMatch
@@ -128,7 +129,26 @@ define([
                 ) {
                     itemField = MainConfig.itemFieldIdToMatch;
                 }
-                if (itemField && itemIds.length) {
+                // vendorCfg.itemMPNColumnIdToMatch > vendorCfg.itemMPNFieldIdToMatch > mainCfg.itemMPNColumnIdToMatch > mainCfg.itemMPNFieldIdToMatch
+                if (vendorCfg && !vendorCfg.itemMPNColumnIdToMatch) {
+                    mpnField = vendorCfg.itemMPNFieldIdToMatch;
+                }
+                if (
+                    !mpnField &&
+                    (!vendorCfg || !vendorCfg.itemMPNColumnIdToMatch) &&
+                    MainConfig &&
+                    !MainConfig.itemMPNColumnIdToMatch
+                ) {
+                    mpnField = MainConfig.itemMPNFieldIdToMatch;
+                }
+                if (itemIds.length && (itemField || mpnField)) {
+                    var itemColumns = [];
+                    if (itemField) {
+                        itemColumns.push(itemField);
+                    }
+                    if (mpnField) {
+                        itemColumns.push(mpnField);
+                    }
                     log.debug(logTitle, 'Lookup alt names for items... ' + itemIds.join(', '));
                     var searchOption = {
                         type: ns_search.Type.ITEM,
@@ -137,15 +157,30 @@ define([
                             'and',
                             ['isinactive', 'is', 'F']
                         ],
-                        columns: [itemField]
+                        columns: itemColumns
                     };
                     var searchResults = vc2_util.searchAllPaged(searchOption);
                     if (searchResults && searchResults.length) {
-                        var altItemNames = {};
+                        var altItemNames = {
+                            _sku: false,
+                            _mpn: false
+                        };
                         searchResults.forEach(function (result) {
-                            var altItemName = result.getValue({ name: itemField }),
-                                itemId = result.id;
-                            altItemNames[itemId] = altItemName;
+                            var altItemName = null,
+                                mpnValue = null;
+                            if (itemField) {
+                                altItemName = result.getValue({ name: itemField });
+                                altItemNames._sku = true;
+                            }
+                            if (mpnField) {
+                                mpnValue = result.getValue({ name: mpnField });
+                                altItemNames._mpn = true;
+                            }
+                            var itemId = result.id;
+                            altItemNames[itemId] = {
+                                partNumber: altItemName,
+                                mpn: mpnValue
+                            };
                             return true;
                         });
                         returnValue = altItemNames;
@@ -159,6 +194,58 @@ define([
                     name: 'Unable to extract alternative item names',
                     message: vc2_util.extractError(error)
                 });
+            }
+            return returnValue;
+        },
+        getAltPartNumValues: function (option) {
+            var logTitle = [LogTitle, 'getAltPartNumValues'].join('::'),
+                source = option.source,
+                skuColumn =
+                    option.vendorConfig.itemColumnIdToMatch ||
+                    option.mainConfig.itemColumnIdToMatch,
+                mpnColumn =
+                    option.vendorConfig.itemMPNColumnIdToMatch ||
+                    option.mainConfig.itemMPNColumnIdToMatch,
+                sku = option.sku,
+                mpn = option.mpn,
+                isItemOnlyMatchedWithVendorSKU = vc2_util.isEmpty(
+                    option.vendorConfig.matchItemToPartNumber
+                )
+                    ? option.mainConfig.matchItemToPartNumber
+                    : option.vendorConfig.matchItemToPartNumber,
+                isMPNMatchedWithName = vc2_util.isEmpty(option.vendorConfig.matchMPNWithPartNumber)
+                    ? option.mainConfig.matchMPNWithPartNumber
+                    : option.vendorConfig.matchMPNWithPartNumber,
+                returnValue = option.target;
+            if (source && source[returnValue.item]) {
+                if (source._sku) {
+                    if (isItemOnlyMatchedWithVendorSKU) {
+                        returnValue.alternativeSKU = source[returnValue.item].partNumber;
+                    } else {
+                        returnValue.alternativeItemName = source[returnValue.item].partNumber;
+                    }
+                }
+                if (source._mpn) {
+                    if (isMPNMatchedWithName) {
+                        returnValue.alternativeItemName2 = source[returnValue.item].mpn;
+                    } else {
+                        returnValue.alternativeMPN = source[returnValue.item].mpn;
+                    }
+                }
+            }
+            if ((!source || !source._sku) && (sku || skuColumn)) {
+                if (isItemOnlyMatchedWithVendorSKU) {
+                    returnValue.alternativeSKU = sku || returnValue[skuColumn];
+                } else {
+                    returnValue.alternativeItemName = sku || returnValue[skuColumn];
+                }
+            }
+            if ((!source || !source._mpn) && (mpn || mpnColumn)) {
+                if (isMPNMatchedWithName) {
+                    returnValue.alternativeItemName2 = mpn || returnValue[mpnColumn];
+                } else {
+                    returnValue.alternativeMPN = mpn || returnValue[mpnColumn];
+                }
             }
             return returnValue;
         },
@@ -313,17 +400,32 @@ define([
                 returnValue = [];
 
             if (!option.poId) return false;
-            var itemAltNameColId = null;
+            var itemAltSKUColId = null;
             if (option.vendorConfig) {
-                itemAltNameColId = option.vendorConfig.itemColumnIdToMatch;
+                itemAltSKUColId = option.vendorConfig.itemColumnIdToMatch;
             }
-            if (!itemAltNameColId && MainConfig) {
-                itemAltNameColId = MainConfig.itemColumnIdToMatch;
+            if (!itemAltSKUColId && MainConfig) {
+                itemAltSKUColId = MainConfig.itemColumnIdToMatch;
             }
-            if (itemAltNameColId) {
+            var itemAltMPNColId = null;
+            if (option.vendorConfig) {
+                itemAltMPNColId = option.vendorConfig.itemMPNColumnIdToMatch;
+            }
+            if (!itemAltMPNColId && MainConfig) {
+                itemAltMPNColId = MainConfig.itemMPNColumnIdToMatch;
+            }
+            if (itemAltSKUColId) {
                 poColumns.push(
                     ns_search.createColumn({
-                        name: itemAltNameColId,
+                        name: itemAltSKUColId,
+                        summary: 'GROUP'
+                    })
+                );
+            }
+            if (itemAltMPNColId) {
+                poColumns.push(
+                    ns_search.createColumn({
+                        name: itemAltMPNColId,
                         summary: 'GROUP'
                     })
                 );
@@ -350,13 +452,22 @@ define([
                         summary: 'GROUP'
                     })
                 };
-                if (itemAltNameColId) {
-                    poLine.alternativeItemName = result.getValue({
-                        name: itemAltNameColId,
+                if (itemAltSKUColId) {
+                    poLine[itemAltSKUColId] = result.getValue({
+                        name: itemAltSKUColId,
                         summary: 'GROUP'
                     });
-                    if (poLine.alternativeItemName == '- None -') {
-                        poLine.alternativeItemName = null;
+                    if (poLine[itemAltSKUColId] == '- None -') {
+                        poLine[itemAltSKUColId] = null;
+                    }
+                }
+                if (itemAltMPNColId) {
+                    poLine[itemAltMPNColId] = result.getValue({
+                        name: itemAltMPNColId,
+                        summary: 'GROUP'
+                    });
+                    if (poLine[itemAltMPNColId] == '- None -') {
+                        poLine[itemAltMPNColId] = null;
                     }
                 }
                 arrSKUs.push(poLine);
@@ -382,9 +493,12 @@ define([
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
                 arrSKUs[i].vendorItemName =
                     arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
-                if (altItemNames) {
-                    arrSKUs[i].alternativeItemName = altItemNames[arrSKUs[i].value];
-                }
+                arrSKUs[i] = Helper.getAltPartNumValues({
+                    source: altItemNames,
+                    target: arrSKUs[i],
+                    vendorConfig: option.vendorConfig,
+                    mainConfig: MainConfig
+                });
             }
             vc2_util.log(logTitle, '// arrSKUs: ', arrSKUs);
 
@@ -647,6 +761,7 @@ define([
 
                     for (ii = 0; ii < currentOrder.lines.length; ii++) {
                         var itemNo = currentOrder.lines[ii].ITEMNO;
+                        var vendorSKU = currentOrder.lines[ii].SKU;
 
                         var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
 
@@ -655,6 +770,9 @@ define([
                         for (var iii = 0; iii < availableSkus.length; iii++) {
                             if (
                                 availableSkus[iii].alternativeItemName == itemNo ||
+                                availableSkus[iii].alternativeItemName2 == itemNo ||
+                                availableSkus[iii].alternativeSKU == vendorSKU ||
+                                availableSkus[iii].alternativeMPN == itemNo ||
                                 availableSkus[iii].text == itemNo ||
                                 availableSkus[iii].vendorItemName == itemNo
                             ) {

@@ -129,6 +129,11 @@ define([
         if (vc2_util.isOneWorld()) {
             searchOption.columns.push(
                 ns_search.createColumn({
+                    name: 'subsidiary'
+                })
+            );
+            searchOption.columns.push(
+                ns_search.createColumn({
                     name: 'country',
                     join: 'subsidiary'
                 })
@@ -157,10 +162,23 @@ define([
         LogPrefix = ['[', searchValues.recordType, ':', searchValues.id, '] '].join('');
         //var record_id = searchValues.id;
         log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));
-
-        var vendorConfig = ns_search.lookupFields({
+        var mainConfig = vc_mainCfg.getMainConfiguration(),
+            subsidiary,
+            country;
+        if (vc2_util.isOneWorld()) {
+            subsidiary = searchValues.values['subsidiary'].value;
+            country = searchValues.values['country.subsidiary'].value;
+        } else {
+            subsidiary = null;
+            // get it from ns runtime
+            country = ns_runtime.country;
+        }
+        var billVendorConfigArr =
+            searchValues.values['custentity_vc_bill_config.vendor'].value ||
+            searchValues.values['custentity_vc_bill_config.vendor'];
+        var vendorConfigSearchOptions = {
             type: 'customrecord_vc_bill_vendor_config',
-            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
+            filters: [['internalid', 'anyof', billVendorConfigArr]],
             columns: [
                 'custrecord_vc_bc_ack',
                 'custrecord_vc_bc_entry',
@@ -176,75 +194,86 @@ define([
                 'custrecord_vc_bc_scope',
                 'custrecord_vc_bc_subs_key'
             ]
-        });
-
-        var mainConfig = vc_mainCfg.getMainConfiguration();
-
-        var configObj = {
-            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            poNum: mainConfig.overridePONum
-                ? searchValues.values['custbody_ctc_vc_override_ponum'] ||
-                  searchValues.values['tranid']
-                : searchValues.values['tranid'],
-            ack_function: vendorConfig.custrecord_vc_bc_ack,
-            entry_function: vendorConfig.custrecord_vc_bc_entry,
-            user_id: vendorConfig.custrecord_vc_bc_user,
-            user_pass: vendorConfig.custrecord_vc_bc_pass,
-            partner_id: vendorConfig.custrecord_vc_bc_partner,
-            host_key: vendorConfig.custrecord_vc_bc_host_key,
-            url: vendorConfig.custrecord_vc_bc_url,
-            res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
-            token_url: vendorConfig.custrecord_vc_bc_token_url,
-            scope: vendorConfig.custrecord_vc_bc_scope,
-            subscription_key: vendorConfig.custrecord_vc_bc_subs_key
         };
-
-        vc2_util.log(logTitle, '// tranid: ', searchValues.values['tranid']);
-
-        if (vc2_util.isOneWorld()) {
-            configObj.country = searchValues.values['country.subsidiary'].value;
-        } else {
-            // get it from ns runtime
-            configObj.country = ns_runtime.country;
+        if (subsidiary) {
+            vendorConfigSearchOptions.filters.push('AND');
+            vendorConfigSearchOptions.filters.push([
+                ['custrecord_vc_bc_subsidiary', 'anyof', subsidiary],
+                'OR',
+                ['custrecord_vc_bc_subsidiary', 'anyof', '@NONE@']
+            ]);
         }
-        log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
-        try {
-            var entryFunction = configObj.entry_function;
+        ns_search
+            .create(vendorConfigSearchOptions)
+            .run()
+            .each(function (vendorConfig) {
+                var configObj = {
+                    id: searchValues.values['custentity_vc_bill_config.vendor'].value,
+                    subsidiary: subsidiary,
+                    country: country,
+                    poNum: mainConfig.overridePONum
+                        ? searchValues.values['custbody_ctc_vc_override_ponum'] ||
+                          searchValues.values['tranid']
+                        : searchValues.values['tranid'],
+                    ack_function: vendorConfig.getValue('custrecord_vc_bc_ack'),
+                    entry_function: vendorConfig.getValue('custrecord_vc_bc_entry'),
+                    user_id: vendorConfig.getValue('custrecord_vc_bc_user'),
+                    user_pass: vendorConfig.getValue('custrecord_vc_bc_pass'),
+                    partner_id: vendorConfig.getValue('custrecord_vc_bc_partner'),
+                    host_key: vendorConfig.getValue('custrecord_vc_bc_host_key'),
+                    url: vendorConfig.getValue('custrecord_vc_bc_url'),
+                    res_path: vendorConfig.getValue('custrecord_vc_bc_res_path'),
+                    ack_path: vendorConfig.getValue('custrecord_vc_bc_ack_path'),
+                    token_url: vendorConfig.getValue('custrecord_vc_bc_token_url'),
+                    scope: vendorConfig.getValue('custrecord_vc_bc_scope'),
+                    subscription_key: vendorConfig.getValue('custrecord_vc_bc_subs_key')
+                };
 
-            var myArr = [];
-            switch (entryFunction) {
-                case 'arrow_api':
-                    myArr = VCLib_VendorMap.arrow_api(context.key, configObj);
-                    break;
-                case 'ingram_api':
-                    myArr = VCLib_VendorMap.ingram_api(context.key, configObj);
-                    break;
-                case 'techdata_api':
-                    myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
-                    break;
-                case 'wefi_api':
-                    myArr = VCLib_VendorMap.wefi(context.key, configObj);
-                    break;
-                case 'jenne_api':
-                    myArr = VCLib_VendorMap.jenne_api(context.key, configObj);
-                    break;
-                case 'scansource_api':
-                    myArr = VCLib_VendorMap.scansource_api(context.key, configObj);
-                    break;
-                case 'synnex_api':
-                    myArr = VCLib_VendorMap.synnex_api(context.key, configObj);
-                    break;
-            }
+                vc2_util.log(logTitle, '// tranid: ', searchValues.values['tranid']);
 
-            //log.debug(context.key, myArr);
+                log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
+                try {
+                    var entryFunction = configObj.entry_function;
 
-            log.audit(logTitle, LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr));
+                    var myArr = [];
+                    switch (entryFunction) {
+                        case 'arrow_api':
+                            myArr = VCLib_VendorMap.arrow_api(context.key, configObj);
+                            break;
+                        case 'ingram_api':
+                            myArr = VCLib_VendorMap.ingram_api(context.key, configObj);
+                            break;
+                        case 'techdata_api':
+                            myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
+                            break;
+                        case 'wefi_api':
+                            myArr = VCLib_VendorMap.wefi(context.key, configObj);
+                            break;
+                        case 'jenne_api':
+                            myArr = VCLib_VendorMap.jenne_api(context.key, configObj);
+                            break;
+                        case 'scansource_api':
+                            myArr = VCLib_VendorMap.scansource_api(context.key, configObj);
+                            break;
+                        case 'synnex_api':
+                            myArr = VCLib_VendorMap.synnex_api(context.key, configObj);
+                            break;
+                        case 'carahsoft_api':
+                            myArr = VCLib_VendorMap.carahsoft_api(context.key, configObj);
+                            break;
+                    }
 
-            VCLib_BillFile.process(configObj, myArr, moment().unix());
-        } catch (e) {
-            log.error(logTitle, LogPrefix + '## Error  ## ' + JSON.stringify(e));
-        }
+                    //log.debug(context.key, myArr);
+
+                    log.audit(logTitle, LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr));
+
+                    VCLib_BillFile.process(configObj, myArr, moment().unix());
+                } catch (e) {
+                    log.error(logTitle, LogPrefix + '## Error  ## ' + JSON.stringify(e));
+                }
+
+                return true;
+            });
     };
 
     MAP_REDUCE.summarize = function (summary) {

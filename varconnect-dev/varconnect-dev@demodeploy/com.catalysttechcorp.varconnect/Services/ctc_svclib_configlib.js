@@ -18,7 +18,9 @@ define(function (require) {
     var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('../CTC_VC2_Constants.js');
 
-    var ns_search = require('N/search');
+    var ns_search = require('N/search'),
+        ns_runtime = require('N/runtime'),
+        ns_https = require('N/https');
 
     var VendorCFG = vc2_constant.RECORD.VENDOR_CONFIG,
         VendorCFG_Map = function (row) {
@@ -52,6 +54,18 @@ define(function (require) {
                 }),
                 itemFieldIdToMatch: row.getValue({
                     name: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+                }),
+                matchItemToPartNumber: row.getValue({
+                    name: VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME
+                }),
+                itemMPNColumnIdToMatch: row.getValue({
+                    name: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH
+                }),
+                itemMPNFieldIdToMatch: row.getValue({
+                    name: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH
+                }),
+                matchMPNWithPartNumber: row.getValue({
+                    name: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
                 })
             };
         };
@@ -97,8 +111,115 @@ define(function (require) {
             autoprocShipVar: MainCFG.FIELD.AUTOPROC_SHIPVAR,
             autoprocOtherVar: MainCFG.FIELD.AUTOPROC_OTHERVAR,
             itemColumnIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
-            itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+            itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+            matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+            itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+            itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
         };
+    var VC_LICENSE = vc2_constant.LICENSE;
+
+    var LibLicense = {
+        fetchLicense: function (option) {
+            var logTitle = 'VC_LICENSE::fetchLicense',
+                logPrefix = '[LICENSE-CHECK] ',
+                response,
+                returnValue = {};
+
+            var startTime = new Date();
+
+            var doRetry = option.doRetry,
+                maxRetry = doRetry ? option.maxRetry || VC_LICENSE.MAX_RETRY : 0,
+                retryCount = option.retryCount || 1,
+                retryWaitMS = option.retryWaitMS || option.retryWait || 2000;
+
+            try {
+                var queryOption = {
+                    method: ns_https.Method.GET,
+                    url:
+                        VC_LICENSE.URL +
+                        '?' +
+                        ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
+                        ('&nsaccountid=' + ns_runtime.accountId)
+                };
+                log.audit(
+                    logTitle,
+                    logPrefix + 'Send Request query: ' + JSON.stringify(queryOption)
+                );
+                response = ns_https.request(queryOption);
+                log.audit(logTitle, logPrefix + 'Response: ' + JSON.stringify(response));
+
+                if (!response || !response.body) throw 'Unable to get response';
+                if (!response.code || response.code !== 200)
+                    throw 'Received invalid response code - ' + response.code;
+
+                // turn off retry from this point, since we can confirm that we are able to connect
+                doRetry = false;
+
+                var parsedResp = vc2_util.safeParse(response.body);
+                if (!parsedResp) throw 'Unable to parse response';
+
+                returnValue = parsedResp;
+            } catch (error) {
+                returnValue.hasError = true;
+                returnValue.errorMsg = vc2_util.extractError(error);
+
+                if (doRetry && maxRetry > retryCount) {
+                    log.audit(logTitle, logPrefix + '... retry count : ' + retryCount);
+                    option.retryCount = retryCount + 1;
+                    vc2_util.waitMs(retryWaitMS); // wait before re-sending
+                    LibLicense.fetchLicense(option);
+                }
+            } finally {
+                var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
+                log.audit(logTitle, logPrefix + '# response time: ' + durationSec + 's');
+            }
+
+            return returnValue;
+        },
+        validate: function (option) {
+            var logTitle = 'VC_LICENSE::validate',
+                logPrefix = '[LICENSE-CHECK] ',
+                returnValue = {};
+
+            try {
+                // prep the cache
+                var vcLicenseResp = vc2_util.getNSCache({ name: VC_LICENSE.KEY });
+                vcLicenseResp = vc2_util.safeParse(vcLicenseResp);
+
+                vc2_util.log(logTitle, '..vcLicenseResp', vcLicenseResp);
+
+                if (!vcLicenseResp || vcLicenseResp.error || vcLicenseResp.status == 'inactive') {
+                    vcLicenseResp = LibLicense.fetchLicense(option);
+
+                    if (vcLicenseResp && !vcLicenseResp.error)
+                        vc2_util.setNSCache({
+                            name: VC_LICENSE.KEY,
+                            value: vcLicenseResp,
+                            cacheTTL: VC_LICENSE.CACHE_TTL
+                        });
+                }
+
+                if (
+                    !vcLicenseResp ||
+                    vcLicenseResp.error ||
+                    vcLicenseResp.isError ||
+                    vcLicenseResp.hasError
+                )
+                    throw vcLicenseResp.error || vcLicenseResp.errorMsg || vcLicenseResp.message;
+
+                if (!vcLicenseResp.status) throw 'Unable to fetch license status';
+                if (vcLicenseResp.status != 'active') throw 'License is not active';
+
+                returnValue = vcLicenseResp;
+            } catch (error) {
+                returnValue.hasError = true;
+                returnValue.errorMsg = vc2_util.extractError(error);
+            }
+
+            return returnValue;
+        }
+    };
 
     return {
         mainConfig: function (option) {
@@ -113,10 +234,10 @@ define(function (require) {
 
             var forced = option && option.forced;
 
-            vc2_util.log(logTitle, '>> main config: ', option);
+            // vc2_util.log(logTitle, '>> main config: ', option);
 
             if (!mainConfigData || forced) {
-                vc2_util.log(logTitle, '## FETCH Main COnfig ## ', forced);
+                // vc2_util.log(logTitle, '## FETCH Main COnfig ## ', forced);
 
                 // do the main config search
                 var searchObj = ns_search.create({
@@ -139,7 +260,7 @@ define(function (require) {
                 });
 
                 if (!mainConfigData) throw 'No Configuration available';
-                vc2_util.log(logTitle, 'mainConfig>> ', mainConfigData);
+                // vc2_util.log(logTitle, 'mainConfig>> ', mainConfigData);
 
                 vc2_util.setNSCache({
                     name: vc2_constant.CACHE_KEY.MAIN_CONFIG,
@@ -152,7 +273,7 @@ define(function (require) {
             return returnValue;
         },
         vendorConfig: function (option) {
-            var logTitle = [LogTitle, 'MainConfig'].join(':'),
+            var logTitle = [LogTitle, 'vendorConfig'].join(':'),
                 returnValue;
 
             var configId = option.configId || option.id,
@@ -161,7 +282,7 @@ define(function (require) {
                 cacheKey = '',
                 cacheParams = [];
 
-            log.audit(logTitle, option);
+            // vc2_util.log(logTitle, '>> vendor config: ', option);
 
             var searchOption = {
                 type: VendorCFG.ID,
@@ -197,11 +318,6 @@ define(function (require) {
             if (!cacheParams || !cacheParams.length)
                 throw 'Missing vendor configuration parameters!';
             cacheKey = vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__' + cacheParams.join('&');
-
-            log.audit(logTitle, searchOption);
-            log.audit(logTitle, cacheParams);
-            log.audit(logTitle, cacheKey);
-
             var vendorConfigData = vc2_util.getNSCache({
                 name: cacheKey,
                 isJSON: true
@@ -225,6 +341,38 @@ define(function (require) {
                 });
             }
             returnValue = vendorConfigData;
+            ///
+            var vendorCacheList = vc2_util.getNSCache({
+                name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST',
+                isJSON: true
+            });
+            if (!vendorCacheList)
+                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST'] };
+            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
+                vendorCacheList.LIST.push(cacheKey);
+            vc2_util.setNSCache({
+                name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST',
+                value: vendorCacheList
+            });
+
+            if (option.forced) {
+                // run through each
+                vendorCacheList.forEach(function (cacheKey) {
+                    vc2_util.removeCache({ name: cacheKey });
+                });
+                vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST' });
+            }
+            ///
+
+            return returnValue;
+        },
+        validateLicense: function (option) {
+            var logTitle = [LogTitle, 'validateLicense'].join(':'),
+                returnValue;
+
+            var servResponse = LibLicense.validate({ doRetry: true, retryMax: 3 });
+            vc2_util.log(logTitle, 'servResponse: ', servResponse);
+            returnValue = servResponse;
 
             return returnValue;
         },

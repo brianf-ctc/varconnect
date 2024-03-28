@@ -23,6 +23,7 @@ define([
     './CTC_VC_Lib_Jenne',
     './CTC_VC_Lib_ScanSource',
     './CTC_VC_Lib_WeFi.js',
+    './CTC_VC_Lib_Carahsoft.js',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils',
@@ -38,6 +39,7 @@ define([
     lib_jenne,
     lib_scansource,
     lib_wefi,
+    lib_carahsoft,
     vc_vendorcfg,
     vc2_constant,
     vc2_util,
@@ -160,6 +162,9 @@ define([
             case vendorList.WEFI:
                 libVendor = lib_wefi;
                 break;
+            case vendorList.CARAHSOFT:
+                libVendor = lib_carahsoft;
+                break;
             default:
                 log.error('Switch case vendor', 'XML Vendor not setup');
                 break;
@@ -274,18 +279,15 @@ define([
 
         vc2_util.log(logTitle, '/// Current ', {
             poNum: poNum,
-            tranDate: tranDate
-            // vendorConfig: vendorConfig
-        });
-
-        var dateCheck = _checkDates({
-            poNum: poNum,
             startDate: startDate,
             tranDate: tranDate,
             xmlVendorText: xmlVendorText
         });
 
-        if (!dateCheck) {
+        // validate the date
+        var isValidDate = vc2_util.parseNSDate(tranDate) > vc2_util.parseNSDate(startDate);
+
+        if (!isValidDate) {
             vc2_util.vcLog({
                 title: 'WebService | Date Check',
                 error:

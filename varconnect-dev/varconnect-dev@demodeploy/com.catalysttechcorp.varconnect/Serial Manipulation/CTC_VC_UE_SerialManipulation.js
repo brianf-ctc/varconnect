@@ -546,8 +546,52 @@ define([
             }
             ////////////////////////////////////////
 
+            // initiate the cleanup
+            this.cleanUpDeployment(option);
+
             return returnValue;
         },
+        cleanUpDeployment: function (option) {
+            var logTitle = [LogTitle, 'cleanUpDeployment'].join('::');
+
+            var searchDeploy = ns_search.create({
+                type: ns_search.Type.SCRIPT_DEPLOYMENT,
+                filters: [
+                    ['script.scriptid', 'is', option.scriptId],
+                    'AND',
+                    ['status', 'is', 'NOTSCHEDULED'],
+                    'AND',
+                    ['isdeployed', 'is', 'T']
+                ],
+                columns: ['scriptid']
+            });
+
+            var maxAllowed = option.max || 100; // only allow 100
+            var arrResults = vc2_util.searchGetAllResult(searchDeploy);
+
+            vc2_util.log(logTitle, '>> cleanup : ', {
+                maxAllowed: maxAllowed,
+                totalResults: arrResults.length
+            });
+            if (maxAllowed > arrResults.length) return;
+
+            var currentScript = ns_runtime.getCurrentScript();
+            var countDelete = arrResults.length - maxAllowed;
+            var idx = 0;
+
+            while (countDelete-- && currentScript.getRemainingUsage() > 100) {
+                try {
+                    ns_record.delete({
+                        type: ns_record.Type.SCRIPT_DEPLOYMENT,
+                        id: arrResults[idx++].id
+                    });
+                } catch (del_err) {}
+            }
+            vc2_util.log(logTitle, '// Total deleted: ', idx);
+
+            return true;
+        },
+
         getField: function (form, fieldId) {
             var logTitle = 'getField',
                 returnField;
@@ -660,7 +704,8 @@ define([
                 returnValue = false;
             var oldRecord = option.oldRecord,
                 record = option.newRecord;
-            if (!oldRecord) returnValue = true; // create
+            if (!oldRecord) returnValue = true;
+            // create
             else if (oldRecord) {
                 var cols = vc2_constant.FIELD.TRANSACTION,
                     hasSerialsChanged = false,

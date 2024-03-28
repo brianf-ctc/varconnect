@@ -107,7 +107,7 @@ define([
                 var requestOption = {
                     url: ns_url.resolveScript(RL_SERVICES),
                     body: {
-                        moduleName: 'webserviceLibV1',
+                        moduleName: 'webserviceLib',
                         action: 'OrderStatusDebug',
                         parameters: {
                             poNum: poNum,

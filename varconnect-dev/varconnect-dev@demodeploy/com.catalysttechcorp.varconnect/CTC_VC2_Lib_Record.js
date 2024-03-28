@@ -154,6 +154,7 @@ define(function (require) {
                 mainCfg = option.mainConfig,
                 vendorCfg = option.vendorConfig,
                 itemField = null,
+                mpnField = null,
                 returnValue = null;
             try {
                 // vendorCfg.itemColumnIdToMatch > vendorCfg.itemFieldIdToMatch > mainCfg.itemColumnIdToMatch > mainCfg.itemFieldIdToMatch
@@ -168,8 +169,30 @@ define(function (require) {
                 ) {
                     itemField = mainCfg.itemFieldIdToMatch;
                 }
-                log.debug(logTitle, 'Lookup alt name (' + itemField + ')...');
-                if (itemField && itemIds.length) {
+                // vendorCfg.itemMPNColumnIdToMatch > vendorCfg.itemMPNFieldIdToMatch > mainCfg.itemMPNColumnIdToMatch > mainCfg.itemMPNFieldIdToMatch
+                if (vendorCfg && !vendorCfg.itemMPNColumnIdToMatch) {
+                    mpnField = vendorCfg.itemMPNFieldIdToMatch;
+                }
+                if (
+                    !mpnField &&
+                    (!vendorCfg || !vendorCfg.itemMPNColumnIdToMatch) &&
+                    mainCfg &&
+                    !mainCfg.itemMPNColumnIdToMatch
+                ) {
+                    mpnField = mainCfg.itemMPNFieldIdToMatch;
+                }
+                log.debug(
+                    logTitle,
+                    'Lookup alt name (' + itemField + ') and mpn (' + mpnField + ')...'
+                );
+                if (itemIds.length && (itemField || mpnField)) {
+                    var itemColumns = [];
+                    if (itemField) {
+                        itemColumns.push(itemField);
+                    }
+                    if (mpnField) {
+                        itemColumns.push(mpnField);
+                    }
                     var searchOption = {
                         type: ns_search.Type.ITEM,
                         filterExpression: [
@@ -177,15 +200,30 @@ define(function (require) {
                             'and',
                             ['isinactive', 'is', 'F']
                         ],
-                        columns: [itemField]
+                        columns: itemColumns
                     };
                     var searchResults = vc2_util.searchAllPaged(searchOption);
                     if (searchResults && searchResults.length) {
-                        var altItemNames = {};
+                        var altItemNames = {
+                            _sku: false,
+                            _mpn: false
+                        };
                         searchResults.forEach(function (result) {
-                            var altItemName = result.getValue({ name: itemField }),
-                                itemId = result.id;
-                            altItemNames[itemId] = altItemName;
+                            var altItemName = null,
+                                mpnValue = null;
+                            if (itemField) {
+                                altItemName = result.getValue({ name: itemField });
+                                altItemNames._sku = true;
+                            }
+                            if (mpnField) {
+                                mpnValue = result.getValue({ name: mpnField });
+                                altItemNames._mpn = true;
+                            }
+                            var itemId = result.id;
+                            altItemNames[itemId] = {
+                                partNumber: altItemName,
+                                mpn: mpnValue
+                            };
                             return true;
                         });
                         returnValue = altItemNames;
@@ -276,12 +314,19 @@ define(function (require) {
             try {
                 var GlobalVar = vc2_constant.GLOBAL;
                 var record = option.record;
-                var itemAltNameColId = null;
+                var itemAltNameColId = null,
+                    itemMPNColId = null;
                 if (vendorCfg) {
                     itemAltNameColId = vendorCfg.itemColumnIdToMatch;
+                    itemMPNColId = vendorCfg.itemMPNColumnIdToMatch;
                 }
-                if (!itemAltNameColId && mainCfg) {
-                    itemAltNameColId = mainCfg.itemColumnIdToMatch;
+                if (mainCfg) {
+                    if (!itemAltNameColId) {
+                        itemAltNameColId = mainCfg.itemColumnIdToMatch;
+                    }
+                    if (!itemMPNColId) {
+                        itemMPNColId = mainCfg.itemMPNColumnIdToMatch;
+                    }
                 }
                 var columns = option.columns || [
                     'item',
@@ -297,6 +342,9 @@ define(function (require) {
                 ];
                 if (itemAltNameColId && columns.indexOf(itemAltNameColId) == -1) {
                     columns.push(itemAltNameColId);
+                }
+                if (itemMPNColId && columns.indexOf(itemMPNColId) == -1) {
+                    columns.push(itemMPNColId);
                 }
                 var sublistId = option.sublistId || 'item';
                 if (!record) return false;
@@ -362,11 +410,12 @@ define(function (require) {
                 });
                 returnValue.forEach(function (lineData) {
                     if (lineData && lineData.item) {
-                        if (altItemNames) {
-                            lineData.alternativeItemName = altItemNames[lineData.item];
-                        } else if (itemAltNameColId) {
-                            lineData.alternativeItemName = lineData[itemAltNameColId];
-                        }
+                        lineData = VC_RecordLib.getAltPartNumValues({
+                            source: altItemNames,
+                            target: lineData,
+                            mainConfig: mainCfg,
+                            vendorConfig: vendorCfg
+                        });
                     }
                     return true;
                 });
@@ -660,6 +709,9 @@ define(function (require) {
 
             var item = {
                 forcedValue: option.alternativeItemName || orderLine.alternativeItemName,
+                altForcedValue: option.alternativeItemName2 || orderLine.alternativeItemName2,
+                forcedSKU: option.alternativeSKU || orderLine.alternativeSKU,
+                forcedMPN: option.alternativeMPN || orderLine.alternativeMPN,
                 text: option.itemText || orderLine.item_text || orderLine.itemname,
                 altValue: option.itemAlt || orderLine[GlobalVar.ITEM_FUL_ID_LOOKUP_COL],
                 altText:
@@ -690,10 +742,32 @@ define(function (require) {
             var matchedValue;
             try {
                 if (
-                    item.forcedValue &&
-                    vc2_util.inArray(item.forcedValue, [vendorLine.item_num, vendorLine.vendorSKU])
+                    vendorLine.item_num &&
+                    vendorLine.vendorSKU &&
+                    ((item.forcedValue &&
+                        vc2_util.inArray(item.forcedValue, [
+                            vendorLine.item_num,
+                            vendorLine.vendorSKU
+                        ])) ||
+                        (item.altForcedValue &&
+                            vc2_util.inArray(item.altForcedValue, [
+                                vendorLine.item_num,
+                                vendorLine.vendorSKU
+                            ])))
                 ) {
                     matchedValue = 'AltItemName';
+                } else if (
+                    vendorLine.item_num &&
+                    item.forcedMPN &&
+                    vendorLine.item_num == item.forcedMPN
+                ) {
+                    matchedValue = 'AltMPN';
+                } else if (
+                    vendorLine.vendorSKU &&
+                    item.forcedSKU &&
+                    vendorLine.vendorSKU == item.forcedSKU
+                ) {
+                    matchedValue = 'AltVendorSKU';
                 } else if (
                     vc2_util.inArray(vendorLine.item_num, [
                         item.text,
@@ -901,7 +975,58 @@ define(function (require) {
 
             return returnValue;
         },
-        updateRecord: function (option) {}
+        getAltPartNumValues: function (option) {
+            var logTitle = [LogTitle, 'getAltPartNumValues'].join('::'),
+                source = option.source,
+                skuColumn =
+                    option.vendorConfig.itemColumnIdToMatch ||
+                    option.mainConfig.itemColumnIdToMatch,
+                mpnColumn =
+                    option.vendorConfig.itemMPNColumnIdToMatch ||
+                    option.mainConfig.itemMPNColumnIdToMatch,
+                sku = option.sku,
+                mpn = option.mpn,
+                isItemOnlyMatchedWithVendorSKU = vc2_util.isEmpty(
+                    option.vendorConfig.matchItemToPartNumber
+                )
+                    ? option.mainConfig.matchItemToPartNumber
+                    : option.vendorConfig.matchItemToPartNumber,
+                isMPNMatchedWithName = vc2_util.isEmpty(option.vendorConfig.matchMPNWithPartNumber)
+                    ? option.mainConfig.matchMPNWithPartNumber
+                    : option.vendorConfig.matchMPNWithPartNumber,
+                returnValue = option.target;
+            if (source && source[returnValue.item]) {
+                if (source._sku) {
+                    if (isItemOnlyMatchedWithVendorSKU) {
+                        returnValue.alternativeSKU = source[returnValue.item].partNumber;
+                    } else {
+                        returnValue.alternativeItemName = source[returnValue.item].partNumber;
+                    }
+                }
+                if (source._mpn) {
+                    if (isMPNMatchedWithName) {
+                        returnValue.alternativeItemName2 = source[returnValue.item].mpn;
+                    } else {
+                        returnValue.alternativeMPN = source[returnValue.item].mpn;
+                    }
+                }
+            }
+            if ((!source || !source._sku) && (sku || skuColumn)) {
+                if (isItemOnlyMatchedWithVendorSKU) {
+                    returnValue.alternativeSKU = sku || returnValue[skuColumn];
+                } else {
+                    returnValue.alternativeItemName = sku || returnValue[skuColumn];
+                }
+            }
+            if ((!source || !source._mpn) && (mpn || mpnColumn)) {
+                if (isMPNMatchedWithName) {
+                    returnValue.alternativeItemName2 = mpn || returnValue[mpnColumn];
+                } else {
+                    returnValue.alternativeMPN = mpn || returnValue[mpnColumn];
+                }
+            }
+            return returnValue;
+        }
     };
 
     // line item matching

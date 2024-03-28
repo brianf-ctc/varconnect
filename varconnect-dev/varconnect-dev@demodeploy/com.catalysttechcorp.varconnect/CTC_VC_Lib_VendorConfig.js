@@ -51,7 +51,11 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
         },
         VendorCFG.FIELD.USE_SHIPDATE,
         VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
-        VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+        VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+        VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+        VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+        VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+        VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
     ];
 
     function _generateVendorConfig(result) {
@@ -86,8 +90,52 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             }),
             itemFieldIdToMatch: result.getValue({
                 name: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+            }),
+            matchItemToPartNumber: result.getValue({
+                name: VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME
+            }),
+            itemMPNColumnIdToMatch: result.getValue({
+                name: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH
+            }),
+            itemMPNFieldIdToMatch: result.getValue({
+                name: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH
+            }),
+            matchMPNWithPartNumber: result.getValue({
+                name: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
             })
         };
+    }
+
+    function getVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_VENDOR_CONFIG_0326' });
+        if (vc2_util.isEmpty(config)) config = getVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
+    }
+    function getMultipleConfigurationsCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_MULTIPLE_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getMultipleConfigurations(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({
+                key: 'VC_MULTIPLE_VENDOR_CONFIG',
+                cacheTTL: 14400,
+                value: config
+            });
+        }
+        return config;
+    }
+    function getDebugVendorConfigurationCache(options) {
+        var config = vc2_util.getNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG' });
+        if (vc2_util.isEmpty(config)) config = getDebugVendorConfiguration(options);
+
+        if (!vc2_util.isEmpty(config)) {
+            vc2_util.setNSCache({ key: 'VC_DEBUG_VENDOR_CONFIG', cacheTTL: 14400, value: config });
+        }
+        return config;
     }
 
     function getVendorConfiguration(options) {
@@ -122,16 +170,6 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
                     values: subsidiary
                 })
             );
-
-        // log.audit(
-        //     logTitle,
-        //     '>> search option: ' +
-        //         JSON.stringify({
-        //             type: VendorCFG.ID,
-        //             filters: filter,
-        //             columns: vendorConfigFields
-        //         })
-        // );
 
         var vendorSearch = ns_search.create({
             type: VendorCFG.ID,
@@ -308,8 +346,8 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
     }
 
     return {
-        getVendorConfiguration: getVendorConfiguration,
-        getMultipleConfigurations: getMultipleConfigurations,
-        getDebugVendorConfiguration: getDebugVendorConfiguration
+        getVendorConfiguration: getVendorConfigurationCache,
+        getMultipleConfigurations: getMultipleConfigurationsCache,
+        getDebugVendorConfiguration: getDebugVendorConfigurationCache
     };
 });

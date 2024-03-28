@@ -34,13 +34,26 @@ define([
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils',
     '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator'
-], function (ns_record, ns_search, ns_runtime, vc2_constant, vc2_util, vc_maincfg, vc_license) {
+    '../CTC_VC_Lib_LicenseValidator',
+    '../Services/ctc_svclib_configlib.js'
+], function (
+    ns_record,
+    ns_search,
+    ns_runtime,
+    vc2_constant,
+    vc2_util,
+    vc_maincfg,
+    vc_license,
+    vcs_configLib
+) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
 
     var COLUMN = vc2_constant.FIELD.TRANSACTION;
+
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     var MAP_REDUCE = {
         getInputData: function () {
@@ -58,10 +71,11 @@ define([
 
                 if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
-                var mainConfig = Helper.loadMainConfig();
+                var mainConfig = vcs_configLib.mainConfig();
                 vc2_util.log(logTitle, '>> mainConfig: ', mainConfig);
 
-                Helper.validateLicense({ mainConfig: mainConfig });
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
                 if (!mainConfig || !mainConfig.copySerialsInv) {
                     //Terminate if Copy Serials functionality is not set

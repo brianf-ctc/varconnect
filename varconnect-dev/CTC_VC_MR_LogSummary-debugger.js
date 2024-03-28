@@ -872,3 +872,22 @@ require(['N/search', 'N/record', 'N/error', 'N/runtime', 'N/format'], function (
 
     return true;
 });
+
+
+
+// require(['N/search', 'N/record', 'N/error', 'N/runtime', 'N/format'], function (
+//     ns_search,
+//     ns_record,
+//     ns_error,
+//     ns_runtime,
+//     ns_format
+// ) {
+//     var searchResults = EntryPoint.getInputData(),
+//         arrReduceData = {};
+
+//     searchResults.run().each(function (result, idx) {
+//         EntryPoint.map.call(this, { key: idx, value: JSON.stringify(result) });
+//         return true;
+//     });
+
+//     return true;

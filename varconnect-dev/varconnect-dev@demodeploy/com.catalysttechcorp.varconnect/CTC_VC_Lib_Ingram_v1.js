@@ -55,7 +55,7 @@ define([
             'ORDER NOT PRINTED'
         ],
         SkippedStatus: ['CANCELED', 'CANCELLED'],
-        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED'],
+        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED', 'E-DELIVERED'],
 
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
@@ -95,6 +95,19 @@ define([
             }
 
             return returnValue;
+        },
+        getTokenCache: function () {
+            var token = vc2_util.getNSCache({ key: 'VC_INGRAM_TOKEN' });
+            if (vc2_util.isEmpty(token)) token = this.generateToken();
+            if (token) {
+                vc2_util.setNSCache({
+                    key: 'VC_INGRAM_TOKEN',
+                    cacheTTL: 14400,
+                    value: token
+                });
+                CURRENT.accessToken = token;
+            }
+            return token;
         },
         getValidOrders: function (option) {
             var logTitle = [LogTitle, 'getValidOrders'].join('::'),
@@ -424,6 +437,23 @@ define([
             }
 
             return returnValue;
+        },
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj =
+                    dateStr && dateStr !== 'NA' ? moment(dateStr, 'YYYY-MM-DD').toDate() : null;
+            } catch (err) {}
+
+            // vc2_util.log(logTitle, '// dateStr: ', {
+            //     dateStr: dateStr,
+            //     dateObj: dateObj,
+            //     isDate: util.isDate(dateObj)
+            // });
+
+            return dateObj;
         }
     };
 
@@ -535,7 +565,9 @@ define([
 
                     var defaultETA = {
                         date: moment(ingramOrderDate).add(1, 'day').toDate(),
-                        text: moment(ingramOrderDate).add(1, 'day').format('YYYY-MM-DD')
+                        text: moment(ingramOrderDate)
+                            .add(1, 'day')
+                            .format(vc2_constant.GLOBAL.DATE_FORMAT)
                     };
 
                     vc2_util.log(logTitle, logPrefix + '// defaultETA: ', defaultETA);
@@ -565,8 +597,7 @@ define([
                             is_shipped: vc2_util.inArray(
                                 orderItem.line_status.toUpperCase(),
                                 LibIngramAPI.ValidShippedStatus
-                            ),
-                            ns_record: null
+                            )
                             // LibIngramAPI.getNSRecord({
                             //     ingramOrderNumber: lineData.order_num
                             // }) || null
@@ -583,9 +614,10 @@ define([
                             orderItem.ship_qty &&
                             orderItem.ship_qty != 0
                         ) {
-                            var shippedDate = moment(orderItem.ship_date, 'YYYY-MM-DD').toDate();
+                            var shippedDate = LibIngramAPI.parseToNSDate(orderItem.ship_date);
 
                             vc2_util.log(logTitle, '**** shipped date: ****', [
+                                orderItem.ship_date,
                                 shippedDate,
                                 util.isDate(shippedDate),
                                 shippedDate <= new Date()
@@ -599,8 +631,11 @@ define([
                                 orderItem.is_shipped = true;
                         }
 
-                        vc2_util.log(logTitle, '>> line data: ', orderItem);
+                        orderItem.eta_nsdate = LibIngramAPI.parseToNSDate(orderItem.order_eta);
+                        orderItem.ship_nsdate = LibIngramAPI.parseToNSDate(orderItem.ship_date);
+                        orderItem.order_nsdate = LibIngramAPI.parseToNSDate(orderItem.order_date);
 
+                        vc2_util.log(logTitle, '>> line data: ', orderItem);
                         itemArray.push(orderItem);
                     }
                 }
@@ -627,7 +662,7 @@ define([
                 if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
 
                 // generate the
-                LibIngramAPI.generateToken();
+                LibIngramAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
                 var arrValidOrders = LibIngramAPI.getValidOrders(),

@@ -20,18 +20,14 @@ define([
     'N/https',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
-    './Services/ctc_svclib_configlib.js',
     './CTC_VC2_Lib_Record',
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
-
     './CTC_VC_Lib_Record.js',
-
     './CTC_VC_Lib_MainConfiguration',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
-
-    './CTC_VC_Lib_LicenseValidator'
+    './Services/ctc_svclib_configlib.js'
 ], function (
     ns_search,
     ns_runtime,
@@ -39,7 +35,6 @@ define([
     ns_https,
     vc2_util,
     vc2_constant,
-    vcs_configLib,
     vc2_record,
     vc_itemfflib,
     vc_itemrcpt,
@@ -47,16 +42,28 @@ define([
     vc_maincfg,
     vc_vendorcfg,
     vc_websvclib,
-    vc_license
+    vcs_configLib
 ) {
     var LogTitle = 'MR_OrderStatus',
         VCLOG_APPNAME = 'VAR Connect | OrderStatus';
     var LogPrefix = '';
-    var PARAM = {},
-        CURRENT = {};
+    var ScriptParam = {},
+        Current = {};
 
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
+    var PO_COLS = {
+        poNum: 'tranid',
+        tranDate: 'trandate',
+        vendorId: 'entity',
+        createdFrom: 'createdfrom',
+        poLinkType: 'custbody_ctc_po_link_type',
+        isDropShip: 'custbody_isdropshippo',
+        isBypassVC: 'custbody_ctc_bypass_vc',
+        subsidiary: vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES ? 'subsidiary' : null,
+        overridePO: vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM
+    };
 
     /////////////////////////////////////////////////////////
     var MAP_REDUCE = {};
@@ -73,128 +80,101 @@ define([
         var returnValue;
 
         try {
-            Helper.getParameters();
-            CURRENT.MainCFG = vcs_configLib.mainConfig();
-            if (!CURRENT.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
+            ScriptParam = Helper.getParameters();
 
-            vc2_util.log(logTitle, 'Main Config: ', CURRENT.MainCFG);
+            Current.MainCFG = vcs_configLib.mainConfig();
+            if (!Current.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
 
             // validate license
             var license = vcs_configLib.validateLicense();
             if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-            if (!CURRENT.MainCFG.processDropships && !CURRENT.MainCFG.processSpecialOrders)
+            if (!Current.MainCFG.processDropships && !Current.MainCFG.processSpecialOrders)
                 throw ERROR_MSG.NO_PROCESS_DROPSHIP_SPECIALORD;
 
-            if (!PARAM.searchId) throw ERROR_MSG.MISSING_ORDERSTATUS_SEARCHID;
+            if (!ScriptParam.searchId) throw ERROR_MSG.MISSING_ORDERSTATUS_SEARCHID;
 
-            var searchRec = ns_search.load({ id: PARAM.searchId }),
-                searchNew;
+            var searchRec = ns_search.load({ id: ScriptParam.searchId }),
+                searchNew,
+                searchCols = (function () {
+                    var arrCols = [];
+                    for (var col in PO_COLS) if (PO_COLS[col]) arrCols.push(PO_COLS[col]);
+                    return arrCols;
+                })();
 
-            if (PARAM.internalid) {
+            searchCols.push(
+                ns_search.createColumn({
+                    name: 'internalid',
+                    join: 'vendor'
+                }),
+                ns_search.createColumn({
+                    name: 'datecreated',
+                    sort: ns_search.Sort.DESC
+                })
+            );
+
+            if (ScriptParam.internalid) {
                 searchNew = ns_search.create({
                     type: searchRec.searchType,
-                    filters: searchRec.filters,
-                    columns: searchRec.columns
+                    filters: [
+                        ns_search.createFilter({ name: 'mainline', operator: 'is', values: 'T' })
+                    ],
+                    columns: searchCols
                 });
 
                 searchNew.filters.push(
                     ns_search.createFilter({
                         name: 'internalid',
                         operator: 'anyof',
-                        values: PARAM.internalid
-                    })
-                );
-
-                // add the override column
-                searchNew.columns.push(
-                    ns_search.createColumn({
-                        name: vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM
-                    })
-                );
-                // add the override column
-                searchNew.columns.push(
-                    ns_search.createColumn({
-                        name: 'custbody_ctc_bypass_vc'
+                        values: ScriptParam.internalid
                     })
                 );
             } else {
                 var activeVendors = Helper.fetchActiveVendors();
-                var searchOption = {
-                    type: 'purchaseorder',
-                    filters: [
-                        ['mainline', 'is', 'T'],
-                        'AND',
-                        ['type', 'anyof', 'PurchOrd'],
-                        'AND',
-                        [
-                            'status',
-                            'noneof',
-                            'PurchOrd:C',
-                            'PurchOrd:G',
-                            'PurchOrd:H',
-                            'PurchOrd:F'
-                        ],
-                        'AND',
-                        ['custbody_ctc_bypass_vc', 'is', 'F']
-                    ],
-                    columns: [
-                        'trandate',
-                        'type',
-                        'tranid',
-                        'entity',
-                        'account',
-                        'statusref',
-                        'amount',
-                        'incoterm',
-                        'custbody_ctc_po_link_type',
-                        'custbody_isdropshippo',
-                        vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM, // add the override column
-                        ns_search.createColumn({
-                            name: 'internalid',
-                            join: 'vendor'
-                        }),
-                        ns_search.createColumn({
-                            name: 'datecreated',
-                            sort: ns_search.Sort.DESC
-                        })
-                    ]
-                };
+                searchNew = ns_search.create({
+                    type: searchRec.searchType,
+                    filters: searchRec.filters,
+                    columns: searchCols
+                });
+                searchNew.filters.push();
 
-                var vendorFilter = [];
+                var vendorFilterFormula = [];
                 for (var i = 0, j = activeVendors.length; i < j; i++) {
                     if (
-                        PARAM.vendorId &&
-                        !vc2_util.inArray(PARAM.vendorId, activeVendors[i].vendor)
+                        ScriptParam.vendorId &&
+                        !vc2_util.inArray(ScriptParam.vendorId, activeVendors[i].vendor)
                     )
                         continue;
 
-                    if (vendorFilter.length) vendorFilter.push('OR');
-                    vendorFilter.push([
-                        ['name', 'anyof', activeVendors[i].vendor],
-                        'AND',
-                        ['trandate', 'onorafter', activeVendors[i].startDate]
-                    ]);
+                    vendorFilterFormula.push(
+                        '(' +
+                            ('{vendor.internalid}=' + activeVendors[i].vendor) +
+                            (" AND {trandate}>='" + activeVendors[i].startDate + "')")
+                    );
                 }
-                searchOption.filters.push('AND', vendorFilter);
+                var vendorFormula =
+                    'CASE WHEN ' + vendorFilterFormula.join(' OR ') + ' THEN 1 ELSE 0 END';
 
-                vc2_util.log(logTitle, '... search option: ', searchOption);
+                vc2_util.log(logTitle, '... active vendor: ', {
+                    activeVendors: activeVendors,
+                    formula: vendorFormula
+                });
 
-                searchNew = ns_search.create(searchOption);
+                searchNew.filters.push(
+                    ns_search.createFilter({
+                        name: 'formulanumeric',
+                        operator: ns_search.Operator.EQUALTO,
+                        values: [1],
+                        formula: vendorFormula
+                    })
+                );
             }
+
+            vc2_util.log(logTitle, '// search params: ', searchNew.filters);
 
             returnValue = searchNew;
         } catch (error) {
             vc2_util.logError(logTitle, error);
-
-            if (error.message && error.logStatus) {
-                vc2_util.vcLog({
-                    title: 'MR Order Status | Error',
-                    error: error.message,
-                    status: error.logStatus
-                });
-            }
-
             throw vc2_util.extractError(error);
         }
 
@@ -211,184 +191,82 @@ define([
             body:
                 'VAR Connect START' +
                 ('\n\nTotal Orders: ' + totalResults) +
-                ('\n\nParameters: ' + JSON.stringify(PARAM))
+                ('\nParameters: ' + JSON.stringify(ScriptParam))
         });
 
         return returnValue;
     };
 
     MAP_REDUCE.map = function (mapContext) {
-        var logTitle = [LogTitle, 'map'].join('::');
-        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
-
-        try {
-            vc2_util.logDebug(logTitle, '###### START: MAP ######');
-
-            Helper.getParameters();
-
-            var searchResult = JSON.parse(mapContext.value);
-            CURRENT.poId = searchResult.id;
-            CURRENT.poNum = searchResult.values.tranid;
-            CURRENT.tranDate = searchResult.values.trandate;
-            CURRENT.vendor = searchResult.values.entity.value;
-            CURRENT.byPassVC = searchResult.values.custbody_ctc_bypass_vc;
-            CURRENT.subsidiary = Helper.getSubsidiary(CURRENT.poId);
-
-            LogPrefix = 'MAP [purchaseorder:' + CURRENT.poId + '] ';
-            vc2_util.LogPrefix = LogPrefix;
-
-            if (CURRENT.byPassVC == 'T' || CURRENT.byPassVC === true)
-                throw ERROR_MSG.BYPASS_VARCONNECT;
-
-            CURRENT.MainCFG = vcs_configLib.mainConfig();
-
-            CURRENT.VendorCFG = vcs_configLib.vendorConfig({
-                vendor: CURRENT.vendor,
-                subsidiary: CURRENT.subsidiary
-            });
-            if (!CURRENT.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
-
-            if (CURRENT.MainCFG.overridePONum) {
-                var tempPONum = searchResult.values[vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM];
-                if (tempPONum) {
-                    CURRENT.poNum = tempPONum;
-                    vc2_util.log(logTitle, '**** TEMP PO NUM: ' + tempPONum + ' ****');
-                }
-            }
-            LogPrefix = 'MAP [purchaseorder:' + CURRENT.poId + '] ';
-            vc2_util.log(logTitle, '..current: ', CURRENT);
-
-            var outputObj = vc_websvclib.process({
-                mainConfig: CURRENT.MainCFG,
-                vendorConfig: CURRENT.VendorCFG,
-                vendor: CURRENT.vendor,
-                poId: CURRENT.poId,
-                poNum: CURRENT.poNum,
-                tranDate: CURRENT.tranDate,
-                subsidiary: CURRENT.subsidiary,
-                countryCode: CURRENT.VendorCFG.countryCodes
-            });
-
-            vc2_util.log(logTitle, '...  outputObj: ', outputObj);
-
-            mapContext.write(CURRENT.poId, outputObj);
-        } catch (error) {
-            vc2_util.logError(logTitle, error);
-
-            vc2_util.vcLog({
-                title: 'MR Order Status | Error',
-                error: error.message || error,
-                recordId: CURRENT.poId,
-                status: error.logStatus || LOG_STATUS.ERROR
-            });
-        } finally {
-            vc2_util.logDebug(logTitle, '###### END: MAP ###### ');
-        }
-
-        // collect all the POs, and leave the bypass
-    };
-
-    MAP_REDUCE.reduce = function (reduceContext) {
-        var logTitle = [LogTitle, 'map'].join('::');
-        vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
-
-        try {
-            vc2_util.logDebug(logTitle, '###### START: REDUCE ######');
-            Helper.getParameters();
-
-            vc2_util.log(logTitle, '/// Total Values: ', reduceContext.values.length);
-        } catch (error) {
-        } finally {
-            vc2_util.logDebug(logTitle, '###### END: REDUCE ###### ');
-        }
-    };
-
-    MAP_REDUCE.mapX = function (mapContext) {
-        var logTitle = [LogTitle, 'map'].join('::');
-
+        var logTitle = [LogTitle, 'map', mapContext.key].join('::');
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
         var outputObj;
+        var searchResult = JSON.parse(mapContext.value);
+        LogPrefix = '[purchaseorder:' + searchResult.id + '] MAP | ';
+        vc2_util.LogPrefix = LogPrefix;
         try {
-            // for each search result, the map function is called in parallel. It will handle the request write out the requestXML
             vc2_util.logDebug(logTitle, '###### START: MAP ######');
 
             Helper.getParameters();
+            Current.poId = searchResult.id;
+            for (var colName in PO_COLS) {
+                var colField = PO_COLS[colName];
+                Current[colName] = searchResult.values[colField];
+            }
+            vc2_util.log(logTitle, '..current: ', Current);
 
-            var searchResult = JSON.parse(mapContext.value);
-            CURRENT.poId = searchResult.id;
-            CURRENT.poNum = searchResult.values.tranid;
-            CURRENT.tranDate = searchResult.values.trandate;
-            CURRENT.vendor = searchResult.values.entity.value;
-
-            CURRENT.byPassVC = searchResult.values.custbody_ctc_bypass_vc;
-
-            CURRENT.subsidiary = Helper.getSubsidiary(CURRENT.poId);
-
-            LogPrefix = 'MAP [purchaseorder:' + CURRENT.poId + '] ';
-
-            vc2_util.LogPrefix = LogPrefix;
-
-            vc2_util.log(logTitle, '..current: ', CURRENT);
-
-            if (CURRENT.byPassVC == 'T' || CURRENT.byPassVC === true)
+            if (Current.isBypassVC == 'T' || Current.isBypassVC === true)
                 throw ERROR_MSG.BYPASS_VARCONNECT;
 
-            CURRENT.MainCFG = Helper.loadMainConfig();
-            CURRENT.VendorCFG = Helper.loadVendorConfig({
-                vendor: CURRENT.vendor,
-                vendorName: searchResult.values.entity.text,
-                subsidiary: CURRENT.subsidiary
+            Current.MainCFG = vcs_configLib.mainConfig();
+            Current.VendorCFG = vcs_configLib.vendorConfig({
+                vendor: Current.vendorId.value,
+                subsidiary: Current.subsidiary.value
             });
-            if (!CURRENT.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
-            ///// OVERRIDE /////
-            if (CURRENT.MainCFG.overridePONum) {
-                var tempPONum = searchResult.values[vc2_constant.FIELD.TRANSACTION.OVERRIDE_PONUM];
+            if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+
+            /// OVERRIDE ///
+            if (Current.MainCFG.overridePONum) {
+                var tempPONum = Current.overridePO;
                 if (tempPONum) {
-                    CURRENT.poNum = tempPONum;
+                    Current.poNum = tempPONum;
                     vc2_util.log(logTitle, '**** TEMP PO NUM: ' + tempPONum + ' ****');
                 }
             }
-            ////////////////
+            /// ========== ///
 
             // looup the country
-            var countryCode = CURRENT.VendorCFG.countryCode;
-            CURRENT.PO_REC = ns_record.load({
+            var countryCode = Current.VendorCFG.countryCode;
+            var PO_REC = ns_record.load({
                 type: 'purchaseorder',
-                id: CURRENT.poId,
+                id: Current.poId,
                 isDynamic: true
             });
 
-            // vc2_util.log(
-            //     logTitle,
-            //     '*** ADHOC FIELD VALUES ***',
-            //     Current.PO_REC.getValue({ fieldId: 'custbody_ctc_vc_helper_field' })
-            // );
-
-            CURRENT.isDropPO =
-                CURRENT.PO_REC.getValue({ fieldId: 'dropshipso' }) ||
-                CURRENT.PO_REC.getValue({
+            Current.isDropPO =
+                PO_REC.getValue({ fieldId: 'dropshipso' }) ||
+                PO_REC.getValue({
                     fieldId: 'custbody_ctc_po_link_type'
                 }) == 'Drop Shipment' ||
-                CURRENT.PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
+                PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
 
             ////////////////////////////////////////////////
             vc2_util.log(logTitle, '///// Initiating library webservice ....');
 
             outputObj = vc_websvclib.process({
-                mainConfig: CURRENT.MainCFG,
-                vendorConfig: CURRENT.VendorCFG,
-                vendor: CURRENT.vendor,
-                po_record: CURRENT.PO_REC,
-                poId: CURRENT.poId,
-                poNum: CURRENT.poNum,
-                tranDate: CURRENT.tranDate,
-                subsidiary: CURRENT.subsidiary,
+                mainConfig: Current.MainCFG,
+                vendorConfig: Current.VendorCFG,
+                vendor: Current.vendorId.value,
+                poId: Current.poId,
+                poNum: Current.poNum,
+                tranDate: Current.tranDate,
+                subsidiary: Current.subsidiary.value,
                 countryCode: countryCode
             });
 
-            vc2_util.log(logTitle, '...  outputObj: ', outputObj);
+            vc2_util.log(logTitle, '...  vendor data: ', outputObj);
             ////////////////////////////////////////////////
 
             ////////////////////////////////////////////////
@@ -404,195 +282,15 @@ define([
                       });
             }
 
-            // throw '** EXIT **';
-
-            ////////////////////////////////////////////////
-            /// UPDATE PO //////
-            vc2_util.log(logTitle, '///// Initiating update order ....');
-
-            var updateStatus = vc_nslib.updatepo({
-                po_record: CURRENT.PO_REC,
-                poNum: CURRENT.poId,
-                lineData: vc2_util.clone(outputObj.itemArray),
-                mainConfig: CURRENT.MainCFG,
-                vendorConfig: CURRENT.VendorCFG,
-                isDropPO: CURRENT.isDropPO
-            });
-            vc2_util.log(logTitle, '... result: ', updateStatus);
-
-            if (updateStatus) {
-                CURRENT.soId = updateStatus.id;
-                if (updateStatus.error && updateStatus.lineuniquekey) {
-                    vc2_util.vcLog({
-                        title: 'PO Update | Error',
-                        error: updateStatus.error,
-                        recordId: CURRENT.poId
-                    });
-                }
-            }
-            vc2_util.log(logTitle, '... so_ID: ', CURRENT.soId);
-            ////////////////////////////////////////////////
-
-            if (!vc2_util.isEmpty(CURRENT.soId)) {
-                CURRENT.SO_REC = ns_record.load({
-                    type: ns_record.Type.SALES_ORDER,
-                    id: CURRENT.soId
-                });
-                CURRENT.customerId = CURRENT.SO_REC.getValue('entity');
-            }
-
-            CURRENT.allowItemFF =
-                CURRENT.MainCFG.processDropships &&
-                CURRENT.VendorCFG.processDropships &&
-                CURRENT.MainCFG.createIF;
-
-            CURRENT.allowItemRcpt =
-                CURRENT.MainCFG.processSpecialOrders &&
-                CURRENT.VendorCFG.processSpecialOrders &&
-                CURRENT.MainCFG.createIR;
-
-            if (CURRENT.isDropPO) {
-                if (!CURRENT.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
-
-                if (PARAM.use_fulfill_rl === true || PARAM.use_fulfill_rl == 'T') {
-                    // Helper.processItemFulfillment_restlet({ orderLines: outputObj.itemArray });
-                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
-                } else {
-                    Helper.processItemFulfillment({ orderLines: outputObj.itemArray });
-                }
-            } else {
-                if (!CURRENT.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
-
-                Helper.processItemReceipt({ orderLines: outputObj.itemArray });
-            }
-
-            //Logic for retrieving information and creating list of serials to be created
-            if (
-                (CURRENT.isDropPO && CURRENT.MainCFG.createSerialDropship) ||
-                (!CURRENT.isDropPO && CURRENT.MainCFG.createSerialSpecialOrder)
-            ) {
-                CURRENT.NumPrefix = CURRENT.VendorCFG.fulfillmentPrefix;
-
-                // Move the searches outside of the for loop for governance issues
-                /// IF SEARCH ///////////////
-                var arrFulfillments = [];
-                var objSearchIF = ns_search.load({ id: 'customsearch_ctc_if_vendor_orders' });
-                objSearchIF.filters.push(
-                    ns_search.createFilter({
-                        name: 'custbody_ctc_if_vendor_order_match',
-                        operator: ns_search.Operator.STARTSWITH,
-                        values: CURRENT.NumPrefix
-                    })
-                );
-
-                var ItemFFSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIF });
-                vc2_util.log(logTitle, '>> Total Results [IF]: ', ItemFFSearchAll.length);
-
-                ItemFFSearchAll.forEach(function (result) {
-                    arrFulfillments.push({
-                        id: result.id,
-                        num: result.getValue('custbody_ctc_if_vendor_order_match')
-                    });
-                    return true;
-                });
-
-                vc2_util.log(logTitle, '>> fulfillments: ', arrFulfillments.length);
-                //////////////////////////////////////////////////
-
-                /// IR SEARCH /////////////////
-                var arrReceipts = [];
-                var objSearchIR = ns_search.load({ id: 'customsearch_ctc_ir_vendor_orders' });
-                objSearchIR.filters.push(
-                    ns_search.createFilter({
-                        name: 'custbody_ctc_if_vendor_order_match',
-                        operator: ns_search.Operator.STARTSWITH,
-                        values: CURRENT.NumPrefix
-                    })
-                );
-                var ItemRcptSearchAll = vc2_util.searchAllPaged({ searchObj: objSearchIR });
-
-                ItemRcptSearchAll.forEach(function (result) {
-                    arrReceipts.push({
-                        id: result.id,
-                        num: result.getValue('custbody_ctc_if_vendor_order_match')
-                    });
-                    return true;
-                });
-                vc2_util.log(logTitle, '>> receipts: ', arrReceipts.length);
-                //////////////////////////////////////////////////
-
-                vc2_util.log(logTitle, '>> lineData: ', outputObj.itemArray.length);
-
-                for (var i = 0; i < outputObj.itemArray.length; i++) {
-                    var lineData = outputObj.itemArray[i];
-                    if (!lineData) continue;
-
-                    vc2_util.log(logTitle, '... line data: ', lineData);
-
-                    var serialArray =
-                        lineData.serial_num && util.isString(lineData.serial_num)
-                            ? lineData.serial_num.split(/,/gi)
-                            : false;
-
-                    if (!serialArray || !serialArray.length) continue;
-
-                    vc2_util.log(logTitle, '... serialArray: ', serialArray);
-
-                    var fulfillmentNum = null,
-                        receiptNum = null,
-                        ii;
-
-                    if (CURRENT.isDropPO && CURRENT.MainCFG.processDropships) {
-                        for (ii = 0; ii < arrFulfillments.length; ii++) {
-                            if (arrFulfillments[ii].num == CURRENT.NumPrefix + lineData.order_num) {
-                                fulfillmentNum = arrFulfillments[ii].id;
-                                break;
-                            }
-                        }
-
-                        vc2_util.log(logTitle, '... matching fulfillment', [
-                            lineData.order_num,
-                            fulfillmentNum
-                        ]);
-                    } else if (!CURRENT.isDropPO && CURRENT.MainCFG.processSpecialOrders) {
-                        for (ii = 0; ii < arrReceipts.length; ii++) {
-                            if (arrReceipts[ii].num == CURRENT.NumPrefix + lineData.order_num) {
-                                receiptNum = arrReceipts[ii].id;
-                                break;
-                            }
-                        }
-
-                        vc2_util.log(logTitle, '... matching fulfillment', [
-                            lineData.order_num,
-                            receiptNum
-                        ]);
-                    }
-
-                    for (var iii = 0; iii < serialArray.length; iii++) {
-                        if (serialArray[iii] == '') continue;
-
-                        mapContext.write(serialArray[iii], {
-                            poId: CURRENT.poId,
-                            itemnum: lineData.item_num,
-                            lineData: lineData,
-                            custid: CURRENT.customerId,
-                            orderNum: fulfillmentNum,
-                            receiptNum: receiptNum,
-                            linenum: lineData.line_num,
-                            mainConfig: CURRENT.MainCFG,
-                            vendorConfig: CURRENT.VendorCFG,
-                            subsidiary: CURRENT.subsidiary
-                        });
-                    }
-                }
-            }
+            vc2_util.log(logTitle, '** CURRENT **', Current);
+            mapContext.write(Current.poId, util.extend(Current, { outputItems: outputObj }));
         } catch (error) {
             vc2_util.logError(logTitle, error);
 
             vc2_util.vcLog({
                 title: 'MR Order Status | Error',
                 error: error,
-                recordId: CURRENT.poId,
+                recordId: Current.poId,
                 status: LOG_STATUS.ERROR
             });
         } finally {
@@ -600,133 +298,159 @@ define([
         }
     };
 
-    MAP_REDUCE.reduceX = function (context) {
+    MAP_REDUCE.reduce = function (context) {
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
-        // reduce runs on each serial number to save it
-        // each instance of reduce has 5000 unit and this way there will be a new one for each line
         var logTitle = [LogTitle, 'reduce'].join('::');
-        vc2_util.logDebug(logTitle, '###### START: REDUCE ###### ');
-
-        var serial = context.key;
-        var currentData = JSON.parse(context.values[0]);
-        LogPrefix = 'REDUCE [purchaseorder:' + currentData.poId + '|serial:' + serial + ' ] ';
+        LogPrefix = 'REDUCE [purchaseorder:' + context.key + ' ] ';
         vc2_util.LogPrefix = LogPrefix;
 
-        if (serial == 'NA') return;
+        try {
+            vc2_util.logDebug(logTitle, '###### START: REDUCE ###### ');
+            ScriptParam = Helper.getParameters();
 
-        if (!currentData.mainConfig) currentData.mainConfig = Helper.loadMainConfig();
-        if (!currentData.subsidiary)
-            currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
-        // if (!currentData.vendorConfig) currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
+            vc2_util.log(logTitle, '>>> PO Lines: ', Current.outputItems);
 
-        vc2_util.log(logTitle, '/// current data: ', currentData);
+            Current.poId = context.key;
+            util.extend(Current, JSON.parse(context.values[0]));
 
-        var po_record = ns_record.load({
-            type: 'purchaseorder',
-            id: currentData.poId,
-            isDynamic: true
-        });
-        if (!po_record) throw 'Unable to load purchase order';
-
-        if (!currentData.vendorConfig) {
-            var vendor = po_record.getValue({ fieldId: 'entity' });
-            var subsidiaryId = null;
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
-                subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
-
-            currentData.vendorConfig =
-                currentData.vendorConfig ||
-                Helper.loadVendorConfig({
-                    vendor: vendor,
-                    vendorName: po_record.getText({ fieldId: 'entity' }),
-                    subsidiary: currentData.subsidiary
-                });
-        }
-
-        if (!currentData.mainConfig) throw 'Main Configuration not found';
-        if (!currentData.vendorConfig) throw 'Vendor Config not found';
-
-        var itemAltNameColId =
-                currentData.vendorConfig.itemColumnIdToMatch ||
-                currentData.mainConfig.itemColumnIdToMatch,
-            poColumns = [
-                'item',
-                'quantity',
-                'rate',
-                'amount',
-                vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
-                vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-            ];
-        if (itemAltNameColId) {
-            poColumns.push(itemAltNameColId);
-        }
-        var arrOrderLines = vc2_record.extractRecordLines({
-            record: po_record,
-            findAll: true,
-            mainConfig: currentData.mainConfig,
-            vendorConfig: currentData.vendorConfig,
-            columns: poColumns
-        });
-
-        var matchedOrderLine = vc2_record.findMatchingOrderLine({
-            record: po_record,
-            mainConfig: currentData.mainConfig,
-            vendorConfig: currentData.vendorConfig,
-            vendorLine: currentData.lineData,
-            orderLines: arrOrderLines
-        });
-
-        vc2_util.log(logTitle, '>> matchedOrderLine', matchedOrderLine);
-
-        if (matchedOrderLine) {
-            currentData.lineNum = matchedOrderLine.line;
-        }
-
-        // currentData.lineNum = vc_nslib.validateLineNumber({
-        //     po_record: po_record,
-        //     lineData: currentData.lineData,
-        //     ingramHashSpace: currentData.mainConfig.ingramHashSpace,
-        //     xmlVendor: currentData.vendorConfig.xmlVendor
-        // });
-
-        vc2_util.log(logTitle, '... lineNum:  ', currentData.lineNum);
-
-        if (currentData.lineNum != null) {
-            currentData.itemId = po_record.getSublistValue({
-                sublistId: 'item',
-                fieldId: 'item',
-                line: currentData.lineNum
+            var PO_REC = ns_record.load({
+                type: 'purchaseorder',
+                id: Current.poId,
+                isDynamic: true
             });
-        }
 
-        currentData.soId = po_record.getValue({ fieldId: 'createdfrom' });
-        vc2_util.logDebug(logTitle, '>> SalesOrder Id: ', currentData.soId);
+            var updateStatus = vc_nslib.updatepo({
+                po_record: PO_REC,
+                poNum: Current.poId,
+                lineData: vc2_util.clone(Current.outputItems.itemArray),
+                mainConfig: Current.MainCFG,
+                vendorConfig: Current.VendorCFG,
+                isDropPO: Current.isDropPO
+            });
+            vc2_util.log(logTitle, '... result: ', updateStatus);
 
-        if (currentData.soId) {
-            var customerInfo = vc2_util.flatLookup({
+            var SO_REC = ns_record.load({
                 type: ns_record.Type.SALES_ORDER,
-                id: currentData.soId,
-                columns: ['entity']
+                id: Current.createdFrom.value
             });
-            vc2_util.logDebug(logTitle, '... customerInfo: ', customerInfo);
+            var SO_DATA = vc2_record.extractValues({
+                record: SO_REC,
+                fields: ['entity']
+            });
+            vc2_util.log(logTitle, '... SO_DATA: ', SO_DATA);
 
-            currentData.customerId =
-                customerInfo.entity && customerInfo.entity.value ? customerInfo.entity.value : null;
+            Current.customerId = SO_REC.getValue('entity');
+
+            ///
+            Current.allowItemFF =
+                Current.MainCFG.processDropships &&
+                Current.VendorCFG.processDropships &&
+                Current.MainCFG.createIF;
+
+            Current.allowItemRcpt =
+                Current.MainCFG.processSpecialOrders &&
+                Current.VendorCFG.processSpecialOrders &&
+                Current.MainCFG.createIR;
+
+            if (Current.isDropPO) {
+                if (!Current.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
+                Helper.processItemFulfillment({
+                    orderLines: Current.outputItems.itemArray,
+                    poRec: PO_REC,
+                    soRec: SO_REC
+                });
+            } else {
+                if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
+                Helper.processItemReceipt({
+                    orderLines: Current.outputItems.itemArray,
+                    poRec: PO_REC,
+                    soRec: SO_REC
+                });
+            }
+
+            if (
+                (Current.isDropPO && Current.MainCFG.createSerialDropship) ||
+                (!Current.isDropPO && Current.MainCFG.createSerialSpecialOrder)
+            ) {
+                Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+                // matched vendor lines
+                vc2_util.log(logTitle, '>> line items: ', Current.outputItems);
+
+                // look for serial nums for all the order num
+                var orderNumSerials = Helper.serialNumsPerOrderNum({
+                    vendorLines: Current.outputItems.itemArray
+                });
+
+                vc2_util.log(logTitle, '>> serial nums: ', orderNumSerials);
+
+                // try to extract the items from the POs
+                var arrOrderLines = vc2_record.extractRecordLines({
+                    mainConfig: Current.MainCFG,
+                    vendorConfig: Current.VendorCFG,
+                    record: PO_REC,
+                    findAll: true,
+                    columns: [
+                        'item',
+                        'quantity',
+                        'rate',
+                        'amount',
+                        vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
+                        vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                        vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
+                        // prioritize the vendor config order match
+                        Current.VendorCFG.itemColumnIdToMatch ||
+                            //... over the main config column to match
+                            Current.MainCFG.itemColumnIdToMatch ||
+                            'item'
+                    ]
+                });
+                // vc2_util.log(logTitle, '>> arrOrderLines: ', arrOrderLines);
+
+                // get matched order line for each
+                Current.outputItems.itemArray.forEach(function (vendorLine) {
+                    var matchedOrderLine = vc2_record.findMatchingOrderLine({
+                        mainConfig: Current.MainCFG,
+                        vendorConfig: Current.VendorCFG,
+                        vendorLine: vendorLine,
+                        orderLines: arrOrderLines
+                    });
+                    var arrSerial =
+                        vendorLine.serial_num && vendorLine.serial_num !== 'NA'
+                            ? vendorLine.serial_num.split(/,/g)
+                            : false;
+                    var fulfillData = orderNumSerials[vendorLine.vendorOrderNum];
+                    if (fulfillData && fulfillData.length) fulfillData = fulfillData.shift();
+
+                    // if (!matchedOrderLine) return;
+                    if (!arrSerial) return;
+
+                    Helper.processSerials({
+                        serials: arrSerial,
+                        ITEM: matchedOrderLine ? matchedOrderLine.item : null,
+                        CUSTOMER: SO_DATA.entity,
+                        PURCHASE_ORDER: Current.poId,
+                        SALES_ORDER: Current.createdFrom.value,
+                        ITEM_FULFILLMENT:
+                            fulfillData && fulfillData.type == 'fulfillment'
+                                ? fulfillData.id
+                                : null,
+                        ITEM_RECEIPT:
+                            fulfillData && fulfillData.type == 'itemreceipt' ? fulfillData.id : null
+                    });
+
+                    return true;
+                });
+            }
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
+        } finally {
+            vc2_util.logDebug(logTitle, '###### END: REDUCE ###### ');
         }
-
-        //create or update serial record.
-        Helper.processSerial({
-            serial: serial,
-            currentData: currentData
-        });
-
-        return true;
     };
 
-    MAP_REDUCE.summarizeX = function (summary) {
+    MAP_REDUCE.summarize = function (summary) {
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
         //any errors that happen in the above methods are thrown here so they should be handled
@@ -746,9 +470,18 @@ define([
         });
         vc2_util.log(logTitle, 'REDUCE keys processed', reduceKeys);
 
+        vc2_util.log(logTitle, '**** SUMMARY ****', {
+            'Total Usage': summary.usage,
+            'No of Queues': summary.concurrency,
+            Yields: summary.yields
+        });
+
         vc2_util.vcLog({
             title: 'VAR Connect END',
-            message: 'VAR Connect END'
+            message:
+                'VAR Connect END' +
+                ('\n\nTotal Usage: ' + summary.usage) +
+                ('\nTotal Time (sec): ' + summary.seconds)
         });
 
         vc2_util.logDebug(logTitle, '###### END OF SCRIPT ###### ');
@@ -764,31 +497,19 @@ define([
             var logTitle = [LogTitle, 'getParameters'].join('::');
             var currentScript = ns_runtime.getCurrentScript();
 
-            PARAM = {
+            ScriptParam = {
                 searchId: currentScript.getParameter('custscript_orderstatus_searchid'),
                 vendorId: currentScript.getParameter('custscript_orderstatus_vendorid'),
                 internalid: currentScript.getParameter('custscript_orderstatus_orderid'),
                 use_fulfill_rl: currentScript.getParameter('custscript_orderstatus_restletif')
             };
-            vc2_util.log(logTitle, { type: 'debug', msg: '/// Params ' }, PARAM);
+            vc2_util.log(logTitle, { type: 'debug', msg: '/// Params ' }, ScriptParam);
 
-            return PARAM;
+            return ScriptParam;
         },
         getUsage: function () {
-            CURRENT.REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
-            return '[rem-usage:' + CURRENT.REMUSAGE + ']';
-        },
-        validateLicense: function (option) {
-            var logTitle = [LogTitle, 'validateLicense'].join('::');
-
-            var mainConfig = option.mainConfig,
-                license = mainConfig.license,
-                response = vc_license.callValidationSuitelet({
-                    license: license,
-                    external: true
-                });
-
-            if (response == 'invalid') throw ERROR_MSG.INVALID_LICENSE;
+            Current.REMUSAGE = ns_runtime.getCurrentScript().getRemainingUsage();
+            return '[rem:' + Current.REMUSAGE + ']';
         },
         fetchActiveVendors: function () {
             var logTitle = [LogTitle, 'fetchActiveVendors'].join('::');
@@ -812,7 +533,7 @@ define([
                         name: 'custrecord_ctc_vc_vendor_start'
                     });
 
-                vc2_util.log(logTitle, '.. vendor/start date', [vendorList, startDate]);
+                // vc2_util.log(logTitle, '.. vendor/start date', [vendorList, startDate]);
 
                 if (vendorList) {
                     arrVendors.push({
@@ -825,7 +546,7 @@ define([
                 return true;
             });
 
-            vc2_util.log(logTitle, '... vendor list', arrVendors);
+            // vc2_util.log(logTitle, '... vendor list', arrVendors);
 
             return arrVendors;
         },
@@ -883,23 +604,23 @@ define([
             option = option || {};
 
             try {
-                if (!CURRENT.poId) throw ERROR_MSG.MISSING_PO;
-                if (!CURRENT.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+                if (!Current.poId) throw ERROR_MSG.MISSING_PO;
+                if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
-                var searchObj = ns_search.load({ id: PARAM.searchId });
+                var searchObj = ns_search.load({ id: ScriptParam.searchId });
 
                 searchObj.filters.push(
                     ns_search.createFilter({
                         name: 'internalid',
                         operator: ns_search.Operator.IS,
-                        values: CURRENT.poId
+                        values: Current.poId
                     })
                 );
                 searchObj.filters.push(
                     ns_search.createFilter({
                         name: 'trandate',
                         operator: ns_search.Operator.ONORAFTER,
-                        values: CURRENT.VendorCFG.startDate
+                        values: Current.VendorCFG.startDate
                     })
                 );
 
@@ -1000,7 +721,7 @@ define([
             return returnValue;
         },
         processItemFulfillment_restlet: function (option) {
-            var logTitle = [LogTitle, 'processItemFulfillment'].join('::'),
+            var logTitle = [LogTitle, 'processItemFulfillment_restlet'].join('::'),
                 returnValue;
 
             try {
@@ -1009,7 +730,7 @@ define([
                 if (!Helper.validateDate()) throw 'Invalid PO Date';
                 var OrderLines = option.orderLines;
 
-                var numPrefix = CURRENT.VendorCFG.fulfillmentPrefix;
+                var numPrefix = Current.VendorCFG.fulfillmentPrefix;
                 if (!numPrefix) throw 'Config Error: Missing Fulfillment Prefix';
 
                 OrderLines = Helper.sortByOrderNum(OrderLines);
@@ -1093,8 +814,8 @@ define([
                             deploymentId: 'customdeploy_ctc_vc_rl_itemff',
                             method: 'POST',
                             body: JSON.stringify({
-                                poId: CURRENT.poId,
-                                soId: CURRENT.soId,
+                                poId: Current.poId,
+                                soId: Current.soId,
                                 orderLine: fulfillLine
                             })
                         });
@@ -1114,7 +835,7 @@ define([
                                         (util.isArray(respdata.msg)
                                             ? respdata.msg.join('\r\n')
                                             : respdata.msg),
-                                    recordId: CURRENT.poId
+                                    recordId: Current.poId
                                 });
                             }
                             if (respdata.error) {
@@ -1124,7 +845,7 @@ define([
                                         noteId + ' - ' + util.isArray(respdata.error)
                                             ? respdata.error.join('\r\n')
                                             : respdata.error,
-                                    recordId: CURRENT.poId
+                                    recordId: Current.poId
                                 });
                             }
                         }
@@ -1149,7 +870,7 @@ define([
                 vc2_util.vcLog({
                     title: 'Fulfillment Creation | Error',
                     error: error,
-                    recordId: CURRENT.poId
+                    recordId: Current.poId
                 });
             }
 
@@ -1157,25 +878,28 @@ define([
         },
         processItemFulfillment: function (option) {
             var logTitle = [LogTitle, 'processItemFulfillment'].join('::'),
+                fulfillmentData,
                 returnValue;
 
             try {
                 fulfillmentData = vc_itemfflib.updateItemFulfillments({
-                    mainConfig: CURRENT.MainCFG,
-                    vendorConfig: CURRENT.VendorCFG,
-                    poId: CURRENT.poId,
+                    mainConfig: Current.MainCFG,
+                    vendorConfig: Current.VendorCFG,
+                    poId: Current.poId,
                     lineData: option.lineData || option.orderLines,
-                    vendor: CURRENT.vendor,
-                    recSalesOrd: CURRENT.SO_REC,
-                    recPurchOrd: CURRENT.PO_REC
+                    vendor: Current.vendor,
+                    recSalesOrd: option.soRec,
+                    recPurchOrd: option.poRec
                 });
+                vc2_util.log(logTitle, '// fulfillmentData:', fulfillmentData);
+                returnValue = fulfillmentData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
                 vc2_util.vcLog({
                     title: 'Fulfillment Creation | Error',
                     error: error,
-                    recordId: CURRENT.poId
+                    recordId: Current.poId
                 });
             }
 
@@ -1183,29 +907,125 @@ define([
         },
         processItemReceipt: function (option) {
             var logTitle = [LogTitle, 'processItemReceipt'].join('::'),
+                receiptData,
                 returnValue;
 
             try {
-                fulfillmentData = vc_itemrcpt.updateIR({
-                    mainConfig: CURRENT.MainCFG,
-                    vendorConfig: CURRENT.VendorCFG,
-                    poId: CURRENT.poId,
+                receiptData = vc_itemrcpt.updateIR({
+                    mainConfig: Current.MainCFG,
+                    vendorConfig: Current.VendorCFG,
+                    poId: Current.poId,
                     lineData: option.lineData || option.orderLines,
-                    vendor: CURRENT.vendor
+                    vendor: Current.vendor
                 });
+                returnValue = receiptData;
+
+                vc2_util.log(logTitle, '// receiptData:', receiptData);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
                 vc2_util.vcLog({
                     title: 'Item Receipt Creation | Error',
                     error: error,
-                    transaction: CURRENT.poId
+                    transaction: Current.poId
                 });
             }
 
             return returnValue;
         },
-        processSerial: function (option) {
+
+        processSerials: function (option) {
+            var logTitle = [LogTitle, 'Helper.processSerial'].join('::'),
+                returnValue,
+                SERIAL_REC = vc2_constant.RECORD.SERIALS;
+
+            try {
+                var recordValues = {},
+                    arrSearchCols = ['internalid', 'name'],
+                    arrSerialFilters = [],
+                    arrSerials = option.serials;
+
+                if (vc2_util.isEmpty(arrSerials)) return false;
+
+                // make the list unique
+                arrSerials = vc2_util.uniqueArray(arrSerials);
+
+                for (var fld in SERIAL_REC.FIELD) {
+                    if (option[fld] == null) continue;
+                    recordValues[SERIAL_REC.FIELD[fld]] = option[fld];
+                    arrSearchCols.push(SERIAL_REC.FIELD[fld]);
+                }
+                // vc2_util.log(logTitle, '>> record data: ', recordValues);
+
+                var searchOption = {
+                    type: SERIAL_REC.ID,
+                    filters: [['isinactive', 'is', 'F']],
+                    columns: arrSearchCols
+                };
+
+                arrSerials.forEach(function (serial) {
+                    if (arrSerialFilters.length) arrSerialFilters.push('OR');
+                    arrSerialFilters.push(['name', 'is', serial]);
+                    return true;
+                });
+
+                searchOption.filters.push(
+                    'AND',
+                    arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift()
+                );
+                // vc2_util.log(logTitle, '>> searchOption: ', searchOption);
+                var serialSarchObj = ns_search.create(searchOption);
+
+                // update the existing serials
+                var arrUpdatedSerial = [],
+                    arrAddedSerial = [],
+                    arrProcessedSerial = [];
+
+                serialSarchObj.run().each(function (searchRow) {
+                    var serialNum = searchRow.getValue({ name: 'name' });
+                    ns_record.submitFields({
+                        type: SERIAL_REC.ID,
+                        id: searchRow.id,
+                        values: recordValues,
+                        options: { enablesourcing: true }
+                    });
+                    arrUpdatedSerial.push(serialNum);
+                    arrProcessedSerial.push(serialNum);
+                    return true;
+                });
+                // vc2_util.log(logTitle, '...updated serials: ', arrUpdatedSerial);
+
+                // add the remaining
+                arrSerials.forEach(function (serial) {
+                    if (vc2_util.inArray(serial, arrUpdatedSerial)) return;
+                    var recSerial = ns_record.create({ type: SERIAL_REC.ID });
+                    recSerial.setValue({ fieldId: 'name', value: serial });
+
+                    for (var fld in recordValues) {
+                        recSerial.setValue({
+                            fieldId: fld,
+                            value: recordValues[fld]
+                        });
+                    }
+                    var serialId = recSerial.save();
+                    vc2_util.logDebug(logTitle, '>> New Serial ID: ', serialId);
+                    arrAddedSerial.push(serial);
+                    arrProcessedSerial.push(serial);
+                });
+                // vc2_util.log(logTitle, '...added serials: ', arrAddedSerial);
+                vc2_util.log(logTitle, '...total processed serials: ', {
+                    processed: arrProcessedSerial.length,
+                    added: arrAddedSerial.length,
+                    updated: arrUpdatedSerial.length
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+
+            return true;
+        },
+
+        processSerialXX: function (option) {
             var logTitle = 'helper.processSerial';
 
             var serial = option.serial;
@@ -1270,6 +1090,138 @@ define([
                 var serialId = recordSerial.save();
                 vc2_util.logDebug(logTitle, '>> New Serial ID: ', serialId);
             }
+        },
+        fetchFulfillments: function (option) {
+            var logTitle = [LogTitle, 'fetchFulfillments'].join('::'),
+                returnValue;
+
+            try {
+                //search for the fulfillments with same prefix
+                var searchObj = ns_search.create({
+                    type: 'itemfulfillment',
+                    filters: [
+                        ['custbody_ctc_if_vendor_order_match', 'STARTSWITH', Current.NumPrefix],
+                        'AND',
+                        ['mainline', 'is', 'T']
+                    ],
+                    columns: ['internalid', 'tranid', 'custbody_ctc_if_vendor_order_match']
+                });
+                vc2_util.log(logTitle, '.. search filters: ', searchObj.filters);
+
+                var arrResults = vc2_util.searchAllPaged({ searchObj: searchObj });
+
+                var itemFFResults = {};
+
+                arrResults.forEach(function (result) {
+                    var vendorOrder = result.getValue({
+                            name: 'custbody_ctc_if_vendor_order_match'
+                        }),
+                        tranId = result.getValue({ name: 'tranid' });
+
+                    itemFFResults[vendorOrder] = {
+                        id: result.id,
+                        name: tranId,
+                        type: 'fulfillment'
+                    };
+                    return true;
+                });
+                returnValue = itemFFResults;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+            return returnValue;
+        },
+        fetchReceipts: function (option) {
+            var logTitle = [LogTitle, 'fetchReceipts'].join('::'),
+                returnValue;
+
+            try {
+                //search for the fulfillments with same prefix
+                var searchObj = ns_search.create({
+                    type: 'itemreceipt',
+                    filters: [
+                        ['custbody_ctc_if_vendor_order_match', 'STARTSWITH', Current.NumPrefix],
+                        'AND',
+                        ['mainline', 'is', 'T']
+                    ],
+                    columns: ['internalid', 'tranid', 'custbody_ctc_if_vendor_order_match']
+                });
+                vc2_util.log(logTitle, '.. search filters: ', searchObj.filters);
+
+                var arrResults = vc2_util.searchAllPaged({ searchObj: searchObj });
+
+                var itemResults = {};
+
+                arrResults.forEach(function (result) {
+                    var vendorOrder = result.getValue({
+                            name: 'custbody_ctc_if_vendor_order_match'
+                        }),
+                        tranId = result.getValue({ name: 'tranid' });
+
+                    itemResults[vendorOrder] = { id: result.id, name: tranId, type: 'itemreceipt' };
+                    return true;
+                });
+                returnValue = itemResults;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+            return returnValue;
+        },
+
+        serialNumsPerOrderNum: function (option) {
+            var logTitle = [LogTitle, 'serialNumsPerOrderNum'].join('::'),
+                returnValue;
+
+            try {
+                var arrVendorLines = option.vendorLines;
+                if (!arrVendorLines || !arrVendorLines.length) return false;
+                var orderNumSerials = {}, //{fulfillments: [], itemreciepts: []},
+                    arrFulfillments = Helper.fetchFulfillments(),
+                    arrReceipts = Helper.fetchReceipts();
+
+                // loop thru the vendor lines
+                arrVendorLines.forEach(function (vendorLine) {
+                    var serialArray =
+                        vendorLine.serial_num && util.isString(vendorLine.serial_num)
+                            ? vendorLine.serial_num !== 'NA'
+                                ? vendorLine.serial_num.split(/,/gi)
+                                : false
+                            : false;
+                    if (!serialArray) return;
+                    var vendorOrderMatch = Current.NumPrefix + vendorLine.order_num;
+
+                    if (arrFulfillments[vendorOrderMatch]) {
+                        if (!orderNumSerials[vendorOrderMatch])
+                            orderNumSerials[vendorOrderMatch] = [];
+
+                        orderNumSerials[vendorOrderMatch].push(
+                            util.extend(arrFulfillments[vendorOrderMatch], { serials: serialArray })
+                        );
+                    }
+
+                    if (arrReceipts[vendorOrderMatch]) {
+                        if (!orderNumSerials[vendorOrderMatch])
+                            orderNumSerials[vendorOrderMatch] = [];
+
+                        orderNumSerials[vendorOrderMatch].push(
+                            util.extend(arrReceipts[vendorOrderMatch], { serials: serialArray })
+                        );
+                    }
+
+                    vc2_util.log(logTitle, '** order serials: ', {
+                        orderNum: vendorOrderMatch,
+                        list: orderNumSerials[vendorOrderMatch]
+                    });
+
+                    return true;
+                });
+
+                returnValue = orderNumSerials;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+
+            return returnValue;
         }
     };
 

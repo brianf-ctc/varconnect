@@ -72,7 +72,7 @@ define(function (require) {
         var logTitle = [LogTitle, 'updateItemFulfillments'].join('::'),
             responseData;
         Current.Script = ns_runtime.getCurrentScript();
-        log.debug(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
+        vc2_util.log(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
 
         try {
             Current.Features = {
@@ -315,6 +315,9 @@ define(function (require) {
                         var itemAltNameColId =
                                 Current.VendorCFG.itemColumnIdToMatch ||
                                 Current.MainCFG.itemColumnIdToMatch,
+                            itemMPNColId =
+                                Current.VendorCFG.itemMPNColumnIdToMatch ||
+                                Current.MainCFG.itemMPNColumnIdToMatch,
                             lineCols = [
                                 'item',
                                 'sitemname',
@@ -340,6 +343,9 @@ define(function (require) {
                         if (itemAltNameColId) {
                             lineCols.push(itemAltNameColId);
                         }
+                        if (itemMPNColId) {
+                            lineCols.push(itemMPNColId);
+                        }
                         var arrVendorItemNames = vc2_record.extractVendorItemNames({
                             lines: arrFFItems
                         });
@@ -356,11 +362,12 @@ define(function (require) {
                                     arrVendorItemNames[line][
                                         vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                                     ];
-                                if (altItemNames) {
-                                    lineFF.alternativeItemName = altItemNames[lineFF.item];
-                                } else if (itemAltNameColId) {
-                                    lineFF.alternativeItemName = lineFF[itemAltNameColId];
-                                }
+                                lineFF = vc2_record.getAltPartNumValues({
+                                    source: altItemNames,
+                                    target: lineFF,
+                                    vendorConfig: Current.VendorCFG,
+                                    mainConfig: Current.MainCFG
+                                });
                                 vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
 
                                 // get the po lines values
@@ -373,6 +380,9 @@ define(function (require) {
                                     ];
                                     if (itemAltNameColId) {
                                         poLineCols.push(itemAltNameColId);
+                                    }
+                                    if (itemMPNColId) {
+                                        poLineCols.push(itemMPNColId);
                                     }
                                     lineFF.poLineData = vc2_record.extractLineValues({
                                         record: Current.PO_REC,
@@ -390,13 +400,12 @@ define(function (require) {
                                                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                                             ];
                                     }
-                                    if (altItemNames) {
-                                        lineFF.poLineData.alternativeItemName =
-                                            altItemNames[lineFF.poline.item];
-                                    } else if (itemAltNameColId) {
-                                        lineFF.poLineData.alternativeItemName =
-                                            lineFF.poLineData[itemAltNameColId];
-                                    }
+                                    lineFF.poLineData = vc2_record.getAltPartNumValues({
+                                        source: altItemNames,
+                                        target: lineFF.poLineData,
+                                        vendorConfig: Current.VendorCFG,
+                                        mainConfig: Current.MainCFG
+                                    });
                                     vc2_util.log(logTitle, '*** PO Line: ***', lineFF.poLineData);
                                 }
 
@@ -809,10 +818,7 @@ define(function (require) {
 
             throw error;
         } finally {
-            log.debug(
-                logTitle,
-                vc2_util.getUsage() + '############ ITEM FULFILLMENT CREATION: END ############'
-            );
+            vc2_util.log(logTitle, '############ ITEM FULFILLMENT CREATION: END ############');
         }
     };
     ////////////////////////////////////

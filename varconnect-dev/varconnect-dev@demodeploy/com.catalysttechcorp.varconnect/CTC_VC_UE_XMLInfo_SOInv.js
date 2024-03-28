@@ -55,17 +55,16 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     ];
 
     var xmlFieldsDef = {
-        TEXT: [
+        LIST: [
             'custcol_ctc_xml_carrier',
-            'custcol_ctc_xml_date_order_placed',
-            'custcol_ctc_xml_dist_order_num',
             'custcol_ctc_xml_eta',
             'custcol_ctc_xml_serial_num',
             'custcol_ctc_xml_ship_date',
-            'custcol_ctc_xml_ship_method',
             'custcol_ctc_xml_tracking_num',
-            'custcol_ctc_xml_inb_tracking_num'
+            'custcol_ctc_xml_inb_tracking_num',
+            'custcol_ctc_xml_dist_order_num'
         ],
+        TEXT: ['custcol_ctc_xml_date_order_placed', 'custcol_ctc_xml_ship_method'],
         DATE: [
             'custcol_ctc_vc_order_placed_date',
             'custcol_ctc_vc_eta_date',
@@ -225,7 +224,9 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                                 ? 'DATE'
                                 : inArray(xmlFields[xmlField], xmlFieldsDef.TEXT)
                                 ? 'TEXT'
-                                : 'TEXT';
+                                : inArray(xmlFields[xmlField], xmlFieldsDef.LIST)
+                                ? 'LIST'
+                                : null;
 
                             var currentValue = soRec.getCurrentSublistValue({
                                 sublistId: 'item',
@@ -272,6 +273,14 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                                             value: fieldValue
                                         })
                                     });
+
+                                    if (fieldType == 'LIST') {
+                                        var valArray = fieldValue.split(/[,\s]/g);
+                                        if (valArray && valArray.length) {
+                                            valArray = uniqueArray(valArray);
+                                            fieldValue = valArray.join(' ');
+                                        }
+                                    }
 
                                     soRec.setCurrentSublistValue({
                                         sublistId: 'item',
@@ -594,6 +603,16 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         log.audit(logTitle, 'return value :' + date);
 
         return date;
+    }
+
+    function uniqueArray(arrVar) {
+        var arrNew = [];
+        for (var i = 0, j = arrVar.length; i < j; i++) {
+            if (inArray(arrVar[i], arrNew)) continue;
+            arrNew.push(arrVar[i]);
+        }
+
+        return arrNew;
     }
 
     //**********************************************************************************************************

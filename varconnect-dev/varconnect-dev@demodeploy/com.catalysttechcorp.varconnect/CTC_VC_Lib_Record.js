@@ -314,6 +314,9 @@ define([
             // extract lines from the PO
             var itemAltNameColId =
                     Current.VendorCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                itemAltMPNColId =
+                    Current.VendorCFG.itemMPNColumnIdToMatch ||
+                    Current.MainCFG.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -327,6 +330,9 @@ define([
                 ];
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
+            }
+            if (itemAltMPNColId) {
+                poColumns.push(itemAltMPNColId);
             }
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,

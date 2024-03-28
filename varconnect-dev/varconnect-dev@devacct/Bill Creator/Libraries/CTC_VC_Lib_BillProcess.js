@@ -78,23 +78,27 @@ define([
 
                 // load the variance config
                 this.loadOrderData(option);
-                this.loadBillFile(option);
+                if (vc2_util.isEmpty(Current.OrderData)) throw 'MISSING_PO';
+                // if (Current.OrderData.isClosed)
+                //     throw Current.OrderData.isFullyBilled ? 'FULLY_BILLED' : 'CLOSED_PO';
 
+                this.loadBillFile(option);
                 if (!Current.OrderData) throw ' Missing PO Data';
                 if (!Current.OrderLines) throw ' Missing PO Line';
                 if (!Current.BillFile) throw ' Missing Bill File Data';
                 if (!Current.VendorData) throw ' Missing Vendor Data';
 
-                // if (Current.OrderData.isClosed)
-                //     throw Current.OrderData.isFullyBilled ? 'FULLY_BILLED' : 'CLOSED_PO';
-
                 /// MATCH the orderLines ///
 
-                Current.MatchedLines = vc2_record.matchOrderLines({
-                    orderLines: Current.OrderLines,
-                    includeZeroQtyLines: true,
-                    vendorLines: Current.VendorData.lines
-                });
+                Current.MatchedLines = [];
+                if (!vc2_util.isEmpty(Current.OrderLines)) {
+                    Current.MatchedLines = vc2_record.matchOrderLines({
+                        orderLines: Current.OrderLines,
+                        includeZeroQtyLines: true,
+                        vendorLines: Current.VendorData.lines
+                    });
+                }
+
                 vc2_util.log(logTitle, '/// Matched Lines ', Current.MatchedLines);
 
                 /// SETUP the Bill Lines
@@ -196,6 +200,10 @@ define([
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
+
+                Helper.setError({
+                    code: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -390,14 +398,14 @@ define([
                     orderId = option.orderId || option.poId || option.internalId;
 
                 if (!recOrder) {
-                    if (!orderId) throw 'Missing PO Id';
+                    if (!orderId) throw 'MISSING_PO';
                     recOrder = vc2_record.load({
                         type: 'purchaseorder',
                         id: orderId,
                         isDynamic: false
                     });
                 }
-                if (!recOrder) throw 'Missing PO record';
+                if (!recOrder) throw 'MISSING_PO';
 
                 // Get PO Data
                 Current.OrderData = vc2_record.extractValues({
@@ -452,6 +460,10 @@ define([
             } catch (error) {
                 // collect all the errors
                 vc2_util.logError(logTitle, error);
+
+                Helper.setError({
+                    code: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -508,7 +520,6 @@ define([
                             return true;
                         });
                         vendorLine.QUANTITY = vc2_util.forceInt(vendorLine.QUANTITY);
-                        if (!vendorLine.NSITEM) throw 'UNMATCHED_ITEMS';
 
                         util.extend(vendorLine, {
                             quantity: vendorLine.QUANTITY,
@@ -517,6 +528,7 @@ define([
                         });
 
                         if (vendorLine.quantity) arrNonZeroLines.push(vendorLine);
+                        if (!vendorLine.NSITEM) throw 'UNMATCHED_ITEMS';
                     } catch (vendorLine_error) {
                         vc2_util.logError(logTitle, vendorLine_error);
                         Helper.setError({

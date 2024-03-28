@@ -704,6 +704,9 @@ define([
             var itemAltNameColId =
                     option.vendorConfig.itemColumnIdToMatch ||
                     option.mainConfig.itemColumnIdToMatch,
+                itemMPNColId =
+                    option.vendorConfig.itemMPNColumnIdToMatch ||
+                    option.mainConfig.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -716,10 +719,15 @@ define([
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
             }
+            if (itemMPNColId) {
+                poColumns.push(itemMPNColId);
+            }
             var arrFulfillLines = vc_recordlib.extractRecordLines({
                 record: option.record,
                 findAll: true,
-                columns: poColumns
+                columns: poColumns,
+                vendorConfig: option.vendorConfig,
+                mainConfig: option.mainConfig
             });
             // sort by quantity
             arrFulfillLines = arrFulfillLines.sort(function (a, b) {
@@ -772,6 +780,28 @@ define([
                             dataSet: Current.billPayload.lines,
                             findAll: true,
                             filter: {
+                                nsitem: itemffLine.alternativeItemName2,
+                                quantity: itemffLine.quantity,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeSKU,
+                                quantity: itemffLine.quantity,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
                                 nsitem: itemffLine.item,
                                 quantity: itemffLine.quantity,
                                 AVAILQTY: function (value) {
@@ -786,6 +816,26 @@ define([
                             findAll: true,
                             filter: {
                                 nsitem: itemffLine.alternativeItemName,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeItemName2,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeSKU,
                                 AVAILQTY: function (value) {
                                     return value > 0;
                                 }

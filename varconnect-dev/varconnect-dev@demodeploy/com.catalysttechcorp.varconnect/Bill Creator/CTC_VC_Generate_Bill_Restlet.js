@@ -23,6 +23,7 @@ define([
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Lib_Record',
     './../CTC_VC_Lib_MainConfiguration',
+    './../CTC_VC_Lib_VendorConfig',
     './Libraries/moment'
 ], function (
     ns_record,
@@ -34,6 +35,7 @@ define([
     vc2_util,
     vc2_recordlib,
     vc_mainCfg,
+    vc_vendorcfg,
     moment
 ) {
     var LogTitle = 'VC BILL CREATE RL',
@@ -69,19 +71,36 @@ define([
 
                 // Load the PO Record
                 var recPO = vc2_recordlib.load({ type: 'purchaseorder', id: Current.poId });
+                var poColumns = [
+                    'tranid',
+                    'entity',
+                    'taxtotal',
+                    'tax2total',
+                    'status',
+                    'statusRef'
+                ];
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                    poColumns.push('subsidiary');
+                }
                 Current.PO_DATA = vc2_recordlib.extractValues({
                     record: recPO,
-                    fields: ['tranid', 'entity', 'taxtotal', 'tax2total', 'status', 'statusRef']
+                    fields: poColumns
                 });
 
                 var mainConfig = Helper.loadBillingConfig(),
-                    vendorConfig = Helper.loadVendorConfig({ entity: Current.PO_DATA.entity });
+                    vendorConfig = Helper.loadVendorConfig({ entity: Current.PO_DATA.entity }),
+                    orderStatusVendorCFG = Helper.loadOrderStatusVendorConfig({
+                        vendor: Current.PO_DATA.entity,
+                        vendorName: Current.PO_DATA.entity_text,
+                        subsidiary: Current.PO_DATA.subsidiary
+                    });
 
                 /// PROCESS THE BILL  =================
                 var BillData = vc_billprocess.preprocessBill({
                     recOrder: recPO,
                     billFileId: Current.billFileId,
-                    vendorConfig: vendorConfig
+                    vendorConfig: vendorConfig,
+                    orderStatusVendorConfig: orderStatusVendorCFG
                 });
 
                 if (BillData.VendorData && BillData.VendorData.hasOwnProperty('ignoreVariance')) {
@@ -155,9 +174,16 @@ define([
 
                 /// =====================================
 
+                vc2_util.log(logTitle, '>> Settings: ', {
+                    AllowBill: BillData.AllowBill,
+                    processVariance: Current.processVariance,
+                    ignoreVariance: Current.ignoreVariance,
+                    hasVariance: BillData.HasVariance,
+                    notAllowed: !BillData.AllowBill && !Current.processVariance
+                });
                 /// VALIDATE BEFORE BILL CREATE =========
                 if (!BillData.AllowBill && !Current.processVariance) {
-                    if (BillData.HasVariance) {
+                    if (BillData.HasVariance && !Current.ignoreVariance) {
                         vc2_util.log(logTitle, '>> Has Variances - ', BillData.VarianceList);
 
                         return util.extend(
@@ -525,6 +551,26 @@ define([
             }
 
             return returnValue;
+        },
+        loadOrderStatusVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
+
+            var vendor = option.vendor,
+                vendorName = option.vendorName,
+                subsidiary = option.subsidiary,
+                vendorConfig = vc_vendorcfg.getVendorConfiguration({
+                    vendor: vendor,
+                    subsidiary: subsidiary
+                });
+
+            if (!vendorConfig) {
+                vc2_util.log(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
+            }
+
+            return vendorConfig;
         }
     };
 

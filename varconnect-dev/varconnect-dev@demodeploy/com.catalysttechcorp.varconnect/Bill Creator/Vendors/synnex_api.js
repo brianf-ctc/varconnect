@@ -309,6 +309,7 @@ define(function (require) {
                     myObj.lines.push({
                         processed: false,
                         ITEMNO: itemData.ManuafacturerPartNumber,
+                        SKU: itemData.SKU,
                         PRICE: vc2_util.parseFloat(itemData.UnitPrice),
                         QUANTITY: vc2_util.parseFloat(itemData.ShipQuantity),
                         DESCRIPTION: itemData.ProductDescription

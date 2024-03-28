@@ -39,7 +39,7 @@ define([
         //     columns: ['tranid', 'subsidiary']
         // });
 
-        var token = generateToken({
+        var token = getTokenCache({
             recordId: recordId,
             config: config,
             tranId: config.poNum
@@ -439,6 +439,7 @@ define([
 
                     var lineData = {
                         ITEMNO: lineInfo.vendorpartnumber,
+                        SKU: lineInfo.ingramPartNumber,
                         PRICE: vc2_util.parseFloat(lineInfo.unitprice),
                         QUANTITY: vc2_util.forceInt(lineInfo.shippedquantity),
                         DESCRIPTION: lineInfo.partdescription
@@ -554,6 +555,21 @@ define([
         if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
         return tokenResp.access_token;
+    }
+
+    function getTokenCache(option) {
+        var token = vc2_util.getNSCache({ key: 'VC_BC_INGRAM_TOKEN' });
+        if (vc2_util.isEmpty(token)) token = generateToken(option);
+
+        if (!vc2_util.isEmpty(token)) {
+            vc2_util.setNSCache({
+                key: 'VC_BC_INGRAM_TOKEN',
+                cacheTTL: 14400,
+                value: token
+            });
+            CURRENT.accessToken = token;
+        }
+        return token;
     }
 
     // // Add the return statement that identifies the entry point function.

@@ -27,7 +27,8 @@ define([
     './../CTC_VC_Lib_MainConfiguration',
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
-    './../CTC_VC2_Lib_Record'
+    './../CTC_VC2_Lib_Record',
+    './../CTC_VC_Lib_VendorConfig'
 ], function (
     ns_ui,
     ns_msg,
@@ -42,7 +43,8 @@ define([
     vc_mainConfig,
     vc2_constant,
     vc2_util,
-    vc2_recordlib
+    vc2_recordlib,
+    vc_vendorcfg
 ) {
     var LogTitle = 'FlexScreen',
         BILL_CREATOR = vc2_constant.Bill_Creator;
@@ -54,6 +56,7 @@ define([
         PO_ID: null,
 
         VendorCFG: {},
+        OrderStatusVendorCFG: {},
 
         PO_REC: null,
         BILLFILE_REC: null,
@@ -260,18 +263,22 @@ define([
                     isDynamic: false
                 });
 
+                var poColumns = [
+                    'id',
+                    'status',
+                    'statusRef',
+                    'location',
+                    'taxtotal',
+                    'tax2total',
+                    'entity',
+                    'total'
+                ];
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                    poColumns.push('subsidiary');
+                }
                 Current.PO_DATA = vc2_recordlib.extractValues({
                     record: Current.PO_REC,
-                    fields: [
-                        'id',
-                        'status',
-                        'statusRef',
-                        'location',
-                        'taxtotal',
-                        'tax2total',
-                        'entity',
-                        'total'
-                    ]
+                    fields: poColumns
                 });
 
                 vc2_util.log(logTitle, '>> PO Info: ', Current.PO_DATA);
@@ -280,6 +287,16 @@ define([
                     entity: Current.PO_DATA.entity
                 });
                 vc2_util.log(logTitle, '>> Vendor Config: ', Current.VendorCFG);
+                Current.OrderStatusVendorCFG = Helper.loadOrderStatusVendorConfig({
+                    vendor: Current.PO_DATA.entity,
+                    vendorName: Current.PO_DATA.entity_text,
+                    subsidiary: Current.PO_DATA.subsidiary
+                });
+                vc2_util.log(
+                    logTitle,
+                    '>> Order Status Vendor Config: ',
+                    Current.OrderStatusVendorCFG
+                );
             }
             /////////////////////////////////////////////////
 
@@ -402,7 +419,8 @@ define([
             var BillData = vc_billprocess.preprocessBill({
                 recOrder: Current.PO_REC,
                 recBillFile: Current.BILLFILE_REC,
-                vendorConfig: Current.VendorCFG
+                vendorConfig: Current.VendorCFG,
+                orderStatusVendorConfig: Current.OrderStatusVendorCFG
             });
 
             // items sublist
@@ -433,13 +451,83 @@ define([
                 vc2_util.log(logTitle, '>> lineData: ', lineData);
 
                 if (Current.IS_ACTIVE_EDIT) {
-                    if (lineData.nsrate != lineData.rate)
-                        lineData.variancerate =
-                            '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+                    var htmlError = '';
+                    var ERROR_MSG = {
+                        UNMATCHED_ITEMS: ['I', 'Item not found'],
+                        INSUFFICIENT_QUANTITY: ['Q', 'Insufficient quantity to bill'],
+                        Price: ['P', 'Mismatched Rates']
+                    };
 
-                    if (lineData.remainingqty < lineData.quantity)
-                        lineData.varianceqty =
-                            '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+                    var arrLineErrors = (function () {
+                        return (
+                            billLine.Errors && billLine.Errors.length ? billLine.Errors : []
+                        ).concat(
+                            billLine.Variance && billLine.Variance.length ? billLine.Variance : null
+                        );
+                    })();
+
+                    log.audit(logTitle, '** LINE ERRORS: ' + JSON.stringify(arrLineErrors));
+
+                    arrLineErrors.forEach(function (errorCode) {
+                        var errMsg = ERROR_MSG[errorCode];
+                        if (!errMsg) return true;
+                        htmlError += errMsg[1] + '. ';
+                        return true;
+                    });
+                    if (htmlError) {
+                        var css = [
+                            'text-decoration:none;',
+                            'color:red;',
+                            'background-color:#faf1f1;',
+                            'padding:0 2px;'
+                            // 'margin:2px 2px 0 0;'
+                        ].join('');
+
+                        lineData.lineerror =
+                            '<div style="font-weight:bold; color: red;font-size:1.2em;text-align:center;margin: auto;width:50%;"> ' +
+                            '<a href="javascript:void(0);" style="' +
+                            css +
+                            '" title="' +
+                            htmlError +
+                            '">&nbsp;!&nbsp;</a></div>';
+                    }
+
+                    //  ERROR v2
+                    // arrLineErrors.forEach(function (errorCode) {
+                    //     var errMsg = ERROR_MSG[errorCode];
+                    //     if (!errMsg) return true;
+                    //     var css = [
+                    //         'text-decoration:none;',
+                    //         'color:red;',
+                    //         // 'background-color:#f8e4e4;',
+                    //         // 'padding:0 5px;',
+                    //         // 'margin:2px 2px 0 0;'
+                    //     ].join('');
+                    //     // htmlError += '&nbsp;' + errMsg[0] + '&nbsp;'
+                    //     htmlError +=
+                    //         // '<span style="font-weight:bold; color: red;font-size:1em;">' +
+                    //         '<a href="#" ' +
+                    //         ('style="' + css + '" ') +
+                    //         ('title="' + errMsg[1] + '"') +
+                    //         ('>&nbsp;**' + errMsg[0] + '&nbsp;</a>');
+                    //     // '</span>';
+                    //     return true;
+                    // });
+                    // if (htmlError)
+                    //     lineData.lineerror =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> ' +
+                    //         htmlError +
+                    //         ' </span> ';
+                    //
+
+                    // ERROR v1:
+                    // if (lineData.nsrate != lineData.rate)
+                    //     lineData.variancerate =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
+
+                    // if (lineData.remainingqty < lineData.quantity)
+                    //     lineData.varianceqty =
+                    //         '<span style="font-weight:bold; color: red;font-size:1em;"> * </span> ';
                 }
 
                 /// SET THE LINE DATA /////////////
@@ -457,6 +545,7 @@ define([
             if (Current.IS_ACTIVE_EDIT) {
                 // REPORT Error
                 if (!vc2_util.isEmpty(BillData.Error)) {
+                    var arrErrorMsg = [];
                     for (var errorCode in BillData.Error) {
                         var errorMsg = BILL_CREATOR.Code[errorCode]
                             ? BILL_CREATOR.Code[errorCode].msg
@@ -468,12 +557,13 @@ define([
                                     ? BillData.Error[errorCode].join(', ')
                                     : BillData.Error[errorCode]);
 
-                        Current.ErrorMessage = errorMsg;
+                        arrErrorMsg.push(errorMsg);
                     }
+                    Current.ErrorMessage = arrErrorMsg.join('<br/>');
                     AllowToBill = false;
                 }
                 // report VARIANCE
-                else if (
+                if (
                     !vc2_util.isEmpty(BillData.VarianceList) &&
                     !vc2_util.inArray(BillData.BillFile.PROC_VARIANCE, ['T', 't', true])
                 ) {
@@ -507,12 +597,12 @@ define([
                                 ns_format.format({
                                     value: BillData.MainCFG.allowedThreshold,
                                     type: ns_format.Type.CURRENCY
-                                }),
-                                ', variance: ' +
-                                    ns_format.format({
-                                        value: totalVariance,
-                                        type: ns_format.Type.CURRENCY
-                                    })
+                                })
+                                // ', variance: ' +
+                                //     ns_format.format({
+                                //         value: totalVariance,
+                                //         type: ns_format.Type.CURRENCY
+                                //     })
                             ].join('')
                         );
                         AllowToBill = exceedThreshold ? false : true;
@@ -551,7 +641,7 @@ define([
                         chargeLine.amount && chargeLine.autoProc
                             ? '<span style="color: red;font-size:1em;"> ** Auto Processed ** </span>'
                             : '',
-                    amount: chargeLine.amount,
+                    amount: chargeLine.amount || chargeLine.chargeAmount,
                     amounttax: chargeLine.amount
                 };
 
@@ -780,7 +870,7 @@ define([
             var errorMessage = vc2_util.extractError(error);
 
             FormHelper.Form.addPageInitMessage({
-                title: 'Error ' + errorMessage,
+                title: 'Error Found ', // + errorMessage,
                 message: util.isString(error) ? error : JSON.stringify(error),
                 type: ns_msg.Type.ERROR
             });
@@ -1081,7 +1171,9 @@ define([
                 autoprocPriceVar: mainConfig.autoprocPriceVar,
                 autoprocTaxVar: mainConfig.autoprocTaxVar,
                 autoprocShipVar: mainConfig.autoprocShipVar,
-                autoprocOtherVar: mainConfig.autoprocOtherVar
+                autoprocOtherVar: mainConfig.autoprocOtherVar,
+                itemColumnIdToMatch: mainConfig.itemColumnIdToMatch,
+                itemMPNColumnIdToMatch: mainConfig.itemMPNColumnIdToMatch
             };
         },
         loadVendorConfig: function (option) {
@@ -1125,6 +1217,26 @@ define([
             }
 
             return returnValue;
+        },
+        loadOrderStatusVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
+
+            var vendor = option.vendor,
+                vendorName = option.vendorName,
+                subsidiary = option.subsidiary,
+                vendorConfig = vc_vendorcfg.getVendorConfiguration({
+                    vendor: vendor,
+                    subsidiary: subsidiary
+                });
+
+            if (!vendorConfig) {
+                vc2_util.log(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
+            }
+
+            return vendorConfig;
         },
         updateBillTotals: function (option) {
             var logTitle = [LogTitle, 'updateBillTotals'].join('::');
@@ -1566,31 +1678,31 @@ define([
                 CALC_TOTAL: {
                     id: 'custpage_calctotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Bill Amount',
+                    label: 'Calc. Bill Amount',
                     defaultValue: Current.TOTALS_DATA.AMOUNT || 0
                 },
                 CALC_LINETOTAL: {
                     id: 'custpage_linetotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Line Amount',
+                    label: 'Calc. Line Amount',
                     defaultValue: Current.TOTALS_DATA.LINE_AMOUNT || 0
                 },
                 CALC_TAXTOTAL: {
                     id: 'custpage_polinetaxtotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Tax',
+                    label: 'Calc. Tax',
                     defaultValue: Current.TOTALS_DATA.TAX_AMOUNT || 0
                 },
                 CALC_SHIPTOTAL: {
                     id: 'custpage_poshiptotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Shipping ',
+                    label: 'Calc. Shipping ',
                     defaultValue: Current.TOTALS_DATA.SHIPPING_AMT || 0
                 },
                 CALC_VARIANCETOTAL: {
                     id: 'custpage_variancetotal',
                     type: ns_ui.FieldType.CURRENCY,
-                    label: 'Total Variance Amount',
+                    label: 'Calc. Variance',
                     defaultValue: Current.TOTALS_DATA.VARIANCE_AMT || 0
                 }
             });
@@ -1606,6 +1718,11 @@ define([
                 label: 'Invoice Lines',
                 type: ns_ui.SublistType.LIST,
                 fields: {
+                    lineerror: {
+                        type: ns_ui.FieldType.TEXT,
+                        size: { w: 3, h: 100 },
+                        label: ' '
+                    },
                     // BILL FILE:item value
                     item: { type: ns_ui.FieldType.TEXT, label: 'Item' },
                     // BILL FILE: nsitem value
@@ -1681,12 +1798,12 @@ define([
                         type: ns_ui.FieldType.CURRENCY
                     },
 
-                    // variance indicator
-                    varianceqty: {
-                        type: ns_ui.FieldType.TEXT,
-                        size: { w: 3, h: 100 },
-                        label: ' '
-                    },
+                    // // variance indicator
+                    // varianceqty: {
+                    //     type: ns_ui.FieldType.TEXT,
+                    //     size: { w: 3, h: 100 },
+                    //     label: ' '
+                    // },
 
                     // BILLFILE: rate value
                     rate: {
@@ -1704,11 +1821,11 @@ define([
                     },
 
                     // variance indicator
-                    variancerate: {
-                        type: ns_ui.FieldType.TEXT,
-                        size: { w: 3, h: 100 },
-                        label: ' '
-                    },
+                    // variancerate: {
+                    //     type: ns_ui.FieldType.TEXT,
+                    //     size: { w: 3, h: 100 },
+                    //     label: ' '
+                    // },
 
                     // BILLFILE: quantity * rate
                     amount: {

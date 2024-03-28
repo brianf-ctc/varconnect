@@ -128,12 +128,6 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                         'AND',
                         ['internalid', 'anyof', poIds],
                         'AND',
-                        [
-                            "formulanumeric: CASE {appliedtotransaction.applyingtransaction} WHEN ({type}||' #'||{number}) THEN 1 ELSE 0 END",
-                            'equalto',
-                            '1'
-                        ],
-                        'AND',
                         ['memorized', 'is', 'F']
                     ],
                     columns: [
