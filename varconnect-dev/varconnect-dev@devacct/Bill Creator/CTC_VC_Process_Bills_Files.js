@@ -17,23 +17,22 @@ define([
     'N/record',
     'N/runtime',
     'N/error',
-    'N/https',
     './Libraries/CTC_VC_Lib_BillProcess',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Constants',
+    './../Services/ctc_svclib_configlib',
     './Libraries/moment'
 ], function (
     ns_search,
     ns_record,
     ns_runtime,
     ns_error,
-    ns_https,
     vc_billprocess,
     vc_billfile,
     vc2_util,
     vc2_constant,
+    vcs_configLib,
     moment
 ) {
     var LogTitle = 'VC PROCESS BILL',
@@ -81,8 +80,8 @@ define([
                 filters: [
                     ['isinactive', 'is', 'F'],
                     'AND',
-                    [BILLFILE_FLD.BILL_LINK, 'anyof', '@NONE@'],
-                    'AND',
+                    // [BILLFILE_FLD.BILL_LINK, 'anyof', '@NONE@'],
+                    // 'AND',
                     [BILLFILE_FLD.PO_LINK, 'noneof', '@NONE@'],
                     'AND',
                     [BILLFILE_FLD.PO_LINK + '.mainline', 'is', 'T'],
@@ -146,8 +145,8 @@ define([
                     }
                 });
 
-                searchOption.filters.push('AND');
-                searchOption.filters.push(['internalid', 'anyof', ScriptParam.billFileID]);
+                // searchOption.filters.push('AND');
+                searchOption.filters = ['internalid', 'anyof', ScriptParam.billFileID];
             }
             log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
 
@@ -226,11 +225,12 @@ define([
                     });
                     vc2_util.log(logTitle, '... CurrentData: ', CurrentData);
 
-                    var vendorCfg = Helper.loadVendorConfig(CurrentData);
+                    var BillCFG = vcs_configLib.billVendorConfig({ poId: CurrentData.PO_ID });
+
                     var statusNote = [
                         'PO Status: ' + CurrentData.poStatus.text,
                         'Bill File receivable? ' + JSON.stringify(CurrentData.isBillReceivable),
-                        'Fulfillment enabled? ' + JSON.stringify(vendorCfg.ENABLE_FULFILLLMENT)
+                        'Fulfillment enabled? ' + JSON.stringify(BillCFG.enableFulfillment)
                     ].join(' ');
 
                     // add it to the VC Logs
@@ -263,7 +263,7 @@ define([
                     /// ITEM FULFILLMENT  ///////////
                     var respItemff = {};
                     if (
-                        vendorCfg.ENABLE_FULFILLLMENT &&
+                        BillCFG.enableFulfillment &&
                         CurrentData.isBillReceivable &&
                         CurrentData.isOrderReceivable
                     ) {

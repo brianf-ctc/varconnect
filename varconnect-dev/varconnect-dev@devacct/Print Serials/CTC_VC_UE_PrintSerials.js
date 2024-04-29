@@ -30,40 +30,14 @@ define([
     'N/render',
     'N/search',
     '../CTC_VC2_Constants.js',
-    '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator'
-], function (record, render, search, vc2_constant, libMainConfig, libLicenseValidator) {
+    '../Services/ctc_svclib_configlib.js'
+], function (record, render, search, vc2_constant, vcs_configLib) {
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
     var templateId = 'CUSTTMPL_209_5860676_557',
         fileName = '',
         folderPath = '';
-
-    function _validateLicense(options) {
-        var mainConfig = options.mainConfig,
-            license = mainConfig.license,
-            response = libLicenseValidator.callValidationSuitelet({
-                license: license,
-                external: true
-            }),
-            result = true;
-
-        if (response == 'invalid') {
-            log.error(
-                'License expired',
-                'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-            );
-            result = false;
-        }
-
-        return result;
-    }
-
-    function _loadMainConfig() {
-        var mainConfig = libMainConfig.getMainConfiguration();
-
-        if (!mainConfig) {
-            log.error('No VAR Connect Main Coniguration available');
-        } else return mainConfig;
-    }
 
     function _searchSerials(recType, recId) {
         var name = 'custrecordserialinvoice',
@@ -92,10 +66,10 @@ define([
 
     function _generatePdf(options) {
         var newRec = options.newRec,
-            mainConfig = options.mainConfig,
+            MainCFG = options.mainConfig,
             renderer = render.create();
         //		renderer.setTemplateByScriptId({ scriptId: templateId });
-        renderer.setTemplateById({ id: mainConfig.printSerialsTemplate });
+        renderer.setTemplateById({ id: MainCFG.printSerialsTemplate });
         renderer.addRecord({
             templateName: 'record',
             record: newRec
@@ -128,10 +102,12 @@ define([
      */
     function beforeLoad(scriptContext) {
         if (scriptContext.type == scriptContext.UserEventType.VIEW) {
-            var mainConfig = _loadMainConfig();
+            var license = vcs_configLib.validateLicense();
+            if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-            _validateLicense({ mainConfig: mainConfig });
-            if (mainConfig.invPrintSerials) {
+            var MainCFG = vcs_configLib.mainConfig();
+
+            if (MainCFG.invPrintSerials) {
                 var form = scriptContext.form;
 
                 //			form.clientScriptFileId = 204609;
@@ -159,14 +135,15 @@ define([
         if (scriptContext.type == scriptContext.UserEventType.CREATE) {
             var newRec = scriptContext.newRecord;
             if (newRec.type == record.Type.INVOICE) {
-                var mainConfig = _loadMainConfig();
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-                _validateLicense({ mainConfig: mainConfig });
+                var MainCFG = vcs_configLib.mainConfig();
 
-                if (mainConfig.invPrintSerials)
+                if (MainCFG.invPrintSerials)
                     _generatePdf({
                         newRec: newRec,
-                        mainConfig: mainConfig
+                        mainConfig: MainCFG
                     });
             }
         }

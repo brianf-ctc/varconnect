@@ -12,8 +12,34 @@
  * @NModuleScope Public
  */
 
-define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
+define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) {
     const LogTitle = 'WS:Ingram';
+
+    let Helper = {
+        // YYYY-MM-DD
+        formatFromIngramDate: function (dateStr) {
+            let formattedDate = null;
+            if (dateStr) {
+                try {
+                    let dateComponents = dateStr.split(/\D+/),
+                        parsedDate = new Date(
+                            dateComponents[0],
+                            dateComponents[1],
+                            dateComponents[2]
+                        );
+                    if (parsedDate) {
+                        formattedDate = NS_Format.format({
+                            value: parsedDate,
+                            type: NS_Format.Type.DATETIME
+                        });
+                    }
+                } catch (formatErr) {
+                    // do nothing
+                }
+            }
+            return formattedDate;
+        }
+    };
 
     function generateToken(option) {
         let logTitle = [LogTitle, 'generateToken'].join('::');
@@ -57,12 +83,18 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
             objPO = option.objPO,
             vendorConfig = option.vendorConfig,
             body = option.body;
-        let ingramToken = generateToken({
+        let ingramTokenRequestQuery = {
             poId: objPO.id,
             apiKey: vendorConfig.apiKey,
             apiSecret: vendorConfig.apiSecret,
             url: vendorConfig.accessEndPoint
-        });
+        };
+        if (vendorConfig.testRequest) {
+            ingramTokenRequestQuery.apiKey = vendorConfig.qaApiKey;
+            ingramTokenRequestQuery.apiSecret = vendorConfig.qaApiSecret;
+            ingramTokenRequestQuery.url = vendorConfig.qaAccessEndPoint;
+        }
+        let ingramToken = generateToken(ingramTokenRequestQuery);
         let bearerToken = [ingramToken.token_type, ingramToken.access_token].join(' ');
         let headers = {
             Accept: 'application/json',
@@ -80,7 +112,7 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
             method: 'post',
             recordId: objPO.id,
             query: {
-                url: vendorConfig.endPoint,
+                url: vendorConfig.testRequest ? vendorConfig.qaEndPoint : vendorConfig.endPoint,
                 headers: headers,
                 body: stBody
             }
@@ -95,20 +127,28 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             vendorConfig = option.vendorConfig,
             record = option.objPO,
+            additionalVendorDetails = {},
             ingramTemplate = '';
 
         let arrLines = record.items.map(function (item) {
-            let objLine = {
-                customerLineNumber: item.lineuniquekey,
-                ingramPartNumber: item.ingramSKU || item.item,
-                quantity: item.quantity
-                // specialBidNumber: 'NA',
-                // notes: 'NA',
-                // unitPrice: 'NA',
-                // additionalAttributes: [{}], // SAP field
-                // warrantyInfo: [],
-                // endUserInfo: [{}], // SAP field
-            };
+            let objLine = {};
+            objLine.customerLineNumber = item.lineuniquekey;
+            objLine.quantity = item.quantity;
+            objLine.endUserPrice = item.rate;
+            // objLine.specialBidNumber = 'NA';
+            // objLine.notes = 'NA';
+            // objLine.unitPrice = 'NA';
+            // objLine.additionalAttributes = [{}]; // SAP field
+            // objLine.warrantyInfo = [];
+            // objLine.endUserInfo = [{}]; // SAP field
+            if (item.ingramPartNumber) {
+                objLine.ingramPartNumber = item.ingramPartNumber;
+            } else if (vendorConfig.isSpecialItemName) {
+                objLine.ingramPartNumber = item.item;
+            } else {
+                objLine.vendorPartNumber = item.item;
+            }
+            log.debug(logTitle, item);
             return objLine;
         });
 
@@ -120,8 +160,8 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
             acceptBackOrder: true,
             resellerInfo: {
                 resellerId: vendorConfig.customerNo,
-                companyName: record.billAttention,
-                contact: record.billAddressee,
+                contact: record.billAttention,
+                companyName: record.billAddressee,
                 addressLine1: record.billAddr1,
                 addressLine2: record.billAddr2,
                 city: record.billCity,
@@ -136,10 +176,10 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
             // },
             shipToInfo: {
                 // addressId: 'NA',
-                contact: record.shipAddressee,
-                companyName: record.shipAttention,
-                name1: record.shipAttention,
-                name2: record.shipAddressee,
+                contact: record.shipContact,
+                companyName: record.shipAddressee || record.shipAttention,
+                name1: record.shipAddrName1,
+                name2: record.shipAddrName2,
                 addressLine1: record.shipAddr1,
                 addressLine2: record.shipAddr2,
                 city: record.shipCity,
@@ -187,8 +227,104 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
         if (vendorConfig.Bill.id) {
             ingramTemplate.billToAddressId = vendorConfig.Bill.id;
         }
-
+        if (record.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
+        } else if (vendorConfig.additionalPOFields) {
+            additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+            });
+        }
+        if (additionalVendorDetails) {
+            for (let fieldId in additionalVendorDetails) {
+                let fieldHierarchy = fieldId.split('.');
+                let fieldContainer = ingramTemplate;
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
+                    let fieldIdComponent = fieldHierarchy[i];
+                    if (i == fieldIdIndex) {
+                        // container is an array, distribute values across container elements
+                        if (
+                            fieldIdComponent.indexOf('__') == 0 &&
+                            util.isArray(additionalVendorDetails[fieldId]) &&
+                            util.isArray(fieldContainer)
+                        ) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            for (let j = 0, lines = fieldContainer.length; j < lines; j += 1) {
+                                let lineObj = fieldContainer[j];
+                                switch (fieldIdComponent) {
+                                    default:
+                                        if (
+                                            !CTC_Util.isEmpty(additionalVendorDetails[fieldId][j])
+                                        ) {
+                                            lineObj[fieldIdComponent] =
+                                                additionalVendorDetails[fieldId][j];
+                                        }
+                                        break;
+                                }
+                            }
+                        } else if (!CTC_Util.isEmpty(additionalVendorDetails[fieldId])) {
+                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        }
+                    } else {
+                        // container is an array, reference as is
+                        if (fieldIdComponent.indexOf('__') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
+                                fieldContainer = fieldContainer[fieldIdComponent];
+                            } else {
+                                fieldContainer[fieldIdComponent] = [];
+                                fieldContainer = fieldContainer[fieldIdComponent];
+                            }
+                            // container is an array, reference first element
+                        } else if (fieldIdComponent.indexOf('_') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(1);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            } else {
+                                fieldContainer[fieldIdComponent] = [{}];
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            }
+                        } else if (!fieldContainer[fieldIdComponent]) {
+                            fieldContainer[fieldIdComponent] = {};
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        } else {
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        }
+                    }
+                }
+                log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
+            }
+        }
+        let cleanUpJSON = function (options) {
+            let objConstructor = options.objConstructor || {}.constructor,
+                obj = options.obj;
+            for (let key in obj) {
+                if (obj[key] === null || obj[key] === '' || obj[key] === undefined) {
+                    delete obj[key];
+                } else if (obj[key].constructor === objConstructor) {
+                    cleanUpJSON({
+                        obj: obj[key],
+                        objConstructor: objConstructor
+                    });
+                }
+            }
+        };
+        cleanUpJSON({ obj: ingramTemplate });
         log.debug(logTitle, '>> Ingram Template Object: ' + JSON.stringify(ingramTemplate));
+        CTC_Util.vcLog({
+            title: [LogTitle, 'Order Request Values'].join(' - '),
+            content: ingramTemplate,
+            transaction: record.id
+        });
 
         return ingramTemplate;
     }
@@ -203,16 +339,17 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
             orderStatus.errorMessage = null;
             orderStatus.errorDetail = null;
             orderStatus.items = [];
-            orderStatus.successLines = [];
-            orderStatus.errorLines = [];
-            orderStatus.lineNotes = [];
+            orderStatus.numSuccessfulLines = 0;
+            orderStatus.numFailedLines = 0;
+            let lineNotes = [];
             if (responseBody.orders && responseBody.orders.length) {
                 for (
                     let orderCtr = 0, orderCount = responseBody.orders.length;
                     orderCtr < orderCount;
                     orderCtr += 1
                 ) {
-                    let orderDetails = responseBody.orders[orderCtr];
+                    let orderDetails = responseBody.orders[orderCtr],
+                        orderDate = Helper.formatFromIngramDate(orderDetails.ingramOrderDate);
                     if (orderDetails.notes) {
                         orderStatus.notes = orderDetails.notes;
                     }
@@ -231,24 +368,18 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
                             let itemDetails = {
                                 line_number: lineDetails.ingramLineNumber || 'NA',
                                 order_number: lineDetails.subOrderNumber || 'NA',
-                                order_date: orderDetails.ingramOrderDate || 'NA',
+                                order_date: orderDate || 'NA',
                                 vendorSKU: lineDetails.ingramPartNumber || 'NA',
                                 item_number: lineDetails.customerPartNumber || 'NA',
                                 quantity: lineDetails.quantityOrdered || 'NA',
-                                rate: lineDetails.unitPrice || 'NA',
-                                ship_qty: 'NA',
-                                ship_date: 'NA',
                                 ship_method: shipmentDetails.carrierCode || 'NA',
                                 ship_from: shipmentDetails.shipFromLocation || 'NA',
                                 carrier: shipmentDetails.carrierName || 'NA',
-                                eta_date: 'NA',
-                                tracking_num: 'NA',
-                                serial_num: 'NA',
                                 order_status: lineDetails.lineStatus,
                                 note: lineDetails.notes
                             };
                             orderStatus.items.push(itemDetails);
-                            orderStatus.successLines.push(itemDetails);
+                            orderStatus.numSuccessfulLines += 1;
                         }
                     }
                     if (orderDetails.rejectedLineItems && orderDetails.rejectedLineItems.length) {
@@ -260,28 +391,17 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
                         ) {
                             let lineDetails = orderDetails.rejectedLineItems[line];
                             let itemDetails = {
-                                line_number: 'NA',
                                 order_number: orderDetails.ingramOrderNumber || 'NA',
-                                order_date: orderDetails.ingramOrderDate || 'NA',
+                                order_date: orderDate || 'NA',
                                 vendorSKU: lineDetails.ingramPartNumber || 'NA',
                                 item_number: lineDetails.customerPartNumber || 'NA',
                                 quantity: lineDetails.quantityOrdered || 'NA',
-                                ship_qty: 'NA',
-                                ship_date: 'NA',
-                                ship_method: 'NA',
-                                ship_from: 'NA',
-                                carrier: 'NA',
-                                eta_date: 'NA',
-                                tracking_num: 'NA',
-                                serial_num: 'NA',
                                 order_status: 'Rejected',
                                 note: [lineDetails.rejectCode, lineDetails.rejectReason].join(': ')
                             };
                             orderStatus.items.push(itemDetails);
-                            orderStatus.errorLines.push(itemDetails);
-                            orderStatus.lineNotes.push(
-                                itemDetails.order_status + ': ' + itemDetails.note
-                            );
+                            orderStatus.numFailedLines += 1;
+                            lineNotes.push(itemDetails.note);
                         }
                     }
                 }
@@ -289,17 +409,32 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
                 returnValue.transactionNum = orderStatus.ponumber;
             }
             returnValue.message = 'Send PO successful';
-            if (orderStatus.errorLines.length) {
+            if (responseBody.errors && responseBody.errors.length) {
+                let errMessage = [];
+                for (
+                    let errCtr = 0, errCount = responseBody.errors.length;
+                    errCtr < errCount;
+                    errCtr += 1
+                ) {
+                    let errorResponse = responseBody.errors[errCtr];
+                    if (errorResponse && errorResponse.message) {
+                        errMessage.push(errorResponse.message);
+                    }
+                }
+                returnValue.isError = true;
+                returnValue.message = 'Send PO failed.';
+                returnValue.errorMsg = errMessage.join('; ');
+            } else if (orderStatus.numFailedLines) {
                 returnValue.message =
                     'Send PO successful with ' +
-                    orderStatus.successLines.length +
+                    orderStatus.numSuccessfulLines +
                     ' line item(s) and ' +
-                    orderStatus.errorLines.length +
+                    orderStatus.numFailedLines +
                     ' failed line(s):<br />' +
-                    orderStatus.lineNotes.join('<br />');
+                    lineNotes.join('<br />');
             } else {
                 returnValue.message =
-                    'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
+                    'Send PO successful with ' + orderStatus.numSuccessfulLines + ' line item(s).';
             }
             returnValue.orderStatus = orderStatus;
         }
@@ -310,60 +445,73 @@ define(['../Library/CTC_Lib_Utils'], function (CTC_Util) {
         let logTitle = [LogTitle, 'process'].join('::'),
             vendorConfig = option.recVendorConfig,
             customerNo = vendorConfig.customerNo,
-            objPO = option.record || option.recPO,
-            testRequest = vendorConfig.testRequest;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(objPO));
-        let returnResponse = {
-            transactionNum: objPO.tranId,
-            transactionId: objPO.id
-        };
+            record = option.record || option.recPO;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+        let sendPOResponse,
+            returnResponse = {
+                transactionNum: record.tranId,
+                transactionId: record.id
+            };
         try {
             let sendPOBody = generateBody({
-                objPO: objPO,
+                objPO: record,
                 customerNo: customerNo,
-                vendorConfig: vendorConfig,
-                testRequest: testRequest
+                vendorConfig: vendorConfig
             });
 
-            let imResponse = sendPOToIngram({
-                objPO: objPO,
+            sendPOResponse = sendPOToIngram({
+                objPO: record,
                 vendorConfig: vendorConfig,
                 body: sendPOBody
             });
 
             returnResponse = {
-                transactionNum: objPO.tranId,
-                transactionId: objPO.id,
-                logId: imResponse.logId,
-                responseBody: imResponse.PARSED_RESPONSE || imResponse.RESPONSE.body,
-                responseCode: imResponse.RESPONSE.code,
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                logId: sendPOResponse.logId,
+                responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
+                responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: objPO.id,
+                errorId: record.id,
                 errorName: null,
                 errorMsg: null
             };
 
-            if (returnResponse.responseBody && returnResponse.responseBody.errors) {
-                returnResponse.isError = true;
-                let sendError = returnResponse.responseBody.errors[0] || {};
-                returnResponse.error = sendError;
-                returnResponse.errorId = sendError.id || returnResponse.errorId;
-                returnResponse.errorName = sendError.type;
-                returnResponse.errorMsg =
-                    sendError.message || JSON.stringify(returnResponse.responseBody.errors);
-            } else {
-                returnResponse = processResponse({
-                    responseBody: returnResponse.responseBody,
-                    returnResponse: returnResponse
-                });
-            }
-
-            log.debug(logTitle, '>> RESPONSE ERROR: ' + returnResponse.isError);
+            returnResponse = processResponse({
+                record: record,
+                responseBody: returnResponse.responseBody,
+                returnResponse: returnResponse
+            });
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
+            returnResponse = returnResponse || {
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                isError: true,
+                error: e,
+                errorId: record.id,
+                errorName: e.name,
+                errorMsg: e.message
+            };
+            returnResponse.isError = true;
+            returnResponse.error = e;
+            returnResponse.errorId = record.id;
+            returnResponse.errorName = e.name;
+            returnResponse.errorMsg = e.message;
+            if (sendPOResponse) {
+                returnResponse.logId = sendPOResponse.logId || null;
+                returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;
+                if (sendPOResponse.RESPONSE) {
+                    if (!returnResponse.responseBody) {
+                        returnResponse.responseBody = sendPOResponse.RESPONSE.body || null;
+                    }
+                    returnResponse.responseCode = sendPOResponse.RESPONSE.code || null;
+                }
+            }
+        } finally {
+            log.audit(logTitle, '>> sendPoResp: ' + JSON.stringify(returnResponse));
         }
-
         return returnResponse;
     }
 

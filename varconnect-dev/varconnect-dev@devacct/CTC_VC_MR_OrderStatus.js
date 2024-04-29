@@ -24,8 +24,6 @@ define([
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
-    './CTC_VC_Lib_MainConfiguration',
-    './CTC_VC_Lib_VendorConfig',
     './CTC_VC_Lib_WebService',
     './Services/ctc_svclib_configlib.js'
 ], function (
@@ -39,8 +37,6 @@ define([
     vc_itemfflib,
     vc_itemrcpt,
     vc_nslib,
-    vc_maincfg,
-    vc_vendorcfg,
     vc_websvclib,
     vcs_configLib
 ) {
@@ -82,12 +78,11 @@ define([
         try {
             ScriptParam = Helper.getParameters();
 
-            Current.MainCFG = vcs_configLib.mainConfig();
-            if (!Current.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
-
-            // validate license
             var license = vcs_configLib.validateLicense();
             if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
+
+            Current.MainCFG = vcs_configLib.mainConfig();
+            if (!Current.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
 
             if (!Current.MainCFG.processDropships && !Current.MainCFG.processSpecialOrders)
                 throw ERROR_MSG.NO_PROCESS_DROPSHIP_SPECIALORD;
@@ -146,9 +141,18 @@ define([
                     )
                         continue;
 
+                    vc2_util.log(logTitle, '>> vendor Ids: ', activeVendors[i].vendor);
+
+                    var vendorIds = activeVendors[i].vendor
+                        .map(function (id) {
+                            return '{vendor.internalid}=' + id;
+                        })
+                        .join(' OR ');
+
                     vendorFilterFormula.push(
                         '(' +
-                            ('{vendor.internalid}=' + activeVendors[i].vendor) +
+                            ('(' + vendorIds + ')') +
+                            // ('{vendor.internalid}=' + activeVendors[i].vendor) +
                             (" AND {trandate}>='" + activeVendors[i].startDate + "')")
                     );
                 }
@@ -220,12 +224,9 @@ define([
                 throw ERROR_MSG.BYPASS_VARCONNECT;
 
             Current.MainCFG = vcs_configLib.mainConfig();
-            Current.VendorCFG = vcs_configLib.vendorConfig({
-                vendor: Current.vendorId.value,
-                subsidiary: Current.subsidiary.value
-            });
+            Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
 
-            if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+            if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
             /// OVERRIDE ///
             if (Current.MainCFG.overridePONum) {
@@ -238,7 +239,7 @@ define([
             /// ========== ///
 
             // looup the country
-            var countryCode = Current.VendorCFG.countryCode;
+            var countryCode = Current.OrderCFG.countryCode;
             var PO_REC = ns_record.load({
                 type: 'purchaseorder',
                 id: Current.poId,
@@ -257,7 +258,7 @@ define([
 
             outputObj = vc_websvclib.process({
                 mainConfig: Current.MainCFG,
-                vendorConfig: Current.VendorCFG,
+                orderConfig: Current.OrderCFG,
                 vendor: Current.vendorId.value,
                 poId: Current.poId,
                 poNum: Current.poNum,
@@ -282,7 +283,7 @@ define([
                       });
             }
 
-            vc2_util.log(logTitle, '** CURRENT **', Current);
+            // vc2_util.log(logTitle, '** CURRENT **', Current);
             mapContext.write(Current.poId, util.extend(Current, { outputItems: outputObj }));
         } catch (error) {
             vc2_util.logError(logTitle, error);
@@ -325,7 +326,7 @@ define([
                 poNum: Current.poId,
                 lineData: vc2_util.clone(Current.outputItems.itemArray),
                 mainConfig: Current.MainCFG,
-                vendorConfig: Current.VendorCFG,
+                orderConfig: Current.OrderCFG,
                 isDropPO: Current.isDropPO
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
@@ -345,35 +346,46 @@ define([
             ///
             Current.allowItemFF =
                 Current.MainCFG.processDropships &&
-                Current.VendorCFG.processDropships &&
+                Current.OrderCFG.processDropships &&
                 Current.MainCFG.createIF;
 
             Current.allowItemRcpt =
                 Current.MainCFG.processSpecialOrders &&
-                Current.VendorCFG.processSpecialOrders &&
+                Current.OrderCFG.processSpecialOrders &&
                 Current.MainCFG.createIR;
 
             if (Current.isDropPO) {
-                if (!Current.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
-                Helper.processItemFulfillment({
-                    orderLines: Current.outputItems.itemArray,
-                    poRec: PO_REC,
-                    soRec: SO_REC
-                });
+                if (!Current.allowItemFF) {
+                    vc2_util.log(logTitle, '// Fulfillment creation is not enabled');
+                    // throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
+                } else
+                    Helper.processItemFulfillment({
+                        orderLines: Current.outputItems.itemArray,
+                        poRec: PO_REC,
+                        soRec: SO_REC
+                    });
             } else {
-                if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
-                Helper.processItemReceipt({
-                    orderLines: Current.outputItems.itemArray,
-                    poRec: PO_REC,
-                    soRec: SO_REC
-                });
+                if (!Current.allowItemRcpt) {
+                    vc2_util.log(logTitle, '// Item Receipt creation is not enabled');
+                    // throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
+                } else
+                    Helper.processItemReceipt({
+                        orderLines: Current.outputItems.itemArray,
+                        poRec: PO_REC,
+                        soRec: SO_REC
+                    });
             }
+            vc2_util.log(logTitle, '..settings:  ', {
+                isDropPO: Current.isDropPO,
+                dropShip: Current.MainCFG.createSerialDropship,
+                specialOrder: Current.MainCFG.createSerialSpecialOrder
+            });
 
             if (
                 (Current.isDropPO && Current.MainCFG.createSerialDropship) ||
                 (!Current.isDropPO && Current.MainCFG.createSerialSpecialOrder)
             ) {
-                Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+                Current.NumPrefix = Current.OrderCFG.fulfillmentPrefix;
                 // matched vendor lines
                 vc2_util.log(logTitle, '>> line items: ', Current.outputItems);
 
@@ -383,14 +395,12 @@ define([
                 });
 
                 vc2_util.log(logTitle, '>> serial nums: ', orderNumSerials);
-
-                // try to extract the items from the POs
-                var arrOrderLines = vc2_record.extractRecordLines({
-                    mainConfig: Current.MainCFG,
-                    vendorConfig: Current.VendorCFG,
-                    record: PO_REC,
-                    findAll: true,
-                    columns: [
+                var itemAltNameColId =
+                        Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                    itemAltMPNColId =
+                        Current.OrderCFG.itemMPNColumnIdToMatch ||
+                        Current.MainCFG.itemMPNColumnIdToMatch,
+                    poColumns = [
                         'item',
                         'quantity',
                         'rate',
@@ -398,13 +408,18 @@ define([
                         vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                         vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
                         vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
-                        // prioritize the vendor config order match
-                        Current.VendorCFG.itemColumnIdToMatch ||
-                            //... over the main config column to match
-                            Current.MainCFG.itemColumnIdToMatch ||
-                            'item'
-                    ]
+                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                    ];
+                if (itemAltNameColId) poColumns.push(itemAltNameColId);
+                if (itemAltMPNColId) poColumns.push(itemAltMPNColId);
+
+                // try to extract the items from the POs
+                var arrOrderLines = vc2_record.extractRecordLines({
+                    mainConfig: Current.MainCFG,
+                    orderConfig: Current.OrderCFG,
+                    record: PO_REC,
+                    findAll: true,
+                    columns: poColumns
                 });
                 // vc2_util.log(logTitle, '>> arrOrderLines: ', arrOrderLines);
 
@@ -412,7 +427,7 @@ define([
                 Current.outputItems.itemArray.forEach(function (vendorLine) {
                     var matchedOrderLine = vc2_record.findMatchingOrderLine({
                         mainConfig: Current.MainCFG,
-                        vendorConfig: Current.VendorCFG,
+                        orderConfig: Current.OrderCFG,
                         vendorLine: vendorLine,
                         orderLines: arrOrderLines
                     });
@@ -473,6 +488,7 @@ define([
         vc2_util.log(logTitle, '**** SUMMARY ****', {
             'Total Usage': summary.usage,
             'No of Queues': summary.concurrency,
+            'Total Time (sec)': summary.seconds,
             Yields: summary.yields
         });
 
@@ -550,35 +566,6 @@ define([
 
             return arrVendors;
         },
-        loadMainConfig: function () {
-            var logTitle = [LogTitle, 'loadMainConfig'].join('::');
-
-            var mainConfig = vc_maincfg.getMainConfiguration();
-            if (!mainConfig) {
-                vc2_util.logError(logTitle, 'No Configuration available');
-                throw new Error('No Configuration available');
-            } else return mainConfig;
-        },
-        loadVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
-
-            var vendor = option.vendor,
-                vendorName = option.vendorName,
-                subsidiary = option.subsidiary,
-                vendorConfig = vc_vendorcfg.getVendorConfiguration({
-                    vendor: vendor,
-                    subsidiary: subsidiary
-                });
-
-            if (!vendorConfig) {
-                vc2_util.log(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
-            }
-
-            return vendorConfig;
-        },
         getSubsidiary: function (poId) {
             var logTitle = [LogTitle, 'getSubsidiary'].join('::');
 
@@ -605,7 +592,7 @@ define([
 
             try {
                 if (!Current.poId) throw ERROR_MSG.MISSING_PO;
-                if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+                if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
                 var searchObj = ns_search.load({ id: ScriptParam.searchId });
 
@@ -620,7 +607,7 @@ define([
                     ns_search.createFilter({
                         name: 'trandate',
                         operator: ns_search.Operator.ONORAFTER,
-                        values: Current.VendorCFG.startDate
+                        values: Current.OrderCFG.startDate
                     })
                 );
 
@@ -730,7 +717,7 @@ define([
                 if (!Helper.validateDate()) throw 'Invalid PO Date';
                 var OrderLines = option.orderLines;
 
-                var numPrefix = Current.VendorCFG.fulfillmentPrefix;
+                var numPrefix = Current.OrderCFG.fulfillmentPrefix;
                 if (!numPrefix) throw 'Config Error: Missing Fulfillment Prefix';
 
                 OrderLines = Helper.sortByOrderNum(OrderLines);
@@ -884,7 +871,7 @@ define([
             try {
                 fulfillmentData = vc_itemfflib.updateItemFulfillments({
                     mainConfig: Current.MainCFG,
-                    vendorConfig: Current.VendorCFG,
+                    orderConfig: Current.OrderCFG,
                     poId: Current.poId,
                     lineData: option.lineData || option.orderLines,
                     vendor: Current.vendor,
@@ -913,7 +900,7 @@ define([
             try {
                 receiptData = vc_itemrcpt.updateIR({
                     mainConfig: Current.MainCFG,
-                    vendorConfig: Current.VendorCFG,
+                    orderConfig: Current.OrderCFG,
                     poId: Current.poId,
                     lineData: option.lineData || option.orderLines,
                     vendor: Current.vendor

@@ -46,12 +46,12 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials',
-                            scope: CURRENT.vendorConfig.oauthScope
+                            scope: CURRENT.orderConfig.oauthScope
                         }),
                         headers: {
                             'Ocp-Apim-Subscription-Key': '4c83c3da-f5e5-4901-954f-399ef8175603', // add this to the config record
@@ -98,8 +98,8 @@ define([
                     method: 'get',
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint +
-                            ('/list?customerNumber=' + CURRENT.vendorConfig.customerNo) +
+                            CURRENT.orderConfig.endPoint +
+                            ('/list?customerNumber=' + CURRENT.orderConfig.customerNo) +
                             ('&poNumber=' + CURRENT.recordNum),
                         headers: CURRENT.Headers
                     }
@@ -123,11 +123,11 @@ define([
                     method: 'get',
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint +
+                            CURRENT.orderConfig.endPoint +
                             ('/detail?salesOrderNumber=' +
                                 option.OrderNumber +
                                 '&customerNumber=') +
-                            (CURRENT.vendorConfig.customerNo + '&excludeSerialTracking=false'),
+                            (CURRENT.orderConfig.customerNo + '&excludeSerialTracking=false'),
                         headers: CURRENT.Headers
                     }
                 });
@@ -170,10 +170,10 @@ define([
         try {
             CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-            CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
             vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-            if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
             // LibScansource.generateToken();
             LibScansource.getTokenCache();

@@ -36,12 +36,12 @@ define([
         log.audit(logTitle, options);
 
         var poNum = options.poNum,
-            vendorConfig = options.vendorConfig,
+            OrderCFG = options.orderConfig,
             country = options.country,
-            requestURL = vendorConfig.endPoint,
-            userName = vendorConfig.user,
-            password = vendorConfig.password,
-            customerNo = vendorConfig.customerNo;
+            requestURL = OrderCFG.endPoint,
+            userName = OrderCFG.user,
+            password = OrderCFG.password,
+            customerNo = OrderCFG.customerNo;
 
         log.debug({
             title: 'Ingram Micro Scheduled',
@@ -406,17 +406,17 @@ define([
         log.audit(logTitle, options);
 
         var poNum = options.poNum,
-            vendorConfig = options.vendorConfig,
+            OrderCFG = options.orderConfig,
             outputArray = null;
         var responseXML = processRequest({
             poNum: poNum,
-            vendorConfig: vendorConfig
+            orderConfig: OrderCFG
         });
 
         log.debug('process responseXML ' + poNum, responseXML);
         if (responseXML.detailxml)
             outputArray = processResponse({
-                vendorConfig: vendorConfig,
+                orderConfig: OrderCFG,
                 responseXML: responseXML
             });
 

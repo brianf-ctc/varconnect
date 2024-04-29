@@ -16,34 +16,37 @@
  * 1.10			Jan 10, 2023			jjacob			Group invoice lines by inv detail id
  */
 
-define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
+define(['N/error', 'N/search', 'N/crypto', '../../CTC_VC2_Lib_Utils'], function (
     ns_error,
     ns_search,
+    ns_crypto,
     vc2_util
 ) {
     var WEFI_BC = {};
+    WEFI_BC.OrderCFG = null;
     WEFI_BC.credential = {};
     WEFI_BC.endpoint = {};
 
     /**
      * Initialize WEFI_BC endpoints and credentials
-     * @param option.vendorConfig - {Object} Vendor Configuration
+     * @param option.OrderCFG - {Object} Vendor Configuration
      * @returns null
      */
     WEFI_BC.init = function (option) {
         var logTitle = 'WEFI_BC.init';
-        var config = option.vendorConfig;
+        var config = option.orderConfig;
+        WEFI_BC.OrderCFG = config;
 
         WEFI_BC.credential = {
             CLIENT_ID: config.user_id,
             CLIENT_SECRET: config.user_pass,
-            //SCOPE: config.oauthScope
-            SCOPE: 'https://wefitecdevb2c.onmicrosoft.com/go-api-amer/.default' // TEMPORARY. No dedicated field on bill create vendor config
+            SCOPE: config.scope || 'https://wefitecdevb2c.onmicrosoft.com/go-api-amer/.default'
         };
 
         WEFI_BC.endpoint = {
-            TOKEN: 'https://login.microsoftonline.com/1c392e32-a57c-433c-b9d8-b7c8ae1f664d/oauth2/v2.0/token', // TEMPORARY. No dedicated field for token url on bill create vendor config
-            //TOKEN: config.accessEndPoint.replace('{{TENANT_ID}}', config.customerNo),
+            TOKEN:
+                config.token_url ||
+                'https://login.microsoftonline.com/1c392e32-a57c-433c-b9d8-b7c8ae1f664d/oauth2/v2.0/token',
             INVOICE: config.url + '/v1.0/reseller/odata/invoices',
             ORDER: config.url + '/v1.0/reseller/odata/approvals'
         };
@@ -56,10 +59,10 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
      * Main entry point
      *
      * @param poNumber - {String} Netsuite PO Tran Id
-     * @param vendorConfig - {Object} Netsuite Vendor Config
+     * @param OrderCFG - {Object} Netsuite Vendor Config
      * @returns {Array} WeFi Invoice Data
      */
-    WEFI_BC.process = function (poInternalId, vendorConfig) {
+    WEFI_BC.process = function (poInternalId, OrderCFG) {
         var logTitle = 'WEFI_BC.process';
         try {
             var arrInvoices = [];
@@ -72,7 +75,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             }
 
             log.debug(logTitle, 'poInternalId=' + poInternalId);
-            log.debug(logTitle, 'vendorConfig=' + JSON.stringify(vendorConfig));
+            log.debug(logTitle, 'OrderCFG=' + JSON.stringify(OrderCFG));
 
             // var objLookup = ns_search.lookupFields({
             //     type: ns_search.Type.PURCHASE_ORDER,
@@ -80,7 +83,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             //     columns: ['tranid']
             // });
 
-            var poNumber = vendorConfig.poNum;
+            var poNumber = OrderCFG.poNum;
             log.debug(logTitle, 'poNumber=' + poNumber);
 
             if (!poNumber) {
@@ -90,7 +93,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
                 });
             }
 
-            if (!vendorConfig) {
+            if (!OrderCFG) {
                 throw ns_error.create({
                     name: 'MISSING_REQUIRED_PARAM',
                     message: 'ns vendor config'
@@ -98,7 +101,7 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
             }
 
             // Initialize wefi params
-            WEFI_BC.init({ vendorConfig: vendorConfig });
+            WEFI_BC.init({ OrderCFG: OrderCFG });
 
             // Get order
             var wefiPO = WEFI_BC.getOrder({ poNumber: poNumber });
@@ -335,13 +338,45 @@ define(['N/error', 'N/search', '../../CTC_VC2_Lib_Utils'], function (
         return returnValue;
     };
 
+    WEFI_BC.generateChecksum = function () {
+        var OrderCFG = this.OrderCFG,
+            checkSum = '';
+        if (OrderCFG) {
+            var hash = ns_crypto.createHash({
+                algorithm: ns_crypto.HashAlg.SHA256
+            });
+            hash.update({
+                input: JSON.stringify({
+                    id: OrderCFG.id,
+                    subsidiary: OrderCFG.subsidiary,
+                    country: OrderCFG.country,
+                    ack_function: OrderCFG.ack_function,
+                    entry_function: OrderCFG.entry_function,
+                    user_id: OrderCFG.user_id,
+                    user_pass: OrderCFG.user_pass,
+                    partner_id: OrderCFG.partner_id,
+                    host_key: OrderCFG.host_key,
+                    url: OrderCFG.url,
+                    res_path: OrderCFG.res_path,
+                    ack_path: OrderCFG.ack_path,
+                    token_url: OrderCFG.token_url,
+                    scope: OrderCFG.scope,
+                    subscription_key: OrderCFG.subscription_key
+                })
+            });
+            checkSum = hash.digest();
+        }
+        return checkSum;
+    };
+
     WEFI_BC.getTokenCache = function () {
-        var token = vc2_util.getNSCache({ key: 'VC_BC_WEFI_TOKEN' });
+        var cacheKey = 'VC_BC_WEFI_TOKEN' + this.generateChecksum(), //set cache based on config values, if they change, then cache will change
+            token = vc2_util.getNSCache({ key: cacheKey });
         if (vc2_util.isEmpty(token)) token = this.generateToken();
 
         if (!vc2_util.isEmpty(token)) {
             vc2_util.setNSCache({
-                key: 'VC_BC_WEFI_TOKEN',
+                key: cacheKey,
                 cacheTTL: 14400,
                 value: token
             });

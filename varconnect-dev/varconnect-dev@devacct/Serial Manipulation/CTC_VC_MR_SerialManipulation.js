@@ -32,24 +32,17 @@ define([
     'N/runtime',
     'N/email',
     '../CTC_VC2_Constants.js',
-    '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator',
-    '../CTC_VC2_Lib_Utils'
-], function (
-    ns_record,
-    ns_search,
-    ns_runtime,
-    ns_email,
-    vc2_constant,
-    vc_maincfg,
-    vc_license,
-    vc2_utils
-) {
+    '../CTC_VC2_Lib_Utils',
+    '../Services/ctc_svclib_configlib.js'
+], function (ns_record, ns_search, ns_runtime, ns_email, vc2_constant, vc2_utils, vcs_configLib) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
 
     var CONST_COLUMN = vc2_constant.FIELD.TRANSACTION;
+
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     var MAP_REDUCE = {
         getInputData: function () {
@@ -67,11 +60,12 @@ define([
 
                 if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
-                var mainConfig = Helper.loadMainConfig();
+                var MainCFG = vcs_configLib.mainConfig();
 
-                Helper.validateLicense({ mainConfig: mainConfig });
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-                if (!mainConfig || !mainConfig.serialScanUpdate) {
+                if (!MainCFG || !MainCFG.serialScanUpdate) {
                     //Terminate if Serials Scan and Update functionality is not set
                     throw 'Serials Scan and Update functionality is not set';
                 }
@@ -338,33 +332,6 @@ define([
     //		CC_ITEM_FULFILLMENT =['atief@myriad360.com', 'serials@myriad360.com']
 
     var Helper = {
-        validateLicense: function (option) {
-            var mainConfig = option.mainConfig,
-                license = mainConfig.license,
-                response = vc_license.callValidationSuitelet({
-                    license: license,
-                    external: true
-                }),
-                result = true;
-
-            if (response == 'invalid') {
-                log.error(
-                    'License expired',
-                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-                );
-                result = false;
-            }
-
-            return result;
-        },
-        loadMainConfig: function () {
-            var mainConfig = vc_maincfg.getMainConfiguration();
-
-            if (!mainConfig) {
-                log.error('No VAR Connect Main Coniguration available');
-            } else return mainConfig;
-        },
-
         createSerial: function (option) {
             var logTitle = [LogTitle, 'createSerial'].join('::');
             var SERIALFLD = vc2_constant.RECORD.SERIALS.FIELD;

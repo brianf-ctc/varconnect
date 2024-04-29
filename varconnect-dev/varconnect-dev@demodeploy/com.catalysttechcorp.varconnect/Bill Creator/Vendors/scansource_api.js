@@ -91,12 +91,19 @@ define(function (require) {
     }
 
     function getTokenCache(config) {
-        var token = vc2_util.getNSCache({ key: 'VC_BC_SCANSOURCE_TOKEN' });
+        var extraParams = vc2_util.extractValues({
+            source: config,
+            params: ['id', 'subsidiary', 'entry_function', 'partner_id']
+        });
+        var cacheKey = 'SCANSOURCE_TOKEN-' + vc2_util.convertToQuery(extraParams),
+            token = vc2_util.getNSCache({ key: cacheKey });
+
+        vc2_util.log(LogTitle, '// cacheKey: ', [extraParams, cacheKey]);
         if (vc2_util.isEmpty(token)) token = getToken(config);
 
         if (!vc2_util.isEmpty(token)) {
             vc2_util.setNSCache({
-                key: 'VC_BC_SCANSOURCE_TOKEN',
+                key: cacheKey,
                 cacheTTL: 14400,
                 value: token
             });

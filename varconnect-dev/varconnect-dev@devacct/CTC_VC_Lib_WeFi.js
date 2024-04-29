@@ -29,7 +29,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      */
     WEFI.init = function () {
         var logTitle = 'WeFi.init';
-        var config = CURRENT.vendorConfig;
+        var config = CURRENT.orderConfig;
 
         WEFI.credential = {
             TENANT_ID: config.customerNo,
@@ -54,7 +54,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      * @param option.recordId - {String|Int} NS Transaction Internal Id
      * @param option.poNum - {String} NS TranId
      * @param option.transactionNum - {String} NS TranId
-     * @param option.vendorConfig - {Object} NS Vendor Config Record
+     * @param  option.orderConfig - {Object} NS Vendor Config Record
      *
      * @returns {Array} WeFi PO lines
      */
@@ -66,12 +66,12 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         try {
             CURRENT.recordId = option.poId || option.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum;
-            CURRENT.vendorConfig = option.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig;
 
             log.debug(logTitle, 'option=' + JSON.stringify(option));
 
             // Required param: vendor config
-            if (!CURRENT.vendorConfig) {
+            if (!CURRENT.orderConfig) {
                 throw error.create({
                     name: 'MISSING_REQUIRED',
                     message: 'vendor config'
@@ -216,7 +216,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      * @param option.poNum - {String} NS TranId
      * @param option.transactionNum - {String} NS TranId
      * @param option.recordNum - {String} NS TranId
-     * @param option.vendorConfig - {Object} NS Vendor Config Record
+     * @param  option.orderConfig - {Object} NS Vendor Config Record
      *
      * @returns {Object} WeFi Response
      */
@@ -228,12 +228,12 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         try {
             CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-            CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
             log.debug(logTitle, 'option=' + JSON.stringify(option));
 
             // Empty vendor config
-            if (!CURRENT.vendorConfig) {
+            if (!CURRENT.orderConfig) {
                 throw error.create({
                     name: 'MISSING_REQUIRED',
                     message: 'vendor config'

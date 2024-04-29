@@ -19,59 +19,68 @@ define([
     '../Library/CTC_VCSP_Constants'
 ], function (NS_CurrentRecord, NS_Format, CTC_Util, VCSP_Global) {
     let Script = {};
-    Script.formatValue = function (option) {
-        let value = option.value,
-            apiVendor = option.apiVendor,
+    /** Convert vendor value value to its NetSuite equivalent  */
+    Script.parseVendorValue = function (option) {
+        let returnValue = option.value,
+            apiVendor = option.apiVendor + '',
             type = option.type;
-        if (!CTC_Util.isEmpty(value)) {
+        if (!CTC_Util.isEmpty(returnValue)) {
             switch (type) {
+                case 'DATETIME':
                 case 'DATE':
                     switch (apiVendor) {
                         case VCSP_Global.Lists.API_VENDOR.SYNNEX:
-                            value = CTC_Util.parseFromSynnexDate(value);
+                            returnValue = CTC_Util.parseFromSynnexDate(returnValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.DANDH:
+                        case VCSP_Global.Lists.API_VENDOR.INGRAM:
+                            returnValue = CTC_Util.parseFromXMLDate(returnValue);
                             break;
                         default:
-                            value = CTC_Util.parseISOString(value);
                             break;
                     }
                     break;
                 case 'CHECKBOX':
-                    value = value === 'T' || value === true;
+                    returnValue = !(returnValue === 'F' || returnValue === false);
                     break;
                 default:
                     break;
             }
         }
-        return value;
+        return returnValue;
     };
-    Script.parseValue = function (option) {
-        let value = option.value,
-            type = option.type,
-            apiVendor = option.apiVendor;
-        if (!CTC_Util.isEmpty(value)) {
+    /** Convert NetSuite field value to vendor format.  */
+    Script.formatToVendorValue = function (option) {
+        let returnValue = option.value, // return the vendor-equivalent value
+            apiVendor = option.apiVendor + '',
+            type = option.type;
+        if (!CTC_Util.isEmpty(returnValue)) {
             switch (type) {
                 case 'DATE':
-                    value = NS_Format.parse({
-                        value: value,
+                    let dateValue = NS_Format.parse({
+                        value: returnValue,
                         type: NS_Format.Type.DATE
                     });
                     switch (apiVendor) {
                         case VCSP_Global.Lists.API_VENDOR.SYNNEX:
-                            value = CTC_Util.formatToSynnexDate(value);
+                            returnValue = CTC_Util.formatToSynnexDate(dateValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.DANDH:
+                        case VCSP_Global.Lists.API_VENDOR.INGRAM:
+                            returnValue = CTC_Util.formatToXMLDate(dateValue);
                             break;
                         default:
-                            value = value.toISOString();
                             break;
                     }
                     break;
                 case 'CHECKBOX':
-                    value = value ? 'T' : 'F';
+                    returnValue = !(returnValue === 'F' || returnValue === false);
                     break;
                 default:
                     break;
             }
         }
-        return value;
+        return returnValue;
     };
     Script.pageInit = function (scriptContext) {
         let record = scriptContext.currentRecord;
@@ -112,7 +121,7 @@ define([
                                 if (sublist) {
                                     sublistFields.push(suiteletFieldId);
                                 }
-                                value = Script.formatValue({
+                                value = Script.parseVendorValue({
                                     value: value,
                                     type: fieldType,
                                     apiVendor: apiVendor
@@ -194,7 +203,7 @@ define([
                                         let lineValues = vendorDetailValues[key];
                                         let value = null;
                                         if (lineValues && lineValues[x]) {
-                                            value = Script.formatValue({
+                                            value = Script.parseVendorValue({
                                                 value: lineValues[x],
                                                 type: fieldType,
                                                 apiVendor: apiVendor
@@ -253,7 +262,7 @@ define([
                         i < len;
                         i += 1
                     ) {
-                        let lineValue = Script.parseValue({
+                        let lineValue = Script.formatToVendorValue({
                             value: record.getSublistValue({
                                 sublistId: 'custpage_vscp_ctc_sublist',
                                 fieldId: suiteletFieldId,
@@ -285,9 +294,9 @@ define([
                     }
                     values[key] = value;
                 } else {
-                    value = Script.parseValue({
+                    value = Script.formatToVendorValue({
                         value: record.getValue(suiteletFieldId),
-                        type: VCSP_Global.Fields.Transaction.VENDOR_DETAILS,
+                        type: fieldType,
                         apiVendor: apiVendor
                     });
                     if (value) {

@@ -66,8 +66,8 @@ define(function (require) {
                     ? poData.entityId.value || poData.entityId
                     : null,
                 subsidiary = poData.subsidiary || null,
-                mainConfig = vcs_configLib.mainConfig(),
-                vendorConfig = vcs_configLib.vendorConfig({
+                MainCFG = vcs_configLib.mainConfig(),
+                OrderCFG = vcs_configLib.orderVendorConfig({
                     vendor: vendor,
                     subsidiary: subsidiary
                 });
@@ -77,7 +77,7 @@ define(function (require) {
                 poNum: poNum,
                 poId: poId,
                 po_record: PO_REC,
-                configId: vendorConfig
+                configId: OrderCFG
             });
 
             // if there are no lines.. just exit the script

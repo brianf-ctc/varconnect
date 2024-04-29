@@ -436,14 +436,56 @@ define([
             var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
             try {
                 vc2_util.log(logTitle, '>> Current: ', Current);
-                // if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
-                // reset the cache for main config
-                vc2_util.removeCache({
-                    name: vc2_constant.CACHE_KEY.MAIN_CONFIG
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.EDIT,
+                        scriptContext.UserEventType.XEDIT
+                    ])
+                )
+                    return;
+
+                var cacheListName = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST';
+                var vendorCacheList = vc2_util.getNSCache({
+                    name: cacheListName,
+                    isJSON: true
                 });
+                vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
 
-                vc2_util.log(logTitle, 'mainConfig>> ', mainConfig);
+                vendorCacheList.LIST.forEach(function (cacheKey) {
+                    vc2_util.removeCache({ name: cacheKey });
+                });
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        }
+    };
+
+    EventRouter.Action[ns_record.Type.VENDOR] = {
+        onAfterSubmit: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+            try {
+                vc2_util.log(logTitle, '>> Current: ', Current);
+
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.EDIT,
+                        scriptContext.UserEventType.XEDIT
+                    ])
+                )
+                    return;
+
+                var cacheListName = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST';
+                var vendorCacheList = vc2_util.getNSCache({
+                    name: cacheListName,
+                    isJSON: true
+                });
+                vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
+
+                vendorCacheList.LIST.forEach(function (cacheKey) {
+                    vc2_util.removeCache({ name: cacheKey });
+                });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -484,8 +526,8 @@ define([
                 vc2_util.log(logTitle, '>> Current: ', Current);
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
-                var mainConfig = vcs_configLib.mainConfig();
-                vc2_util.log(logTitle, 'mainConfig>> ', mainConfig);
+                var MainCFG = vcs_configLib.mainConfig();
+                vc2_util.log(logTitle, 'MainCFG>> ', MainCFG);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -496,15 +538,14 @@ define([
 
             try {
                 vc2_util.log(logTitle, '>> Current: ', Current);
-                // if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-
                 // reset the cache for main config
+
                 vc2_util.removeCache({
                     name: vc2_constant.CACHE_KEY.MAIN_CONFIG
                 });
 
-                var mainConfig = vcs_configLib.mainConfig({ forced: true });
-                vc2_util.log(logTitle, 'mainConfig>> ', mainConfig);
+                var MainCFG = vcs_configLib.mainConfig({ forced: true });
+                vc2_util.log(logTitle, 'mainConfig>> ', MainCFG);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -547,18 +588,18 @@ define([
                     return;
 
                 var Form = scriptContext.form;
-                var mainCfg = vcs_configLib.mainConfig();
-                if (!mainCfg) return;
+                var MainCFG = vcs_configLib.mainConfig();
+                if (!MainCFG) return;
 
                 var currentRecord = scriptContext.newRecord;
-                var vendorCfg = vcs_configLib.vendorConfig({
-                    vendor: currentRecord.getValue({ fieldId: 'entity' }),
-                    subsidiary: currentRecord.getValue({
-                        fieldId: 'subsidiary'
-                    })
-                });
-                vc2_util.log(logTitle, '// vendorCfg:  ' + JSON.stringify(vendorCfg));
-                if (!mainCfg.overridePONum) {
+
+                var OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.recordId });
+                vc2_util.log(logTitle, '// OrderCFG:  ' + JSON.stringify(OrderCFG));
+
+                var BillCFG = vcs_configLib.billVendorConfig({ poId: Current.recordId });
+                vc2_util.log(logTitle, '// billVendorCfg:  ' + JSON.stringify(BillCFG));
+
+                if (!MainCFG.overridePONum) {
                     Helper.hideFields(Form, ['custbody_ctc_vc_override_ponum']);
                 }
 
@@ -569,19 +610,23 @@ define([
                         error: 'Your License is no longer valid or have expired. '
                     });
 
-                Helper.addVCButton({
-                    form: scriptContext.form,
-                    id: 'btn_orderstatus',
-                    label: ' Process Order Status',
-                    action: EventRouter.addActionURL('actionOrderStatus')
-                });
+                if (OrderCFG)
+                    Helper.addVCButton({
+                        form: scriptContext.form,
+                        id: 'btn_orderstatus',
+                        label: ' Process Order Status',
+                        action: EventRouter.addActionURL('actionOrderStatus')
+                    });
 
-                // Helper.addVCButton({
-                //     form: scriptContext.form,
-                //     id: 'btn_orderstatus2',
-                //     label: ' Reload Serials',
-                //     action: EventRouter.addActionURL('actionOrderStatus')
-                // });
+                var CONNECT_TYPE = { API: 1, SFTP: 2 };
+
+                if (BillCFG && BillCFG.connectionType == CONNECT_TYPE.API)
+                    Helper.addVCButton({
+                        form: scriptContext.form,
+                        id: 'btn_billsapi',
+                        label: 'Bill Files - API',
+                        action: EventRouter.addActionURL('actionGetBillsAPI')
+                    });
 
                 // VENDOR LINE INFO /////
                 var lineCount = currentRecord.getLineCount({
@@ -672,6 +717,28 @@ define([
 
             return true;
         },
+        actionGetBillsAPI: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'actionGetBiills'].join('::'),
+                returnValue;
+            vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
+
+            var mrTask = ns_task.create({
+                taskType: ns_task.TaskType.MAP_REDUCE,
+                scriptId: vc2_constant.SCRIPT.GETBILLS_API,
+                params: {
+                    custscript_ctc_vc_bc_po_id: Current.recordId
+                }
+            });
+            mrTask.submit();
+            vc2_util.waitMs(2000);
+
+            ns_redirect.redirect({
+                url: '/app/common/scripting/mapreducescriptstatus.nl?daterange=TODAY&sortcol=dateCreated&sortdir=DESC&scripttype=&primarykey=' //&scripttype=customscript_ctc_vc_process_bills'
+            });
+
+            return true;
+        },
+
         triggerOrderStatus: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'reloadBillFile'].join('::'),
                 returnValue;

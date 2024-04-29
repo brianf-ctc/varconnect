@@ -12,10 +12,9 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', 'N/https', 'N/search', '../Libraries/moment', '../Libraries/lodash'], function (
+define(['N/xml', 'N/https', '../Libraries/moment', '../Libraries/lodash'], function (
     ns_xml,
     ns_https,
-    ns_search,
     moment,
     lodash
 ) {

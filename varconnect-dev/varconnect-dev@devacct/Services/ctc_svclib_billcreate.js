@@ -17,8 +17,7 @@ define(function (require) {
 
     var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('./../CTC_VC2_Constants.js'),
-        vc_mainCfg = require('./../CTC_VC_Lib_MainConfiguration'),
-        vcs_records = require('./ctc_svclib_records.js');
+        vcs_configLib = require('./ctc_svclib_configlib.js');
 
     var ns_search = require('N/search'),
         ns_record = require('N/record'),
@@ -28,24 +27,13 @@ define(function (require) {
 
     const BILLFILE = vc2_constant.RECORD.BILLFILE;
 
-    var MainConfig,
+    var MainCFG,
         Helper = {
-            loadMainConfig: function () {
-                var logTitle = [LogTitle, 'loadMainConfig'].join('::');
-
-                if (!MainConfig) {
-                    MainConfig = vc_mainCfg.getMainConfiguration();
-                    if (!MainConfig) {
-                        log.error(logTitle, 'No Configuration available');
-                    }
-                }
-                return MainConfig;
-            },
             searchPO: function (option) {
                 var logTitle = [LogTitle, 'searchPO'].join('::'),
                     returnValue;
 
-                Helper.loadMainConfig();
+                MainCFG = vcs_configLib.mainConfig();
 
                 var poId = option.poId || option.po,
                     poNum = option.poNum || option.ponum;
@@ -57,7 +45,7 @@ define(function (require) {
                     filters: [
                         poId
                             ? ['internalid', 'anyof', poId]
-                            : MainConfig.overridePONum
+                            : MainCFG.overridePONum
                             ? [
                                   ['numbertext', 'is', poNum],
                                   'OR',
@@ -73,7 +61,7 @@ define(function (require) {
                         'trandate',
                         'postingperiod',
                         'type',
-                        MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
+                        MainCFG.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
                         'tranid',
                         'entity',
                         'amount',

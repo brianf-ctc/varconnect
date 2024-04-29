@@ -73,17 +73,17 @@ define([
                     isXML: true,
                     doRetry: true,
                     query: {
-                        url: CURRENT.vendorConfig.endPoint,
+                        url: CURRENT.orderConfig.endPoint,
                         body:
                             '<?xml version="1.0" encoding="UTF-8" ?>' +
                             '<SynnexB2B version="2.2">' +
                             '<Credential>' +
-                            ('<UserID>' + CURRENT.vendorConfig.user + '</UserID>') +
-                            ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
+                            ('<UserID>' + CURRENT.orderConfig.user + '</UserID>') +
+                            ('<Password>' + CURRENT.orderConfig.password + '</Password>') +
                             '</Credential>' +
                             '<OrderStatusRequest>' +
                             ('<CustomerNumber>' +
-                                CURRENT.vendorConfig.customerNo +
+                                CURRENT.orderConfig.customerNo +
                                 '</CustomerNumber>') +
                             ('<PONumber>' + CURRENT.recordNum + '</PONumber>') +
                             '</OrderStatusRequest>' +
@@ -150,11 +150,11 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
@@ -173,11 +173,11 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {

@@ -215,7 +215,7 @@ define(function (require) {
             returnValue = cachedData;
 
             if (!cachedData || option.forced) {
-                var MainConfig = vcs_configLib.mainConfig();
+                var MainCFG = vcs_configLib.mainConfig();
                 var searchOption = {
                         type: 'purchaseorder',
                         filters: [['mainline', 'is', 'T'], 'AND', ['type', 'anyof', 'PurchOrd']],
@@ -243,7 +243,7 @@ define(function (require) {
                     searchOption.filters.push(['internalid', 'anyof', poId]);
                 } else if (poNum) {
                     searchOption.filters.push('AND');
-                    if (MainConfig.overridePONum) {
+                    if (MainCFG.overridePONum) {
                         searchOption.filters.push(['custbody_ctc_vc_override_ponum', 'is', poNum]);
                     } else {
                         searchOption.filters.push(['numbertext', 'is', poNum]);
@@ -282,7 +282,7 @@ define(function (require) {
             CURRENT.PO_RECORD = option.po_record || option.record;
             CURRENT.VendorLines = option.vendorLines;
             CURRENT.MainCFG = option.mainConfig;
-            CURRENT.VendorCFG = option.vendorConfig;
+            CURRENT.OrderCFG = option.orderConfig;
 
             if (!CURRENT.VendorLines) throw 'Missing vendor lines';
             if (!CURRENT.PO_RECORD) {
@@ -310,14 +310,14 @@ define(function (require) {
             ];
 
             var itemAltNameColId =
-                CURRENT.VendorCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
+                CURRENT.OrderCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
             if (itemAltNameColId) arrPOCols.push(itemAltNameColId);
 
             CURRENT.OrderLines = vc2_record.extractRecordLines({
                 record: CURRENT.PO_REC,
                 findAll: true,
                 mainConfig: CURRENT.MainCFG,
-                vendorConfig: CURRENT.VendorCFG,
+                orderConfig: CURRENT.OrderCFG,
                 columns: arrPOCols
             });
 

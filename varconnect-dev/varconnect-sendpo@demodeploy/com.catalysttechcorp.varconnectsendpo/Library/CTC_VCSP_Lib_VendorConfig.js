@@ -39,7 +39,8 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         { name: VendorConfig.API_KEY },
         { name: VendorConfig.API_SECRET },
         { name: VendorConfig.ACCESS_ENDPOINT },
-        { name: VendorConfig.SKU_COLUMN },
+        { name: VendorConfig.OAUTH_SCOPE },
+        { name: VendorConfig.SUBSCRIPTION_KEY },
         { name: VendorConfig.Bill.ID },
         { name: VendorConfig.Bill.ADDRESSEE },
         { name: VendorConfig.Bill.ATTENTION },
@@ -50,10 +51,19 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         { name: VendorConfig.Bill.ZIP },
         { name: VendorConfig.Bill.COUNTRY },
         { name: VendorConfig.TEST_REQUEST },
+        { name: VendorConfig.IS_SPECIAL_ITEM_NAME },
         { name: VendorConfig.QA_WEBSERVICE_ENDPOINT },
         { name: VendorConfig.QA_ACCESS_ENDPOINT },
+        { name: VendorConfig.QA_OAUTH_SCOPE },
         { name: VendorConfig.QA_API_KEY },
         { name: VendorConfig.QA_API_SECRET },
+        { name: VendorConfig.QA_SUBSCRIPTION_KEY },
+        { name: VendorConfig.PONUM_FIELD },
+        { name: VendorConfig.QUOTE_COLUMN },
+        { name: VendorConfig.MEMO_FIELD },
+        { name: VendorConfig.SHIP_CONTACT_FIELD },
+        { name: VendorConfig.SHIP_EMAIL_FIELD },
+        { name: VendorConfig.SHIP_PHONE_FIELD },
         { name: VendorConfig.Bill.EMAIL },
         { name: VendorConfig.Bill.PHONENO },
         { name: VendorConfig.PAYMENT.MEAN },
@@ -61,8 +71,10 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         { name: VendorConfig.PAYMENT.TERM },
         { name: VendorConfig.FIELD_MAP },
         { name: VendorConfig.EVENT_TYPE },
+        { name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS },
         { name: VendorConfig.ADDITIONAL_PO_FIELDS },
-        { name: VendorConfig.PO_LINE_COLUMNS }
+        { name: VendorConfig.PO_LINE_COLUMNS },
+        { name: VendorConfig.BUSINESS_UNIT }
     ];
 
     function _generateVendorConfig(result) {
@@ -86,7 +98,14 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
             apiKey: result.getValue({ name: VendorConfig.API_KEY }),
             apiSecret: result.getValue({ name: VendorConfig.API_SECRET }),
             accessEndPoint: result.getValue({ name: VendorConfig.ACCESS_ENDPOINT }),
-            skuColumn: result.getValue({ name: VendorConfig.SKU_COLUMN }),
+            oauthScope: result.getValue({ name: VendorConfig.OAUTH_SCOPE }),
+            subscriptionKey: result.getValue({ name: VendorConfig.SUBSCRIPTION_KEY }),
+            poNumField: result.getValue({ name: VendorConfig.PONUM_FIELD }),
+            quoteColumn: result.getValue({ name: VendorConfig.QUOTE_COLUMN }),
+            memoField: result.getValue({ name: VendorConfig.MEMO_FIELD }),
+            shipContactField: result.getValue({ name: VendorConfig.SHIP_CONTACT_FIELD }),
+            shipEmailField: result.getValue({ name: VendorConfig.SHIP_EMAIL_FIELD }),
+            shipPhoneField: result.getValue({ name: VendorConfig.SHIP_PHONE_FIELD }),
             eventType: result.getValue({ name: VendorConfig.EVENT_TYPE }),
             Bill: {
                 id: result.getValue({ name: VendorConfig.Bill.ID }),
@@ -101,17 +120,24 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
                 country: result.getValue({ name: VendorConfig.Bill.COUNTRY }),
                 email: result.getValue({ name: VendorConfig.Bill.EMAIL })
             },
+            isSpecialItemName: result.getValue({ name: VendorConfig.IS_SPECIAL_ITEM_NAME }),
             testRequest: result.getValue({ name: VendorConfig.TEST_REQUEST }),
             qaEndPoint: result.getValue({ name: VendorConfig.QA_WEBSERVICE_ENDPOINT }),
             qaAccessEndPoint: result.getValue({ name: VendorConfig.QA_ACCESS_ENDPOINT }),
+            qaOauthScope: result.getValue({ name: VendorConfig.QA_OAUTH_SCOPE }),
             qaApiKey: result.getValue({ name: VendorConfig.QA_API_KEY }),
             qaApiSecret: result.getValue({ name: VendorConfig.QA_API_SECRET }),
+            qaSubscriptionKey: result.getValue({ name: VendorConfig.QA_SUBSCRIPTION_KEY }),
             paymentMean: result.getText({ name: VendorConfig.PAYMENT.MEAN }),
             paymentOther: result.getText({ name: VendorConfig.PAYMENT.OTHER }),
             paymentTerm: result.getText({ name: VendorConfig.PAYMENT.TERM }),
             fieldMap: vendorConfigRecord.getValue(VendorConfig.FIELD_MAP),
+            addVendorDetailsEnabled: result.getValue({
+                name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS
+            }),
             additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
-            poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS)
+            poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS),
+            businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT)
         };
     }
 

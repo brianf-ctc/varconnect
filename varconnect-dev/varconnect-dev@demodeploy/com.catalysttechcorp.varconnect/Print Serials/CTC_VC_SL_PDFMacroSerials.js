@@ -79,6 +79,11 @@ define(['N/search', 'N/runtime', 'N/record'], function (ns_search, ns_runtime, n
                                 : 'custrecorditemfulfillment',
                         operator: 'anyof',
                         values: recId
+                    },
+                    {
+                        name: 'isinactive',
+                        operator: 'is',
+                        values: 'F'
                     }
                 ],
                 columns = [

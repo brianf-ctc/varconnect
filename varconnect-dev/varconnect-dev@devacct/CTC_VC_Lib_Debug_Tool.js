@@ -69,27 +69,27 @@ define(function (require) {
     function _loadDebugVendorConfig(options) {
         var xmlVendor = options.xmlVendor,
             xmlSubsidiary = options.xmlSubsidiary,
-            vendorConfig = libVendorConfig.getDebugVendorConfiguration({
+            OrderCFG = libVendorConfig.getDebugVendorConfiguration({
                 xmlVendor: xmlVendor,
                 subsidiary: xmlSubsidiary
             });
 
-        if (!vendorConfig) {
+        if (!OrderCFG) {
             log.debug('No configuration set up for xml vendor ' + xmlVendor);
-        } else return vendorConfig;
+        } else return OrderCFG;
     }
 
     function _loadVendorConfig(vendor, subsidiary) {
-        var vendorConfig = libVendorConfig.getVendorConfiguration({
+        var OrderCFG = libVendorConfig.getVendorConfiguration({
             vendor: vendor,
             subsidiary: subsidiary
         });
 
-        if (!vendorConfig) {
+        if (!OrderCFG) {
             log.debug(
                 'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
             );
-        } else return vendorConfig;
+        } else return OrderCFG;
     }
 
     function showVendorName() {
@@ -107,12 +107,12 @@ define(function (require) {
             alert('Please Select a vendor and enter a PO number');
         } else {
             var xmlContent = 'Your PO = ' + ponum;
-            var vendorConfig = _loadDebugVendorConfig({
+            var OrderCFG = _loadDebugVendorConfig({
                 xmlVendor: xmlVendor,
                 xmlSubsidiary: objPO.subsidiary
             });
             var elementIdToShow, elementIdToHide;
-            if (!vendorConfig) {
+            if (!OrderCFG) {
                 alert('Please Select a valid PO with vendor properly configured');
             } else {
                 jQuery('#custpage_xml__loader').show();
@@ -123,14 +123,14 @@ define(function (require) {
                             var outputObj;
                             try {
                                 outputObj = libWebService.handleRequest({
-                                    vendorConfig: vendorConfig,
+                                    orderConfig: OrderCFG,
                                     poNum: ponum,
                                     poId: objPO.id,
                                     country:
-                                        vendorConfig.country == 'CA'
+                                        OrderCFG.country == 'CA'
                                             ? vc2_constant.LIST.COUNTRY.CA
                                             : vc2_constant.LIST.COUNTRY.US,
-                                    countryCode: vendorConfig.country
+                                    countryCode: OrderCFG.country
                                 });
                             } catch (processErr) {
                                 outputObj =
@@ -151,8 +151,7 @@ define(function (require) {
                             );
                             if (outputObj) {
                                 if (
-                                    vendorConfig.xmlVendor ==
-                                    vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO
                                 ) {
                                     xmlContent =
                                         '<!--Retrieved XML-->\n' +
@@ -178,13 +177,12 @@ define(function (require) {
                                         elementIdToHide = 'custpage_xml__viewer';
                                     }
                                 } else if (
-                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
-                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
-                                    vendorConfig.xmlVendor ==
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
+                                    OrderCFG.xmlVendor ==
                                         vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_API ||
-                                    vendorConfig.xmlVendor ==
+                                    OrderCFG.xmlVendor ==
                                         vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_V_ONE
                                 ) {
                                     xmlContent = JSON.stringify(outputObj);
@@ -285,21 +283,21 @@ define(function (require) {
             var promiseObj = new Promise(function (resolve) {
                 var outputObj,
                     objPO = _getPODetails(poNum),
-                    vendorConfig = _loadDebugVendorConfig({
+                    OrderCFG = _loadDebugVendorConfig({
                         xmlVendor: xmlVendor,
                         xmlSubsidiary: objPO.subsidiary
                     });
 
                 try {
                     outputObj = libWebService.handleRequest({
-                        vendorConfig: vendorConfig,
+                        orderConfig: OrderCFG,
                         poNum: poNum,
                         poId: objPO.id,
                         country:
-                            vendorConfig.country == 'CA'
+                            OrderCFG.country == 'CA'
                                 ? vc2_constant.LIST.COUNTRY.CA
                                 : vc2_constant.LIST.COUNTRY.US,
-                        countryCode: vendorConfig.country
+                        countryCode: OrderCFG.country
                     });
                 } catch (processErr) {
                     outputObj =

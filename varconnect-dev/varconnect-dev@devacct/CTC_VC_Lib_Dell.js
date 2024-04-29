@@ -47,10 +47,10 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials'
                         }),
                         headers: {
@@ -130,7 +130,7 @@ define([
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     method: 'POST',
                     query: {
-                        url: CURRENT.vendorConfig.endPoint,
+                        url: CURRENT.orderConfig.endPoint,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
@@ -161,11 +161,11 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
 
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
                 var itemArray = [];
 
                 var arrResponse = this.processRequest(option);
@@ -292,10 +292,10 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 LibDellAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';

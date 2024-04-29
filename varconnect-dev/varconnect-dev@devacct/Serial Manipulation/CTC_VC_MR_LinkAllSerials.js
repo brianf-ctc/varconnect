@@ -33,19 +33,8 @@ define([
     'N/runtime',
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils',
-    '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator',
     '../Services/ctc_svclib_configlib.js'
-], function (
-    ns_record,
-    ns_search,
-    ns_runtime,
-    vc2_constant,
-    vc2_util,
-    vc_maincfg,
-    vc_license,
-    vcs_configLib
-) {
+], function (ns_record, ns_search, ns_runtime, vc2_constant, vc2_util, vcs_configLib) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -71,13 +60,13 @@ define([
 
                 if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
-                var mainConfig = vcs_configLib.mainConfig();
-                vc2_util.log(logTitle, '>> mainConfig: ', mainConfig);
+                var MainCFG = vcs_configLib.mainConfig();
+                vc2_util.log(logTitle, '>> mainConfig: ', MainCFG);
 
                 var license = vcs_configLib.validateLicense();
                 if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-                if (!mainConfig || !mainConfig.copySerialsInv) {
+                if (!MainCFG || !MainCFG.copySerialsInv) {
                     //Terminate if Copy Serials functionality is not set
                     throw 'Copy serials functionality is not set';
                 }
@@ -372,37 +361,14 @@ define([
                     custbody_ctc_vc_serialsync_done: true
                 }
             });
+
+            Helper.cleanUpDeployment({
+                scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR
+            });
         }
     };
 
     var Helper = {
-        validateLicense: function (options) {
-            var mainConfig = options.mainConfig,
-                license = mainConfig.license,
-                response = vc_license.callValidationSuitelet({
-                    license: license,
-                    external: true
-                }),
-                result = true;
-
-            if (response == 'invalid') {
-                log.error(
-                    'License expired',
-                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-                );
-                result = false;
-            }
-
-            return result;
-        },
-
-        loadMainConfig: function () {
-            var mainConfig = vc_maincfg.getMainConfiguration();
-
-            if (!mainConfig) {
-                log.error('No VAR Connect Main Coniguration available');
-            } else return mainConfig;
-        },
         isEmpty: function (stValue) {
             return (
                 stValue === '' ||
@@ -519,6 +485,47 @@ define([
             //     });
             //     rec.save();
             // }
+        },
+
+        cleanUpDeployment: function (option) {
+            var logTitle = [LogTitle, 'cleanUpDeployment'].join('::');
+
+            var searchDeploy = ns_search.create({
+                type: ns_search.Type.SCRIPT_DEPLOYMENT,
+                filters: [
+                    ['script.scriptid', 'is', option.scriptId],
+                    'AND',
+                    ['status', 'is', 'NOTSCHEDULED'],
+                    'AND',
+                    ['isdeployed', 'is', 'T']
+                ],
+                columns: ['scriptid']
+            });
+
+            var maxAllowed = option.max || 100; // only allow 100
+            var arrResults = vc2_util.searchGetAllResult(searchDeploy);
+
+            vc2_util.log(logTitle, '>> cleanup : ', {
+                maxAllowed: maxAllowed,
+                totalResults: arrResults.length
+            });
+            if (maxAllowed > arrResults.length) return;
+
+            var currentScript = ns_runtime.getCurrentScript();
+            var countDelete = arrResults.length - maxAllowed;
+            var idx = 0;
+
+            while (countDelete-- && currentScript.getRemainingUsage() > 100) {
+                try {
+                    ns_record.delete({
+                        type: ns_record.Type.SCRIPT_DEPLOYMENT,
+                        id: arrResults[idx++].id
+                    });
+                } catch (del_err) {}
+            }
+            vc2_util.log(logTitle, '// Total deleted: ', idx);
+
+            return true;
         }
     };
 

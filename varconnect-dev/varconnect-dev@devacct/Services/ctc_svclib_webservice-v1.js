@@ -39,22 +39,22 @@ define(function (require) {
             // if (!poData || vc2_util.isEmpty(poData) || !poNum) throw 'Valid PO Number is required';
             vc2_util.log(logTitle, '>> poData: ', poData);
 
-            var vendorConfig = vcs_configLib.vendorConfig({
+            var OrderCFG = vcs_configLib.orderVendorConfig({
                 vendor: poData ? poData.entity : null,
                 subsidiary: poData ? poData.subsidiary : null,
                 configId: option.vendorConfigId
             });
-            if (!vendorConfig) throw 'Please make sure Vendor configuration was setup correctly';
+            if (!OrderCFG) throw 'Please make sure Vendor configuration was setup correctly';
 
             var outputObj = vc_websvclib.handleRequest({
-                vendorConfig: vendorConfig,
+                orderConfig: OrderCFG,
                 poNum: poNum,
                 poId: poData.id,
                 country:
-                    vendorConfig.country == 'CA'
+                    OrderCFG.country == 'CA'
                         ? vc2_constant.LIST.COUNTRY.CA
                         : vc2_constant.LIST.COUNTRY.US,
-                countryCode: vendorConfig.country
+                countryCode: OrderCFG.country
             });
 
             return outputObj;
@@ -75,22 +75,22 @@ define(function (require) {
 
             var vendor = poData.entity,
                 subsidiary = poData.subsidiary,
-                mainConfig = vcs_configLib.mainConfig(),
-                vendorConfig = vcs_configLib.vendorConfig({
+                MainCFG = vcs_configLib.mainConfig(),
+                OrderCFG = vcs_configLib.orderVendorConfig({
                     vendor: vendor,
                     subsidiary: subsidiary,
                     configId: configId
                 });
 
             var processOption = {
-                mainConfig: mainConfig,
-                vendorConfig: vendorConfig,
+                mainConfig: MainCFG,
+                orderConfig: OrderCFG,
                 vendor: vendor,
                 poId: poData.id,
                 poNum: poNum,
                 tranDate: poData.trandate,
                 subsidiary: subsidiary,
-                countryCode: vendorConfig.country
+                countryCode: OrderCFG.country
             };
             vc2_util.log(logTitle, '## processing: ', processOption);
 

@@ -37,18 +37,42 @@ define([
 
     var LogTitle = 'VC|LogSearchTool';
 
+    var MAPPING = {
+        internalid: {
+            name: 'ID',
+            type: 'RECORD',
+            recordType: 'customrecord_ctc_vcsp_log'
+        },
+        // custrecord_ctc_vcsp_log_date: { name: 'Log Date' },
+        // custrecord_ctc_vcsp_log_status: { name: 'Status' },
+        // custrecord_ctc_vcsp_log_header: { name: 'Title' },
+        // custrecord_ctc_vcsp_log_body: { name: 'Details' },
+        custrecord_ctc_vcsp_log_transaction: {
+            name: 'Transaction',
+            type: 'RECORD',
+            recordType: 'purchaseorder'
+        },
+        'custrecord_ctc_vcsp_log_transaction.entity': { name: 'Vendor' },
+        'custrecord_ctc_vcsp_log_transaction.statusref': { name: 'Status' },
+        'custrecord_ctc_vcsp_log_transaction.custbody_isdropshippo': {
+            name: 'DropShip'
+        }
+    };
+
     var Pages = {
         entry: function (option) {
-            var logTitle = [LogTitle, 'Pages.entry'].join('::'),
+            var logTitle = [LogTitle, 'Pages.entry'].join(' ::'),
                 returnValue;
-            var Form = ns_ui.createForm({ title: 'VAR Connect | VC Log Search' });
+            var Form = ns_ui.createForm({
+                title: 'VAR Connect | VC Log Search'
+            });
 
-            log.audit(logTitle, option);
+            // log.audit(logTitle, option);
 
             /// VC LOG SEARCH ID ///
             var VCLogSearchId = 'customsearch_ctc_vc_logs';
 
-            // load the search
+            // load the ns_search
             var searchObj = ns_search.load({ id: VCLogSearchId });
             // add the content
             var resultsData = vc2_util.searchAllPaged({
@@ -94,6 +118,7 @@ define([
             resultsData.forEach(function (searchRow, lineNo) {
                 sublistCols.forEach(function (col) {
                     var colValue = {
+                        col: col,
                         text: searchRow.getText({ name: col.fieldId }),
                         value: searchRow.getValue({ name: col.fieldId })
                     };
@@ -112,6 +137,279 @@ define([
                     });
 
                     return true;
+                });
+
+                return true;
+            });
+
+            option.Response.writePage({ pageObject: Form });
+            return returnValue;
+        },
+        paginatedList: function (option) {
+            var logTitle = [LogTitle, 'Pages.entry'].join(' ::'),
+                returnValue;
+            var Form = ns_ui.createForm({
+                title: 'VAR Connect | VC Log Search'
+            });
+
+            var VCLogSearchId = 'customsearch_ctc_vc_logs';
+
+            // load the ns_search
+            var searchObj = ns_search.load({ id: VCLogSearchId });
+            // add the content
+            // var resultsData = vc2_util.searchAllPaged({
+            //     searchObj: searchObj
+            // });
+
+            // create the sublist
+            UIHelper.PaginatedSublist({
+                id: 'vclogs',
+                label: 'VC Logs',
+                form: Form,
+                searchObj: searchObj,
+                recordsPerPage: 200
+            });
+
+            option.Response.writePage({ pageObject: Form });
+
+            return returnValue;
+        },
+        backorderedIngram: function (option) {
+            var logTitle = [LogTitle, 'Pages.backorderedIngram'].join(' ::'),
+                returnValue;
+            var Form = ns_ui.createForm({
+                title: 'VAR Connect | Backordered Ingram'
+            });
+
+            var searchOption = {
+                type: 'customrecord_ctc_vcsp_log',
+                filters: [
+                    ['custrecord_ctc_vcsp_log_transaction.type', 'anyof', 'PurchOrd'],
+                    'AND',
+                    [
+                        'custrecord_ctc_vcsp_log_header',
+                        'startswith',
+                        'WS:IngramAPI Order Details - Response'
+                    ],
+                    'AND',
+                    [
+                        ['custrecord_ctc_vcsp_log_transaction', 'noneof', '@NONE@'],
+                        'AND',
+                        ['custrecord_ctc_vcsp_log_transaction.mainline', 'is', 'T'],
+                        'AND',
+                        [
+                            'custrecord_ctc_vcsp_log_transaction.status',
+                            'anyof',
+                            ['PurchOrd:G', 'PurchOrd:D', 'PurchOrd:F', 'PurchOrd:E']
+                        ]
+                    ]
+                ],
+                columns: [
+                    'internalid',
+                    ns_search.createColumn({
+                        name: 'id',
+                        sort: ns_search.Sort.DESC
+                    }),
+                    'custrecord_ctc_vcsp_log_date',
+                    'custrecord_ctc_vcsp_log_status',
+                    'custrecord_ctc_vcsp_log_header',
+                    'custrecord_ctc_vcsp_log_body',
+                    'custrecord_ctc_vcsp_log_transaction',
+                    'custrecord_ctc_vcsp_log_transaction.entity',
+                    'custrecord_ctc_vcsp_log_transaction.statusref',
+                    'custrecord_ctc_vcsp_log_transaction.custbody_isdropshippo'
+                ]
+            };
+            var searchObj = ns_search.create(searchOption);
+            var resultsData = vc2_util.searchAllPaged({ searchObj: searchObj });
+
+            var filteredResults = [],
+                filteredPOs = [];
+            resultsData.forEach(function (result) {
+                var logValue = result.getValue({
+                        name: 'custrecord_ctc_vcsp_log_body'
+                    }),
+                    poId = result.getValue({
+                        name: 'custrecord_ctc_vcsp_log_transaction'
+                    });
+                // if (count > 10) return;
+                if (vc2_util.inArray(poId, filteredPOs)) return;
+
+                var mm = logValue.replace(/\s/gi, '').match(/quantityBackOrdered":0,/gi);
+                if (mm) return;
+
+                ///search for the itemFF
+                var itemffSearchObj = ns_search.create({
+                    type: 'purchaseorder',
+                    filters: [
+                        ['type', 'anyof', 'PurchOrd'],
+                        'AND',
+                        ['createdfrom', 'noneof', '@NONE@'],
+                        'AND',
+                        ['mainline', 'any', ''],
+                        'AND',
+                        ['applyingtransaction.type', 'anyof', 'ItemRcpt', 'ItemShip'],
+                        'AND',
+                        ['internalid', 'anyof', poId]
+                    ],
+                    columns: [
+                        ns_search.createColumn({
+                            name: 'custbody_ctc_vc_createdby_vc',
+                            join: 'applyingTransaction'
+                        }),
+                        'applyingtransaction',
+                        ns_search.createColumn({
+                            name: 'recordtype',
+                            join: 'applyingTransaction'
+                        })
+                    ]
+                });
+
+                var itemFFList = [],
+                    arrItemFF = [];
+                itemffSearchObj.run().each(function (itemffResult) {
+                    var itemFF = {
+                        name: itemffResult.getText({
+                            name: 'applyingtransaction'
+                        }),
+                        id: itemffResult.getValue({
+                            name: 'applyingtransaction'
+                        }),
+                        url: ns_url.resolveRecord({
+                            recordType: itemffResult.getValue({
+                                name: 'recordtype',
+                                join: 'applyingTransaction'
+                            }),
+                            recordId: itemffResult.getValue({
+                                name: 'applyingtransaction'
+                            })
+                        })
+                    };
+
+                    if (!vc2_util.inArray(itemFF.id, arrItemFF)) {
+                        itemFFList.push(
+                            '<a href="' +
+                                itemFF.url +
+                                '" target="_blank" class="dottedlink">' +
+                                itemFF.name +
+                                '</a>'
+                        );
+                        arrItemFF.push(itemFF.id);
+                    }
+                    return true;
+                });
+
+                result['fulfillment_list'] = itemFFList.join('<br />');
+
+                /*
+                 purchaseorderSearchObj.id="customsearch1686835968279";
+                 purchaseorderSearchObj.title="VAR Connect - PO Fulfilled/Received (Targetted PO) (copy)";
+                 var newSearchId = purchaseorderSearchObj.save();
+                 */
+
+                filteredResults.push(result);
+                filteredPOs.push(poId);
+
+                return true;
+            });
+
+            Form.addField({
+                id: 'custpage_dumpdata',
+                label: 'Search Data',
+                type: ns_ui.FieldType.INLINEHTML
+            }).defaultValue = JSON.stringify({
+                totalCount: searchObj.runPaged().count,
+                dataCount: resultsData.length,
+                filtered: filteredResults.length
+            });
+
+            var sublistOption = {
+                id: 'vcloglist',
+                label: 'VC Log Summary | Total: ' + filteredResults.length,
+                type: ns_ui.SublistType.LIST
+            };
+
+            var vcLogSublist = Form.addSublist(sublistOption);
+
+            // add the columns
+            var sublistCols = [];
+            searchObj.columns.forEach(function (searchCol, idx) {
+                var col = vc2_util.clone(searchCol);
+                var colName = col.name.toLowerCase();
+                if (col.join) colName = col.join + '.' + col.name;
+
+                // log.audit(logTitle, '>> col:' + JSON.stringify(colName));
+
+                if (!MAPPING[colName]) return;
+
+                var colData = {
+                    id: col.name,
+                    name: col.name,
+                    fieldId: col.name,
+                    join: col.join,
+                    recordType: MAPPING[colName].recordType,
+                    label: MAPPING[colName].name || col.label || col.name,
+                    type: MAPPING[colName].type || ns_ui.FieldType.TEXT,
+                    _type: MAPPING[colName].type || ns_ui.FieldType.TEXT
+                };
+                colData.label += ' [' + colData.type + ']';
+
+                if (colData._type == 'RECORD') {
+                    colData.type = ns_ui.FieldType.TEXT;
+                    colData.source = colData.recordType;
+                }
+
+                // log.audit(logTitle, '>> columns: ' + JSON.stringify([idx, col, colData]));
+
+                sublistCols.push(colData);
+                vcLogSublist.addField(colData);
+
+                return true;
+            });
+
+            /// add the fulfillment list
+            vcLogSublist.addField({
+                id: 'fulfillment_list',
+                label: 'Fulfillment List',
+                type: ns_ui.FieldType.TEXTAREA
+            });
+
+            filteredResults.forEach(function (searchRow, lineNo) {
+                sublistCols.forEach(function (searchCol) {
+                    var colValueOption = {
+                        sublistId: sublistOption.id,
+                        line: lineNo,
+                        id: searchCol.id
+                    };
+
+                    var colValue = {
+                        text: searchRow.getText(searchCol),
+                        value: searchRow.getValue(searchCol)
+                    };
+
+                    if (searchCol._type == 'RECORD' && searchCol.recordType) {
+                        var recordUrl = ns_url.resolveRecord({
+                            recordType: searchCol.recordType,
+                            recordId: colValue.value
+                        });
+                        colValue.text =
+                            '' +
+                            ('<a href="' + recordUrl + '" target="_blank" class="dottedlink">') +
+                            (colValue.text + '</a>');
+                        colValueOption.value = colValue.text;
+                    } else {
+                        colValueOption.value = colValue.text || colValue.value || 'NULL';
+                    }
+
+                    vcLogSublist.setSublistValue(colValueOption);
+                    return true;
+                });
+
+                vcLogSublist.setSublistValue({
+                    sublistId: sublistOption.id,
+                    line: lineNo,
+                    id: 'fulfillment_list',
+                    value: searchRow['fulfillment_list']
                 });
 
                 return true;
@@ -174,7 +472,7 @@ define([
             columns: []
         };
 
-        if (!option.searchObj) throw 'Missing search object';
+        if (!option.searchObj) throw 'Missing ns_search object';
         log.audit(logTitle, '>> searchObj:  ' + JSON.stringify(option.searchObj.searchType));
 
         var searchOption = {
@@ -437,7 +735,9 @@ define([
             }
 
             /// add the sublist rows ///////////////
-            var currentPageResults = pagedResults.fetch({ index: SublistInfo.currentPage - 1 });
+            var currentPageResults = pagedResults.fetch({
+                index: SublistInfo.currentPage - 1
+            });
             currentPageResults.data.forEach(function (result, lineNo) {
                 if (SublistInfo.hasCheckbox) {
                     if (vc2_util.inArray(result.id, SublistInfo.selectedValues)) {
@@ -494,7 +794,9 @@ define([
                             '<a href="',
                             ns_url.resolveRecord({
                                 recordType: sublistCol.recordType,
-                                recordId: result.getValue({ name: sublistCol.fieldId })
+                                recordId: result.getValue({
+                                    name: sublistCol.fieldId
+                                })
                             }),
                             '" target="_blank">',
                             columnValue,
@@ -523,7 +825,9 @@ define([
             label: 'SublistInfo',
             container: sublistOption.tab || null
         });
-        sublistInfoField.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
+        sublistInfoField.updateDisplayType({
+            displayType: ns_ui.FieldDisplayType.HIDDEN
+        });
         sublistInfoField.defaultValue = JSON.stringify(SublistInfo);
 
         var sublistInfoIframe = Form.addField({
@@ -554,7 +858,7 @@ define([
                 returnValue;
 
             UIHelper.initialize(context);
-            UIHelper.loadPage({ page: Pages.entry });
+            UIHelper.loadPage({ page: Pages.backorderedIngram });
 
             // context.response.writePage({ pageObject: form });
         }

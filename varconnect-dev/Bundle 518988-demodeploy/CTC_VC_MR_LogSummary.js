@@ -40,9 +40,6 @@ define((require) => {
             CATEGORY: {
                 FULFILLMENT: 'Fulfillment Created',
                 ORDERLINE: 'PO Line',
-                MISSING_ORDERNUM: 'Missing Order',
-                INVALID_LOGIN: 'Invalid Login',
-                INVALID_HOST: 'Invalid Host',
                 BILLFILE_CREATED: 'BillFile Created',
                 BILL_CREATED: 'Bill Created',
                 PO_COUNT: 'PO Count',
@@ -50,7 +47,12 @@ define((require) => {
                 PO_PROCESSED: 'PO Processed',
                 POLINE_PROCESSD: 'PO Processed Line',
                 POLINE_SHIPPED: 'PO Line Shipped',
-                POLINE_BILLED: 'PO Line Billed'
+                POLINE_BILLED: 'PO Line Billed',
+
+                MISSING_ORDERNUM: 'Missing Order',
+                INVALID_LOGIN: 'Invalid Login',
+                INVALID_HOST: 'Invalid Host',
+                INVALID_XML_RESP: 'Invalid XML Response'
             },
             TYPE: {
                 SUCCESS: 'SUCCESS',
@@ -344,6 +346,20 @@ define((require) => {
                                 CATEGORY: LIST.CATEGORY.INVALID_HOST
                             });
 
+                            returnValue = {
+                                key: logKeyId.join('_'),
+                                value: reportObj
+                            };
+                        } else if (
+                            /xml.Document: : Missing a required argument: xmldoc/i.test(
+                                logValues.BODY
+                            )
+                        ) {
+                            logKeyId.push(LIST.CATEGORY.INVALID_XML_RESP);
+                            util.extend(reportObj, {
+                                TYPE: LIST.TYPE.ERROR,
+                                CATEGORY: LIST.CATEGORY.INVALID_XML_RESP
+                            });
                             returnValue = {
                                 key: logKeyId.join('_'),
                                 value: reportObj

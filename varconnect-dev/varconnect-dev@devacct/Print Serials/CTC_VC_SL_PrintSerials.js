@@ -27,12 +27,10 @@
 define([
     'N/render',
     'N/record',
-    'N/runtime',
     'N/search',
-    'N/xml',
-    '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator'
-], function (ns_render, ns_record, ns_runtime, ns_search, ns_xml, vc_maincfg, vc_license) {
+    '../CTC_VC2_Constants.js',
+    '../Services/ctc_svclib_configlib.js'
+], function (ns_render, ns_record, ns_search, vc2_constant, vcs_configLib) {
     var PARAMS = {
             RECORD_TYPE: 'custscript_ctc_vc_serials_rectype',
             RECORD_ID: 'custscript_ctc_vc_serials_recid'
@@ -42,33 +40,8 @@ define([
         },
         pdfFileName = 'PDFTemplate';
 
-    function _validateLicense(options) {
-        var mainConfig = options.mainConfig,
-            license = mainConfig.license,
-            response = vc_license.callValidationSuitelet({
-                license: license,
-                external: true
-            }),
-            result = true;
-
-        if (response == 'invalid') {
-            log.error(
-                'License expired',
-                'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-            );
-            result = false;
-        }
-
-        return result;
-    }
-
-    function _loadMainConfig() {
-        var mainConfig = vc_maincfg.getMainConfiguration();
-
-        if (!mainConfig) {
-            log.error('No VAR Connect Main Coniguration available');
-        } else return mainConfig;
-    }
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     function _searchSerials(recType, recId) {
         var name =
@@ -80,6 +53,11 @@ define([
                     name: name,
                     operator: 'anyof',
                     values: recId
+                },
+                {
+                    name: 'isinactive',
+                    operator: 'is',
+                    values: 'F'
                 }
             ],
             columns = [
@@ -94,6 +72,8 @@ define([
             filters: filters,
             columns: columns
         });
+
+        log.audit('_searchSerials', searchObj.filters);
 
         return searchObj.run().getRange(0, 1000);
     }
@@ -148,18 +128,19 @@ define([
         log.debug(PARAMS.RECORD_ID, recId);
 
         if (context.request.method === 'GET') {
-            var mainConfig = _loadMainConfig();
+            var license = vcs_configLib.validateLicense();
+            if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-            _validateLicense({ mainConfig: mainConfig });
+            var MainCFG = vcs_configLib.mainConfig();
 
-            if (mainConfig.invPrintSerials) {
+            if (MainCFG.invPrintSerials) {
                 var rec = ns_record.load({
                         type: recType,
                         id: recId
                     }),
                     scriptId =
                         recType == ns_record.Type.INVOICE
-                            ? mainConfig.printSerialsTemplate
+                            ? MainCFG.printSerialsTemplate
                             : TEMPLATES.PACKING,
                     sublistId =
                         recType == ns_record.Type.INVOICE

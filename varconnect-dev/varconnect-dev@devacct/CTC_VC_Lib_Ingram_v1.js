@@ -70,10 +70,10 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials'
                         }),
                         headers: {
@@ -119,15 +119,15 @@ define([
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint +
+                            CURRENT.orderConfig.endPoint +
                             '/search?customerOrderNumber=' +
                             CURRENT.recordNum,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
                             'Content-Type': 'application/json',
-                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
-                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
                             'IM-CustomerOrderNumber': CURRENT.recordNum,
                             'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
                         }
@@ -178,13 +178,13 @@ define([
                     header: [LogTitle, 'Order Details'].join(' '),
                     recordId: CURRENT.recordId,
                     query: {
-                        url: CURRENT.vendorConfig.endPoint + '/' + ingramOrder.ingramOrderNumber,
+                        url: CURRENT.orderConfig.endPoint + '/' + ingramOrder.ingramOrderNumber,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
                             'Content-Type': 'application/json',
-                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
-                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
                             'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
                         }
                     }
@@ -207,7 +207,7 @@ define([
 
             var orderNumber = option.ingramOrderNumber;
             orderNumber = orderNumber.replace(/[^a-z0-9]/gi, '');
-            orderNumber = [CURRENT.vendorConfig.fulfillmentPrefix, orderNumber].join('');
+            orderNumber = [CURRENT.orderConfig.fulfillmentPrefix, orderNumber].join('');
 
             var searchOption = {
                 type: 'itemfulfillment',
@@ -531,21 +531,21 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
                 var itemArray = [];
 
                 // detect if v6.1 or v6.0
                 if (
-                    CURRENT.vendorConfig.endPoint &&
-                    CURRENT.vendorConfig.endPoint.match(/\/v6.1\//)
+                    CURRENT.orderConfig.endPoint &&
+                    CURRENT.orderConfig.endPoint.match(/\/v6.1\//)
                 ) {
                     vc2_util.log(
                         logTitle,
                         '*** VER 6.1 Endpoint *** ',
-                        CURRENT.vendorConfig.endPoint
+                        CURRENT.orderConfig.endPoint
                     );
                     CURRENT.apiver = APIVER.ver61;
                     LibIngramAPI = LibIngramAPIV61;
@@ -656,10 +656,10 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 // generate the
                 LibIngramAPI.getTokenCache();

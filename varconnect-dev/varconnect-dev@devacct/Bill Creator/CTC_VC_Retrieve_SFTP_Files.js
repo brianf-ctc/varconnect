@@ -22,7 +22,8 @@ define([
     './../CTC_VC2_Constants',
     './Libraries/moment',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-    './Libraries/CTC_VC_Lib_Vendor_Map'
+    './Libraries/CTC_VC_Lib_Vendor_Map',
+    './../Services/ctc_svclib_configlib'
 ], function (
     ns_search,
     ns_runtime,
@@ -32,7 +33,8 @@ define([
     vc2_constant,
     moment,
     lib_billfile,
-    lib_vendormap
+    lib_vendormap,
+    vcs_configLib
 ) {
     var LogTitle = 'MR_BillFiles-SFTP',
         VCLOG_APPNAME = 'VAR Connect|Retrieve Bill (SFTP)';
@@ -42,8 +44,10 @@ define([
 
     function getInputData() {
         var logTitle = [LogTitle, 'getInputData'].join(':');
-
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
+        var license = vcs_configLib.validateLicense();
+        if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
         var CONNECT_TYPE = {
                 API: 1,
@@ -101,7 +105,7 @@ define([
         //get the vendor config details
         vc2_util.log(logTitle, '>> Current : ', [context.value, param]);
 
-        var vendorConfig = ns_search.lookupFields({
+        var OrderCFG = ns_search.lookupFields({
             type: 'customrecord_vc_bill_vendor_config',
             id: context.value,
             columns: [
@@ -120,15 +124,15 @@ define([
 
         var configObj = {
             id: context.value,
-            ack_function: vendorConfig.custrecord_vc_bc_ack,
-            entry_function: vendorConfig.custrecord_vc_bc_entry,
-            user_id: vendorConfig.custrecord_vc_bc_user,
-            user_pass: vendorConfig.custrecord_vc_bc_pass,
-            partner_id: vendorConfig.custrecord_vc_bc_partner,
-            host_key: vendorConfig.custrecord_vc_bc_host_key,
-            url: vendorConfig.custrecord_vc_bc_url,
-            res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path
+            ack_function: OrderCFG.custrecord_vc_bc_ack,
+            entry_function: OrderCFG.custrecord_vc_bc_entry,
+            user_id: OrderCFG.custrecord_vc_bc_user,
+            user_pass: OrderCFG.custrecord_vc_bc_pass,
+            partner_id: OrderCFG.custrecord_vc_bc_partner,
+            host_key: OrderCFG.custrecord_vc_bc_host_key,
+            url: OrderCFG.custrecord_vc_bc_url,
+            res_path: OrderCFG.custrecord_vc_bc_res_path,
+            ack_path: OrderCFG.custrecord_vc_bc_ack_path
         };
         vc2_util.log(logTitle, '>> configObj: ', configObj);
 

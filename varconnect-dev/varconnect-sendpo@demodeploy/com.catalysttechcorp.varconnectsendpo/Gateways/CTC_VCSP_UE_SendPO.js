@@ -223,9 +223,11 @@ define([
     let purchaseOrderValidation = {};
     purchaseOrderValidation.setMemoAndHelper = function (option) {
         let logTitle = [LogTitle, 'setMemoAndHelper'].join('::'),
-            scriptContext = option.scriptContext || option;
+            scriptContext = option.scriptContext,
+            vendorCfg = option.vendorConfig;
         log.debug(logTitle, 'Consolidating line memos to header...');
-        let lineMemos = [];
+        let lineMemos = [],
+            memoField = vendorCfg.memoField || 'memo';
         for (
             let i = 0, lineCount = scriptContext.newRecord.getLineCount('item');
             i < lineCount;
@@ -240,10 +242,10 @@ define([
                 lineMemos.push(['@', i + 1, ': ', lineMemo].join(''));
             }
         }
-        let consolidatedMemo = [scriptContext.newRecord.getValue('memo'), lineMemos.join('\n')]
+        let consolidatedMemo = [scriptContext.newRecord.getValue(memoField), lineMemos.join('\n')]
             .join('\n')
             .trim();
-        scriptContext.newRecord.setValue('memo', consolidatedMemo);
+        scriptContext.newRecord.setValue(memoField, consolidatedMemo);
         log.debug(logTitle, 'Adding "Repopulate memo" button...');
         scriptContext.form.getSublist('item').addButton({
             id: 'custpage_ctc_vcsp_remergememo',
@@ -252,8 +254,9 @@ define([
                 `( function(fieldId) {
                         require(['N/currentRecord'], function(ns_currentRecord) {
                             let currentRecord = ns_currentRecord.get(),
-                                memo = currentRecord.getValue('memo');
-                            if (!memo || !memo.trim() || window.confirm('This will overwrite the current header-level memo. Proceed?')) {
+                                memo = currentRecord.getValue('${memoField}'),
+                                memoField = currentRecord.getField('${memoField}');
+                            if (!memo || !memo.trim() || window.confirm('This will overwrite the contents of the ' + memoField.label + ' field. Proceed?')) {
                                 let lineMemos = [];
                                 for (let i = 0, lineCount = currentRecord.getLineCount('item'); i < lineCount; i += 1) {
                                     let lineMemo = currentRecord.getSublistValue({
@@ -271,7 +274,7 @@ define([
                                     }
                                 }
                                 let consolidatedMemo = lineMemos.join('\\n').trim();
-                                currentRecord.setValue('memo', consolidatedMemo);
+                                currentRecord.setValue('${memoField}', consolidatedMemo);
                             }
                         });
                     })('` +
@@ -284,9 +287,9 @@ define([
             scriptContext = option.scriptContext,
             vendorCfg = option.vendorConfig,
             poid = option.poid;
-        if (scriptContext && scriptContext.form) {
+        if (scriptContext && scriptContext.form && vendorCfg && vendorCfg.addVendorDetailsEnabled) {
             // check if vendor details is mapped
-            if (vendorCfg) {
+            if (vendorCfg.additionalPOFields) {
                 let vendorDetailsPopupUrl = NS_Url.resolveScript({
                     deploymentId: VCSP_Global.Scripts.Deployment.VENDOR_DETAILS_SL,
                     scriptId: VCSP_Global.Scripts.Script.VENDOR_DETAILS_SL,
@@ -368,7 +371,7 @@ define([
             eventType = option.eventType;
         log.debug(logTitle, 'Event type= ' + eventType);
         if (scriptContext.form) {
-            let poLineColumnsToDisplay = null,
+            let poLineColumnsToDisplay = [],
                 poLineColumnsToDisplayStr = vendorCfg.poLineColumns,
                 poLineColumnsToIgnore = ['internalid'];
             if (poLineColumnsToDisplayStr && poLineColumnsToDisplayStr.length) {
@@ -686,9 +689,6 @@ define([
                         mainConfig = libMainConfig.getMainConfiguration();
                         log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
                         if (mainConfig) {
-                            // check for valid license
-                            // if (!libLicenseValidator.isValidLicense({ mainConfig: mainConfig })) return;
-
                             vendorCfg = libVendorConfig.getVendorConfiguration({
                                 vendor: lookupData.entity.value,
                                 subsidiary: lookupData.subsidiary.value
@@ -761,10 +761,6 @@ define([
                         mainConfig = libMainConfig.getMainConfiguration();
                         log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
                         if (mainConfig) {
-                            // check for valid license
-                            // if (!libLicenseValidator.isValidLicense({ mainConfig: mainConfig })) return;
-
-                            purchaseOrderValidation.setMemoAndHelper(scriptContext);
                             let vendorConfigParams = {
                                 vendor: scriptContext.newRecord.getValue('entity'),
                                 subsidiary: scriptContext.newRecord.getValue('subsidiary')
@@ -773,6 +769,10 @@ define([
                                 vendorCfg =
                                     libVendorConfig.getVendorConfiguration(vendorConfigParams);
                             }
+                            purchaseOrderValidation.setMemoAndHelper({
+                                vendorConfig: vendorCfg,
+                                scriptContext: scriptContext
+                            });
                             log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                             popupWindowParams.scriptContext = scriptContext;
                             if (vendorCfg) {
@@ -837,9 +837,6 @@ define([
                 let mainConfig = libMainConfig.getMainConfiguration();
                 log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
                 if (!mainConfig) return;
-
-                // check for valid license
-                // if (!libLicenseValidator.isValidLicense({ mainConfig: mainConfig })) return;
 
                 let vendorCfg = libVendorConfig.getVendorConfiguration({
                     vendor: lookupData.getValue('entity'),
@@ -957,8 +954,6 @@ define([
                         let mainConfig = libMainConfig.getMainConfiguration();
                         log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
                         if (mainConfig) {
-                            // check for valid license
-                            // if (!libLicenseValidator.isValidLicense({ mainConfig: mainConfig })) return;
                             popupWindowParams.scriptContext = scriptContext;
                         }
                         break;
@@ -1068,6 +1063,11 @@ define([
             EventRouter.initialize(scriptContext);
             log.audit(logTitle, EventRouter.Type);
             try {
+                // check for valid license
+                if (!libLicenseValidator.isLicenseValid()) {
+                    log.audit(logTitle, 'Inactive license key.');
+                    return;
+                }
                 EventRouter.execute(EventRouter.Type.CUSTOM);
                 EventRouter.execute(EventRouter.Type.BEFORE_LOAD);
             } catch (beforeLoadError) {
@@ -1095,6 +1095,11 @@ define([
         //         returnValue = null;
         //     EventRouter.initialize(scriptContext);
         //     try {
+        //         // check for valid license
+        //         if (!libLicenseValidator.isLicenseValid()) {
+        //             log.audit(logTitle, 'Inactive license key.');
+        //             return;
+        //         }
         //         returnValue = EventRouter.execute(EventRouter.Type.BEFORE_SUBMIT);
         //     } catch (beforeSubmitError) {
         //         log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: beforeSubmitError.name, message: beforeSubmitError.message}));
@@ -1114,6 +1119,11 @@ define([
                 returnValue = null;
             EventRouter.initialize(scriptContext);
             try {
+                // check for valid license
+                if (!libLicenseValidator.isLicenseValid()) {
+                    log.audit(logTitle, 'Inactive license key.');
+                    return;
+                }
                 returnValue = EventRouter.execute(EventRouter.Type.AFTER_SUBMIT);
             } catch (afterSubmitError) {
                 log.error(

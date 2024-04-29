@@ -543,7 +543,11 @@ define(function (require) {
                     });
                 }
 
-                log.audit(logTitle, '>> REQUEST: ' + JSON.stringify(queryOption));
+                vc2_util.log(
+                    logTitle,
+                    ['### REQUEST | ', param.logHeader, ' (' + param.method + ')'].join(''),
+                    queryOption
+                );
                 returnValue.REQUEST = queryOption;
 
                 /////////////////////////////////////////
@@ -554,15 +558,11 @@ define(function (require) {
                 returnValue.RESPONSE = response;
                 /////////////////////////////////////////
 
-                log.audit(
-                    logTitle,
-                    '>> RESPONSE ' +
-                        JSON.stringify({
-                            duration: this.roundOff((new Date() - startTime) / 1000),
-                            code: response.code || '-no response-',
-                            body: response.body || '-empty response-'
-                        })
-                );
+                vc2_util.log(logTitle, '>> RESPONSE ', {
+                    duration: this.roundOff((new Date() - startTime) / 1000),
+                    code: response.code || '-no response-',
+                    body: response.body || '-empty response-'
+                });
 
                 if (!response || !response.body) {
                     throw 'Empty or Missing Response !';
@@ -587,17 +587,6 @@ define(function (require) {
                 returnValue.error = error;
                 returnValue.details = parsedResponse || response;
 
-                // vc2_util.vcLog({
-                //     title:
-                //         param.logHeader +
-                //         ': Error' +
-                //         (param.doRetry
-                //             ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
-                //             : ''),
-                //     error: { message: errorMsg, details: returnValue.details },
-                //     transaction: param.logTranId
-                // });
-
                 vc2_util.logError(logTitle, errorMsg);
 
                 if (param.doRetry)
@@ -613,9 +602,9 @@ define(function (require) {
                     returnValue = vc2_util.sendRequest(option);
                 }
             } finally {
-                vc2_util.log(logTitle, '>> RESPONSE time: ', {
-                    duration: this.roundOff((new Date() - startTime) / 1000)
-                });
+                // vc2_util.log(logTitle, '>> RESPONSE time: ', {
+                //     duration: this.roundOff((new Date() - startTime) / 1000)
+                // });
 
                 if (!param.noLogs) {
                     vc2_util.vcLog({

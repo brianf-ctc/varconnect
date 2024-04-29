@@ -348,7 +348,10 @@ define([
             ];
         }
 
-        var customrecordserialnumSearchObj = search.create({
+        // only show active serials
+        filterList.push('AND', ['isinactive', 'is', 'F']);
+
+        var customSerialSearchObj = search.create({
             type: 'customrecordserialnum',
             filters: filterList,
             columns: [
@@ -362,9 +365,10 @@ define([
             ]
         });
 
-        var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        log.debug('customrecordserialnumSearchObj result count', searchResultCount);
-        customrecordserialnumSearchObj.run().each(function (result) {
+        var searchResultCount = customSerialSearchObj.runPaged().count;
+        log.debug('customSerialSearchObj result count', searchResultCount);
+
+        customSerialSearchObj.run().each(function (result) {
             // .run().each has a limit of 4,000 results
             var serialsObj = {
                 sn_id: result.id,

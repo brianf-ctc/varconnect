@@ -12,13 +12,14 @@
  * @NModuleScope Public
  */
 
-define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], function (
-    ns_url,
-    ns_https,
-    ns_runtime,
-    ns_cache,
-    vc2_constant
-) {
+define([
+    'N/url',
+    'N/https',
+    'N/runtime',
+    'N/cache',
+    './CTC_VC2_Constants.js',
+    './Services/ctc_svclib_configlib'
+], function (ns_url, ns_https, ns_runtime, ns_cache, vc2_constant, vcs_configLib) {
     function callValidationSuitelet_2(option) {
         var license = option.license,
             external = option.external ? true : null,
@@ -44,14 +45,16 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
         return result;
     }
 
-    var VC_LICENSE = {
-        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
-        PRODUCT_CODE: 2,
-        MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY__20231123',
-        CACHE_NAME: 'VC_LICENSE',
-        CACHE_TTL: 86400 // 24 hrs
-    };
+    var VC_LICENSE = vc2_constant.LICENSE;
+
+    // {
+    //     URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+    //     PRODUCT_CODE: 2,
+    //     MAX_RETRY: 3,
+    //     KEY: 'LICENSE_KEY__20231123',
+    //     CACHE_NAME: 'VC_LICENSE',
+    //     CACHE_TTL: 86400 // 24 hrs
+    // };
 
     var LibLicense = {
         fetchLicense: function (option) {
@@ -220,9 +223,12 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                 returnValue;
 
             try {
-                response = LibLicense.validate({ doRetry: true, retryMax: 3 });
-                log.audit(logTitle, response);
-                if (response.hasError) throw response.errorMsg;
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError) throw response.errorMsg;
+
+                // response = LibLicense.validate({ doRetry: true, retryMax: 3 });
+                // log.audit(logTitle, response);
+                // if (response.hasError) throw response.errorMsg;
 
                 returnValue = 'valid';
             } catch (error) {

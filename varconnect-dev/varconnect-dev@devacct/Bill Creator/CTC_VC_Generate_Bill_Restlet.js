@@ -16,29 +16,26 @@ define([
     'N/record',
     'N/search',
     'N/format',
-    'N/runtime',
     './Libraries/CTC_VC_Lib_BillProcess',
-
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Lib_Record',
-    './../CTC_VC_Lib_MainConfiguration',
+    './../Services/ctc_svclib_configlib',
     './Libraries/moment'
 ], function (
     ns_record,
     ns_search,
     ns_format,
-    ns_runtime,
     vc_billprocess,
     vc2_constant,
     vc2_util,
     vc2_recordlib,
-    vc_mainCfg,
+    vcs_configLib,
     moment
 ) {
     var LogTitle = 'VC BILL CREATE RL',
         VCLOG_APPNAME = 'VAR Connect | Process Bill',
-        Current = { Config: {} },
+        Current = { MainCFG: {} },
         LogPrefix = '',
         BILL_CREATOR = vc2_constant.Bill_Creator;
 
@@ -69,19 +66,30 @@ define([
 
                 // Load the PO Record
                 var recPO = vc2_recordlib.load({ type: 'purchaseorder', id: Current.poId });
+                var poColumns = [
+                    'tranid',
+                    'entity',
+                    'taxtotal',
+                    'tax2total',
+                    'status',
+                    'statusRef'
+                ];
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                    poColumns.push('subsidiary');
+                }
                 Current.PO_DATA = vc2_recordlib.extractValues({
                     record: recPO,
-                    fields: ['tranid', 'entity', 'taxtotal', 'tax2total', 'status', 'statusRef']
+                    fields: poColumns
                 });
 
-                var mainConfig = Helper.loadBillingConfig(),
-                    vendorConfig = Helper.loadVendorConfig({ entity: Current.PO_DATA.entity });
+                Current.MainCFG = vcs_configLib.mainConfig();
+                Current.BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId });
+                Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
 
                 /// PROCESS THE BILL  =================
                 var BillData = vc_billprocess.preprocessBill({
                     recOrder: recPO,
-                    billFileId: Current.billFileId,
-                    vendorConfig: vendorConfig
+                    billFileId: Current.billFileId
                 });
 
                 if (BillData.VendorData && BillData.VendorData.hasOwnProperty('ignoreVariance')) {
@@ -90,11 +98,7 @@ define([
                         ['T', 't', true]
                     );
                 }
-
                 /// =====================================
-                Current.VendorCFG = vendorConfig;
-                Current.Config = mainConfig;
-                // Current.PO_REC = recPO;
 
                 /// FIND EXISTING BILLS =================
                 vc2_util.log(logTitle, ' // Checking for existing bills...');
@@ -155,9 +159,16 @@ define([
 
                 /// =====================================
 
+                vc2_util.log(logTitle, '>> Settings: ', {
+                    AllowBill: BillData.AllowBill,
+                    processVariance: Current.processVariance,
+                    ignoreVariance: Current.ignoreVariance,
+                    hasVariance: BillData.HasVariance,
+                    notAllowed: !BillData.AllowBill && !Current.processVariance
+                });
                 /// VALIDATE BEFORE BILL CREATE =========
                 if (!BillData.AllowBill && !Current.processVariance) {
-                    if (BillData.HasVariance) {
+                    if (BillData.HasVariance && !Current.ignoreVariance) {
                         vc2_util.log(logTitle, '>> Has Variances - ', BillData.VarianceList);
 
                         return util.extend(
@@ -193,17 +204,17 @@ define([
                     isDynamic: true
                 };
 
-                if (Current.Config.defaultBillForm) {
-                    transformOption.customform = Current.Config.defaultBillForm;
+                if (Current.MainCFG.defaultBillForm) {
+                    transformOption.customform = Current.MainCFG.defaultBillForm;
                 }
                 vc2_util.log(logTitle, '... Transform: ', transformOption);
 
                 Current.POBILL_REC = vc2_recordlib.transform(transformOption);
 
-                if (Current.Config.defaultBillForm) {
+                if (Current.MainCFG.defaultBillForm) {
                     Current.POBILL_REC.setValue({
                         fieldId: 'customform',
-                        value: Current.Config.defaultBillForm
+                        value: Current.MainCFG.defaultBillForm
                     });
                 }
 
@@ -287,11 +298,11 @@ define([
                 /// SAVING THE BILL =====================
                 Current.POBILL_REC.setValue({
                     fieldId: 'approvalstatus',
-                    value: Current.Config.billDefaultStatus || 1
+                    value: Current.MainCFG.defaultVendorBillStatus || 1
                 }); // defaults to pending approval
 
                 // Bill Save is disabled
-                if (Current.Config.dontSaveBill) {
+                if (Current.MainCFG.isBillCreationDisabled) {
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
                     return returnObj;
                 }
@@ -455,77 +466,97 @@ define([
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
-        },
-        loadBillingConfig: function () {
-            var mainConfig = vc_mainCfg.getMainConfiguration();
-            if (!mainConfig) {
-                log.error('No Configuration available');
-                throw new Error('No Configuration available');
-            }
-            return {
-                defaultBillForm: mainConfig.defaultBillForm,
-                billDefaultStatus: mainConfig.defaultVendorBillStatus,
-                allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
-                allowAdjustLine: mainConfig.allowAdjustLine,
-
-                applyTax: mainConfig.isVarianceOnTax || false,
-                taxItem: mainConfig.defaultTaxItem,
-                taxItem2: mainConfig.defaultTaxItem2,
-                applyShip: mainConfig.isVarianceOnShipping || false,
-                shipItem: mainConfig.defaultShipItem,
-                applyOther: mainConfig.isVarianceOnOther || false,
-                otherItem: mainConfig.defaultOtherItem,
-
-                dontSaveBill: mainConfig.isBillCreationDisabled || false,
-
-                autoprocPriceVar: mainConfig.autoprocPriceVar || false,
-                autoprocTaxVar: mainConfig.autoprocTaxVar || false,
-                autoprocShipVar: mainConfig.autoprocShipVar || false,
-                autoprocOtherVar: mainConfig.autoprocOtherVar || false
-            };
-        },
-        loadVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
-                returnValue;
-            var entityId = option.entity;
-            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
-
-            try {
-                var searchOption = {
-                    type: 'vendor',
-                    filters: [['internalid', 'anyof', entityId]],
-                    columns: []
-                };
-
-                for (var field in BILLCREATE_CFG.FIELD) {
-                    searchOption.columns.push(
-                        ns_search.createColumn({
-                            name: BILLCREATE_CFG.FIELD[field],
-                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                        })
-                    );
-                }
-
-                var searchObj = ns_search.create(searchOption);
-                if (!searchObj.runPaged().count) throw 'No config available';
-
-                returnValue = {};
-                searchObj.run().each(function (row) {
-                    for (var field in BILLCREATE_CFG.FIELD) {
-                        returnValue[field] = row.getValue({
-                            name: BILLCREATE_CFG.FIELD[field],
-                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                        });
-                    }
-                    return true;
-                });
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
-            }
-
-            return returnValue;
         }
+        // loadBillingConfig: function () {
+        //     var MainCFG = vc_mainCfg.getMainConfiguration();
+        //     if (!MainCFG) {
+        //         log.error('No Configuration available');
+        //         throw new Error('No Configuration available');
+        //     }
+        //     return {
+        //         defaultBillForm: MainCFG.defaultBillForm,
+        //         billDefaultStatus: MainCFG.defaultVendorBillStatus,
+        //         allowedThreshold: MainCFG.allowedVarianceAmountThreshold,
+        //         allowAdjustLine: MainCFG.allowAdjustLine,
+
+        //         applyTax: MainCFG.isVarianceOnTax || false,
+        //         taxItem: MainCFG.defaultTaxItem,
+        //         taxItem2: MainCFG.defaultTaxItem2,
+        //         applyShip: MainCFG.isVarianceOnShipping || false,
+        //         shipItem: MainCFG.defaultShipItem,
+        //         applyOther: MainCFG.isVarianceOnOther || false,
+        //         otherItem: MainCFG.defaultOtherItem,
+
+        //         dontSaveBill: MainCFG.isBillCreationDisabled || false,
+
+        //         autoprocPriceVar: MainCFG.autoprocPriceVar || false,
+        //         autoprocTaxVar: MainCFG.autoprocTaxVar || false,
+        //         autoprocShipVar: MainCFG.autoprocShipVar || false,
+        //         autoprocOtherVar: MainCFG.autoprocOtherVar || false
+        //     };
+        // },
+        // loadVendorConfig: function (option) {
+        //     var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
+        //         returnValue;
+        //     var entityId = option.entity;
+        //     var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
+
+        //     try {
+        //         var searchOption = {
+        //             type: 'vendor',
+        //             filters: [['internalid', 'anyof', entityId]],
+        //             columns: []
+        //         };
+
+        //         for (var field in BILLCREATE_CFG.FIELD) {
+        //             searchOption.columns.push(
+        //                 ns_search.createColumn({
+        //                     name: BILLCREATE_CFG.FIELD[field],
+        //                     join: vc2_constant.FIELD.ENTITY.BILLCONFIG
+        //                 })
+        //             );
+        //         }
+
+        //         var searchObj = ns_search.create(searchOption);
+        //         if (!searchObj.runPaged().count) throw 'No config available';
+
+        //         returnValue = {};
+        //         searchObj.run().each(function (row) {
+        //             for (var field in BILLCREATE_CFG.FIELD) {
+        //                 returnValue[field] = row.getValue({
+        //                     name: BILLCREATE_CFG.FIELD[field],
+        //                     join: vc2_constant.FIELD.ENTITY.BILLCONFIG
+        //                 });
+        //             }
+        //             return true;
+        //         });
+        //     } catch (error) {
+        //         vc2_util.logError(logTitle, error);
+        //         returnValue = false;
+        //     }
+
+        //     return returnValue;
+        // },
+        // loadOrderStatusVendorConfig: function (option) {
+        //     var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
+
+        //     var vendor = option.vendor,
+        //         vendorName = option.vendorName,
+        //         subsidiary = option.subsidiary,
+        //         BillCFG = vc_vendorcfg.getVendorConfiguration({
+        //             vendor: vendor,
+        //             subsidiary: subsidiary
+        //         });
+
+        //     if (!BillCFG) {
+        //         vc2_util.log(
+        //             logTitle,
+        //             'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+        //         );
+        //     }
+
+        //     return BillCFG;
+        // }
     };
 
     return RESTLET;

@@ -25,8 +25,6 @@ define(function (require) {
     var log = require('N/log');
     var util = require('N/util');
     var xml = require('N/xml');
-    var https = require('N/https');
-    var search = require('N/search');
 
     //Custom modules
     var vc2_util = require('./../../CTC_VC2_Lib_Utils');

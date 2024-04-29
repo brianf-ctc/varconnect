@@ -35,8 +35,9 @@ define([
     'N/format',
     './CTC_VC2_Lib_Record',
     './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants.js'
-], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant) {
+    './CTC_VC2_Constants.js',
+    './Services/ctc_svclib_configlib.js'
+], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant, vcs_configLib) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -46,7 +47,7 @@ define([
         VendorLines: [],
         OrderLines: [],
         MainCFG: null,
-        VendorCFG: null
+        OrderCFG: null
     };
 
     var MAXLEN = {
@@ -281,11 +282,13 @@ define([
 
         Current.PO_NUM = option.poNum;
         Current.VendorLines = option.lineData; //vc2_util.copyValues();
-        Current.MainCFG = option.mainConfig;
-        Current.VendorCFG = option.vendorConfig;
         Current.PO_REC = option.po_record;
         Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
+
+        Current.MainCFG = option.mainConfig || vcs_configLib.mainConfig();
+        Current.OrderCFG =
+            option.orderConfig || vcs_configLib.orderVendorConfig({ poId: Current.PO_REC.id });
 
         LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
         vc2_util.LogPrefix = LogPrefix;
@@ -313,7 +316,10 @@ define([
 
             // extract lines from the PO
             var itemAltNameColId =
-                    Current.VendorCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                    Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                itemAltMPNColId =
+                    Current.OrderCFG.itemMPNColumnIdToMatch ||
+                    Current.MainCFG.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -328,11 +334,14 @@ define([
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
             }
+            if (itemAltMPNColId) {
+                poColumns.push(itemAltMPNColId);
+            }
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
                 findAll: true,
-                mainConfig: Current.MainCFG,
-                vendorConfig: Current.VendorCFG,
+                // mainConfig: Current.MainCFG,
+                // orderConfig: Current.OrderCFG,
                 columns: poColumns
             });
 
@@ -349,8 +358,8 @@ define([
                     /// look for a matching line from the
                     var orderLineMatch = vc2_record.findMatchingOrderLine({
                         record: Current.PO_REC,
-                        mainConfig: Current.MainCFG,
-                        vendorConfig: Current.VendorCFG,
+                        // mainConfig: Current.MainCFG,
+                        // orderConfig: Current.OrderCFG,
                         orderLines: Current.OrderLines,
                         lineData: vendorLine
                     });
@@ -391,7 +400,7 @@ define([
                             // If DropShip and fulfillment is not enabled
                             if (
                                 Current.isDropPO &&
-                                (!Current.MainCFG.createIF || !Current.VendorCFG.processDropships)
+                                (!Current.MainCFG.createIF || !Current.OrderCFG.processDropships)
                             ) {
                                 vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
@@ -400,7 +409,7 @@ define([
                             if (
                                 !Current.isDropPO &&
                                 (!Current.MainCFG.createIR ||
-                                    !Current.VendorCFG.processSpecialOrders)
+                                    !Current.OrderCFG.processSpecialOrders)
                             ) {
                                 vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
@@ -699,7 +708,7 @@ define([
             orderLines = option.orderLines || Current.OrderLines,
             hashSpace =
                 option.ingramHashSpace || Current.MainCFG ? Current.MainCFG.ingramHashSpace : null,
-            xmlVendor = option.xmlVendor || Current.VendorCFG ? Current.VendorCFG.xmlVendor : null;
+            xmlVendor = option.xmlVendor || Current.OrderCFG ? Current.OrderCFG.xmlVendor : null;
 
         Current.PO_REC = option.po_record || Current.PO_REC;
         lineData.vendorSKU = lineData.vendorSKU || lineData.item_num_alt;
@@ -751,7 +760,7 @@ define([
                 // check for ingram match
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    vc2_util.inArray(Current.VendorCFG.xmlVendor, [
+                    vc2_util.inArray(Current.OrderCFG.xmlVendor, [
                         VendorList.INGRAM_MICRO_V_ONE,
                         VendorList.INGRAM_MICRO
                     ])
@@ -819,7 +828,7 @@ define([
                 // check for ingram match
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    vc2_util.inArray(Current.VendorCFG.xmlVendor, [
+                    vc2_util.inArray(Current.OrderCFG.xmlVendor, [
                         VendorList.INGRAM_MICRO_V_ONE,
                         VendorList.INGRAM_MICRO
                     ])
@@ -859,8 +868,8 @@ define([
                 //Ingram Hash replacement
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    (Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO_V_ONE ||
-                        Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO)
+                    (Current.OrderCFG.xmlVendor == VendorList.INGRAM_MICRO_V_ONE ||
+                        Current.OrderCFG.xmlVendor == VendorList.INGRAM_MICRO)
                 ) {
                     // check for itemNum
                     if (lineData.item_num.replace('#', ' ') == tempItemNum) break;
@@ -874,7 +883,7 @@ define([
                         break;
                 }
 
-                if (Current.VendorCFG.xmlVendor == VendorList.DandH) {
+                if (Current.OrderCFG.xmlVendor == VendorList.DandH) {
                     //D&H Item replacement
                     var dAndhItem = Current.PO_REC.getSublistValue({
                         sublistId: 'item',
