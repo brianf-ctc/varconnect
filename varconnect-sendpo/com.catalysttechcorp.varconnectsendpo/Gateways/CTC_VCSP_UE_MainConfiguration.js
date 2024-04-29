@@ -19,17 +19,13 @@ define(['../Library/CTC_VCSP_Lib_LicenseValidator', '../Library/CTC_VCSP_Constan
     //Validates license and displays the corresponding status
     function _validateLicense(options) {
         let newRecord = options.newRecord,
-            license = newRecord.getValue({ fieldId: VCSP_Global.Fields.MainConfig.LICENSE }),
-            response = libLicenseValidator.callValidationSuitelet({
-                license: license,
-                external: true
-            }),
+            isLicenseValid = libLicenseValidator.isLicenseValid(),
             licenseText;
-        log.debug('response', response);
-        if (response == 'valid') {
+        log.debug('response', isLicenseValid);
+        if (isLicenseValid) {
             licenseText =
                 "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect Send PO is currently valid.</b></span>";
-        } else if (response == 'invalid') {
+        } else {
             licenseText =
                 "<span style='background-color:red; color: white;'><b>WARNING: Your License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.</b></span>";
         }

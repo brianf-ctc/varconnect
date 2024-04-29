@@ -14,12 +14,13 @@
 
 define([
     'N/runtime',
+    'N/https',
     'N/format',
     'N/record',
     'N/search',
     'N/xml',
     './CTC_VCSP_Constants'
-], function (NS_Runtime, NS_Format, NS_Record, NS_Search, NS_Xml, VCSP_Global) {
+], function (NS_Runtime, NS_Https, NS_Format, NS_Record, NS_Search, NS_Xml, VCSP_Global) {
     let LogTitle = 'CTC_Util',
         LogPrefix;
 
@@ -132,75 +133,6 @@ define([
         parseFloat: function (stValue) {
             return stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
         },
-        parseDate: function (option) {
-            let logTitle = [LogTitle, 'parseDate'].join('::');
-            log.audit(logTitle, '>> option: ' + JSON.stringify(option));
-
-            let dateString = option.dateString || option,
-                dateFormat = CTC_Util.CACHE.DATE_FORMAT,
-                date = '';
-
-            if (!dateFormat) {
-                try {
-                    require(['N/config'], function (config) {
-                        let generalPref = config.load({
-                            type: config.Type.COMPANY_PREFERENCES
-                        });
-                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                        return true;
-                    });
-                } catch (e) {}
-
-                if (!dateFormat) {
-                    try {
-                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
-                    } catch (e) {}
-                    // log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-                }
-                CTC_Util.CACHE.DATE_FORMAT = dateFormat;
-                log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
-            }
-
-            if (dateString && dateString.length > 0 && dateString != 'NA') {
-                try {
-                    let stringToProcess = dateString
-                        .replace(/-/g, '/')
-                        .replace(/\n/g, ' ')
-                        .split(' ');
-
-                    for (let i = 0; i < stringToProcess.length; i++) {
-                        let singleString = stringToProcess[i];
-                        if (singleString) {
-                            let stringArr = singleString.split('T'); //handle timestamps with T
-                            singleString = stringArr[0];
-                            let convertedDate = new Date(singleString);
-
-                            if (!date || convertedDate > date) date = convertedDate;
-                        }
-                    }
-                } catch (e) {
-                    log.error(logTitle, LogPrefix + '>> !! ERROR !! ' + util.extractError(e));
-                }
-            }
-
-            //Convert to string
-            if (date) {
-                //set date
-                let year = date.getFullYear();
-                if (year < 2000) {
-                    year += 100;
-                    date.setFullYear(year);
-                }
-
-                date = NS_Format.format({
-                    value: date,
-                    type: dateFormat ? dateFormat : NS_Format.Type.DATE
-                });
-            }
-
-            log.audit('---datestring ' + dateString, date);
-            return date;
-        },
         forceInt: function (stValue) {
             let intValue = parseInt(stValue, 10);
 
@@ -211,7 +143,7 @@ define([
             return intValue;
         },
         forceFloat: function (stValue) {
-            let flValue = this.parseFloat(stValue);
+            let flValue = CTC_Util.parseFloat(stValue);
 
             if (isNaN(flValue) || stValue == Infinity) {
                 return 0.0;
@@ -280,7 +212,7 @@ define([
             return str.substring(str.length - len, str.length);
         },
         roundOff: function (value) {
-            let flValue = this.forceFloat(value || '0');
+            let flValue = CTC_Util.forceFloat(value || '0');
             if (!flValue || isNaN(flValue)) return 0;
 
             return Math.round(flValue * 100) / 100;
@@ -386,7 +318,6 @@ define([
                 maxRetries: 3,
                 maxWaitMs: 3000
             };
-            let ns_https = CTC_Util.loadModule('N/https');
 
             let queryOption = option.query || option.queryOption;
             if (!queryOption || CTC_Util.isEmpty(queryOption)) throw 'Missing query option';
@@ -434,7 +365,7 @@ define([
                 returnValue.REQUEST = queryOption;
 
                 //// SEND THE REQUEST //////
-                response = ns_https[param.method](queryOption);
+                response = NS_Https[param.method](queryOption);
                 returnValue.RESPONSE = response;
 
                 log.audit(
@@ -517,43 +448,8 @@ define([
 
             return returnValue;
         },
-
         isOneWorld: function () {
             return NS_Runtime.isFeatureInEffect({ feature: 'Subsidiaries' });
-        },
-
-        getFileContent: function (option) {
-            let returnValue = null;
-            let logTitle = [LogTitle, 'getFileContent'];
-
-            try {
-                let fileId = option.fileId;
-                if (!fileId) {
-                    let fileName = option.filename || option.name;
-                    if (!fileName) return false;
-
-                    let folderId = option.folder || option.folderId || this.getCurrentFolder();
-                    let fileInfo = this.searchFile({
-                        name: fileName,
-                        folder: folderId
-                    });
-
-                    if (!fileInfo) return false;
-                    fileId = fileInfo.id;
-                }
-
-                // load the file
-                let NS_File = this.loadModule('N/file');
-                let fileObj = NS_File.load({
-                    id: fileId
-                });
-
-                returnValue = fileObj.getContents();
-            } catch (e) {
-                log.error(logTitle, JSON.stringify(e));
-            }
-
-            return returnValue;
         },
         searchFolder: function (option) {
             let folderName = option.folderName || option.name;
@@ -575,9 +471,9 @@ define([
             let returnValue = null;
 
             let cacheKey = ['FileLib.searchFolder', JSON.stringify(searchOption)].join('::');
-            let folderInfo = this.CACHE[cacheKey];
+            let folderInfo = CTC_Util.CACHE[cacheKey];
 
-            if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+            if (CTC_Util.isEmpty(CTC_Util.CACHE[cacheKey]) || option.noCache == true) {
                 let objSearch = NS_Search.create(searchOption);
                 folderInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
@@ -592,7 +488,7 @@ define([
                     return true;
                 });
 
-                this.CACHE[cacheKey] = folderInfo;
+                CTC_Util.CACHE[cacheKey] = folderInfo;
             }
 
             return option.doReturnArray && option.doReturnArray === true
@@ -627,9 +523,9 @@ define([
             let returnValue = null;
 
             let cacheKey = ['FileLib.searchFile', JSON.stringify(searchOption)].join('::');
-            let fileInfo = this.CACHE[cacheKey];
+            let fileInfo = CTC_Util.CACHE[cacheKey];
 
-            if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
+            if (CTC_Util.isEmpty(CTC_Util.CACHE[cacheKey]) || option.noCache == true) {
                 let objSearch = NS_Search.create(searchOption);
                 fileInfo = []; // prepare for multiple results?
                 objSearch.run().each(function (row) {
@@ -648,60 +544,12 @@ define([
                     return true;
                 });
 
-                this.CACHE[cacheKey] = fileInfo;
+                CTC_Util.CACHE[cacheKey] = fileInfo;
             }
 
             return option.doReturnArray && option.doReturnArray === true
                 ? fileInfo
                 : fileInfo.shift();
-        },
-        getCurrentFolder: function (option) {
-            let returnValue = null,
-                logTitle = [LogTitle, 'getCurrentFolder'].join('::');
-            option = option || {};
-
-            try {
-                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
-                returnValue = this.CACHE[cacheKey];
-
-                if (this.isEmpty(this.CACHE[cacheKey]) || option.noCache == true) {
-                    let scriptId = option.scriptId;
-                    if (!scriptId) {
-                        if (!option.currentScript) {
-                            if (!option.runtime) option.runtime = this.loadModule('N/runtime');
-                            option.currentScript = option.runtime.getCurrentScript();
-                        }
-                        scriptId = option.currentScript.id;
-                    }
-                    if (!scriptId) return false;
-
-                    let objSearch = NS_Search.create({
-                        type: 'script',
-                        filters: [['scriptid', 'is', scriptId]],
-                        columns: ['scriptfile', 'name']
-                    });
-
-                    let fileId = null;
-                    objSearch.run().each(function (row) {
-                        fileId = row.getValue('scriptfile');
-                        return true;
-                    });
-
-                    let NS_File = this.loadModule('N/file');
-                    let fileObj = NS_File.load({
-                        id: fileId
-                    });
-
-                    returnValue = fileObj.folder;
-                    this.CACHE[cacheKey] = fileObj.folder;
-                }
-            } catch (e) {
-                log.error(logTitle, JSON.stringify(e));
-            } finally {
-                // log.debug(logTitle, '>> current folder: ' + returnValue);
-            }
-
-            return returnValue;
         },
         log: function (option, title, message) {
             let logType = option.type || option,
@@ -725,6 +573,24 @@ define([
                 }
             } while (tempMessage.length > 0);
         },
+        getVendorAdditionalPOFieldDefaultValues: function (options) {
+            let fields = options.fields,
+                defaultValues = options.defaultValues || {};
+            if (fields && fields.length) {
+                for (let x = 0, fieldCount = fields.length; x < fieldCount; x += 1) {
+                    let poField = fields[x];
+                    if (poField.fieldGroup) {
+                        defaultValues = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                            fields: poField.fields,
+                            defaultValues: defaultValues
+                        });
+                    } else if (poField.defaultValue) {
+                        defaultValues[poField.name] = poField.defaultValue;
+                    }
+                }
+            }
+            return defaultValues;
+        },
         leftPadString: function (str, padding, len) {
             let tempStr = str + '';
             let pad = padding + '';
@@ -741,15 +607,28 @@ define([
                 formattedDate = [
                     [
                         dateToFormat.getFullYear(),
-                        this.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
-                        this.leftPadString(dateToFormat.getDate(), '0', 2)
+                        CTC_Util.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
+                        CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2)
                     ].join('-'),
                     [
-                        this.leftPadString(dateToFormat.getHours(), '0', 2),
-                        this.leftPadString(dateToFormat.getMinutes(), '0', 2),
-                        this.leftPadString(dateToFormat.getSeconds(), '0', 2)
+                        CTC_Util.leftPadString(dateToFormat.getHours(), '0', 2),
+                        CTC_Util.leftPadString(dateToFormat.getMinutes(), '0', 2),
+                        CTC_Util.leftPadString(dateToFormat.getSeconds(), '0', 2)
                     ].join(':')
                 ].join('T');
+            }
+            return formattedDate;
+        },
+        formatToXMLDate: function (option) {
+            let dateToFormat = option.date || option,
+                formattedDate = dateToFormat;
+            if (dateToFormat && dateToFormat instanceof Date) {
+                // YYYY-MM-DD
+                formattedDate = [
+                    dateToFormat.getFullYear(),
+                    CTC_Util.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
+                    CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2)
+                ].join('-');
             }
             return formattedDate;
         },
@@ -772,20 +651,35 @@ define([
             }
             return parsedDate;
         },
-        parseISOString: function (option) {
-            let date = option.date || option,
-                dateComponents = date.split(/\D+/);
-            return new Date(
-                Date.UTC(
-                    dateComponents[0],
-                    --dateComponents[1],
-                    dateComponents[2],
-                    dateComponents[3],
-                    dateComponents[4],
-                    dateComponents[5],
-                    dateComponents[6]
-                )
-            );
+        // YYYY-MM-dd
+        parseFromXMLDate: function (option) {
+            let dateToParse = option.date || option,
+                parsedDate = dateToParse;
+            if (dateToParse) {
+                let dateComponents = dateToParse.split(/\D+/);
+                parsedDate = new Date(dateComponents[0], --dateComponents[1], dateComponents[2]);
+            }
+            return parsedDate;
+        },
+        // YYYY-MM-ddThh:mm:ss.000Z
+        parseISODateString: function (option) {
+            let dateToParse = option.date || option,
+                parsedDate = dateToParse;
+            if (dateToParse) {
+                let dateComponents = dateToParse.split(/\D+/);
+                parsedDate = new Date(
+                    Date.UTC(
+                        dateComponents[0],
+                        --dateComponents[1],
+                        dateComponents[2],
+                        dateComponents[3],
+                        dateComponents[4],
+                        dateComponents[5],
+                        dateComponents[6]
+                    )
+                );
+            }
+            return parsedDate;
         },
         xmlNodeToJson: function (option) {
             let xmlNode = option.node || option,
@@ -794,7 +688,7 @@ define([
                 let mainKey = xmlNode.nodeName;
                 if (xmlNode.nodeType == NS_Xml.NodeType.TEXT_NODE) {
                     let value = xmlNode.textContent;
-                    if (!this.isEmpty(value)) {
+                    if (!CTC_Util.isEmpty(value)) {
                         json[mainKey] = value;
                     }
                 } else {
@@ -825,14 +719,14 @@ define([
                         let childNodes = xmlNode.childNodes;
                         for (let i = 0, x = childNodes.length; i < x; i += 1) {
                             let childNode = childNodes[i];
-                            this.xmlNodeToJson({
+                            CTC_Util.xmlNodeToJson({
                                 node: childNode,
                                 json: jsonNode
                             });
                         }
                     } else {
                         let value = xmlNode.textContent;
-                        if (this.isEmpty(value)) {
+                        if (CTC_Util.isEmpty(value)) {
                             delete json[mainKey];
                         } else {
                             if (xmlNode.hasAttributes()) {
@@ -855,7 +749,7 @@ define([
                 let childNodes = xmlDoc.documentElement.childNodes;
                 for (let i = 0, len = childNodes.length; i < len; i += 1) {
                     let node = childNodes[i];
-                    this.xmlNodeToJson({
+                    CTC_Util.xmlNodeToJson({
                         node: node,
                         json: json
                     });

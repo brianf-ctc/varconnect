@@ -17,63 +17,102 @@ define([
     'N/record',
     'N/format',
     'N/redirect',
+    'N/render',
+    '../Library/CTC_VCSP_Lib_LicenseValidator',
     '../Library/CTC_Lib_Utils',
     '../Library/CTC_VCSP_Constants',
-    '../Library/CTC_VCSP_Lib_VendorConfig'
+    '../Library/CTC_VCSP_Lib_VendorConfig',
+    '../VO/CTC_VCSP_PO'
 ], function (
     NS_ServerWidget,
     NS_Record,
     NS_Format,
     NS_Redirect,
+    NS_Render,
+    libLicenseValidator,
     CTC_Util,
     VCSP_Global,
-    libVendorConfig
+    libVendorConfig,
+    PO
 ) {
     let LogTitle = 'VCSP:FormPopup';
     let Helper = {};
-    Helper.formatValue = function (option) {
-        let value = option.value,
-            type = option.type,
-            apiVendor = option.apiVendor;
-        if (!CTC_Util.isEmpty(value)) {
-            if (type == 'DATE') {
-                value = NS_Format.parse({
-                    value: value,
-                    type: NS_Format.Type.DATE
-                });
-                switch (apiVendor) {
-                    case VCSP_Global.Lists.API_VENDOR.SYNNEX:
-                        value = CTC_Util.formatToSynnexDate(value);
-                        break;
-                    default:
-                        value = value.toISOString();
-                        break;
-                }
-            }
-        }
-        return value;
-    };
-    Helper.parseValue = function (option) {
-        let type = option.type,
-            value = option.value,
-            apiVendor = option.apiVendor;
-        if (!CTC_Util.isEmpty(value)) {
+    Helper.parseVendorValue = function (option) {
+        let logTitle = [LogTitle, 'parseVendorValue'].join(':'),
+            returnValue = option.value, // return the NetSuite-equivalent value
+            apiVendor = option.apiVendor,
+            type = option.type;
+        log.debug(logTitle, JSON.stringify(option));
+        if (!CTC_Util.isEmpty(returnValue)) {
+            let dateFormat = null;
             switch (type) {
-                case NS_ServerWidget.FieldType.DATE:
+                case 'DATETIME':
+                    dateFormat = NS_Format.Type.DATETIME;
+                case 'DATE':
+                    dateFormat = dateFormat || NS_Format.Type.DATE;
+                    let dateValue = null;
                     switch (apiVendor) {
                         case VCSP_Global.Lists.API_VENDOR.SYNNEX:
-                            value = CTC_Util.parseFromSynnexDate(value);
+                            dateValue = CTC_Util.parseFromSynnexDate(returnValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.DANDH:
+                            dateValue = CTC_Util.parseFromXMLDate(returnValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.INGRAM:
+                            dateValue = CTC_Util.parseFromXMLDate(returnValue);
                             break;
                         default:
-                            value = CTC_Util.parseISOString(value);
                             break;
                     }
+                    if (!CTC_Util.isEmpty(dateValue)) {
+                        returnValue = NS_Format.format({
+                            value: dateValue,
+                            type: dateFormat
+                        });
+                    }
+                    break;
+                case 'CHECKBOX':
+                    returnValue = returnValue === false || returnValue === 'F' ? 'F' : 'T';
                     break;
                 default:
                     break;
             }
         }
-        return value;
+        return returnValue;
+    };
+    Helper.formatToVendorValue = function (option) {
+        let returnValue = option.value, // return the vendor-equivalent value
+            apiVendor = option.apiVendor,
+            type = option.type;
+        if (!CTC_Util.isEmpty(returnValue)) {
+            switch (type) {
+                case 'DATE':
+                    let dateValue = NS_Format.parse({
+                        value: returnValue,
+                        type: NS_Format.Type.DATE
+                    });
+                    switch (apiVendor) {
+                        case VCSP_Global.Lists.API_VENDOR.SYNNEX:
+                            returnValue = CTC_Util.formatToSynnexDate(dateValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.DANDH:
+                            returnValue = CTC_Util.formatToXMLDate(dateValue);
+                            break;
+                        case VCSP_Global.Lists.API_VENDOR.INGRAM:
+                            returnValue = CTC_Util.formatToXMLDate(dateValue);
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case 'CHECKBOX':
+                    returnValue = !(returnValue === 'F' || returnValue === false);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return returnValue;
     };
     Helper.addFields = function (option) {
         let logTitle = [LogTitle, 'addFields'].join(':'),
@@ -119,6 +158,10 @@ define([
                     let fieldDetails = {};
                     fieldDetails.label = poField.label;
                     fieldDetails.type = poField.type;
+                    if (fieldDetails.type == 'RESETBUTTON') {
+                        fieldDetails.type = 'INLINEHTML';
+                        poField.isResetButton = true;
+                    }
                     if (poField.source) {
                         fieldDetails.source = poField.source;
                     }
@@ -127,7 +170,7 @@ define([
                         containerIndex = fieldIdMapping._containers.indexOf(containerName);
                         if (containerIndex == -1) {
                             containerId =
-                                'custpage_vscp_ctc_fldgrp' +
+                                'custpage_vcsp_ctc_fldgrp' +
                                 (fieldIdMapping._containers.length + 1);
                             let fldGroupObj = form.addFieldGroup({
                                 id: containerId,
@@ -142,28 +185,31 @@ define([
                     fieldDetails.id = ['custpage_vcsp_ctc_fld', containerIndex + 1, x + 1].join(
                         '_'
                     );
-                    fieldIdMapping[fieldDetails.id] = poField;
+                    poField.fieldGroup = containerName;
+                    if (poField.name) {
+                        fieldIdMapping[fieldDetails.id] = poField;
+                    }
                     if (poField.sublist) {
                         if (!sublist) {
                             let columnDisplayType = NS_ServerWidget.FieldDisplayType.ENTRY;
                             if (record) columnDisplayType = NS_ServerWidget.FieldDisplayType.INLINE;
                             sublist = form.addSublist({
-                                id: 'custpage_vscp_ctc_sublist',
+                                id: 'custpage_vcsp_ctc_sublist',
                                 label: 'Items',
                                 type: NS_ServerWidget.SublistType.LIST
                             });
                             let itemColumn = sublist.addField({
-                                id: 'custpage_vscp_ctc_item_item',
+                                id: 'custpage_vcsp_ctc_item_item',
                                 label: 'Item',
                                 type: NS_ServerWidget.FieldType.TEXT
                             });
                             let descriptionColumn = sublist.addField({
-                                id: 'custpage_vscp_ctc_item_desc',
+                                id: 'custpage_vcsp_ctc_item_desc',
                                 label: 'Description',
                                 type: NS_ServerWidget.FieldType.TEXTAREA
                             });
                             let rateColumn = sublist.addField({
-                                id: 'custpage_vscp_ctc_item_rate',
+                                id: 'custpage_vcsp_ctc_item_rate',
                                 label: 'Rate',
                                 type: NS_ServerWidget.FieldType.CURRENCY
                             });
@@ -202,20 +248,20 @@ define([
                                         });
                                     if (item) {
                                         sublist.setSublistValue({
-                                            id: 'custpage_vscp_ctc_item_item',
+                                            id: 'custpage_vcsp_ctc_item_item',
                                             line: i,
                                             value: item
                                         });
                                         if (rate) {
                                             sublist.setSublistValue({
-                                                id: 'custpage_vscp_ctc_item_rate',
+                                                id: 'custpage_vcsp_ctc_item_rate',
                                                 line: i,
                                                 value: rate
                                             });
                                         }
                                         if (description) {
                                             sublist.setSublistValue({
-                                                id: 'custpage_vscp_ctc_item_desc',
+                                                id: 'custpage_vcsp_ctc_item_desc',
                                                 line: i,
                                                 value: description
                                             });
@@ -226,7 +272,7 @@ define([
                                 // initialize the same number of lines
                                 for (let i = 0; i < lineCount; i += 1) {
                                     sublist.setSublistValue({
-                                        id: 'custpage_vscp_ctc_item_desc',
+                                        id: 'custpage_vcsp_ctc_item_desc',
                                         line: i,
                                         value: ' '
                                     });
@@ -246,17 +292,83 @@ define([
                         });
                     }
                     if (poField.defaultValue) {
+                        let parsedValue = Helper.parseVendorValue({
+                            type: fieldDetails.type,
+                            apiVendor: filterValues.apiVendor,
+                            value: poField.defaultValue
+                        });
                         if (poField.sublist) {
                             for (let i = 0; i < lineCount; i += 1) {
                                 sublist.setSublistValue({
                                     id: poField.id,
                                     line: i,
-                                    value: poField.defaultValue
+                                    value: parsedValue
                                 });
                             }
                         } else {
-                            fieldObj.defaultValue = poField.defaultValue;
+                            fieldObj.defaultValue = parsedValue;
                         }
+                    }
+                    if (poField.isResetButton) {
+                        fieldObj.defaultValue = `<span class="smallgraytext uir-label">
+                                <span class="labelSpanEdit smallgraytextnolink">${poField.label}</span>&nbsp;&nbsp;
+                                <span class='uir-field inputreadonly'>
+                                    <a class='smalltext' href='#' title='Reset' onclick='require(["N/currentRecord"], function(ns_currentRecord) {
+                                        let record = ns_currentRecord.get();
+                                        let fieldsListStr = record.getValue("custpage_vcsp_ctc_fieldslist");
+                                        let fieldMapping = null;
+                                        if (fieldsListStr) {
+                                            fieldMapping = JSON.parse(fieldsListStr);
+                                        }
+                                        for (let suiteletFieldId in fieldMapping) {
+                                            let fieldGroup = fieldMapping[suiteletFieldId].fieldGroup;
+                                            if (fieldGroup == "${containerName}") {
+                                                let sublist = fieldMapping[suiteletFieldId].sublist;
+                                                if (sublist) {
+                                                    for (let i = 0, len = record.getLineCount("custpage_vscp_ctc_sublist"); i < len; i += 1) {
+                                                        let newValue = null;
+                                                        switch (record.getSublistField({
+                                                            sublistId: "custpage_vscp_ctc_sublist",
+                                                            fieldId: suiteletFieldId,
+                                                            line: 0
+                                                        }).type) {
+                                                            case "${NS_Format.Type.CHECKBOX}":
+                                                                newValue = false;
+                                                                break;
+                                                            case "${NS_Format.Type.CURRENCY}":
+                                                                newValue = "";
+                                                                break;
+                                                            default:
+                                                                break;
+                                                        }
+                                                        record.setSublistValue({
+                                                            sublistId: "custpage_vscp_ctc_sublist",
+                                                            fieldId: suiteletFieldId,
+                                                            line: i,
+                                                            value: newValue
+                                                        });
+                                                    }
+                                                } else {
+                                                    let newValue = null;
+                                                    switch (record.getField({ fieldId: suiteletFieldId }).type) {
+                                                        case "${NS_Format.Type.CHECKBOX}":
+                                                            newValue = false;
+                                                            break;
+                                                        case "${NS_Format.Type.CURRENCY}":
+                                                            newValue = "";
+                                                            break;
+                                                        default:
+                                                            break;
+                                                    }
+                                                    record.setValue({
+                                                        fieldId: suiteletFieldId,
+                                                        value: newValue
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    });
+                                    return false'>Clear ${containerName} Fields</a></span></span>`;
                     }
                     if (poField.help) {
                         fieldObj.setHelpText({ help: poField.help });
@@ -267,27 +379,37 @@ define([
                             fieldObj.updateLayoutType({
                                 layoutType: NS_ServerWidget.FieldLayoutType.OUTSIDEABOVE
                             });
+                        case NS_ServerWidget.FieldType.INLINEHTML:
+                            fieldObj.updateLayoutType({
+                                layoutType: NS_ServerWidget.FieldLayoutType.OUTSIDEABOVE
+                            });
                             break;
                         default:
                             break;
                     }
-                    vendorDtlValue = Helper.parseValue({
-                        type: fieldDetails.type,
-                        apiVendor: filterValues.apiVendor,
-                        value: vendorDtlValue
-                    });
                     if (!CTC_Util.isEmpty(vendorDtlValue)) {
                         if (poField.sublist) {
                             for (let i = 0, len = vendorDtlValue.length; i < len; i += 1) {
+                                let parsedValue = Helper.parseVendorValue({
+                                    type: fieldDetails.type,
+                                    apiVendor: filterValues.apiVendor,
+                                    value: vendorDtlValue[i]
+                                });
                                 sublist.setSublistValue({
                                     id: fieldDetails.id,
                                     line: i,
-                                    value: vendorDtlValue[i]
+                                    value: parsedValue
                                 });
                             }
                         } else {
                             if (poField.split && util.isArray(vendorDtlValue)) {
                                 vendorDtlValue = vendorDtlValue.join('\r\n');
+                            } else {
+                                vendorDtlValue = Helper.parseVendorValue({
+                                    type: fieldDetails.type,
+                                    apiVendor: filterValues.apiVendor,
+                                    value: vendorDtlValue
+                                });
                             }
                             fieldObj.defaultValue = vendorDtlValue;
                         }
@@ -356,6 +478,11 @@ define([
                     subsidiary: subsidiaryId
                 });
             CTC_Util.log('AUDIT', logTitle, 'Vendor=' + JSON.stringify(vendorConfig));
+            // check for valid license
+            if (!libLicenseValidator.isLicenseValid()) {
+                log.audit(logTitle, 'Inactive license key.');
+                return;
+            }
             if (linesStr) {
                 arrLines = CTC_Util.safeParse(linesStr);
                 lineCount = arrLines.length;
@@ -387,20 +514,20 @@ define([
                                     logTitle,
                                     'Sublist lines=' +
                                         context.request.getLineCount({
-                                            group: 'custpage_vscp_ctc_sublist'
+                                            group: 'custpage_vcsp_ctc_sublist'
                                         })
                                 );
                                 for (
                                     let i = 0,
                                         len = context.request.getLineCount({
-                                            group: 'custpage_vscp_ctc_sublist'
+                                            group: 'custpage_vcsp_ctc_sublist'
                                         });
                                     i < len;
                                     i += 1
                                 ) {
-                                    let lineValue = Helper.parseValue({
+                                    let lineValue = Helper.formatToVendorValue({
                                         value: context.request.getSublistValue({
-                                            group: 'custpage_vscp_ctc_sublist',
+                                            group: 'custpage_vcsp_ctc_sublist',
                                             line: i,
                                             name: suiteletFieldId
                                         }),
@@ -410,9 +537,9 @@ define([
                                     value.push(lineValue);
                                     // set PO rates
                                     let lineRate = context.request.getSublistValue({
-                                        group: 'custpage_vscp_ctc_sublist',
+                                        group: 'custpage_vcsp_ctc_sublist',
                                         line: i,
-                                        name: 'custpage_vscp_ctc_item_rate'
+                                        name: 'custpage_vcsp_ctc_item_rate'
                                     });
                                     log.debug(
                                         logTitle,
@@ -446,7 +573,7 @@ define([
                                     values[propertyName] = value;
                                 }
                             } else {
-                                value = Helper.formatValue({
+                                value = Helper.formatToVendorValue({
                                     value: context.request.parameters[suiteletFieldId],
                                     type: fieldType,
                                     apiVendor: vendorConfig.apiVendor
@@ -586,6 +713,16 @@ define([
                     CTC_Util.log('AUDIT', logTitle, 'Fields=' + fieldsArrayStr);
                     fieldsArrayFld.defaultValue = fieldsArrayStr;
                     if (fieldsArrayStr) {
+                        if (record) {
+                            var templateRenderer = NS_Render.create();
+                            templateRenderer.templateContent = fieldsArrayStr;
+                            templateRenderer.addCustomDataSource({
+                                format: NS_Render.DataSource.OBJECT,
+                                alias: 'record',
+                                data: new PO(record)
+                            });
+                            fieldsArrayStr = templateRenderer.renderAsString();
+                        }
                         let fieldsArr = CTC_Util.safeParse(fieldsArrayStr);
                         if (fieldsArr && fieldsArr.length) {
                             closeWindow = false;
@@ -624,14 +761,17 @@ define([
                                 displayType: NS_ServerWidget.FieldDisplayType.HIDDEN
                             });
                             form.clientScriptModulePath = './CTC_VCSP_CS_FormPopup.js';
+                            let customClientScriptFunctions = form.addField({
+                                id: 'custpage_vcsp_clientscript',
+                                label: ' ',
+                                type: NS_ServerWidget.FieldType.INLINEHTML
+                            });
                             let loaderFld = form.addField({
                                 id: 'custpage_vcsp_ctc_loader',
                                 label: 'Loading',
                                 type: NS_ServerWidget.FieldType.INLINEHTML
                             });
                             if (poid) {
-                                if (record) {
-                                }
                                 let poidFld = form.addField({
                                     id: 'custpage_vcsp_ctc_poid',
                                     label: 'Purchase Order Id',
@@ -676,7 +816,7 @@ define([
                                 });
                                 form.addButton({
                                     id: 'custpage_vcsp_ctc_cancel',
-                                    label: 'Close',
+                                    label: 'Cancel',
                                     functionName: 'close'
                                 });
                                 loaderFld.defaultValue = `<div id="vcsp_ctc_loader"
@@ -782,7 +922,7 @@ define([
                     label: ' ',
                     type: NS_ServerWidget.FieldType.INLINEHTML
                 });
-                jsTrigger.defaultValue = `<script>
+                jsTrigger.defaultValue = `<script type="text/javascript">
                     function displayMessage(title, text) {
                         require(['N/ui/message'], function(NS_Message) {
                             let message = NS_Message.create({

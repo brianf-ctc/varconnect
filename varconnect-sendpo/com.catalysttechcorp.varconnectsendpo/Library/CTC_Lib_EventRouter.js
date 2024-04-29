@@ -69,7 +69,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                     recordId: Current.recordId
                 });
             }
-            log.audit('EventRouter.intialize', Current);
+            log.audit('EventRouter.initialize', Current);
             this.scriptContext = scriptContext;
             this.Current = Current;
 

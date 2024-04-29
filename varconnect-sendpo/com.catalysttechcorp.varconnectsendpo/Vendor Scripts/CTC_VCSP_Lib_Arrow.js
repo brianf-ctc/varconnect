@@ -137,7 +137,8 @@ define([
         poDetails.ShipViaCode = 'ZZ'; // constant for arrow
         poDetails.ShipViaDescription = 'ELECTRONIC DISTRIBUTION'; // constant for arrow
         poDetails.PoCurrency = 'USD'; // constant -- for Arrow US
-        poDetails.ArrowQuoteNumber = poObj.quoteNumber;
+        poDetails.ArrowQuote = {};
+        poDetails.ArrowQuote.ArrowQuoteNumber = poObj.items[0].quotenumber.toString();
 
         var billToObj = getBillingInfo(poObj);
         //    	var shipToObj = getShippingInfo(poObj);
@@ -426,9 +427,6 @@ define([
     }
 
     return {
-        generateToken: generateToken,
-        processRequest: processRequest,
-        generateRequest: generateRequest,
         process: process
     };
 });

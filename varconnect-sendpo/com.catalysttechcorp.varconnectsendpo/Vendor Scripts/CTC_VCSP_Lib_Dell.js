@@ -251,16 +251,7 @@ define([
                     });
 
                 let shippingContactObj = {
-                    company:
-                        addrInfo.addressee && addrInfo.addressee.value
-                            ? addrInfo.attention && addrInfo.attention.value
-                                ? [addrInfo.attention.value, addrInfo.addressee.value].join(' \n ')
-                                : addrInfo.addressee.value
-                            : addrInfo.attention && addrInfo.attention.value
-                            ? addrInfo.attention.value
-                            : null,
-
-                    // addrInfo.addressee.value || addrInfo.attention.value,
+                    company: addrInfo.addressee.value,
                     contactName: contactInfo.entityid,
                     email: contactInfo.email,
                     telephone: addrInfo.addrphone.value,
@@ -326,8 +317,8 @@ define([
                     let itemDetails = {
                         lineItemNum: (i + 1).toString(),
                         lineItemDescription: itemData.description,
-                        supplierPartId: itemData.quotenumber_ext || itemData.quotenumber,
-                        supplierPartIdExt: itemData.quotenumber_ext || itemData.quotenumber,
+                        supplierPartId: itemData.quotenumber,
+                        supplierPartIdExt: itemData.quotenumber,
                         quantity: itemData.quantity.toString(),
                         unitPrice: itemData.rate.toString(),
                         currency: poObj.currency

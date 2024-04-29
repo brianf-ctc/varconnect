@@ -12,11 +12,12 @@
  * @NModuleScope Public
  */
 
-define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
-    NS_Format,
-    VCSP_Global,
-    CTC_Util
-) {
+define([
+    'N/format',
+    'N/error',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_Lib_Utils'
+], function (NS_Format, NS_Error, VCSP_Global, CTC_Util) {
     const LogTitle = 'WS:DandH';
     let errorMessages = {
         STATUS_401:
@@ -24,40 +25,27 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         STATUS_404: 'URL not found. Please check Send PO Vendor configuration.'
     };
 
-    // YYYY-MM-ddThh:mm:ss.000Z
-    function getISOString(dateObj) {
-        let dateObject = dateObj || new Date();
-        let dateComponent = [dateObject.getMonth() + 1, dateObject.getDate()];
-        let timeComponent = [
-            dateObject.getHours(),
-            dateObject.getMinutes(),
-            dateObject.getSeconds()
-        ];
-        let milliseconds = dateObject.getMilliseconds();
-        for (let i = 0, len = dateComponent.length; i < len; i += 1) {
-            let element = dateComponent[i];
-            let strElem = '0' + element;
-            strElem = strElem.slice(-2);
-            dateComponent[i] = strElem;
+    let Helper = {
+        formatFromISODateString: function (option) {
+            let logTitle = [LogTitle, 'Helper', 'formatFromISODateString'].join('::'),
+                dateStrToParse = option,
+                formattedDate = null;
+            if (dateStrToParse) {
+                try {
+                    let parsedDate = CTC_Util.parseISODateString(dateStrToParse);
+                    if (parsedDate) {
+                        formattedDate = NS_Format.format({
+                            value: parsedDate,
+                            type: NS_Format.Type.DATETIME
+                        });
+                    }
+                } catch (formatErr) {
+                    // do nothing
+                }
+            }
+            return formattedDate;
         }
-        dateComponent.splice(0, 0, dateObject.getFullYear());
-        for (let i = 0, len = timeComponent.length; i < len; i += 1) {
-            let element = timeComponent[i];
-            let strElem = '0' + element;
-            strElem = strElem.slice(-2);
-            timeComponent[i] = strElem;
-        }
-        let strMilliseconds = '00' + milliseconds;
-        strMilliseconds = strMilliseconds.slice(-3);
-        return [
-            dateComponent.join('-'),
-            'T',
-            timeComponent.join(':'),
-            '.',
-            strMilliseconds,
-            'Z'
-        ].join('');
-    }
+    };
 
     function generateToken(option) {
         let logTitle = [LogTitle, 'generateToken'].join('::');
@@ -77,16 +65,26 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                 url: option.url
             }
         });
+        let tokenResp = tokenReq.PARSED_RESPONSE,
+            errorMessage = null;
         if (tokenReq.isError) {
-            // try to parse anything
-            let errorMessage = tokenReq.errorMsg;
-            if (tokenReq.PARSED_RESPONSE && tokenReq.PARSED_RESPONSE.error_description) {
-                errorMessage = tokenReq.PARSED_RESPONSE.error_description;
-            }
-            throw 'Generate Token Error - ' + errorMessage;
+            errorMessage = tokenReq.errorMsg;
         }
-        let tokenResp = CTC_Util.safeParse(tokenReq.RESPONSE);
-        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+        if (tokenResp && tokenResp.error_description) {
+            errorMessage = tokenResp.error_description;
+        }
+        if (errorMessage) {
+            throw NS_Error.create({
+                message: 'Generate Token Error - ' + errorMessage,
+                name: 'TOKEN_ERR'
+            });
+        }
+        if (!tokenResp || !tokenResp.access_token) {
+            throw NS_Error.create({
+                message: 'Unable to generate token',
+                name: 'TOKEN_ERR'
+            });
+        }
         log.audit(logTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
         return tokenResp;
     }
@@ -95,13 +93,19 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         let logTitle = [LogTitle, 'sendPOToDAndH'].join('::'),
             objPO = option.objPO,
             vendorConfig = option.vendorConfig,
-            body = option.body;
-        let dnhToken = generateToken({
-            poId: objPO.id,
-            apiKey: vendorConfig.apiKey,
-            apiSecret: vendorConfig.apiSecret,
-            url: vendorConfig.accessEndPoint
-        });
+            body = option.body,
+            dnhTokenRequestQuery = {
+                poId: objPO.id,
+                apiKey: vendorConfig.apiKey,
+                apiSecret: vendorConfig.apiSecret,
+                url: vendorConfig.accessEndPoint
+            };
+        if (vendorConfig.testRequest) {
+            dnhTokenRequestQuery.apiKey = vendorConfig.qaApiKey;
+            dnhTokenRequestQuery.apiSecret = vendorConfig.qaApiSecret;
+            dnhTokenRequestQuery.url = vendorConfig.qaAccessEndPoint;
+        }
+        let dnhToken = generateToken(dnhTokenRequestQuery);
         let bearerToken = [dnhToken.token_type, dnhToken.access_token].join(' ');
         let dnhTenant = 'dhus';
         switch (vendorConfig.country) {
@@ -128,7 +132,7 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
             method: 'post',
             recordId: objPO.id,
             query: {
-                url: vendorConfig.endPoint,
+                url: vendorConfig.testRequest ? vendorConfig.qaEndPoint : vendorConfig.endPoint,
                 headers: headers,
                 body: stBody
             }
@@ -147,7 +151,7 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         let arrLines = record.items.map(function (item) {
             let objLine = {
                 // unitPrice: item.rate,
-                item: item.dandhSKU || item.item,
+                item: item.dandhPartNumber || item.item,
                 externalLineNumber: item.lineuniquekey,
                 orderQuantity: item.quantity
                 // clientReferenceData: {}, // any additional data to be stored with the order
@@ -232,76 +236,80 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         };
         if (record.additionalVendorDetails) {
             additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
-            if (additionalVendorDetails) {
-                for (let fieldId in additionalVendorDetails) {
-                    let fieldHierarchy = fieldId.split('.');
-                    let fieldContainer = dnhTemplate;
-                    for (
-                        let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
-                        i < len;
-                        i += 1
-                    ) {
-                        let fieldIdComponent = fieldHierarchy[i];
-                        if (i == fieldIdIndex) {
-                            // container is an array, distribute values across container elements
-                            if (
-                                fieldIdComponent.indexOf('__') == 0 &&
-                                util.isArray(additionalVendorDetails[fieldId]) &&
-                                util.isArray(fieldContainer)
-                            ) {
-                                fieldIdComponent = fieldIdComponent.slice(2);
-                                for (let j = 0, lines = fieldContainer.length; j < lines; j += 1) {
-                                    let lineObj = fieldContainer[j];
-                                    switch (fieldIdComponent) {
-                                        case 'requestUnitPrice':
-                                            if (additionalVendorDetails[fieldId][j] == 'T') {
-                                                lineObj.unitPrice = record.items[j].rate;
-                                            }
-                                            break;
-                                        default:
-                                            lineObj[fieldIdComponent] =
-                                                additionalVendorDetails[fieldId][j];
-                                            break;
-                                    }
+        } else if (vendorConfig.additionalPOFields) {
+            additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+            });
+        }
+        if (additionalVendorDetails) {
+            for (let fieldId in additionalVendorDetails) {
+                let fieldHierarchy = fieldId.split('.');
+                let fieldContainer = dnhTemplate;
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
+                    let fieldIdComponent = fieldHierarchy[i];
+                    if (i == fieldIdIndex) {
+                        // container is an array, distribute values across container elements
+                        if (
+                            fieldIdComponent.indexOf('__') == 0 &&
+                            util.isArray(additionalVendorDetails[fieldId]) &&
+                            util.isArray(fieldContainer)
+                        ) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            for (let j = 0, lines = fieldContainer.length; j < lines; j += 1) {
+                                let lineObj = fieldContainer[j];
+                                switch (fieldIdComponent) {
+                                    case 'requestUnitPrice':
+                                        if (additionalVendorDetails[fieldId][j] == 'T') {
+                                            lineObj.unitPrice = record.items[j].rate;
+                                        }
+                                        break;
+                                    default:
+                                        lineObj[fieldIdComponent] =
+                                            additionalVendorDetails[fieldId][j];
+                                        break;
                                 }
-                            } else {
-                                fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
                             }
                         } else {
-                            // container is an array, reference as is
-                            if (fieldIdComponent.indexOf('__') == 0) {
-                                fieldIdComponent = fieldIdComponent.slice(2);
-                                if (
-                                    fieldContainer[fieldIdComponent] &&
-                                    util.isArray(fieldContainer[fieldIdComponent])
-                                ) {
-                                    fieldContainer = fieldContainer[fieldIdComponent];
-                                } else {
-                                    fieldContainer[fieldIdComponent] = [];
-                                    fieldContainer = fieldContainer[fieldIdComponent];
-                                }
-                                // container is an array, reference first element
-                            } else if (fieldIdComponent.indexOf('_') == 0) {
-                                fieldIdComponent = fieldIdComponent.slice(1);
-                                if (
-                                    fieldContainer[fieldIdComponent] &&
-                                    util.isArray(fieldContainer[fieldIdComponent])
-                                ) {
-                                    fieldContainer = fieldContainer[fieldIdComponent][0];
-                                } else {
-                                    fieldContainer[fieldIdComponent] = [{}];
-                                    fieldContainer = fieldContainer[fieldIdComponent][0];
-                                }
-                            } else if (!fieldContainer[fieldIdComponent]) {
-                                fieldContainer[fieldIdComponent] = {};
+                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        }
+                    } else {
+                        // container is an array, reference as is
+                        if (fieldIdComponent.indexOf('__') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
                                 fieldContainer = fieldContainer[fieldIdComponent];
                             } else {
+                                fieldContainer[fieldIdComponent] = [];
                                 fieldContainer = fieldContainer[fieldIdComponent];
                             }
+                            // container is an array, reference first element
+                        } else if (fieldIdComponent.indexOf('_') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(1);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            } else {
+                                fieldContainer[fieldIdComponent] = [{}];
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            }
+                        } else if (!fieldContainer[fieldIdComponent]) {
+                            fieldContainer[fieldIdComponent] = {};
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        } else {
+                            fieldContainer = fieldContainer[fieldIdComponent];
                         }
                     }
-                    log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
                 }
+                log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
         }
         let dtTranDate = NS_Format.parse({
@@ -356,9 +364,15 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                                 line < lineCount;
                                 line += 1
                             ) {
+                                log.audit(
+                                    logTitle,
+                                    'shipment line=' + JSON.stringify(shipmentDetails.lines)
+                                );
                                 let lineDetails = shipmentDetails.lines[line];
                                 delete itemJsonData.shipments;
-                                itemJsonData.shipments = shipmentDetails;
+                                itemJsonData.shipments = JSON.parse(
+                                    JSON.stringify(shipmentDetails)
+                                );
                                 delete itemJsonData.shipments.lines;
                                 itemJsonData.shipments.line = lineDetails;
                                 let itemJsonDataStr = JSON.stringify(itemJsonData).replace(
@@ -376,7 +390,10 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                                     vendor_order_number: responseBody.orderNumber || 'NA',
                                     customer_order_number:
                                         responseBody.customerPurchaseOrder || 'NA',
-                                    order_date: endUserDataDetails.dateOfSale || 'NA',
+                                    order_date:
+                                        Helper.formatFromISODateString(
+                                            endUserDataDetails.dateOfSale
+                                        ) || 'NA',
                                     vendor_sku: lineDetails.item || 'NA',
                                     item_number: 'NA',
                                     note: responseBody.specialInstructions,
@@ -455,8 +472,7 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         let logTitle = [LogTitle, 'process'].join('::'),
             vendorConfig = option.recVendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO,
-            testRequest = vendorConfig.testRequest;
+            record = option.record || option.recPO;
         log.audit(logTitle, '>> record : ' + JSON.stringify(record));
         let returnResponse = {
             transactionNum: record.tranId,
@@ -467,8 +483,7 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
             let sendPOBody = generateBody({
                 objPO: record,
                 customerNo: customerNo,
-                vendorConfig: vendorConfig,
-                testRequest: testRequest
+                vendorConfig: vendorConfig
             });
             dnhResponse = sendPOToDAndH({
                 objPO: record,
@@ -517,6 +532,10 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                 errorMsg: e.message
             };
             returnResponse.isError = true;
+            returnResponse.error = e;
+            returnResponse.errorId = record.id;
+            returnResponse.errorName = e.name;
+            returnResponse.errorMsg = e.message;
             if (dnhResponse) {
                 returnResponse.logId = dnhResponse.logId || null;
                 returnResponse.responseBody = dnhResponse.PARSED_RESPONSE;

@@ -20,6 +20,8 @@ define([
     '../Vendor Scripts/CTC_VCSP_Lib_Synnex',
     '../Vendor Scripts/CTC_VCSP_Lib_IngramMicro',
     '../Vendor Scripts/CTC_VCSP_Lib_DandH',
+    '../Vendor Scripts/CTC_VCSP_Lib_Scansource',
+    '../Vendor Scripts/CTC_VCSP_Lib_Carahsoft',
     '../VO/CTC_VCSP_Response',
     '../VO/CTC_VCSP_PO'
 ], function (
@@ -31,6 +33,8 @@ define([
     libSynnex,
     libIngram,
     libDandH,
+    libScanSource,
+    libCarahsoft,
     response,
     PO
 ) {
@@ -41,32 +45,61 @@ define([
 
         let recVendorConfig = options.recVendorConfig,
             apiVendor = recVendorConfig.apiVendor,
+            vendorList = VCSP_Global.Lists.API_VENDOR,
             endpoint = recVendorConfig.endPoint;
 
+        if (recVendorConfig.testRequest) {
+            endpoint = recVendorConfig.qaEndPoint;
+        }
         let requiredWebserviceInfo = {
             endpoint: endpoint
         };
         switch (apiVendor) {
-            case VCSP_Global.Lists.API_VENDOR.SYNNEX:
+            case vendorList.SYNNEX:
                 requiredWebserviceInfo.user = recVendorConfig.user;
                 requiredWebserviceInfo.password = recVendorConfig.password;
                 break;
-            case VCSP_Global.Lists.API_VENDOR.INGRAM:
-                requiredWebserviceInfo.endpoint = recVendorConfig.accessEndPoint;
-                requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
-                requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+            case vendorList.SCANSOURCE:
+                requiredWebserviceInfo.businessUnit = recVendorConfig.businessUnit;
+                requiredWebserviceInfo.subscriptionKey = recVendorConfig.subscriptionKey;
+                if (recVendorConfig.testRequest) {
+                    requiredWebserviceInfo.oauthScope = recVendorConfig.qaOauthScope;
+                } else {
+                    requiredWebserviceInfo.oauthScope = recVendorConfig.oauthScope;
+                }
+            case vendorList.DANDH:
+            case vendorList.INGRAM:
+                if (recVendorConfig.testRequest) {
+                    requiredWebserviceInfo.tokenEndpoint = recVendorConfig.qaAccessEndPoint;
+                    requiredWebserviceInfo.apiKey = recVendorConfig.qaApiKey;
+                    requiredWebserviceInfo.apiSecret = recVendorConfig.qaApiSecret;
+                } else {
+                    requiredWebserviceInfo.tokenEndpoint = recVendorConfig.accessEndPoint;
+                    requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
+                    requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                }
                 break;
-            case VCSP_Global.Lists.API_VENDOR.DELL:
+            case vendorList.DELL:
             default:
-                requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
-                requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                if (recVendorConfig.testRequest) {
+                    requiredWebserviceInfo.apiKey = recVendorConfig.qaApiKey;
+                    requiredWebserviceInfo.apiSecret = recVendorConfig.qaApiSecret;
+                } else {
+                    requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
+                    requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                }
                 break;
         }
         log.debug(logTitle, JSON.stringify(requiredWebserviceInfo));
 
         for (let requiredParam in requiredWebserviceInfo) {
             if (!requiredWebserviceInfo[requiredParam]) {
-                throw 'Incomplete webservice information for ' + recVendorConfig.vendorName;
+                throw (
+                    'Incomplete webservice information for ' +
+                    recVendorConfig.vendorName +
+                    '. Missing one of the following: ' +
+                    Object.keys(requiredWebserviceInfo).join(', ')
+                );
             }
         }
 
@@ -98,6 +131,12 @@ define([
                 break;
             case vendorList.DANDH:
                 libVendor = libDandH;
+                break;
+            case vendorList.SCANSOURCE:
+                libVendor = libScanSource;
+                break;
+            case vendorList.CARAHSOFT:
+                libVendor = libCarahsoft;
                 break;
             default:
                 log.error(logTitle, 'API Vendor not setup');

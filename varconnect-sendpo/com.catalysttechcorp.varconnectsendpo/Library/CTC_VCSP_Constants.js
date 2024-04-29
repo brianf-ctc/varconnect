@@ -35,55 +35,62 @@ define([], function () {
                     MANUFACTURER: 'custcol_ctc_manufacturer',
                     DELL_SKU: 'custcol_ctc_vcsp_sku_dell',
                     SYNNEX_SKU: 'custcol_ctc_vcsp_sku_synnex',
-                    INGRAM_SKU: 'custcol_ctc_vcsp_sku_ingram',
-                    DANDH_SKU: 'custcol_ctc_vcsp_sku_dandh'
+                    INGRAM_PART_NUMBER: 'custcol_ctc_vc_ingram_mpn',
+                    DANDH_PART_NUMBER: 'custcol_ctc_vc_dh_mpn'
                 }
-            },
-            Location: {
-                SYNNEX_WAREHOUSE_CODE: 'custrecord_ctc_vcsp_synnex_warehouse'
             },
             VendorConfig: {
                 ID: 'internalid',
                 SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
                 API_VENDOR: 'custrecord_ctc_vcsp_api_vendor',
                 VENDOR: 'custrecord_ctc_vcsp_vendor',
+                EVENT_TYPE: 'custrecord_ctc_vcsp_event',
+                TEST_REQUEST: 'custrecord_ctc_vcsp_test',
+                IS_SPECIAL_ITEM_NAME: 'custrecord_vcsp_is_item_name_special',
                 WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint',
                 ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint',
+                OAUTH_SCOPE: 'custrecord_ctc_vcsp_access_scope',
+                SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_key',
                 USERNAME: 'custrecord_ctc_vcsp_username',
                 PASSWORD: 'custrecord_ctc_vcsp_password',
                 CUSTOMER_NO: 'custrecord_ctc_vcsp_customer_number',
                 API_KEY: 'custrecord_ctc_vcsp_api_key',
                 API_SECRET: 'custrecord_ctc_vcsp_api_secret',
-                SKU_COLUMN: 'custrecord_ctc_vcsp_ven_itemcol',
-                TEST_REQUEST: 'custrecord_ctc_vcsp_test',
                 FIELD_MAP: 'custrecord_ctc_vcsp_fieldmapping',
-                EVENT_TYPE: 'custrecord_ctc_vcsp_event',
                 QA_WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint_qa',
-                QA_ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint_qa', // fixed bug on QA fields
+                QA_ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint_qa',
+                QA_OAUTH_SCOPE: 'custrecord_ctc_vcsp_access_scope_qa',
                 QA_API_KEY: 'custrecord_ctc_vcsp_api_key_qa',
                 QA_API_SECRET: 'custrecord_ctc_vcsp_api_secret_qa',
+                QA_SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_qa',
+                PONUM_FIELD: 'custrecord_ctc_vcsp_ponum_field',
+                QUOTE_COLUMN: 'custrecord_ctc_vcsp_quoteno_field',
+                MEMO_FIELD: 'custrecord_ctc_vcsp_memo_field',
+                SHIP_CONTACT_FIELD: 'custrecord_ctc_vcsp_shipcontact_field',
+                SHIP_EMAIL_FIELD: 'custrecord_ctc_vcsp_shipemail_field',
+                SHIP_PHONE_FIELD: 'custrecord_ctc_vcsp_shipphone_field',
+                ENABLE_ADD_VENDOR_DETAILS: 'custrecord_ctc_vcsp_show_details',
                 ADDITIONAL_PO_FIELDS: 'custrecord_ctc_vcsp_po_fields',
                 PO_LINE_COLUMNS: 'custrecord_ctc_vcsp_line_cols',
-                SHOW_VENDOR_DETAILS: 'custrecord_ctc_vcsp_show_details',
-                QUOTENO_FIELD: 'custrecord_ctc_vcsp_quoteno_field',
                 Bill: {
                     ID: 'custrecord_ctc_vcsp_bill_addrid',
                     ADDRESSEE: 'custrecord_ctc_vcsp_bill_addressee',
                     ATTENTION: 'custrecord_ctc_vcsp_bill_attention',
+                    EMAIL: 'custrecord_ctc_vcsp_bill_email',
+                    PHONENO: 'custrecord_ctc_vcsp_phoneno',
                     ADDRESS_1: 'custrecord_ctc_vcsp_bill_addr1',
                     ADDRESS_2: 'custrecord_ctc_vcsp_bill_addr2',
-                    PHONENO: 'custrecord_ctc_vcsp_phoneno',
                     CITY: 'custrecord_ctc_vcsp_bill_city',
                     STATE: 'custrecord_ctc_vcsp_bill_state',
                     ZIP: 'custrecord_ctc_vcsp_bill_zip',
-                    COUNTRY: 'custrecord_ctc_vcsp_bill_country',
-                    EMAIL: 'custrecord_ctc_vcsp_bill_email'
+                    COUNTRY: 'custrecord_ctc_vcsp_bill_country'
                 },
                 PAYMENT: {
                     MEAN: 'custrecord_ctc_vcsp_payment_mean',
                     OTHER: 'custrecord_ctc_vcsp_payment_mean_other',
                     TERM: 'custrecord_ctc_vcsp_payment_term'
-                }
+                },
+                BUSINESS_UNIT: 'custrecord_ctc_vcsp_businessunit'
             },
             MainConfig: {
                 ID: 'internalid',
@@ -143,7 +150,11 @@ define([], function () {
                 ARROW: '2',
                 SYNNEX: '3',
                 INGRAM: '4',
-                DANDH: '5'
+                DANDH: '5',
+                JENNE: '6',
+                TECHDATA: '7',
+                SCANSOURCE: '8',
+                CARAHSOFT: '9'
             },
             VC_LOG_STATUS: {
                 SUCCESS: '1',

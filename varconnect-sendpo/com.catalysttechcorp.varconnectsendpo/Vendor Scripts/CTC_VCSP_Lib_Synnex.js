@@ -299,6 +299,9 @@ define([
         } else {
             returnValue.message = 'Send PO failed';
         }
+        orderStatus.itemCount = orderStatus.items.length;
+        orderStatus.numFailedLines = orderStatus.errorLines.length;
+        orderStatus.numSuccessfulLines = orderStatus.errorLines.length;
         log.audit(logTitle, '>> Parsed response: ' + JSON.stringify(orderStatus));
         returnValue.orderStatus = orderStatus;
         return returnValue;
@@ -309,10 +312,9 @@ define([
             returnValue = '';
 
         let record = option.record,
-            additionalVendorDetails = {},
+            additionalVendorDetails = null,
             customerNo = option.customerNo,
             vendorConfig = option.vendorConfig,
-            testRequest = option.testRequest,
             credentials = {
                 UserID: vendorConfig.user,
                 Password: vendorConfig.password
@@ -330,14 +332,15 @@ define([
                     })
                 ),
                 XMLPOSubmitDateTime: Helper.formatToSynnexDate(new Date()),
-                DropShipFlag: record.dropShipPO ? 'Y' : 'N',
+                DropShipFlag: record.isDropShip ? 'Y' : 'N',
+                ShipComplete: record.shipComplete ? 'Y' : 'N',
                 EndUserPONumber: record.tranId,
                 Comment: record.memo,
                 Shipment: {
-                    ShipFromWarehouse: record.shipFromSynnexWarehouse || 'ANY',
+                    ShipFromWarehouse: 'ANY',
                     ShipTo: {
-                        AddressName1: record.shipAttention,
-                        AddressName2: record.shipAddressee,
+                        AddressName1: record.shipAddrName1,
+                        AddressName2: record.shipAddrName2,
                         AddressLine1: record.shipAddr1,
                         AddressLine2: record.shipAddr2,
                         City: record.shipCity,
@@ -359,8 +362,8 @@ define([
                         '/attributes': {
                             code: customerNo
                         },
-                        AddressName1: record.billAttention,
-                        AddressName2: record.billAddressee,
+                        AddressName1: record.billAttention || record.billAddressee,
+                        AddressName2: record.billAttention ? record.billAddressee : null,
                         AddressLine1: record.billAddr1,
                         AddressLine2: record.billAddr2,
                         City: record.billCity,
@@ -451,27 +454,31 @@ define([
         };
         if (record.additionalVendorDetails) {
             additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
-            if (additionalVendorDetails) {
-                for (let fieldId in additionalVendorDetails) {
-                    let fieldHierarchy = fieldId.split('.');
-                    let fieldContainer = requestDetails.OrderRequest;
-                    for (
-                        let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
-                        i < len;
-                        i += 1
-                    ) {
-                        let fieldIdComponent = fieldHierarchy[i];
-                        if (i == fieldIdIndex) {
-                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
-                        } else {
-                            if (!fieldContainer[fieldIdComponent]) {
-                                fieldContainer[fieldIdComponent] = {};
-                            }
-                            fieldContainer = fieldContainer[fieldIdComponent];
+        } else if (vendorConfig.additionalPOFields) {
+            additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+            });
+        }
+        if (additionalVendorDetails) {
+            for (let fieldId in additionalVendorDetails) {
+                let fieldHierarchy = fieldId.split('.');
+                let fieldContainer = requestDetails.OrderRequest;
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
+                    let fieldIdComponent = fieldHierarchy[i];
+                    if (i == fieldIdIndex) {
+                        fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                    } else {
+                        if (!fieldContainer[fieldIdComponent]) {
+                            fieldContainer[fieldIdComponent] = {};
                         }
+                        fieldContainer = fieldContainer[fieldIdComponent];
                     }
-                    log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
                 }
+                // log.debug(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
         }
         log.audit(logTitle, 'Order Request: ' + JSON.stringify(requestDetails.OrderRequest));
@@ -488,13 +495,8 @@ define([
         let logTitle = [LogTitle, 'sendPOToSynnex'].join('::'),
             record = option.record,
             vendorConfig = option.vendorConfig,
-            body = option.body;
-        let sendPOResponse = CTC_Util.sendRequest({
-            header: [LogTitle, 'Send PO'].join(' : '),
-            method: 'post',
-            recordId: record.id,
-            isXML: true,
-            query: {
+            body = option.body,
+            synnexRequestQuery = {
                 url: vendorConfig.endPoint,
                 headers: {
                     'Content-Type': 'application/xml',
@@ -502,7 +504,17 @@ define([
                     Host: vendorConfig.endPoint.match(/(?:\w+\.)+\w+/)[0]
                 },
                 body: body
-            }
+            };
+        if (vendorConfig.testRequest) {
+            synnexRequestQuery.url = vendorConfig.qaEndPoint;
+            synnexRequestQuery.headers.Host = vendorConfig.qaEndPoint.match(/(?:\w+\.)+\w+/)[0];
+        }
+        let sendPOResponse = CTC_Util.sendRequest({
+            header: [LogTitle, 'Send PO'].join(' : '),
+            method: 'post',
+            recordId: record.id,
+            isXML: true,
+            query: synnexRequestQuery
         });
         log.audit(logTitle, '>> Synnex: ' + JSON.stringify(sendPOResponse));
         return sendPOResponse;
@@ -512,8 +524,7 @@ define([
         let logTitle = [LogTitle, 'process'].join('::'),
             vendorConfig = option.recVendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO,
-            testRequest = vendorConfig.testRequest;
+            record = option.record || option.recPO;
         log.audit(logTitle, '>> record : ' + JSON.stringify(record));
         let sendPOResponse,
             returnResponse = {
@@ -524,8 +535,7 @@ define([
             let sendPOBody = generateBody({
                 record: record,
                 customerNo: customerNo,
-                vendorConfig: vendorConfig,
-                testRequest: testRequest
+                vendorConfig: vendorConfig
             });
             sendPOResponse = sendPOToSynnex({
                 record: record,
@@ -562,6 +572,10 @@ define([
                 errorMsg: e.message
             };
             returnResponse.isError = true;
+            returnResponse.error = e;
+            returnResponse.errorId = record.id;
+            returnResponse.errorName = e.name;
+            returnResponse.errorMsg = e.message;
             if (sendPOResponse) {
                 returnResponse.logId = sendPOResponse.logId || null;
                 returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;
