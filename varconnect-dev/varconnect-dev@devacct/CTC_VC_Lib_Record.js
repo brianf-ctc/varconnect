@@ -337,13 +337,16 @@ define([
             if (itemAltMPNColId) {
                 poColumns.push(itemAltMPNColId);
             }
+
+            vc2_util.log(logTitle, '... po columns:', poColumns);
+
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
                 findAll: true,
-                // mainConfig: Current.MainCFG,
-                // orderConfig: Current.OrderCFG,
                 columns: poColumns
             });
+
+            vc2_util.log(logTitle, '... OrderLines:', Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
@@ -358,8 +361,6 @@ define([
                     /// look for a matching line from the
                     var orderLineMatch = vc2_record.findMatchingOrderLine({
                         record: Current.PO_REC,
-                        // mainConfig: Current.MainCFG,
-                        // orderConfig: Current.OrderCFG,
                         orderLines: Current.OrderLines,
                         lineData: vendorLine
                     });

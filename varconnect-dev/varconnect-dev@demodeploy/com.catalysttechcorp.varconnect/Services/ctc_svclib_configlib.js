@@ -22,62 +22,14 @@ define(function (require) {
         ns_runtime = require('N/runtime'),
         ns_https = require('N/https');
 
-    // var VendorCFG = vc2_constant.RECORD.VENDOR_CONFIG,
-    //     VendorCFG_Map = function (row) {
-    //         return {
-    //             id: row.getValue({ name: VendorCFG.FIELD.ID }),
-    //             subsidiary: row.getValue({ name: VendorCFG.FIELD.SUBSIDIARY }),
-    //             xmlVendor: row.getValue({ name: VendorCFG.FIELD.XML_VENDOR }),
-    //             xmlVendorText: row.getText({ name: VendorCFG.FIELD.XML_VENDOR }),
-    //             vendor: row.getValue({ name: VendorCFG.FIELD.VENDOR }),
-    //             endPoint: row.getValue({ name: VendorCFG.FIELD.WEBSERVICE_ENDPOINT }),
-    //             startDate: row.getValue({ name: VendorCFG.FIELD.START_DATE }),
-    //             user: row.getValue({ name: VendorCFG.FIELD.USERNAME }),
-    //             password: row.getValue({ name: VendorCFG.FIELD.PASSWORD }),
-    //             customerNo: row.getValue({ name: VendorCFG.FIELD.CUSTOMER_NO }),
-    //             processDropships: row.getValue({ name: VendorCFG.FIELD.PROCESS_DROPSHIPS }),
-    //             processSpecialOrders: row.getValue({
-    //                 name: VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS
-    //             }),
-    //             fulfillmentPrefix: row.getValue({ name: VendorCFG.FIELD.FULFILLMENT_PREFIX }),
-    //             accessEndPoint: row.getValue({ name: VendorCFG.FIELD.ACCESS_ENDPOINT }),
-    //             apiKey: row.getValue({ name: VendorCFG.FIELD.API_KEY }),
-    //             apiSecret: row.getValue({ name: VendorCFG.FIELD.API_SECRET }),
-    //             oauthScope: row.getValue({ name: VendorCFG.FIELD.OATH_SCOPE }),
-    //             useShipDate: row.getValue({ name: VendorCFG.FIELD.USE_SHIPDATE }),
-    //             country: row.getValue({
-    //                 name: 'country',
-    //                 join: VendorCFG.FIELD.SUBSIDIARY
-    //             }),
-    //             itemColumnIdToMatch: row.getValue({
-    //                 name: VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH
-    //             }),
-    //             itemFieldIdToMatch: row.getValue({
-    //                 name: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
-    //             }),
-    //             matchItemToPartNumber: row.getValue({
-    //                 name: VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME
-    //             }),
-    //             itemMPNColumnIdToMatch: row.getValue({
-    //                 name: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH
-    //             }),
-    //             itemMPNFieldIdToMatch: row.getValue({
-    //                 name: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH
-    //             }),
-    //             matchMPNWithPartNumber: row.getValue({
-    //                 name: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
-    //             })
-    //         };
-    //     };
-
-    var MainCFG = vc2_constant.RECORD.MAIN_CONFIG,
-        MainCFG_Map = vc2_constant.MAPPING.MAIN_CONFIG,
+    var MAIN_CFG = vc2_constant.RECORD.MAIN_CONFIG,
+        MAIN_CFG_MAP = vc2_constant.MAPPING.MAIN_CONFIG,
         // vendor config fields/map
-        VendorCFG = vc2_constant.RECORD.VENDOR_CONFIG,
-        VendorCFG_Map = vc2_constant.MAPPING.VENDOR_CONFIG,
+        VENDOR_CFG = vc2_constant.RECORD.VENDOR_CONFIG,
+        VENDOR_CFG_MAP = vc2_constant.MAPPING.VENDOR_CONFIG,
         // bill vendor config fields/map
-        BillVendorCFG = vc2_constant.RECORD.BILLCREATE_CONFIG,
-        BillVendorCFG_Map = vc2_constant.MAPPING.BILLCREATE_CONFIG;
+        BILL_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG,
+        BILL_CFG_MAP = vc2_constant.MAPPING.BILLCREATE_CONFIG;
 
     var VC_LICENSE = vc2_constant.LICENSE;
 
@@ -87,6 +39,8 @@ define(function (require) {
                 logPrefix = '[LICENSE-CHECK] ',
                 response,
                 returnValue = {};
+
+            vc2_util.LogPrefix = logPrefix;
 
             var startTime = new Date();
 
@@ -104,12 +58,9 @@ define(function (require) {
                         ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
                         ('&nsaccountid=' + ns_runtime.accountId)
                 };
-                log.audit(
-                    logTitle,
-                    logPrefix + 'Send Request query: ' + JSON.stringify(queryOption)
-                );
+                vc2_util.log(logTitle, 'Send Request query: ', queryOption);
                 response = ns_https.request(queryOption);
-                log.audit(logTitle, logPrefix + 'Response: ' + JSON.stringify(response));
+                vc2_util.log(logTitle, 'Response: ', response);
 
                 if (!response || !response.body) throw 'Unable to get response';
                 if (!response.code || response.code !== 200)
@@ -127,14 +78,14 @@ define(function (require) {
                 returnValue.errorMsg = vc2_util.extractError(error);
 
                 if (doRetry && maxRetry > retryCount) {
-                    log.audit(logTitle, logPrefix + '... retry count : ' + retryCount);
+                    vc2_util.log(logTitle, '... retry count : ' + retryCount);
                     option.retryCount = retryCount + 1;
                     vc2_util.waitMs(retryWaitMS); // wait before re-sending
                     LibLicense.fetchLicense(option);
                 }
             } finally {
                 var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
-                log.audit(logTitle, logPrefix + '# response time: ' + durationSec + 's');
+                vc2_util.log(logTitle, '# response time: ' + durationSec + 's');
             }
 
             return returnValue;
@@ -143,6 +94,8 @@ define(function (require) {
             var logTitle = 'VC_LICENSE::validate',
                 logPrefix = '[LICENSE-CHECK] ',
                 returnValue = {};
+
+            vc2_util.LogPrefix = logPrefix;
 
             try {
                 // prep the cache
@@ -240,10 +193,11 @@ define(function (require) {
         }
     };
 
-    return {
+    var EndPoint = {
+        orderConfig: {},
         //
         mainConfig: function (option) {
-            var logTitle = [LogTitle, 'MainConfig'].join(':'),
+            var logTitle = [LogTitle, 'mainConfig'].join(':'),
                 option = option || {},
                 returnValue;
 
@@ -261,23 +215,27 @@ define(function (require) {
 
                 // do the main config search
                 var searchObj = ns_search.create({
-                    type: MainCFG.ID,
+                    type: MAIN_CFG.ID,
                     filters: [['isinactive', 'is', 'F']],
                     columns: (function () {
                         var flds = [];
-                        for (var fld in MainCFG_Map) flds.push(MainCFG_Map[fld]);
+                        for (var fld in MAIN_CFG_MAP) flds.push(MAIN_CFG_MAP[fld]);
                         return flds;
                     })()
                 });
                 mainConfigData = {};
 
                 searchObj.run().each(function (row) {
-                    for (var fld in MainCFG_Map) {
-                        var rowValue = row.getValue({ name: MainCFG_Map[fld] });
+                    for (var fld in MAIN_CFG_MAP) {
+                        var rowValue = row.getValue({ name: MAIN_CFG_MAP[fld] });
                         mainConfigData[fld] = rowValue ? rowValue.value || rowValue : null;
                     }
                     return true;
                 });
+
+                mainConfigData.allowedVarianceAmountThreshold = vc2_util.parseFloat(
+                    mainConfigData.allowedVarianceAmountThreshold || '0'
+                );
 
                 if (!mainConfigData) throw 'No Configuration available';
                 // vc2_util.log(logTitle, 'mainConfig>> ', mainConfigData);
@@ -290,10 +248,12 @@ define(function (require) {
 
             returnValue = mainConfigData;
 
+            vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
+
             return returnValue;
         },
-        vendorConfig: function (option) {
-            var logTitle = [LogTitle, 'vendorConfig'].join(':'),
+        orderVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'orderVendorConfig'].join(':'),
                 returnValue;
 
             var configId = option.configId || option.id,
@@ -306,14 +266,14 @@ define(function (require) {
             // vc2_util.log(logTitle, '>> vendor config: ', option);
 
             var searchOption = {
-                type: VendorCFG.ID,
+                type: VENDOR_CFG.ID,
                 filters: [],
                 columns: (function () {
                     var flds = [];
-                    for (var fld in VendorCFG.FIELD) {
-                        flds.push(VendorCFG.FIELD[fld]);
+                    for (var fld in VENDOR_CFG.FIELD) {
+                        flds.push(VENDOR_CFG.FIELD[fld]);
                     }
-                    flds.push({ name: 'country', join: VendorCFG.FIELD.SUBSIDIARY });
+                    flds.push({ name: 'country', join: VENDOR_CFG.FIELD.SUBSIDIARY });
                     return flds;
                 })()
             };
@@ -330,18 +290,20 @@ define(function (require) {
                 }
 
                 if (vendorId) {
-                    searchOption.filters.push([VendorCFG.FIELD.VENDOR, 'anyof', vendorId]);
+                    searchOption.filters.push([VENDOR_CFG.FIELD.VENDOR, 'anyof', vendorId]);
                     cacheParams.push('vendor=' + vendorId);
                 }
                 if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
                     if (searchOption.filters.length) searchOption.filters.push('AND');
-                    searchOption.filters.push([VendorCFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                    searchOption.filters.push([VENDOR_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
                     cacheParams.push('subs=' + subsId);
                 }
             }
 
-            if (!cacheParams || !cacheParams.length)
-                throw 'Missing vendor configuration parameters!';
+            if (!cacheParams || !cacheParams.length) {
+                vc2_util.log(logTitle, 'Missing vendor configuration parameters!');
+                return false;
+            }
 
             cacheKey = vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__' + cacheParams.join('&');
             var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
@@ -351,21 +313,24 @@ define(function (require) {
                 var searchObj = ns_search.create(searchOption);
 
                 searchObj.run().each(function (row) {
-                    for (var fld in VendorCFG_Map) {
-                        var rowValue = row.getValue({ name: VendorCFG_Map[fld] });
+                    for (var fld in VENDOR_CFG_MAP) {
+                        var rowValue = row.getValue({ name: VENDOR_CFG_MAP[fld] });
                         configData[fld] = rowValue ? rowValue.value || rowValue : null;
                     }
 
-                    configData.xmlVendor = row.getText({ name: VendorCFG.FIELD.XML_VENDOR });
+                    configData.xmlVendorText = row.getText({ name: VENDOR_CFG.FIELD.XML_VENDOR });
 
                     configData.country = row.getValue({
                         name: 'country',
-                        join: VendorCFG.FIELD.SUBSIDIARY
+                        join: VENDOR_CFG.FIELD.SUBSIDIARY
                     });
 
                     return true;
                 });
-                if (vc2_util.isEmpty(configData)) throw 'No Vendor Configuration available';
+                if (vc2_util.isEmpty(configData)) {
+                    vc2_util.log(logTitle, 'No Vendor Configuration available');
+                    return false;
+                }
 
                 vc2_util.setNSCache({ name: cacheKey, value: configData });
             }
@@ -397,6 +362,7 @@ define(function (require) {
             }
             ///
 
+            vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
             return returnValue;
         },
         billVendorConfig: function (option) {
@@ -412,11 +378,11 @@ define(function (require) {
 
             // search for our billCreateConfig
             var searchOption = {
-                type: BillVendorCFG.ID,
+                type: BILL_CFG.ID,
                 filters: [],
                 columns: (function () {
                     var flds = [];
-                    for (var fld in BillVendorCFG_Map) flds.push(BillVendorCFG_Map[fld]);
+                    for (var fld in BILL_CFG_MAP) flds.push(BILL_CFG_MAP[fld]);
                     return flds;
                 })()
             };
@@ -430,41 +396,51 @@ define(function (require) {
             if (vendorId && !configId) {
                 var vendorData = Helper.fetchVendorData(vendorId);
                 configId = vendorData.custentity_vc_bill_config;
+
+                vc2_util.log(logTitle, '## VENDOR DATA -- ', vendorData);
                 cacheParams.push('vendor=' + vendorId);
             }
 
-            if (configId) {
-                searchOption.filters.push(['internalid', 'anyof', configId]);
-                cacheParams.push('id=' + configId);
-            } else
-                throw 'Incomplete data to retrieve bill create vendor config: Missing either poId, vendorId  ';
+            vc2_util.log(logTitle, 'cacheParams'.cacheParams);
+
+            if (!configId) {
+                vc2_util.log(logTitle, '## NO BILL CONFIG ON VENDOR ##');
+                return false;
+            }
+
+            searchOption.filters.push(['internalid', 'anyof', configId]);
+            cacheParams.push('id=' + configId);
 
             if (subsId && util.isArray(configId) && configId.length) {
-                searchOption.filters.push('AND', [BillVendorCFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                searchOption.filters.push('AND', [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
                 cacheParams.push('subs=' + subsId);
             }
 
-            if (!cacheParams || !cacheParams.length)
-                throw 'Missing bill vendor configuration parameters!';
+            if (!cacheParams || !cacheParams.length) {
+                vc2_util.log(logTitle, 'Missing bill vendor configuration parameters!');
+                return false;
+            }
 
             cacheKey = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__' + cacheParams.join('&');
             var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
 
             if (!configData || option.forced) {
-                vc2_util.log(logTitle, '// search Option ', searchOption);
+                vc2_util.log(logTitle, '// search Option ', searchOption.filters);
 
                 configData = {};
                 var searchObj = ns_search.create(searchOption);
 
                 searchObj.run().each(function (row) {
-                    for (var fld in BillVendorCFG_Map) {
-                        var rowValue = row.getValue({ name: BillVendorCFG_Map[fld] });
+                    for (var fld in BILL_CFG_MAP) {
+                        var rowValue = row.getValue({ name: BILL_CFG_MAP[fld] });
                         configData[fld] = rowValue ? rowValue.value || rowValue : null;
                     }
                     return true;
                 });
-                if (vc2_util.isEmpty(configData)) throw 'No Bill Vendor Configuration found';
-                else vc2_util.setNSCache({ name: cacheKey, value: configData });
+                if (vc2_util.isEmpty(configData)) {
+                    vc2_util.log(logTitle, 'No Bill Vendor Configuration found');
+                    return false;
+                } else vc2_util.setNSCache({ name: cacheKey, value: configData });
             }
             returnValue = configData;
 
@@ -498,6 +474,8 @@ define(function (require) {
             }
             ///
 
+            vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
+
             return returnValue;
         },
         validateLicense: function (option) {
@@ -505,10 +483,14 @@ define(function (require) {
                 returnValue;
 
             var servResponse = LibLicense.validate({ doRetry: true, retryMax: 3 });
-            vc2_util.log(logTitle, 'servResponse: ', servResponse);
+            // vc2_util.log(logTitle, 'servResponse: ', servResponse);
             returnValue = servResponse;
 
             return returnValue;
         }
     };
+
+    EndPoint.vendorConfig = EndPoint.orderVendorConfig;
+
+    return EndPoint;
 });

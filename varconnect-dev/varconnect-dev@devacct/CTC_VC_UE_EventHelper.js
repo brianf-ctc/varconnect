@@ -452,9 +452,10 @@ define([
                 });
                 vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
 
-                vendorCacheList.LIST.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
+                if (vendorCacheList && vendorCacheList.LIST)
+                    (vendorCacheList.LIST || []).forEach(function (cacheKey) {
+                        vc2_util.removeCache({ name: cacheKey });
+                    });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -483,9 +484,10 @@ define([
                 });
                 vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
 
-                vendorCacheList.LIST.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
+                if (vendorCacheList && vendorCacheList.LIST)
+                    (vendorCacheList.LIST || []).forEach(function (cacheKey) {
+                        vc2_util.removeCache({ name: cacheKey });
+                    });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -508,9 +510,10 @@ define([
                 });
                 vc2_util.log(logTitle, 'VendorConfig CACHE List: ', vendorCacheList);
 
-                vendorCacheList.LIST.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
+                if (vendorCacheList && vendorCacheList.LIST)
+                    (vendorCacheList.LIST || []).forEach(function (cacheKey) {
+                        vc2_util.removeCache({ name: cacheKey });
+                    });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -624,7 +627,7 @@ define([
                     Helper.addVCButton({
                         form: scriptContext.form,
                         id: 'btn_billsapi',
-                        label: 'Bill Files - API',
+                        label: 'Fetch Bill Files - API',
                         action: EventRouter.addActionURL('actionGetBillsAPI')
                     });
 

@@ -138,6 +138,13 @@ define(function (require) {
                 objData.balance = objInvoice.Balance;
                 objData.orderid = objInvoice.Order_ID;
 
+                //charges
+                objData.charges = {
+                    tax: 0,
+                    other: 0,
+                    shipping: 0
+                };
+
                 arrInvoiceData.push({ ordObj: objData });
             }
         } else {
@@ -154,6 +161,13 @@ define(function (require) {
             objData.datepaid = objInvoice.DatePaid;
             objData.balance = objInvoice.Balance;
             objData.orderid = objInvoice.Order_ID;
+
+            //charges
+            objData.charges = {
+                tax: 0,
+                other: 0,
+                shipping: 0
+            };
 
             arrInvoiceData.push({ ordObj: objData });
         }
@@ -257,7 +271,10 @@ define(function (require) {
             }
         }
 
-        arrData.push({ ordObj: objInvoiceData.ordObj });
+        arrData.push({
+            ordObj: objInvoiceData.ordObj,
+            xmlStr: JSON.stringify(objOrder)
+        });
     }
 
     function getToken(config) {

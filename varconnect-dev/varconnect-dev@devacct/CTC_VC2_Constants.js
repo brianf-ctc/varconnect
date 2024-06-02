@@ -449,6 +449,11 @@ define(function (require) {
         },
 
         /// FULFILLMENT ///
+        MISSING_SALESORDER: {
+            message: 'Created from Sales Order record is missing',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+
         FULFILLMENT_NOT_ENABLED: {
             message: 'Item Fulfillment creation is not enabled',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR

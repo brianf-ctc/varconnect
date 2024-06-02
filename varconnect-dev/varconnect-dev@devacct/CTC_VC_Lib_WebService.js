@@ -175,6 +175,7 @@ define([
 
     function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
+        option = option || {};
 
         var dateString = option.dateString || option,
             date = null;
@@ -244,6 +245,8 @@ define([
 
     function _checkDates(option) {
         var logTitle = [LogTitle, '_checkDates'].join('::');
+
+        vc2_util.log(logTitle, '.. check dates: ', option);
 
         var poNum = option.poNum,
             startDate = option.startDate,
@@ -415,27 +418,27 @@ define([
 
             returnValue.prefix = OrderCFG.fulfillmentPrefix;
 
-            if (
-                MainCFG.multipleIngram &&
-                (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
-            ) {
-                outputArray = _handleMultipleVendor({
-                    vendor: vendor,
-                    subsidiary: subsidiary,
-                    poNum: poNum,
-                    poId: poId,
-                    countryCode: countryCode,
-                    tranDate: tranDate
-                });
-            } else {
-                outputArray = _handleSingleVendor({
-                    orderConfig: OrderCFG,
-                    poNum: poNum,
-                    poId: poId,
-                    countryCode: countryCode,
-                    tranDate: tranDate
-                });
-            }
+            // if (
+            //     MainCFG.multipleIngram &&
+            //     (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
+            // ) {
+            //     outputArray = _handleMultipleVendor({
+            //         vendor: vendor,
+            //         subsidiary: subsidiary,
+            //         poNum: poNum,
+            //         poId: poId,
+            //         countryCode: countryCode,
+            //         tranDate: tranDate
+            //     });
+            // } else {
+            outputArray = _handleSingleVendor({
+                orderConfig: OrderCFG,
+                poNum: poNum,
+                poId: poId,
+                countryCode: countryCode,
+                tranDate: tranDate
+            });
+            // }
 
             returnValue.itemArray = outputArray;
         } catch (error) {

@@ -26,8 +26,8 @@ define([
     'N/ui/serverWidget',
     'N/ui/message',
     './CTC_VC2_Constants.js',
-    './CTC_VC_Lib_LicenseValidator'
-], function (ns_runtime, ns_ui, ns_msg, vc2_constant, vc_license) {
+    './Services/ctc_svclib_configlib.js'
+], function (ns_runtime, ns_ui, ns_msg, vc2_constant, vcs_configLib) {
     var LogTitle = 'MainCFG';
 
     var MAINCFG = vc2_constant.RECORD.MAIN_CONFIG;
@@ -53,24 +53,16 @@ define([
 
         var newRecord = options.newRecord,
             license = newRecord.getValue({ fieldId: MAINCFG.FIELD.LICENSE }),
-            response = vc_license.callValidationSuitelet({
-                license: license,
-                external: true
-            });
+            response = vcs_configLib.validateLicense();
 
         log.debug(logTitle, '>> response: ' + JSON.stringify(response));
 
-        if (response == 'valid') {
-            newRecord.setValue({
-                fieldId: MAINCFG.FIELD.LICENSE_TEXT,
-                value: "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>"
-            });
-        } else {
+        if (response.hasError) {
             newRecord.setValue({
                 fieldId: MAINCFG.FIELD.LICENSE_TEXT,
                 value:
                     "<span style='background-color:red; color: white;'><b>ERROR: " +
-                    response +
+                    response.errorMsg +
                     '.</b></span>'
             });
 
@@ -80,7 +72,16 @@ define([
                     'Your License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.',
                 type: ns_msg.Type.ERROR
             });
+        } else {
+            newRecord.setValue({
+                fieldId: MAINCFG.FIELD.LICENSE_TEXT,
+                value: "<span style='background-color:lightgreen'><b>VERIFIED: Your License for VAR Connect is currently valid.</b></span>"
+            });
         }
+
+        // if (response == 'valid') {
+        // } else {
+        // }
     }
 
     /**

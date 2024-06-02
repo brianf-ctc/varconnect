@@ -47,7 +47,8 @@ define(function (require) {
     var vc2_constant = require('./CTC_VC2_Constants.js'),
         vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         vc_record = require('./CTC_VC_Lib_Record.js'),
-        vc2_record = require('./CTC_VC2_Lib_Record.js');
+        vc2_record = require('./CTC_VC2_Lib_Record.js'),
+        vcs_configLib = require('./Services/ctc_svclib_configlib.js');
 
     var LogTitle = 'ItemFFLIB',
         LogPrefix = '',
@@ -62,7 +63,7 @@ define(function (require) {
         SO_ID: null,
         OrderLines: null,
         MainCFG: null,
-        VendorCFG: null,
+        OrderCFG: null,
         Vendor: null
     };
 
@@ -82,12 +83,16 @@ define(function (require) {
                     feature: 'crosssubsidiaryfulfillment'
                 })
             };
-
-            Current.MainCFG = option.mainConfig;
-            Current.VendorCFG = option.vendorConfig;
             Current.PO_ID = option.poId || option.recPurchOrd.id;
             Current.SO_ID = option.soId || option.recSalesOrd.id;
             Current.Vendor = option.vendor;
+
+            var license = vcs_configLib.validateLicense();
+            if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
+
+            Current.MainCFG = option.mainConfig || vcs_configLib.mainConfig();
+            Current.OrderCFG =
+                option.orderConfig || vcs_configLib.orderVendorConfig({ poId: Current.PO_ID });
 
             LogPrefix = '[purchaseorder:' + Current.PO_ID + '] ';
             vc2_util.LogPrefix = LogPrefix;
@@ -104,12 +109,12 @@ define(function (require) {
 
             //////////////////////
             if (!Current.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
-            if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+            if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
             if (!Current.PO_ID) throw ERROR_MSG.MISSING_PO;
             if (vc2_util.isEmpty(Current.OrderLines)) throw ERROR_MSG.MISSING_LINES;
             // if (!Helper.validateDate()) throw ERROR_MSG.INVALID_PODATE;
 
-            Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+            Current.NumPrefix = Current.OrderCFG.fulfillmentPrefix;
             if (!Current.NumPrefix) throw ERROR_MSG.MISSING_PREFIX;
 
             // sort the line data
@@ -235,7 +240,7 @@ define(function (require) {
                         inventoryLocations.push(null);
                     }
 
-                    //// TRANSFORM recordfindMatchingVendorLine
+                    /// TRANSFORM recordfindMatchingVendorLine
                     for (
                         var locCtr = 0, locationCount = inventoryLocations.length;
                         locCtr < locationCount;
@@ -313,12 +318,14 @@ define(function (require) {
                         }
                         // get alt item name
                         var itemAltNameColId =
-                                Current.VendorCFG.itemColumnIdToMatch ||
-                                Current.MainCFG.itemColumnIdToMatch,
-                            itemMPNColId =
-                                Current.VendorCFG.itemMPNColumnIdToMatch ||
-                                Current.MainCFG.itemMPNColumnIdToMatch,
-                            lineCols = [
+                            Current.OrderCFG.itemColumnIdToMatch ||
+                            Current.MainCFG.itemColumnIdToMatch;
+
+                        var itemMPNColId =
+                            Current.OrderCFG.itemMPNColumnIdToMatch ||
+                            Current.MainCFG.itemMPNColumnIdToMatch;
+
+                        var lineCols = [
                                 'item',
                                 'sitemname',
                                 'quantity',
@@ -338,17 +345,15 @@ define(function (require) {
                             altItemNames = vc2_record.extractAlternativeItemName({
                                 item: uniqueItemIds,
                                 mainConfig: Current.MainCFG,
-                                vendorConfig: Current.VendorCFG
+                                orderConfig: Current.OrderCFG
+                            }),
+                            arrVendorItemNames = vc2_record.extractVendorItemNames({
+                                lines: arrFFItems
                             });
-                        if (itemAltNameColId) {
-                            lineCols.push(itemAltNameColId);
-                        }
-                        if (itemMPNColId) {
-                            lineCols.push(itemMPNColId);
-                        }
-                        var arrVendorItemNames = vc2_record.extractVendorItemNames({
-                            lines: arrFFItems
-                        });
+
+                        if (itemAltNameColId) lineCols.push(itemAltNameColId);
+                        if (itemMPNColId) lineCols.push(itemMPNColId);
+
                         for (line = 0; line < lineItemCount; line++) {
                             try {
                                 lineFF = vc2_record.extractLineValues({
@@ -365,7 +370,7 @@ define(function (require) {
                                 lineFF = vc2_record.getAltPartNumValues({
                                     source: altItemNames,
                                     target: lineFF,
-                                    vendorConfig: Current.VendorCFG,
+                                    orderConfig: Current.OrderCFG,
                                     mainConfig: Current.MainCFG
                                 });
                                 vc2_util.log(logTitle, '*** fulfillment line ***', lineFF);
@@ -403,7 +408,7 @@ define(function (require) {
                                     lineFF.poLineData = vc2_record.getAltPartNumValues({
                                         source: altItemNames,
                                         target: lineFF.poLineData,
-                                        vendorConfig: Current.VendorCFG,
+                                        orderConfig: Current.OrderCFG,
                                         mainConfig: Current.MainCFG
                                     });
                                     vc2_util.log(logTitle, '*** PO Line: ***', lineFF.poLineData);
@@ -420,7 +425,7 @@ define(function (require) {
                                     vendorLines: vendorOrderLines,
                                     orderLine: lineFF,
                                     mainConfig: Current.MainCFG,
-                                    vendorConfig: Current.VendorCFG
+                                    orderConfig: Current.OrderCFG
                                 });
 
                                 if (!matchingVendorLine) ERROR_MSG.LINE_NOT_MATCHED;
@@ -619,8 +624,8 @@ define(function (require) {
 
                                 /// update the fulfillment trandate
                                 if (
-                                    (Current.VendorCFG.useShipDate == true ||
-                                        Current.VendorCFG.useShipDate == 'T') &&
+                                    (Current.OrderCFG.useShipDate == true ||
+                                        Current.OrderCFG.useShipDate == 'T') &&
                                     uniqVendorLine.ship_date &&
                                     uniqVendorLine.ship_date != 'NA'
                                 ) {
@@ -973,7 +978,7 @@ define(function (require) {
 
             lineData.sort(
                 sort_by('order_num', false, function (a) {
-                    return a.toUpperCase();
+                    return a.toString().toUpperCase();
                 })
             );
 
@@ -1373,7 +1378,7 @@ define(function (require) {
 
             try {
                 if (!Current.PO_ID) throw ERROR_MSG.MISSING_PO;
-                if (!Current.VendorCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+                if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
 
                 var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
                 var searchObj = ns_search.load({ id: searchId });
@@ -1389,7 +1394,7 @@ define(function (require) {
                     ns_search.createFilter({
                         name: 'trandate',
                         operator: ns_search.Operator.ONORAFTER,
-                        values: Current.VendorCFG.startDate
+                        values: Current.OrderCFG.startDate
                     })
                 );
 
@@ -1513,14 +1518,14 @@ define(function (require) {
                                     orderLine: orderLine,
                                     vendorLine: vendorLine,
                                     mainConfig: Current.MainCFG,
-                                    vendorConfig: Current.VendorCFG
+                                    orderConfig: Current.OrderCFG
                                 }) ||
                                 (orderLine.poLineData
                                     ? vc2_record.isVendorLineMatched({
                                           orderLine: orderLine.poLineData,
                                           vendorLine: vendorLine,
                                           mainConfig: Current.MainCFG,
-                                          vendorConfig: Current.VendorCFG
+                                          orderConfig: Current.OrderCFG
                                       })
                                     : false);
 

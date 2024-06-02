@@ -172,7 +172,8 @@ define([
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                vc2_util.log(logTitle, '//// GET ORDER DETAILS:', ingramOrder.ingramOrderNumber);
+                vc2_util.log(logTitle, '/// GET ORDER DETAILS:', ingramOrder);
+                if (!ingramOrder.ingramOrderNumber) throw 'Ingram Order is required';
 
                 var reqOrderDetails = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
@@ -195,48 +196,9 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = vc2_util.extractError(error);
+                // throw error;
             }
 
-            return returnValue;
-        },
-        getNSRecord: function (option) {
-            var logTitle = [LogTitle, 'getNSRecord'].join('::'),
-                returnValue;
-
-            return false;
-
-            var orderNumber = option.ingramOrderNumber;
-            orderNumber = orderNumber.replace(/[^a-z0-9]/gi, '');
-            orderNumber = [CURRENT.orderConfig.fulfillmentPrefix, orderNumber].join('');
-
-            var searchOption = {
-                type: 'itemfulfillment',
-                filters: [
-                    ['type', 'anyof', 'ItemShip'],
-                    'AND',
-                    ['mainline', 'is', 'T'],
-                    'AND',
-                    [
-                        "formulatext: REGEXP_REPLACE({custbody_ctc_if_vendor_order_match}, '[^a-zA-Z0-9]', '')",
-                        'is',
-                        orderNumber
-                    ]
-                ],
-                columns: ['internalid', 'transactionnumber', 'custbody_ctc_if_vendor_order_match']
-            };
-
-            var nsItemFF = null;
-            ns_search
-                .create(searchOption)
-                .run()
-                .each(function (row) {
-                    nsItemFF = row.id;
-                    return true;
-                });
-
-            returnValue = nsItemFF;
-
-            vc2_util.log(logTitle, '/// nsitemff: ', nsItemFF);
             return returnValue;
         },
         extractLineData: function (respLineData) {
@@ -598,9 +560,6 @@ define([
                                 orderItem.line_status.toUpperCase(),
                                 LibIngramAPI.ValidShippedStatus
                             )
-                            // LibIngramAPI.getNSRecord({
-                            //     ingramOrderNumber: lineData.order_num
-                            // }) || null
                         });
 
                         if (!orderItem.order_eta || orderItem.order_eta == 'NA') {
@@ -667,6 +626,8 @@ define([
 
                 var arrValidOrders = LibIngramAPI.getValidOrders(),
                     arrOrderDetails = {};
+
+                vc2_util.log(logTitle, '...arrValidOrders: ', arrValidOrders);
 
                 for (var i = 0, j = arrValidOrders.length; i < j; i++) {
                     var validOrder = arrValidOrders[i];
