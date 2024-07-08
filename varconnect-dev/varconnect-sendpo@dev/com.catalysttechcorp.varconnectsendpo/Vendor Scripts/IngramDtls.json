@@ -1,0 +1,191 @@
+[{
+    "fieldGroup": "Additional Information",
+    "fields" : [{
+        "name": "acceptBackOrder",
+        "label": "Accept back order?",
+        "type": "CHECKBOX",
+        "help": "Check to accept order if this item is backordered. The value of this field is ignored when `Ship Complete?` field is also checked.",
+        "defaultValue": true
+    }, {
+        "name": "specialBidNumber",
+        "label": "Special Bid Number",
+        "type": "TEXT",
+        "help": "The bid number provided to the reseller for special pricing and discounts. Line-level bid numbers take precedence over header-level bid numbers."
+    }, {
+        "name": "vmf.vendAuthNumber",
+        "label": "Vendor Authorization Number",
+        "type": "TEXT",
+        "help": "Required in case of warranty orders, enter the authorization number provided by vendor to Ingram's reseller. Orders will be placed on hold without this value, vendor specific mandatory field - please reach out to Ingram Sales team for the complete list of vendors for whom this is mandatory."
+    }]
+}, {
+    "fieldGroup": "Additional Shipment Information",
+    "fields" : [{
+        "name": "shipToInfo.addressId",
+        "label": "Address Id",
+        "type": "TEXT",
+        "help": "The ID references the resellers address in Ingram Micro's system for shipping. Provided to resellers during the onboarding process.",
+        "maxLength": 10
+    }, {
+        "name": "shipmentDetails.carrierCode",
+        "label": "Carrier Code",
+        "type": "TEXT",
+        "help": "The code for the shipping carrier for the line item.",
+        "maxLength": 10
+    }, {
+        "name": "shipmentDetails.freightAccountNumber",
+        "label": "Freight Account Number",
+        "type": "TEXT",
+        "help": "The reseller 's shipping account number with carrier. Used to bill the shipping carrier directly from the reseller's account with the carrier."
+    }, {
+        "name": "shipmentDetails.requestedDeliveryDate",
+        "label": "Requested Delivery Date",
+        "type": "DATE",
+        "help": "The reseller-requested delivery date. Delivery date is not guaranteed."
+    }, {
+        "name": "shipmentDetails.shippingInstructions",
+        "label": "Shipping Instructions",
+        "type": "TEXT",
+        "maxLength": 132
+    }, {
+        "name": "shipmentDetails.signatureRequired",
+        "label": "Signature Required?",
+        "type": "CHECKBOX",
+        "help": "Specifies whether a signature is required for delivery."
+    }]
+}, {
+    "fieldGroup": "End User Information",
+    "fields" : [{
+        "name": "endUserInfo.endUserId",
+        "label": "End User Id",
+        "type": "TEXT",
+        "help": "ID for the end user/customer in Ingram Micro's system."
+    }, {
+        "name": "endUserInfo.companyName",
+        "label": "Company Name",
+        "type": "TEXT",
+        "maxLength": 40
+    }, {
+        "name": "endUserInfo.contact",
+        "label": "Contact",
+        "type": "TEXT",
+        "maxLength": 70
+    }, {
+        "name": "endUserInfo.name1",
+        "label": "Name 1",
+        "type": "TEXT"
+    }, {
+        "name": "endUserInfo.name2",
+        "label": "Name 2",
+        "type": "TEXT"
+    }, {
+        "name": "endUserInfo.addressLine1",
+        "label": "Address Line 1",
+        "type": "TEXT",
+        "maxLength": 70
+    }, {
+        "name": "endUserInfo.addressLine2",
+        "label": "Address Line 2",
+        "type": "TEXT",
+        "maxLength": 70
+    }, {
+        "name": "endUserInfo.addressLine3",
+        "label": "Address Line 3",
+        "type": "TEXT",
+        "maxLength": 70
+    }, {
+        "name": "endUserInfo.addressLine4",
+        "label": "Address Line 4",
+        "type": "TEXT",
+        "maxLength": 70
+    }, {
+        "name": "endUserInfo.city",
+        "label": "City",
+        "type": "TEXT",
+        "maxLength": 25,
+        "help": "The end user/customer's city. Required for Impulse countries."
+    }, {
+        "name": "endUserInfo.state",
+        "label": "State",
+        "type": "TEXT",
+        "maxLength": 3,
+        "help": "The end user/customer's state. Required for Impulse countries but optional for EMEA countries."
+    }, {
+        "name": "endUserInfo.postalCode",
+        "label": "Postal Code",
+        "type": "TEXT",
+        "maxLength": 10,
+        "help": "The end user/customer's zip or postal code. Required for Impulse countries."
+    }, {
+        "name": "endUserInfo.countryCode",
+        "label": "Country Code",
+        "type": "TEXT",
+        "maxLength": 2
+    }, {
+        "name": "endUserInfo.phoneNumber",
+        "label": "Phone Number",
+        "type": "PHONE"
+    }, {
+        "name": "endUserInfo.email",
+        "label": "Email",
+        "type": "EMAIL"
+    }]
+}, {
+    "fieldGroup": "Additional Line Level Details",
+    "fields": [{
+        "label": "- Unit price pertains to reseller-requested unit price and is not guaranteed.",
+        "type": "LABEL"
+    }, {
+        "name": "__lines.__unitPrice",
+        "sublist": "item",
+        "label": "Unit Price",
+        "type": "CURRENCY"
+    }, {
+        "name": "__lines.__specialBidNumber",
+        "sublist": "item",
+        "label": "Special Bid Number",
+        "type": "TEXT",
+        "maxLength": 36
+    }, {
+        "name": "__lines.__notes",
+        "sublist": "item",
+        "label": "Notes",
+        "type": "TEXT"
+    }, {
+        "name": "__lines.__warrantyInfo._directLineLink",
+        "sublist": "item",
+        "label": "Direct Line Link",
+        "type": "TEXT",
+        "help": "Unique value to link hardware and warranty lines. Should be used only when products are purchased from both Ingram and/or vendor but the warranty is purchased through Ingram for them.",
+        "maxLength": 25
+    }, {
+        "name": "__lines.__warrantyInfo._hardwareLineLink",
+        "sublist": "item",
+        "label": "Warranty Line Number",
+        "type": "INTEGER",
+        "help": "Line number of the warranty product to link with this hardware."
+    }, {
+        "name": "__lines.__warrantyInfo.__serialinfo._dateofPurchase",
+        "sublist": "item",
+        "label": "Date of Purchase",
+        "type": "DATE",
+        "help": "Date of purchase of the hardware to be associated with the warranty."
+    }, {
+        "name": "__lines.__warrantyInfo.__serialinfo._shipDate",
+        "sublist": "item",
+        "label": "Ship Date",
+        "type": "DATE",
+        "help": "Vendor specific mandatory field, date of hardware/product shipment from vendor to be associated with the warranty."
+    }, {
+        "name": "__lines.__warrantyInfo.__serialinfo._primarySerialNumber",
+        "sublist": "item",
+        "label": "Primary Serial Number(s)",
+        "type": "TEXT",
+        "help": "List of serial numbers for the hardware/product to be associated with the warranty."
+    }, {
+        "name": "__lines.__warrantyInfo.__serialinfo._secondarySerialNumber",
+        "sublist": "item",
+        "label": "Secondary Serial Number(s)",
+        "type": "TEXT",
+        "help": "List of serial numbers for any accessories associated with the hardware/product linked to the warranty."
+    }]
+}]

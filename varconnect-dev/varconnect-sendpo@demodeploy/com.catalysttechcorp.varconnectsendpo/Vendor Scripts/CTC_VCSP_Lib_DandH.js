@@ -91,11 +91,11 @@ define([
 
     function sendPOToDAndH(option) {
         let logTitle = [LogTitle, 'sendPOToDAndH'].join('::'),
-            objPO = option.objPO,
+            poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig,
             body = option.body,
             dnhTokenRequestQuery = {
-                poId: objPO.id,
+                poId: poObj.id,
                 apiKey: vendorConfig.apiKey,
                 apiSecret: vendorConfig.apiSecret,
                 url: vendorConfig.accessEndPoint
@@ -130,7 +130,7 @@ define([
         let dnhResponse = CTC_Util.sendRequest({
             header: [LogTitle, 'sendPOToDAndH'].join(' : '),
             method: 'post',
-            recordId: objPO.id,
+            recordId: poObj.id,
             query: {
                 url: vendorConfig.testRequest ? vendorConfig.qaEndPoint : vendorConfig.endPoint,
                 headers: headers,
@@ -144,11 +144,11 @@ define([
     function generateBody(option) {
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             vendorConfig = option.vendorConfig,
-            record = option.objPO,
+            poObj = option.purchaseOrder,
             additionalVendorDetails = {},
             dnhTemplate = '';
 
-        let arrLines = record.items.map(function (item) {
+        let arrLines = poObj.items.map(function (item) {
             let objLine = {
                 // unitPrice: item.rate,
                 item: item.dandhPartNumber || item.item,
@@ -160,10 +160,10 @@ define([
         });
 
         dnhTemplate = {
-            customerPurchaseOrder: record.custPO || record.tranId, // Required
+            customerPurchaseOrder: poObj.custPO || poObj.tranId, // Required
             shipping: {
-                // serviceType: objPO.shipMethod, // Enum: [pickup, ground, nextDay, secondDay, nextDaySaturdayDelivery, firstClassMail, priorityMail]
-                // carrier: objPO.shipMethod, // Enum: [pickup, ups, fedex, usps, upsm, upss, fxsp, purolator]
+                // serviceType: poObj.shipMethod, // Enum: [pickup, ground, nextDay, secondDay, nextDaySaturdayDelivery, firstClassMail, priorityMail]
+                // carrier: poObj.shipMethod, // Enum: [pickup, ups, fedex, usps, upsm, upss, fxsp, purolator]
                 allowPartialShipment: true,
                 allowBackOrder: true
             },
@@ -197,7 +197,7 @@ define([
                 //     fax: '',
                 //     email: '',
                 // },
-                purchaseOrderNumber: record.tranid
+                purchaseOrderNumber: poObj.tranid
                 // organization: '',
                 // modelNumber: '',
                 // department: '',
@@ -213,16 +213,16 @@ define([
             deliveryAddress: {
                 address: {
                     // All fields in address are required
-                    country: record.shipCountry,
-                    city: record.shipCity,
-                    street: [record.shipAddr1, record.shipAddr2].join('\r\n'),
-                    postalCode: record.shipZip,
-                    region: record.shipState
+                    country: poObj.shipCountry,
+                    city: poObj.shipCity,
+                    street: [poObj.shipAddr1, poObj.shipAddr2].join('\r\n'),
+                    postalCode: poObj.shipZip,
+                    region: poObj.shipState
                 },
-                attention: record.shipAttention,
-                deliveryName: record.shipAddressee
+                attention: poObj.shipAttention,
+                deliveryName: poObj.shipAddressee
             },
-            specialInstructions: record.memo,
+            specialInstructions: poObj.memo,
             // freightBillingAccount: '',
             // flooringAuthorizationNumber: '',
             shipments: [
@@ -234,8 +234,8 @@ define([
             ]
             // clientReferenceData: {}, // any additional data to be stored with the order
         };
-        if (record.additionalVendorDetails) {
-            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
+        if (poObj.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
         } else if (vendorConfig.additionalPOFields) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                 fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
@@ -264,7 +264,7 @@ define([
                                 switch (fieldIdComponent) {
                                     case 'requestUnitPrice':
                                         if (additionalVendorDetails[fieldId][j] == 'T') {
-                                            lineObj.unitPrice = record.items[j].rate;
+                                            lineObj.unitPrice = poObj.items[j].rate;
                                         }
                                         break;
                                     default:
@@ -313,7 +313,7 @@ define([
             }
         }
         let dtTranDate = NS_Format.parse({
-            value: record.tranDate,
+            value: poObj.tranDate,
             type: NS_Format.Type.DATE
         });
         log.debug(logTitle, 'dtTranDate=' + dtTranDate);
@@ -330,7 +330,7 @@ define([
 
     function processResponse(option) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
-            record = option.record,
+            poObj = option.purchaseOrder,
             returnValue = option.returnResponse,
             responseBody = option.responseBody || returnValue.responseBody,
             orderStatus = {},
@@ -344,8 +344,8 @@ define([
             orderStatus.errorLines = [];
             orderStatus.lineNotes = [];
             if (responseBody) {
-                for (let i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
-                    lineUniqueKeys.push(record.items[i].lineuniquekey);
+                for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
+                    lineUniqueKeys.push(poObj.items[i].lineuniquekey);
                 }
                 let shippingDetails = responseBody.shipping || {};
                 let endUserDataDetails = responseBody.endUserData || {};
@@ -470,36 +470,36 @@ define([
 
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::'),
-            vendorConfig = option.recVendorConfig,
+            vendorConfig = option.vendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+            poObj = option.purchaseOrder;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
         let returnResponse = {
-            transactionNum: record.tranId,
-            transactionId: record.id
+            transactionNum: poObj.tranId,
+            transactionId: poObj.id
         };
         let dnhResponse;
         try {
             let sendPOBody = generateBody({
-                objPO: record,
+                purchaseOrder: poObj,
                 customerNo: customerNo,
                 vendorConfig: vendorConfig
             });
             dnhResponse = sendPOToDAndH({
-                objPO: record,
+                purchaseOrder: poObj,
                 vendorConfig: vendorConfig,
                 body: sendPOBody
             });
 
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: dnhResponse.logId,
                 responseBody: dnhResponse.PARSED_RESPONSE || dnhResponse.RESPONSE.body,
                 responseCode: dnhResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
@@ -513,7 +513,7 @@ define([
                 returnResponse.errorMsg = sendError.message;
             } else {
                 returnResponse = processResponse({
-                    record: record,
+                    purchaseOrder: poObj,
                     responseBody: returnResponse.responseBody,
                     returnResponse: returnResponse
                 });
@@ -523,17 +523,17 @@ define([
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (dnhResponse) {

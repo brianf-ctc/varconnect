@@ -25,7 +25,8 @@ define([
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
     './CTC_VC_Lib_WebService',
-    './Services/ctc_svclib_configlib.js'
+    './Services/ctc_svclib_configlib.js',
+    './Services/ctc_svclib_process-v1.js'
 ], function (
     ns_search,
     ns_runtime,
@@ -38,7 +39,8 @@ define([
     vc_itemrcpt,
     vc_nslib,
     vc_websvclib,
-    vcs_configLib
+    vcs_configLib,
+    vcs_processLib
 ) {
     var LogTitle = 'MR_OrderStatus',
         VCLOG_APPNAME = 'VAR Connect | OrderStatus';
@@ -929,6 +931,15 @@ define([
             return returnValue;
         },
 
+        sliceArrayIntoChunks: function (array, chunkSize) {
+            var chunks = [];
+            for (var i = 0; i < array.length; i += chunkSize) {
+                var chunk = array.slice(i, i + chunkSize);
+                chunks.push(chunk);
+            }
+            return chunks;
+        },
+
         processSerials: function (option) {
             var logTitle = [LogTitle, 'Helper.processSerial'].join('::'),
                 returnValue,
@@ -944,80 +955,24 @@ define([
 
                 // make the list unique
                 arrSerials = vc2_util.uniqueArray(arrSerials);
-
                 vc2_util.log(logTitle, '// Total serials: ', arrSerials.length);
 
-                for (var fld in SERIAL_REC.FIELD) {
-                    if (option[fld] == null) continue;
-                    recordValues[SERIAL_REC.FIELD[fld]] = option[fld];
-                    arrSearchCols.push(SERIAL_REC.FIELD[fld]);
-                }
-                vc2_util.log(logTitle, '>> record data: ', recordValues);
+                if (arrSerials.length > 500) {
+                    var arrSerialsChunks = Helper.sliceArrayIntoChunks(arrSerials, 300);
 
-                var searchOption = {
-                    type: SERIAL_REC.ID,
-                    filters: [['isinactive', 'is', 'F']],
-                    columns: arrSearchCols
-                };
+                    arrSerialsChunks.forEach(function (chunkSerials) {
+                        var chunkOption = option;
+                        chunkOption.serials = chunkSerials;
 
-                arrSerials.forEach(function (serial) {
-                    if (arrSerialFilters.length) arrSerialFilters.push('OR');
-                    arrSerialFilters.push(['name', 'is', serial]);
-                    return true;
-                });
-
-                searchOption.filters.push(
-                    'AND',
-                    arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift()
-                );
-                // vc2_util.log(logTitle, '>> searchOption: ', searchOption);
-                var serialSarchObj = ns_search.create(searchOption);
-
-                // update the existing serials
-                var arrUpdatedSerial = [],
-                    arrAddedSerial = [],
-                    arrProcessedSerial = [];
-
-                serialSarchObj.run().each(function (searchRow) {
-                    var serialNum = searchRow.getValue({ name: 'name' });
-                    ns_record.submitFields({
-                        type: SERIAL_REC.ID,
-                        id: searchRow.id,
-                        values: recordValues,
-                        options: { enablesourcing: true }
+                        vc2_util.serviceRequest({
+                            moduleName: 'processV1',
+                            action: 'processSerials',
+                            parameters: chunkOption
+                        });
                     });
-                    arrUpdatedSerial.push(serialNum);
-                    arrProcessedSerial.push(serialNum);
-
-                    vc2_util.log(logTitle, '>> Updated Serial: ', [serialNum, searchRow.id]);
-                    return true;
-                });
-                // vc2_util.log(logTitle, '...updated serials: ', arrUpdatedSerial);
-
-                // add the remaining
-                arrSerials.forEach(function (serial) {
-                    if (vc2_util.inArray(serial, arrUpdatedSerial)) return;
-
-                    var recSerial = ns_record.create({ type: SERIAL_REC.ID });
-                    recSerial.setValue({ fieldId: 'name', value: serial });
-
-                    for (var fld in recordValues) {
-                        recSerial.setValue({ fieldId: fld, value: recordValues[fld] });
-                    }
-                    var serialId = recSerial.save();
-
-                    vc2_util.log(logTitle, '>> New Serial ID: ', [serial, recordValues, serialId]);
-
-                    arrAddedSerial.push(serial);
-                    arrProcessedSerial.push(serial);
-                });
-                // vc2_util.log(logTitle, '...added serials: ', arrAddedSerial);
-                vc2_util.log(logTitle, '...total processed serials: ', {
-                    recordValues: recordValues,
-                    processed: arrProcessedSerial.length,
-                    added: arrAddedSerial.length,
-                    updated: arrUpdatedSerial.length
-                });
+                } else {
+                    vcs_processLib.processSerials(option);
+                }
             } catch (error) {
                 vc2_util.logError(logTitle, error);
             }
@@ -1025,72 +980,6 @@ define([
             return true;
         },
 
-        processSerialXX: function (option) {
-            var logTitle = 'helper.processSerial';
-
-            var serial = option.serial;
-            var currentData = option.currentData;
-
-            if (vc2_util.isEmpty(serial)) {
-                vc2_util.vcLog({
-                    title: logTitle + ' | Error',
-                    error: 'Empty Serial',
-                    transaction: currentData.poId || ''
-                });
-                return;
-            }
-
-            //search for serial
-            var objSerialSearch = ns_search.create({
-                type: 'customrecordserialnum',
-                filters: [['name', 'is', serial], 'AND', ['isinactive', 'is', 'F']],
-                columns: [
-                    ns_search.createColumn({
-                        name: 'internalid',
-                        sort: ns_search.Sort.DESC
-                    })
-                ]
-            });
-
-            //range search
-            var resultSet = objSerialSearch.run();
-            var arrResult = resultSet.getRange({ start: 0, end: 1 });
-
-            /** ===== remove null values ===== **/
-            var serialValues = vc2_util.removeNullValues({
-                name: serial,
-                custrecordserialpurchase: currentData.poId || null,
-                custrecordserialitem: currentData.itemId || null,
-                custrecordserialsales: currentData.soId || null,
-                custrecorditemfulfillment: currentData.orderNum || null,
-                custrecorditemreceipt: currentData.receiptNum || null,
-                custrecordcustomer: currentData.customerId
-            });
-            vc2_util.logDebug(logTitle, '... serialValues: ', serialValues);
-
-            /** ===== update serial ===== **/
-            if (Array.isArray(arrResult) && typeof arrResult[0] !== 'undefined') {
-                vc2_util.logDebug(logTitle, ' >> Matching serial found : ', arrResult);
-
-                ns_record.submitFields({
-                    type: 'customrecordserialnum',
-                    id: arrResult[0].getValue('internalid'),
-                    values: serialValues,
-                    options: { enablesourcing: true }
-                });
-            } else {
-                /** ===== create serial ===== **/
-                var recordSerial = ns_record.create({ type: 'customrecordserialnum' });
-                for (var fld in serialValues) {
-                    recordSerial.setValue({
-                        fieldId: fld,
-                        value: serialValues[fld]
-                    });
-                }
-                var serialId = recordSerial.save();
-                vc2_util.logDebug(logTitle, '>> New Serial ID: ', serialId);
-            }
-        },
         fetchFulfillments: function (option) {
             var logTitle = [LogTitle, 'fetchFulfillments'].join('::'),
                 returnValue;

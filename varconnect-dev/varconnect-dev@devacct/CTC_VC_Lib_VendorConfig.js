@@ -102,7 +102,7 @@ define(['N/search', './CTC_VC2_Constants', './CTC_VC2_Lib_Utils'], function (
             }),
             matchMPNWithPartNumber: result.getValue({
                 name: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
-            })
+            }),
         };
     }
 

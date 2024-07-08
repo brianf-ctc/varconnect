@@ -29,7 +29,10 @@ define(function (require) {
         VENDOR_CFG_MAP = vc2_constant.MAPPING.VENDOR_CONFIG,
         // bill vendor config fields/map
         BILL_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG,
-        BILL_CFG_MAP = vc2_constant.MAPPING.BILLCREATE_CONFIG;
+        BILL_CFG_MAP = vc2_constant.MAPPING.BILLCREATE_CONFIG,
+        // sendpo vendor config
+        SENDPOVND_CFG = vc2_constant.RECORD.SENDPOVENDOR_CONFIG,
+        SENDPOVND_CFG_MAP = vc2_constant.MAPPING.SENDPOVND_CONFIG;
 
     var VC_LICENSE = vc2_constant.LICENSE;
 
@@ -267,7 +270,7 @@ define(function (require) {
 
             var searchOption = {
                 type: VENDOR_CFG.ID,
-                filters: [],
+                filters: [['isinactive', 'is', 'F'], 'AND'],
                 columns: (function () {
                     var flds = [];
                     for (var fld in VENDOR_CFG.FIELD) {
@@ -476,6 +479,108 @@ define(function (require) {
 
             vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
 
+            return returnValue;
+        },
+        sendPOVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'sendPOVendorConfig'].join(':'),
+                returnValue;
+
+            var configId = option.configId || option.id,
+                vendorId = option.vendor || option.vendorId,
+                subsId = option.subsidiary || option.subsidiaryId,
+                poId = option.poId,
+                cacheKey = '',
+                cacheParams = [];
+
+            var searchOption = {
+                type: SENDPOVND_CFG.ID,
+                filters: [['isinactive', 'is', 'F'], 'AND'],
+                columns: (function () {
+                    var flds = [];
+                    for (var fld in SENDPOVND_CFG.FIELD) {
+                        flds.push(SENDPOVND_CFG.FIELD[fld]);
+                    }
+                    return flds;
+                })()
+            };
+
+            if (configId) {
+                searchOption.filters.push(['internalid', 'anyof', configId]);
+                cacheParams.push('id=' + configId);
+            } else {
+                if (poId && !vendorId) {
+                    var vendorInfo = Helper.fetchVendorFromPO(poId);
+                    vendorId = vendorInfo.entity.value || vendorInfo.entity;
+                    subsId = vendorInfo.subsidiary.value || vendorInfo.subsidiary || null;
+                    cacheParams.push('poid=' + poId);
+                }
+
+                if (vendorId) {
+                    searchOption.filters.push([SENDPOVND_CFG.FIELD.VENDOR, 'anyof', vendorId]);
+                    cacheParams.push('vendor=' + vendorId);
+                }
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
+                    if (searchOption.filters.length) searchOption.filters.push('AND');
+                    searchOption.filters.push([SENDPOVND_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                    cacheParams.push('subs=' + subsId);
+                }
+            }
+
+            if (!cacheParams || !cacheParams.length) {
+                vc2_util.log(logTitle, 'Missing vendor configuration parameters!');
+                return false;
+            }
+
+            cacheKey = vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__' + cacheParams.join('&');
+            var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
+
+            if (!configData || option.forced) {
+                configData = {};
+                var searchObj = ns_search.create(searchOption);
+
+                searchObj.run().each(function (row) {
+                    for (var fld in SENDPOVND_CFG_MAP) {
+                        var rowValue = row.getValue({ name: SENDPOVND_CFG_MAP[fld] });
+                        configData[fld] = rowValue ? rowValue.value || rowValue : null;
+                    }
+                    return true;
+                });
+                if (vc2_util.isEmpty(configData)) {
+                    vc2_util.log(logTitle, 'No SendPO Vendor Configuration available');
+                    return false;
+                }
+
+                vc2_util.setNSCache({ name: cacheKey, value: configData });
+            }
+            returnValue = configData;
+
+            // add the cache to the cache list
+            var vendorCacheList = vc2_util.getNSCache({
+                name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST',
+                isJSON: true
+            });
+
+            if (!vendorCacheList)
+                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST'] };
+
+            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
+                vendorCacheList.LIST.push(cacheKey);
+
+            vc2_util.setNSCache({
+                name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST',
+                value: vendorCacheList
+            });
+
+            if (option.forced) {
+                // run through each
+                vendorCacheList.forEach(function (cacheKey) {
+                    vc2_util.removeCache({ name: cacheKey });
+                });
+                vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST' });
+            }
+            ///
+
+            vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
             return returnValue;
         },
         validateLicense: function (option) {

@@ -27,7 +27,7 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
 ) {
     let VC_LICENSE = {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
-        PRODUCT_CODE: 4,
+        PRODUCT_CODE: 2, // unified license with VAR Connect Order Update
         MAX_RETRY: 3,
         KEY: 'LICENSE_KEY',
         CACHE_NAME: 'VCSP_LICENSE',
@@ -164,7 +164,7 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
         }
     };
 
-    function isLicenseValid(options) {
+    function isLicenseValid(option) {
         let returnValue = false,
             response = LibLicense.validate({
                 doRetry: true

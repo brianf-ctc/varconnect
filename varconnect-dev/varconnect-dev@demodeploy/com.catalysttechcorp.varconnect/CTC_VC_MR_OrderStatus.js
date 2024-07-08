@@ -310,11 +310,10 @@ define([
             vc2_util.logDebug(logTitle, '###### START: REDUCE ###### ');
             ScriptParam = Helper.getParameters();
 
-            vc2_util.log(logTitle, '>>> PO Lines: ', Current.outputItems);
-
             Current.poId = context.key;
             util.extend(Current, JSON.parse(context.values[0]));
 
+            vc2_util.log(logTitle, '>>> PO Lines: ', Current.outputItems);
             var PO_REC = ns_record.load({
                 type: 'purchaseorder',
                 id: Current.poId,
@@ -331,50 +330,39 @@ define([
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
 
-            var SO_REC = ns_record.load({
-                type: ns_record.Type.SALES_ORDER,
-                id: Current.createdFrom.value
-            });
-            var SO_DATA = vc2_record.extractValues({
-                record: SO_REC,
-                fields: ['entity']
-            });
+            var SO_REC = null,
+                SO_DATA;
+
+            try {
+                SO_REC = ns_record.load({
+                    type: ns_record.Type.SALES_ORDER,
+                    id: Current.createdFrom.value
+                });
+
+                SO_DATA = vc2_record.extractValues({
+                    record: SO_REC,
+                    fields: ['entity']
+                });
+                Current.customerId = SO_REC.getValue('entity');
+            } catch (so_error) {
+                vc2_util.log(logTitle, '// Error loading the Sales Order');
+            }
             vc2_util.log(logTitle, '... SO_DATA: ', SO_DATA);
 
-            Current.customerId = SO_REC.getValue('entity');
-
-            ///
-            Current.allowItemFF =
-                Current.MainCFG.processDropships &&
-                Current.OrderCFG.processDropships &&
-                Current.MainCFG.createIF;
-
-            Current.allowItemRcpt =
-                Current.MainCFG.processSpecialOrders &&
-                Current.OrderCFG.processSpecialOrders &&
-                Current.MainCFG.createIR;
-
             if (Current.isDropPO) {
-                if (!Current.allowItemFF) {
-                    vc2_util.log(logTitle, '// Fulfillment creation is not enabled');
-                    // throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
-                } else
-                    Helper.processItemFulfillment({
-                        orderLines: Current.outputItems.itemArray,
-                        poRec: PO_REC,
-                        soRec: SO_REC
-                    });
+                Helper.processItemFulfillment({
+                    orderLines: Current.outputItems.itemArray,
+                    poRec: PO_REC,
+                    soRec: SO_REC
+                });
             } else {
-                if (!Current.allowItemRcpt) {
-                    vc2_util.log(logTitle, '// Item Receipt creation is not enabled');
-                    // throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
-                } else
-                    Helper.processItemReceipt({
-                        orderLines: Current.outputItems.itemArray,
-                        poRec: PO_REC,
-                        soRec: SO_REC
-                    });
+                Helper.processItemReceipt({
+                    orderLines: Current.outputItems.itemArray,
+                    poRec: PO_REC,
+                    soRec: SO_REC
+                });
             }
+
             vc2_util.log(logTitle, '..settings:  ', {
                 isDropPO: Current.isDropPO,
                 dropShip: Current.MainCFG.createSerialDropship,
@@ -871,6 +859,16 @@ define([
                 returnValue;
 
             try {
+                Current.allowItemFF =
+                    Current.MainCFG.processDropships &&
+                    Current.OrderCFG.processDropships &&
+                    Current.MainCFG.createIF;
+
+                if (!Current.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
+
+                // look for the SALES ORDER
+                if (!option.soRec) throw ERROR_MSG.MISSING_SALESORDER;
+
                 fulfillmentData = vc_itemfflib.updateItemFulfillments({
                     mainConfig: Current.MainCFG,
                     orderConfig: Current.OrderCFG,
@@ -900,6 +898,14 @@ define([
                 returnValue;
 
             try {
+                Current.allowItemRcpt =
+                    Current.MainCFG.processSpecialOrders &&
+                    Current.OrderCFG.processSpecialOrders &&
+                    Current.MainCFG.createIR;
+
+                if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
+                if (!option.soRec) throw ERROR_MSG.MISSING_SALESORDER;
+
                 receiptData = vc_itemrcpt.updateIR({
                     mainConfig: Current.MainCFG,
                     orderConfig: Current.OrderCFG,

@@ -942,6 +942,7 @@ define(function (require) {
                     orderDetails += '\n   Num      : ' + line.order_num;
                     orderDetails += '\n   Date     : ' + line.order_date;
                     orderDetails += '\n   ETA      : ' + line.order_eta;
+                    orderDetails += '\n   Deliv ETA: ' + line.order_delivery_eta;
                     orderDetails += '\n   Ship Date: ' + line.ship_date;
                     orderDetails += '\n   Carrier  : ' + line.carrier;
                 }

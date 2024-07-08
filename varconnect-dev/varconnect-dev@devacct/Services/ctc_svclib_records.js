@@ -36,6 +36,7 @@ define(function (require) {
                 custcol_ctc_vc_order_placed_date: 'order_date', //date
                 custcol_ctc_vc_shipped_date: 'ship_date', //date
                 custcol_ctc_vc_eta_date: 'order_eta', //date
+                custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
                 custcol_ctc_xml_ship_date: 'ship_date', //text
                 custcol_ctc_xml_carrier: 'carrier', // text
                 custcol_ctc_xml_eta: 'order_eta', //textarea
@@ -53,6 +54,7 @@ define(function (require) {
                 'order_status',
                 'order_date',
                 'order_eta',
+                'order_delivery_eta',
                 'ship_date',
                 'tracking_num',
                 'carrier',
@@ -64,6 +66,7 @@ define(function (require) {
                 DATE: [
                     'custcol_ctc_vc_order_placed_date',
                     'custcol_ctc_vc_eta_date',
+                    'custcol_ctc_vc_delivery_eta_date',
                     'custcol_ctc_vc_prom_deliv_date',
                     'custcol_ctc_vc_shipped_date'
                 ],

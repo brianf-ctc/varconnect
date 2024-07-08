@@ -46,6 +46,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 }),
 
                 'custrecord_ctc_vc_bill_linked_po',
+                'custrecord_ctc_vc_bill_po',
                 'custrecord_ctc_vc_bill_number',
                 'custrecord_ctc_vc_bill_date',
                 'custrecord_ctc_vc_bill_due_date',
@@ -109,6 +110,7 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
 
                 currentPage.data.forEach(function (result) {
                     var poObj = buildObject(result);
+
                     returnArray.push(poObj);
                     if (poObj.poId && poIds.indexOf(poObj.poId) == -1) {
                         poIds.push(poObj.poId);
@@ -128,12 +130,19 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                         'AND',
                         ['internalid', 'anyof', poIds],
                         'AND',
+                        ['appliedtotransaction.applyinglinktype', 'anyof', ['DropShip', 'SpecOrd']],
+                        'AND',
                         ['memorized', 'is', 'F']
                     ],
                     columns: [
                         search.createColumn({
+                            name: 'internalid',
+                            summary: search.Summary.GROUP
+                        }),
+                        search.createColumn({
                             name: 'applyinglinktype',
-                            join: 'appliedtotransaction'
+                            join: 'appliedtotransaction',
+                            summary: search.Summary.GROUP
                         })
                     ]
                 });
@@ -148,9 +157,14 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 for (var i = 0; i < pagedData.pageRanges.length; i++) {
                     var currentPage = pagedData.fetch(i);
                     currentPage.data.forEach(function (result) {
-                        poLinkTypeMapping[result.id] = result.getValue({
+                        var resultId = result.getValue({
+                            name: 'internalid',
+                            summary: search.Summary.GROUP
+                        });
+                        poLinkTypeMapping[resultId] = result.getValue({
                             name: 'applyinglinktype',
-                            join: 'appliedtotransaction'
+                            join: 'appliedtotransaction',
+                            summary: search.Summary.GROUP
                         });
                         isPOLinkEmpty = false;
                     });
@@ -341,20 +355,18 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
             }
         }
 
-        var po = result.getText({
-            name: 'custrecord_ctc_vc_bill_linked_po'
-        });
+        returnObj.poNum = result.getValue({ name: 'custrecord_ctc_vc_bill_po' });
+        var po = result.getText({ name: 'custrecord_ctc_vc_bill_linked_po' });
 
-        if (po && po !== '') {
-            returnObj.po = po.slice(16);
-        } else {
-            returnObj.po = null;
-        }
-
+        // if (po && po !== '') {
+        //     returnObj.po = po.slice(16);
+        // } else {
+        //     returnObj.po = returnObj.poNum;
+        // }
+        returnObj.po = returnObj.poNum;
         returnObj.poId = result.getValue({
             name: 'custrecord_ctc_vc_bill_linked_po'
         });
-
         returnObj.poType = '';
 
         returnObj.poStatus = result.getText({

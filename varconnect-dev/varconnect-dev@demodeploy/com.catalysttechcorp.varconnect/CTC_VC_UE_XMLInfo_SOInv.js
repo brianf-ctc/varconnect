@@ -51,7 +51,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         'custcol_ctc_vc_order_placed_date', //8
         'custcol_ctc_vc_eta_date', //9
         'custcol_ctc_vc_shipped_date', //10
-        'custcol_ctc_xml_inb_tracking_num' //11
+        'custcol_ctc_xml_inb_tracking_num', //11
+        'custcol_ctc_vc_delivery_eta_date'
     ];
 
     var xmlFieldsDef = {
@@ -68,7 +69,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         DATE: [
             'custcol_ctc_vc_order_placed_date',
             'custcol_ctc_vc_eta_date',
-            'custcol_ctc_vc_shipped_date'
+            'custcol_ctc_vc_shipped_date',
+            'custcol_ctc_vc_delivery_eta_date'
         ]
     };
 

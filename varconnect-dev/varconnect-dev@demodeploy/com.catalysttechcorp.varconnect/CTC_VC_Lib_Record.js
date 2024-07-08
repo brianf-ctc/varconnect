@@ -111,6 +111,7 @@ define([
                     'ship_date',
                     'order_date',
                     'order_eta',
+                    'order_delivery_eta',
                     'eta_ship_desc',
                     'eta_ship_source',
                     'eta_delivery_date',
@@ -220,6 +221,7 @@ define([
             custcol_ctc_vc_order_placed_date: 'order_date', //date
             custcol_ctc_vc_shipped_date: 'ship_date', //date
             custcol_ctc_vc_eta_date: 'order_eta', //date
+            custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
             custcol_ctc_xml_ship_date: 'ship_date', //text
             custcol_ctc_xml_carrier: 'carrier', // text
             custcol_ctc_xml_eta: 'order_eta', //textarea
@@ -237,6 +239,7 @@ define([
             'order_status',
             'order_date',
             'order_eta',
+            'order_delivery_eta',
             'ship_date',
             'tracking_num',
             'carrier',
@@ -248,6 +251,7 @@ define([
             DATE: [
                 'custcol_ctc_vc_order_placed_date',
                 'custcol_ctc_vc_eta_date',
+                'custcol_ctc_vc_delivery_eta_date',
                 'custcol_ctc_vc_prom_deliv_date',
                 'custcol_ctc_vc_shipped_date'
             ],
@@ -337,13 +341,18 @@ define([
             if (itemAltMPNColId) {
                 poColumns.push(itemAltMPNColId);
             }
+
+            vc2_util.log(logTitle, '... po columns:', poColumns);
+
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
                 findAll: true,
-                // mainConfig: Current.MainCFG,
-                // orderConfig: Current.OrderCFG,
-                columns: poColumns
+                columns: poColumns,
+                mainConfig: Current.MainCFG,
+                orderConfig: Current.OrderCFG
             });
+
+            vc2_util.log(logTitle, '... PO lines data:', Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
@@ -358,10 +367,10 @@ define([
                     /// look for a matching line from the
                     var orderLineMatch = vc2_record.findMatchingOrderLine({
                         record: Current.PO_REC,
-                        // mainConfig: Current.MainCFG,
-                        // orderConfig: Current.OrderCFG,
                         orderLines: Current.OrderLines,
-                        lineData: vendorLine
+                        lineData: vendorLine,
+                        mainConfig: Current.MainCFG,
+                        orderConfig: Current.OrderCFG
                     });
 
                     if (!orderLineMatch) {

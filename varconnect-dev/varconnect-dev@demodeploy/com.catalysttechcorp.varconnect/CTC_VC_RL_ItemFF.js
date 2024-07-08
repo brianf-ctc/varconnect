@@ -31,8 +31,7 @@ define(function (require) {
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_constant = require('./CTC_VC2_Constants'),
         vc_log = require('./CTC_VC_Lib_Log'),
-        vc_maincfg = require('./CTC_VC_Lib_MainConfiguration'),
-        vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig'),
+        vcs_configLib = require('./Services/ctc_svclib_configlib.js'),
         util_record = require('./CTC_VC2_Lib_Record');
 
     var LogTitle = 'ItemFFLIB',
@@ -75,7 +74,7 @@ define(function (require) {
                 LogPrefix = '[purchaseorder:' + Current.PO_ID + '] ';
 
                 /// LOAD CONFIG ////
-                Current.MainCFG = Helper.loadMainConfig();
+                Current.MainCFG = vcs_configLib.mainConfig();
                 if (!Current.MainCFG) throw 'Unable to load Main Configuration';
 
                 Current.PO_REC = ns_record.load({
@@ -105,12 +104,8 @@ define(function (require) {
                 );
 
                 // LOAD VENDOR CONFIG ///////
-                Current.VendorCFG = Helper.loadVendorConfig({
-                    vendor: PO_Data.entity,
-                    vendorName: PO_Data.entity_text,
-                    subsidiary: PO_Data.subsidiary
-                });
-                if (!Current.VendorCFG) throw 'Missing Vendor Config';
+                Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.PO_ID });
+                if (!Current.OrderCFG) throw 'Missing Vendor Config';
 
                 if (Current.SO_ID) {
                     Current.SO_REC = ns_record.load({
@@ -128,7 +123,7 @@ define(function (require) {
                 if (vc2_util.isEmpty(OrderLines)) throw 'Missing order lines';
                 ////////////////////////////////////////////////////
 
-                Current.NumPrefix = Current.VendorCFG.fulfillmentPrefix;
+                Current.NumPrefix = Current.OrderCFG.fulfillmentPrefix;
                 if (!Current.NumPrefix) throw 'Config Error: Missing Fulfillment Prefix';
 
                 // sort the line data
@@ -268,7 +263,12 @@ define(function (require) {
                                 lines: LinesToFulfill.map(function (data) {
                                     return vc2_util.extractValues({
                                         source: data,
-                                        fields: ['order_num', 'ship_qty', 'order_eta']
+                                        fields: [
+                                            'order_num',
+                                            'ship_qty',
+                                            'order_eta',
+                                            'order_delivery_eta'
+                                        ]
                                     });
                                 })
                             }
@@ -425,6 +425,7 @@ define(function (require) {
                                 item_num: lineToFulfill.item_num,
                                 order_date: lineToFulfill.order_date,
                                 order_eta: lineToFulfill.order_eta,
+                                order_delivery_eta: lineToFulfill.order_delivery_eta,
                                 ship_date: lineToFulfill.ship_date,
                                 carrier: lineToFulfill.carrier,
                                 ship_qty: parseInt(lineToFulfill.ship_qty || '0', 10) || 0,
@@ -599,7 +600,7 @@ define(function (require) {
                                     (lineFFData.vendorSKU &&
                                         lineFFData.vendorSKU == itemToShip.vendorSKU) ||
                                     (lineFFData.dandh &&
-                                        Current.VendorCFG.xmlVendor ==
+                                        Current.OrderCFG.xmlVendor ==
                                             vc2_constant.LIST.XML_VENDOR.DandH &&
                                         lineFFData.dandh == itemToShip.item_num)
                                 ) {
@@ -618,6 +619,9 @@ define(function (require) {
                                         custcol_ctc_xml_tracking_num: itemToShip.all_tracking_nums,
                                         custcol_ctc_vc_eta_date: Helper.parseDate({
                                             dateString: itemToShip.order_eta
+                                        }),
+                                        custcol_ctc_vc_delivery_eta_date: Helper.parseDate({
+                                            dateString: itemToShip.order_delivery_eta
                                         }),
                                         custcol_ctc_vc_order_placed_date: Helper.parseDate({
                                             dateString: itemToShip.order_date
@@ -749,6 +753,7 @@ define(function (require) {
                                         order_num: itemToShip.order_num,
                                         order_date: itemToShip.order_date,
                                         order_eta: itemToShip.order_eta,
+                                        order_delivery_eta: itemToShip.order_delivery_eta,
                                         ship_date: itemToShip.ship_date,
                                         carrier: itemToShip.carrier,
                                         all_serial_nums: arrSerials.join('\n')
@@ -1006,7 +1011,7 @@ define(function (require) {
 
             try {
                 if (!Current.PO_ID) throw 'Missing PO ID';
-                if (!Current.VendorCFG) throw 'Missing Vendor Config';
+                if (!Current.OrderCFG) throw 'Missing Vendor Config';
 
                 var searchId = ns_runtime.getCurrentScript().getParameter('custscript_searchid2');
                 var searchObj = ns_search.load({ id: searchId });
@@ -1022,7 +1027,7 @@ define(function (require) {
                     ns_search.createFilter({
                         name: 'trandate',
                         operator: ns_search.Operator.ONORAFTER,
-                        values: Current.VendorCFG.startDate
+                        values: Current.OrderCFG.startDate
                     })
                 );
 
@@ -1109,7 +1114,7 @@ define(function (require) {
                     fieldToTest = option.testField;
 
                 var hashSpace = Current.MainCFG.ingramHashSpace,
-                    xmlVendor = Current.VendorCFG.xmlVendor,
+                    xmlVendor = Current.OrderCFG.xmlVendor,
                     vendorList = vc2_constant.LIST.XML_VENDOR;
 
                 var logPrefix = LogPrefix + ' [Item: ' + dataToTest.item_num + ']';
@@ -1468,40 +1473,6 @@ define(function (require) {
     ///////////////////////////////////////////////////////////////////////
     var dateFormat;
     var Helper = {
-        loadMainConfig: function () {
-            var logTitle = [LogTitle, 'loadMainConfig'].join('::');
-
-            var mainConfig = vc_maincfg.getMainConfiguration();
-            if (!mainConfig) {
-                log.error(logTitle, 'No Configuration available');
-                throw new Error('No Configuration available');
-            } else return mainConfig;
-        },
-        loadVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
-            // log.debug(logTitle,  vc_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option));
-
-            var vendor = option.vendor,
-                vendorName = option.vendorName,
-                subsidiary = option.subsidiary,
-                vendorConfig = vc_vendorcfg.getVendorConfiguration({
-                    vendor: vendor,
-                    subsidiary: subsidiary
-                });
-
-            if (!vendorConfig) {
-                log.audit(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
-            }
-
-            log.debug(
-                logTitle,
-                vc2_util.getUsage() + LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig)
-            );
-            return vendorConfig;
-        },
         uniqueList: function (option) {
             var strList = option.listString || option.value,
                 splitStr = option.splitStr || ',',
@@ -1710,6 +1681,7 @@ define(function (require) {
                     orderDetails += '\n   Num      : ' + line.order_num;
                     orderDetails += '\n   Date     : ' + line.order_date;
                     orderDetails += '\n   ETA      : ' + line.order_eta;
+                    orderDetails += '\n   Deliv ETA: ' + line.order_delivery_eta;
                     orderDetails += '\n   Ship Date: ' + line.ship_date;
                     orderDetails += '\n   Carrier  : ' + line.carrier;
                 }

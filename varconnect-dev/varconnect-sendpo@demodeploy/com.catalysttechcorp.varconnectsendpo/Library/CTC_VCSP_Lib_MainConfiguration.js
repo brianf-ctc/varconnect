@@ -18,8 +18,11 @@
  * 1.00		Mar 09, 2020	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './CTC_VCSP_Constants'], function (NS_Search, VCSP_Global) {
-    let mainConfigFields = [
+define(['N/search', './CTC_VCSP_Constants'], function (
+    NS_Search,
+    VCSP_Global
+) {
+    let  mainConfigFields = [
         VCSP_Global.Fields.MainConfig.ID, //0
         VCSP_Global.Fields.MainConfig.LICENSE //1
     ];
@@ -32,9 +35,9 @@ define(['N/search', './CTC_VCSP_Constants'], function (NS_Search, VCSP_Global) {
     }
 
     function getMainConfiguration() {
-        let result = {};
+        let  result = {};
 
-        let recLookup = NS_Search.lookupFields({
+        let  recLookup = NS_Search.lookupFields({
             type: VCSP_Global.Records.MAIN_CONFIG,
             id: 1,
             columns: mainConfigFields

@@ -19,13 +19,106 @@ define([
     'N/record',
     'N/search',
     'N/xml',
+    'N/cache',
     './CTC_VCSP_Constants'
-], function (NS_Runtime, NS_Https, NS_Format, NS_Record, NS_Search, NS_Xml, VCSP_Global) {
-    let LogTitle = 'CTC_Util',
-        LogPrefix;
+], function (NS_Runtime, NS_Https, NS_Format, NS_Record, NS_Search, NS_Xml, NS_Cache, VCSP_Global) {
+    let LogTitle = 'CTC_Util';
+    let LogPrefix;
 
     let CTC_Util = {
+        // LOCAL CACHING
         CACHE: {},
+        getCache: function (cacheKey) {
+            return this.CACHE.hasOwnProperty(cacheKey) ? this.CACHE[cacheKey] : null;
+        },
+        setCache: function (cacheKey, objVar) {
+            this.CACHE[cacheKey] = objVar;
+        },
+
+        // N/CACHE
+        NSCACHE_NAME: 'VCSP_202406',
+        NSCACHE_KEY: 'VCSP_202406',
+        NSCACHE_TTL: 86400, // 1 whole day
+        getNSCache: function (option) {
+            var logTitle = [LogTitle, 'getNSCache'].join('::'),
+                returnValue;
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+
+                returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
+                if (option.isJSON && returnValue) returnValue = this.safeParse(returnValue);
+
+                this.log({
+                    type: 'AUDIT',
+                    title: logTitle,
+                    message: '// CACHE fetch: ' + JSON.stringify([cacheName, cacheKey, cacheTTL])
+                });
+            } catch (error) {
+                this.logError(logTitle, error);
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        setNSCache: function (option) {
+            var logTitle = [LogTitle, 'setNSCache'].join('::'),
+                returnValue;
+
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheValue = option.value || option.cacheValue;
+                if (this.isEmpty(cacheValue)) throw 'Missing cache value!';
+                if (!util.isString(cacheValue)) cacheValue = JSON.stringify(cacheValue);
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+                cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
+            } catch (error) {
+                this.logError(logTitle, error);
+            }
+        },
+        removeCache: function (option) {
+            var logTitle = [LogTitle, 'removeCache'].join('::'),
+                returnValue;
+
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+                cacheObj.remove({ key: cacheKey });
+
+                this.log({
+                    type: 'AUDIT',
+                    title: logTitle,
+                    message: '// CACHE remove: ' + JSON.stringify([cacheName, cacheKey, cacheTTL])
+                });
+            } catch (error) {
+                this.logError(logTitle, error);
+            }
+        },
         isEmpty: function (stValue) {
             return (
                 stValue === '' ||
@@ -44,7 +137,8 @@ define([
         },
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
-            for (let i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
+            let i;
+            for (i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
             return i > -1;
         },
         uniqueArray: function (arrVar) {
@@ -431,6 +525,45 @@ define([
 
             return returnValue;
         },
+        handleJSONResponse: function (request) {
+            var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
+                returnValue = request;
+
+            // detect the error
+            var parsedResp = request.PARSED_RESPONSE;
+            if (!parsedResp) throw 'Unable to parse response';
+
+            // check for faultstring
+            if (parsedResp.fault && parsedResp.fault.faultstring)
+                throw parsedResp.fault.faultstring;
+
+            // check response.errors
+            if (
+                parsedResp.errors &&
+                util.isArray(parsedResp.errors) &&
+                !CTC_Util.isEmpty(parsedResp.errors)
+            ) {
+                var respErrors = parsedResp.errors
+                    .map(function (err) {
+                        return [err.id, err.message].join(': ');
+                    })
+                    .join(', ');
+                throw respErrors;
+            }
+
+            // chek for error_description
+            if (parsedResp.error && parsedResp.error_description)
+                throw parsedResp.error_description;
+
+            // ARROW: ResponseHeader
+
+            if (request.isError || request.RESPONSE.code != '200') {
+                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
+            }
+
+            return returnValue;
+        },
+
         safeParse: function (response) {
             let logTitle = [LogTitle, 'safeParse'].join('::'),
                 strToParse = (response ? response.body : response) || response,
@@ -554,7 +687,7 @@ define([
         log: function (option, title, message) {
             let logType = option.type || option,
                 logTitle = option.title || title,
-                tempMessage = new String(option.message || message || '');
+                tempMessage = JSON.stringify(option.message || message || '');
             do {
                 let messagePortion = tempMessage.slice(0, 3999);
                 tempMessage = tempMessage.slice(3999);
@@ -573,19 +706,38 @@ define([
                 }
             } while (tempMessage.length > 0);
         },
-        getVendorAdditionalPOFieldDefaultValues: function (options) {
-            let fields = options.fields,
-                defaultValues = options.defaultValues || {};
+        logError: function (logTitle, errorMsg) {
+            this.log({ type: 'ERROR', title: logTitle + '| ERROR', message: errorMsg });
+            // this.log(logTitle, { type: 'error', msg: '### ERROR: ' }, errorMsg);
+            return;
+        },
+
+        getVendorAdditionalPOFieldDefaultValues: function (option) {
+            let fields = option.fields,
+                defaultValues = option.defaultValues || {},
+                filterValues = option.filterValues || {};
             if (fields && fields.length) {
                 for (let x = 0, fieldCount = fields.length; x < fieldCount; x += 1) {
-                    let poField = fields[x];
-                    if (poField.fieldGroup) {
-                        defaultValues = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
-                            fields: poField.fields,
-                            defaultValues: defaultValues
-                        });
-                    } else if (poField.defaultValue) {
-                        defaultValues[poField.name] = poField.defaultValue;
+                    let poField = fields[x],
+                        ignoreField = false;
+                    if (poField.filter) {
+                        for (let filterProperty in poField.filter) {
+                            if (poField.filter[filterProperty] != filterValues[filterProperty]) {
+                                ignoreField = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!ignoreField) {
+                        if (poField.fieldGroup) {
+                            defaultValues = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                                fields: poField.fields,
+                                filterValues: filterValues,
+                                defaultValues: defaultValues
+                            });
+                        } else if (poField.defaultValue) {
+                            defaultValues[poField.name] = poField.defaultValue;
+                        }
                     }
                 }
             }
@@ -756,6 +908,54 @@ define([
                 }
             }
             return json;
+        },
+        extendPO: function (option) {
+            let poObj = option.purchaseOrder || {},
+                vendorConfig = option.vendorConfig,
+                record = option.transaction;
+
+            if (vendorConfig && vendorConfig.fieldMap && record) {
+                let fieldMap = vendorConfig.fieldMap;
+                if (util.isString(fieldMap)) {
+                    fieldMap = CTC_Util.safeParse(fieldMap);
+                }
+
+                for (let fieldName in fieldMap) {
+                    let fieldId = fieldMap[fieldName];
+
+                    log.audit('extendPO', { fieldId: fieldId, name: fieldName });
+
+                    if (!fieldId) continue;
+
+                    try {
+                        poObj[fieldName] = record.getValue(fieldId);
+                        poObj[[fieldName, 'text'].join('_')] = record.getText(fieldId);
+                    } catch (error) {
+                        this.logError('extendPO', this.extractError(error));
+                    }
+                }
+            }
+            return poObj;
+        },
+
+        // removes properties with values that are blank, null, or undefined
+        cleanUpJSON: function (option) {
+            let objConstructor = option.objConstructor || {}.constructor,
+                obj = option.obj;
+            for (let key in obj) {
+                if (CTC_Util.isEmpty(obj[key])) {
+                    delete obj[key];
+                } else if (obj[key].constructor === objConstructor) {
+                    CTC_Util.cleanUpJSON({
+                        obj: obj[key],
+                        objConstructor: objConstructor
+                    });
+                    // recheck if emptied and delete if so
+                    if (CTC_Util.isEmpty(obj[key])) {
+                        delete obj[key];
+                    }
+                }
+            }
         }
     };
 

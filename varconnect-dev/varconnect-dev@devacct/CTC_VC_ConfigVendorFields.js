@@ -117,10 +117,15 @@ define(function (require) {
                     custrecord_ctc_vc_xml_vendor: '',
                     custrecord_ctc_vc_vendor_subsidiary: '',
                     custrecord_ctc_vc_endpoint:
-                        'https://ecsoag.arrow.com/ArrowECS/SalesOrder_RS/Status',
-                    custrecord_ctc_vc_customer_number: '',
-                    custrecord_ctc_vc_api_key: '-none-',
-                    custrecord_ctc_vc_api_secret: '-none-'
+                        'https://qaecsapi.arrow.com/external/ArrowLink/ArrowECS/SalesOrder_RS/Status',
+                    custrecord_ctc_vc_access_endpoint:
+                        'https://login.microsoftonline.com/0beb0c35-9cbb-4feb-99e5-589e415c7944/oauth2/v2.0/token',
+                    custrecord_ctc_vc_customer_number: '- set customer no -',
+                    custrecord_ctc_vc_api_key: '- set client-id -',
+                    custrecord_ctc_vc_api_secret: '- set client_secret -',
+                    custrecord_ctc_vc_oath_scope: '- set Ocp-Apim-Subscription-Key -',
+                    custrecord_ctc_vc_user: '-none-',
+                    custrecord_ctc_vc_password: '-none-'
                 };
                 BILL_CREATE[xmlVendorId] = {
                     custrecord_vc_bc_connect_type: '',

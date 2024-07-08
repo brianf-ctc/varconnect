@@ -724,13 +724,12 @@ define([
                 for (var i = 0, j = invoiceOrders.links.length; i < j; i++) {
                     var invoiceLink = invoiceOrders.links[i];
 
-                    // vc2_util.log(logTitle, '... invoice link: ', invoiceLink);
+                    vc2_util.log(logTitle, '... invoice link: ', invoiceLink);
 
-                    var invoiceDetail = {};
-                    //  = this.processInvoiceDetails({ link: invoiceLink });
+                    var invoiceDetail = this.processInvoiceDetails({ link: invoiceLink });
 
                     // if (!invoiceDetail || !invoiceDetail.data || !invoiceDetail.data.lines) {
-                    invoiceDetail = this.processInvoiceDetailsV6({ link: invoiceLink });
+                    // invoiceDetail = this.processInvoiceDetailsV6({ link: invoiceLink });
                     // }
 
                     if (!invoiceDetail || !invoiceDetail.data || !invoiceDetail.data.lines) {

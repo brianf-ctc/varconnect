@@ -182,9 +182,11 @@ define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], fun
 
                 if (sums_10.model_number == 'FREIGHT') {
                     ordObj.charges.shipping += sums_10.finance_charge;
-                } else if (sums_10.model_number == 'TAX') {
+                }
+                if (sums_10.model_number == 'TAX') {
                     ordObj.charges.tax += sums_10.finance_charge;
-                } else {
+                }
+                if (sums_10.model_number == 'MISCELLANEOUS') {
                     ordObj.charges.other += sums_10.finance_charge;
                 }
 

@@ -13,6 +13,7 @@
  */
 define([
     './CTC_Lib_Utils',
+    '../Library/CTC_Lib_ServerUtils',
     './CTC_VCSP_Constants',
     './CTC_VCSP_Lib_VendorConfig',
     '../Vendor Scripts/CTC_VCSP_Lib_Dell',
@@ -26,6 +27,7 @@ define([
     '../VO/CTC_VCSP_PO'
 ], function (
     CTC_Util,
+    CTC_SSUtil,
     VCSP_Global,
     libVendorConfig,
     libDell,
@@ -40,53 +42,65 @@ define([
 ) {
     let LogTitle = 'LibWS';
 
-    function _validateVendorConfig(options) {
+    function _validateVendorConfig(option) {
         let logTitle = [LogTitle, 'validateVendorConfig'].join('::');
 
-        let recVendorConfig = options.recVendorConfig,
-            apiVendor = recVendorConfig.apiVendor,
+        let vendorConfig = option.vendorConfig,
+            apiVendor = vendorConfig.apiVendor,
             vendorList = VCSP_Global.Lists.API_VENDOR,
-            endpoint = recVendorConfig.endPoint;
+            endpoint = vendorConfig.endPoint;
 
-        if (recVendorConfig.testRequest) {
-            endpoint = recVendorConfig.qaEndPoint;
+        if (vendorConfig.testRequest) {
+            endpoint = vendorConfig.qaEndPoint;
         }
         let requiredWebserviceInfo = {
             endpoint: endpoint
         };
         switch (apiVendor) {
             case vendorList.SYNNEX:
-                requiredWebserviceInfo.user = recVendorConfig.user;
-                requiredWebserviceInfo.password = recVendorConfig.password;
+                requiredWebserviceInfo.user = vendorConfig.user;
+                requiredWebserviceInfo.password = vendorConfig.password;
                 break;
             case vendorList.SCANSOURCE:
-                requiredWebserviceInfo.businessUnit = recVendorConfig.businessUnit;
-                requiredWebserviceInfo.subscriptionKey = recVendorConfig.subscriptionKey;
-                if (recVendorConfig.testRequest) {
-                    requiredWebserviceInfo.oauthScope = recVendorConfig.qaOauthScope;
+                requiredWebserviceInfo.businessUnit = vendorConfig.businessUnit;
+                if (vendorConfig.testRequest) {
+                    requiredWebserviceInfo.oauthScope = vendorConfig.qaOauthScope;
+                    requiredWebserviceInfo.subscriptionKey = vendorConfig.qaSubscriptionKey;
                 } else {
-                    requiredWebserviceInfo.oauthScope = recVendorConfig.oauthScope;
+                    requiredWebserviceInfo.oauthScope = vendorConfig.oauthScope;
+                    requiredWebserviceInfo.subscriptionKey = vendorConfig.subscriptionKey;
                 }
             case vendorList.DANDH:
             case vendorList.INGRAM:
-                if (recVendorConfig.testRequest) {
-                    requiredWebserviceInfo.tokenEndpoint = recVendorConfig.qaAccessEndPoint;
-                    requiredWebserviceInfo.apiKey = recVendorConfig.qaApiKey;
-                    requiredWebserviceInfo.apiSecret = recVendorConfig.qaApiSecret;
+                if (vendorConfig.testRequest) {
+                    requiredWebserviceInfo.tokenEndpoint = vendorConfig.qaAccessEndPoint;
+                    requiredWebserviceInfo.apiKey = vendorConfig.qaApiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.qaApiSecret;
                 } else {
-                    requiredWebserviceInfo.tokenEndpoint = recVendorConfig.accessEndPoint;
-                    requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
-                    requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                    requiredWebserviceInfo.tokenEndpoint = vendorConfig.accessEndPoint;
+                    requiredWebserviceInfo.apiKey = vendorConfig.apiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.apiSecret;
+                }
+                break;
+            case vendorList.ARROW:
+                if (vendorConfig.testRequest) {
+                    requiredWebserviceInfo.apiKey = vendorConfig.qaApiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.qaApiSecret;
+                    requiredWebserviceInfo.oauthScope = vendorConfig.qaSubscriptionKey;
+                } else {
+                    requiredWebserviceInfo.apiKey = vendorConfig.apiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.apiSecret;
+                    requiredWebserviceInfo.oauthScope = vendorConfig.oauthScope;
                 }
                 break;
             case vendorList.DELL:
             default:
-                if (recVendorConfig.testRequest) {
-                    requiredWebserviceInfo.apiKey = recVendorConfig.qaApiKey;
-                    requiredWebserviceInfo.apiSecret = recVendorConfig.qaApiSecret;
+                if (vendorConfig.testRequest) {
+                    requiredWebserviceInfo.apiKey = vendorConfig.qaApiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.qaApiSecret;
                 } else {
-                    requiredWebserviceInfo.apiKey = recVendorConfig.apiKey;
-                    requiredWebserviceInfo.apiSecret = recVendorConfig.apiSecret;
+                    requiredWebserviceInfo.apiKey = vendorConfig.apiKey;
+                    requiredWebserviceInfo.apiSecret = vendorConfig.apiSecret;
                 }
                 break;
         }
@@ -96,7 +110,7 @@ define([
             if (!requiredWebserviceInfo[requiredParam]) {
                 throw (
                     'Incomplete webservice information for ' +
-                    recVendorConfig.vendorName +
+                    vendorConfig.vendorName +
                     '. Missing one of the following: ' +
                     Object.keys(requiredWebserviceInfo).join(', ')
                 );
@@ -106,11 +120,11 @@ define([
         return;
     }
 
-    function _getVendorLibrary(options) {
+    function _getVendorLibrary(option) {
         let logTitle = [LogTitle, 'getVendorLibrary'].join('::');
 
-        let recVendorConfig = options.recVendorConfig,
-            apiVendor = recVendorConfig.apiVendor,
+        let vendorConfig = option.vendorConfig,
+            apiVendor = vendorConfig.apiVendor,
             vendorList = VCSP_Global.Lists.API_VENDOR,
             libVendor;
 
@@ -147,57 +161,76 @@ define([
         return libVendor;
     }
 
-    function _updateRecPO(options) {
-        let recVendorConfig = options.recVendorConfig,
-            recPO = options.recPO,
-            nativePO = options.nativePO;
+    function _updatePurchaseOrder(option) {
+        let vendorConfig = option.vendorConfig,
+            poObj = option.purchaseOrder,
+            record = option.transaction;
 
-        recPO.setValuesFromVendorConfig({
-            recVendorConfig: recVendorConfig,
-            nativePO: nativePO
+        log.audit('_updatePurchaseOrder', '/// vendor config: ' + JSON.stringify(vendorConfig));
+
+        poObj.setValuesFromVendorConfig({
+            vendorConfig: vendorConfig,
+            transaction: record
         });
     }
 
-    function process(options) {
-        let recPO = options.nativePO,
-            objPO = new PO(recPO),
+    function process(option) {
+        let logTitle = [LogTitle, 'process'].join('::'),
+            record = option.transaction,
+            poObj = new PO(record),
             resp;
-
         try {
-            let recVendorConfig = libVendorConfig.getVendorConfiguration({
-                vendor: objPO.entity,
-                subsidiary: objPO.subsidiary
+            let vendorConfig = libVendorConfig.getVendorConfiguration({
+                vendor: poObj.entity,
+                subsidiary: poObj.subsidiary,
+                transaction: record
             });
 
-            if (recVendorConfig) {
-                _updateRecPO({
-                    recPO: objPO,
-                    nativePO: recPO,
-                    recVendorConfig: recVendorConfig
+            log.audit(logTitle, '/// Vendor Config: ' + JSON.stringify(vendorConfig));
+
+            if (vendorConfig) {
+                poObj = CTC_Util.extendPO({
+                    purchaseOrder: poObj,
+                    vendorConfig: vendorConfig,
+                    transaction: record
+                });
+                if (vendorConfig.additionalPOFields) {
+                    vendorConfig.additionalPOFields = CTC_SSUtil.renderTemplate({
+                        body: vendorConfig.additionalPOFields,
+                        purchaseOrder: poObj
+                    });
+                }
+                _updatePurchaseOrder({
+                    purchaseOrder: poObj,
+                    transaction: record,
+                    vendorConfig: vendorConfig
                 });
 
                 let libVendor = _getVendorLibrary({
-                    recVendorConfig: recVendorConfig
+                    vendorConfig: vendorConfig
                 });
 
                 if (!libVendor) throw 'Missing or invalid vendor configuration';
 
                 _validateVendorConfig({
-                    recVendorConfig: recVendorConfig
+                    vendorConfig: vendorConfig
                 });
 
                 resp = new response(
                     libVendor.process({
-                        recVendorConfig: recVendorConfig,
-                        recPO: objPO,
-                        nativePO: recPO
+                        vendorConfig: vendorConfig,
+                        purchaseOrder: poObj,
+                        transaction: record
                     })
                 );
             }
-        } catch (e) {
+        } catch (error) {
+            var errorMsg = CTC_Util.extractError(error);
+            CTC_Util.logError(logTitle, JSON.stringify(error));
+
             resp = new response({
                 code: 'error',
-                message: CTC_Util.extractError(e)
+                message: CTC_Util.extractError(error)
             });
         }
 

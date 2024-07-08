@@ -75,13 +75,13 @@ define([
             return returnValue;
         },
         getTokenCache: function () {
-            var token = vc2_util.getNSCache({ key: 'VC_SCANSOURCE_TOKEN' });
+            var token = vc2_util.getNSCache({ key: 'VC_SCANSOURCE_TOKEN_00' });
             if (vc2_util.isEmpty(token)) token = this.generateToken();
 
             if (!vc2_util.isEmpty(token)) {
                 vc2_util.setNSCache({
-                    key: 'VC_SCANSOURCE_TOKEN',
-                    cacheTTL: 14400,
+                    key: 'VC_SCANSOURCE_TOKEN_00',
+                    cacheTTL: 3599,
                     value: token
                 });
                 CURRENT.accessToken = token;

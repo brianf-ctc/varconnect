@@ -567,6 +567,9 @@ define(function (require) {
                                 custcol_ctc_vc_eta_date: Helper.parseDate({
                                     dateString: itemToShip.order_eta
                                 }),
+                                custcol_ctc_vc_delivery_eta_date: Helper.parseDate({
+                                    dateString: itemToShip.order_delivery_eta
+                                }),
                                 custcol_ctc_vc_order_placed_date: Helper.parseDate({
                                     dateString: itemToShip.order_date
                                 }),
@@ -670,6 +673,7 @@ define(function (require) {
                                 order_num: itemToShip.order_num,
                                 order_date: itemToShip.order_date,
                                 order_eta: itemToShip.order_eta,
+                                order_delivery_eta: itemToShip.order_delivery_eta,
                                 ship_date: itemToShip.ship_date,
                                 carrier: itemToShip.carrier,
                                 all_serial_nums: arrSerials.join('\n'),
@@ -909,6 +913,7 @@ define(function (require) {
                     orderDetails += '\n   Num      : ' + line.order_num;
                     orderDetails += '\n   Date     : ' + line.order_date;
                     orderDetails += '\n   ETA      : ' + line.order_eta;
+                    orderDetails += '\n   Deliv ETA: ' + line.order_delivery_eta;
                     orderDetails += '\n   Ship Date: ' + line.ship_date;
                     orderDetails += '\n   Carrier  : ' + line.carrier;
                 }

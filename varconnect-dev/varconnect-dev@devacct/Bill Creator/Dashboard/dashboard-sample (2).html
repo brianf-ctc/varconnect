@@ -291,13 +291,15 @@
                                                             iRow,
                                                             iCol
                                                         ) {
-                                                            $(nTd).html(
-                                                                '<a href="/app/accounting/transactions/transaction.nl?id=' +
-                                                                    oData.poId +
-                                                                    '" target="_blank">' +
-                                                                    oData.po +
-                                                                    '</a>'
-                                                            );
+                                                            if (oData.poId) {
+                                                                $(nTd).html(
+                                                                    '<a href="/app/accounting/transactions/transaction.nl?id=' +
+                                                                        oData.poId +
+                                                                        '" target="_blank">' +
+                                                                        oData.po +
+                                                                        '</a>'
+                                                                );
+                                                            }
                                                         }
                                                     },
                                                     {

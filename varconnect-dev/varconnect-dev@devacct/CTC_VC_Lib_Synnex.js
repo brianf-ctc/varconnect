@@ -76,7 +76,7 @@ define([
                         url: CURRENT.orderConfig.endPoint,
                         body:
                             '<?xml version="1.0" encoding="UTF-8" ?>' +
-                            '<SynnexB2B version="2.2">' +
+                            '<SynnexB2B version="2.7">' +
                             '<Credential>' +
                             ('<UserID>' + CURRENT.orderConfig.user + '</UserID>') +
                             ('<Password>' + CURRENT.orderConfig.password + '</Password>') +
@@ -222,7 +222,8 @@ define([
                         order_date:
                             Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') ||
                             'NA',
-                        order_eta: Helper.getNodeValue(itemNode, 'ETADate') || 'NA',
+                        order_eta: Helper.getNodeValue(itemNode, 'EstimatedShipDate') || 'NA',
+                        order_delivery_eta: Helper.getNodeValue(itemNode, 'EstimatedDeliveryDate') || Helper.getNodeValue(itemNode, 'EstimateDeliveryDate') || 'NA',
                         ship_date: Helper.getNodeValue(itemNode, 'ShipDatetime') || 'NA',
                         ship_qty: Helper.getNodeValue(itemNode, 'ShipQuantity') || 'NA',
                         carrier: Helper.getNodeValue(itemNode, 'ShipMethodDescription') || 'NA',

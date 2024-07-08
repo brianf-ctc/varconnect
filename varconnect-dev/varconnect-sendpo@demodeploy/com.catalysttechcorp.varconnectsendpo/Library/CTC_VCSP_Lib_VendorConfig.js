@@ -18,12 +18,14 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Vendor Configuration
  *
  */
-define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Constants'], function (
-    NS_Search,
-    NS_Record,
-    VCSP_Pref,
-    VCSP_Global
-) {
+define([
+    'N/search',
+    'N/record',
+    './CTC_VCSP_Lib_Preferences',
+    './CTC_VCSP_Constants',
+    './CTC_Lib_Utils',
+    '../VO/CTC_VCSP_PO'
+], function (NS_Search, NS_Record, VCSP_Pref, VCSP_Global, CTC_Util, PO) {
     let LogTitle = 'VC:SENDPO';
     let VendorConfig = VCSP_Global.Fields.VendorConfig;
     let vendorConfigFields = [
@@ -59,6 +61,7 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         { name: VendorConfig.QA_API_SECRET },
         { name: VendorConfig.QA_SUBSCRIPTION_KEY },
         { name: VendorConfig.PONUM_FIELD },
+        { name: VendorConfig.ITEM_COLUMN },
         { name: VendorConfig.QUOTE_COLUMN },
         { name: VendorConfig.MEMO_FIELD },
         { name: VendorConfig.SHIP_CONTACT_FIELD },
@@ -73,18 +76,22 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         { name: VendorConfig.EVENT_TYPE },
         { name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS },
         { name: VendorConfig.ADDITIONAL_PO_FIELDS },
+        { name: VendorConfig.ADD_DETAILS_ON_SUBMIT },
         { name: VendorConfig.PO_LINE_COLUMNS },
         { name: VendorConfig.BUSINESS_UNIT }
     ];
 
-    function _generateVendorConfig(result) {
+    function _generateVendorConfig(option) {
         // log.debug('vendor config', JSON.stringify(result));
+        let result = option.result,
+            record = option.transaction,
+            poObj = option.purchaseOrder;
         let vendorConfigRecord = NS_Record.load({
             type: VCSP_Global.Records.VENDOR_CONFIG,
             id: result.id,
             isDynamic: false
         });
-        return {
+        let returnValue = {
             id: result.getValue({ name: VendorConfig.ID }),
             subsidiary: result.getValue({ name: VendorConfig.SUBSIDIARY }),
             country: result.getValue({ name: 'country', join: VendorConfig.SUBSIDIARY }),
@@ -101,6 +108,7 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
             oauthScope: result.getValue({ name: VendorConfig.OAUTH_SCOPE }),
             subscriptionKey: result.getValue({ name: VendorConfig.SUBSCRIPTION_KEY }),
             poNumField: result.getValue({ name: VendorConfig.PONUM_FIELD }),
+            itemColumn: result.getValue({ name: VendorConfig.ITEM_COLUMN }),
             quoteColumn: result.getValue({ name: VendorConfig.QUOTE_COLUMN }),
             memoField: result.getValue({ name: VendorConfig.MEMO_FIELD }),
             shipContactField: result.getValue({ name: VendorConfig.SHIP_CONTACT_FIELD }),
@@ -136,19 +144,42 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
                 name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS
             }),
             additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
+            includeAdditionalDetailsOnSubmit: vendorConfigRecord.getValue(
+                VendorConfig.ADD_DETAILS_ON_SUBMIT
+            ),
             poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS),
             businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT)
         };
+        if (!returnValue.addVendorDetailsEnabled) {
+            returnValue.additionalPOFields = null;
+        }
+        return returnValue;
     }
 
-    function getVendorConfiguration(options) {
+    function getVendorConfiguration(option) {
         let logTitle = [LogTitle, 'getVendorConfig'].join(':'),
             config = null,
-            vendorConfigId = options.vendorConfigId,
-            vendor = options.vendor,
-            subsidiary = options.subsidiary;
-
-        log.debug(logTitle, 'Params: ' + JSON.stringify(options));
+            record = option.transaction,
+            vendorConfigId = option.vendorConfigId,
+            vendor = option.vendor,
+            subsidiary = option.subsidiary,
+            poObj = null;
+        if (record) {
+            poObj = new PO(record);
+        }
+        if (poObj) {
+            vendor = poObj.entity;
+            subsidiary = poObj.subsidiary;
+        }
+        log.debug(
+            logTitle,
+            'Params: ' +
+                JSON.stringify({
+                    vendorConfigId: vendorConfigId,
+                    vendor: vendor,
+                    subsidiary: subsidiary
+                })
+        );
         let filter = [];
         if (vendorConfigId) {
             filter.push(
@@ -197,7 +228,11 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         });
 
         if (result && result[0]) {
-            config = _generateVendorConfig(result[0]);
+            config = _generateVendorConfig({
+                result: result[0],
+                transaction: record,
+                purchaseOrder: poObj
+            });
         }
 
         // log.debug('vendor config', config);
@@ -205,12 +240,12 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
         return config;
     }
 
-    function getAvailableVendorList(options) {
+    function getAvailableVendorList(option) {
         let logTitle = [LogTitle, 'getAvailableVendorList'].join(':'),
             vendorList = null,
-            subsidiary = options.subsidiary;
+            subsidiary = option.subsidiary;
 
-        log.debug(logTitle, 'Params: ' + JSON.stringify(options));
+        log.debug(logTitle, 'Params: ' + JSON.stringify(option));
         let filter = [];
         filter.push(
             NS_Search.createFilter({
@@ -269,7 +304,10 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
             vendorId = option.vendor,
             returnValue = null;
         // init search details
-        let searchColumns = [{ name: VendorConfig.ADDITIONAL_PO_FIELDS }],
+        let searchColumns = [
+                { name: VendorConfig.ADDITIONAL_PO_FIELDS },
+                { name: VendorConfig.FIELD_MAP }
+            ],
             searchDetails;
         if (vendorConfigId) {
             returnValue = getVendorConfiguration({
@@ -302,6 +340,7 @@ define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Consta
             });
             if (results && results.length) {
                 returnValue.additionalPOFields = results[0].getValue(searchColumns[0]);
+                returnValue.fieldMap = results[0].getValue(searchColumns[1]);
             }
         }
         return returnValue;

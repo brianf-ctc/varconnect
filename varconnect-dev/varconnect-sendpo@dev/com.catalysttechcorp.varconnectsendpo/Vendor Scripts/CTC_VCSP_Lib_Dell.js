@@ -8,29 +8,30 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 define([
     'N/encode',
     'N/search',
-    '../Library/CTC_VCSP_Constants.js',
-    '../Library/CTC_VCSP_Lib_Log.js',
+    'N/error',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_VCSP_Lib_Log',
     '../Library/CTC_Lib_Utils'
-], function (ns_encode, ns_search, constants, vcLog, ctc_util) {
-    var LogTitle = 'WS:Dell';
+], function (ns_encode, ns_search, ns_error, constants, vcLog, ctc_util) {
+    let LogTitle = 'WS:Dell';
 
     function generateToken(option) {
-        var logTitle = [LogTitle, 'generateToken'].join('::');
+        let logTitle = [LogTitle, 'generateToken'].join('::');
 
-        var authkey = ns_encode.convert({
+        let authkey = ns_encode.convert({
             string: option.key + ':' + option.secret,
             inputEncoding: ns_encode.Encoding.UTF_8,
             outputEncoding: ns_encode.Encoding.BASE_64_URL_SAFE
         });
         log.audit(logTitle, '>> auth-key: ' + JSON.stringify(authkey));
 
-        var tokenReq = ctc_util.sendRequest({
+        let tokenReq = ctc_util.sendRequest({
             header: [LogTitle, 'GenerateToken'].join(' : '),
             method: 'post',
             recordId: option.poId,
@@ -48,15 +49,21 @@ define([
 
         if (tokenReq.isError) {
             // try to parse anything
-            var errorMessage = tokenReq.errorMsg;
+            let errorMessage = tokenReq.errorMsg;
             if (tokenReq.PARSED_RESPONSE && tokenReq.PARSED_RESPONSE.error_description) {
                 errorMessage = tokenReq.PARSED_RESPONSE.error_description;
             }
-            throw 'Generate Token Error - ' + errorMessage;
+            throw ns_error.create({
+                name: 'TOKEN_ERR',
+                message: 'Generate Token Error - ' + errorMessage
+            });
         }
 
-        var tokenResp = ctc_util.safeParse(tokenReq.RESPONSE);
-        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+        let tokenResp = ctc_util.safeParse(tokenReq.RESPONSE);
+        if (!tokenResp || !tokenResp.access_token) throw ns_error.create({
+            name: 'TOKEN_ERR',
+            message: 'Unable to retrieve token'
+        });
 
         log.audit(logTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
 
@@ -64,10 +71,10 @@ define([
     }
 
     function generateBody(option) {
-        var logTitle = [LogTitle, 'generateBody'].join('::'),
+        let logTitle = [LogTitle, 'generateBody'].join('::'),
             returnValue = '';
 
-        var poObj = option.record,
+        let poObj = option.record,
             recPO = option.nativeRecPO,
             customerNo = option.customerNo,
             vendorConfig = option.config,
@@ -76,9 +83,9 @@ define([
 
         log.audit(logTitle, '// poObj: ' + JSON.stringify(poObj));
 
-        var field_mapping = ctc_util.safeParse(vendorConfig.fieldmap) || {};
+        let field_mapping = ctc_util.safeParse(vendorConfig.fieldMap) || {};
 
-        var bodyContentJSON = {
+        let bodyContentJSON = {
             isTestPayload: !!testRequest,
             correlationId: '',
             poNumber: poObj.tranId,
@@ -86,16 +93,16 @@ define([
             profileId: customerNo,
             profilePwd: '',
             requestedDeliveryDate: (function () {
-                var deliveryDate = null;
-                for (var i = 0; i < itemLength; i++) {
+                let deliveryDate = null;
+                for (let i = 0; i < itemLength; i++) {
                     if (deliveryDate) break;
-                    var expectedReceiptDate = poObj.items[i].expectedReceiptDate;
+                    let expectedReceiptDate = poObj.items[i].expectedReceiptDate;
                     if (expectedReceiptDate) deliveryDate = expectedReceiptDate;
                 }
                 return deliveryDate || '';
             })(),
             // orderContact: (function () {
-            //     var contactId = recPO.getValue({ fieldId: 'custbody_ctc_quote_contact' });
+            //     let contactId = recPO.getValue({ fieldId: 'custbody_ctc_quote_contact' });
 
             // })(),
             orderContact: {
@@ -113,21 +120,19 @@ define([
                 }
             },
             shippingContact: (function () {
-                var logTitle = [LogTitle, 'GenerateBody', 'shippingContact'].join('::');
+                let logTitle = [LogTitle, 'GenerateBody', 'shippingContact'].join('::');
 
-                var shipSubRec = recPO.getSubrecord({ fieldId: 'shippingaddress' });
+                let shipSubRec = recPO.getSubrecord({ fieldId: 'shippingaddress' });
                 log.audit(logTitle, '// shipSubRec: ' + JSON.stringify(shipSubRec));
 
-                var poData = {
+                let poData = {
                     shipto: recPO.getValue({ fieldId: 'shipto' }),
                     createdfrom: recPO.getValue({ fieldId: 'createdfrom' }),
                     primaryContact: recPO.getValue({ fieldId: 'custbody_ctc_vcsp_primary_contact' })
                 };
                 log.audit(logTitle, '// poData: ' + JSON.stringify(poData));
-                
-                //TODO: Ship-To Attention as Quote Contact (if available)
 
-                var arrAddressFields = [
+                let arrAddressFields = [
                     'country',
                     'attention',
                     'addressee',
@@ -140,7 +145,7 @@ define([
                     'zip'
                 ];
 
-                var addrInfo = {};
+                let addrInfo = {};
                 arrAddressFields.forEach(function (fld) {
                     addrInfo[fld] = {
                         value: shipSubRec.getValue({ fieldId: fld }),
@@ -148,12 +153,15 @@ define([
                     };
                 });
                 log.audit(logTitle, '// addrInfo: ' + JSON.stringify(addrInfo));
-                if (ctc_util.isEmpty(addrInfo)) throw 'Missing Shipping Address Info';
+                if (ctc_util.isEmpty(addrInfo)) throw ns_error.create({
+                    name: 'MISSING_SHIP_ADDRESS',
+                    message: 'Missing Shipping Address Info'
+                });
 
                 // get the customer from 'shipto' or SO's entity
-                var customerId = poData.shipto;
+                let customerId = poData.shipto;
                 if (!customerId) {
-                    var salesOrderSearch = ns_search.create({
+                    let salesOrderSearch = ns_search.create({
                         type: 'salesorder',
                         filters: [
                             ['type', 'anyof', 'SalesOrd'],
@@ -173,9 +181,9 @@ define([
                 log.audit(logTitle, '// customerid: ' + customerId);
 
                 // get the primary contact
-                var ContactRoles = { PRIMARY: '-10', ALTERNATE: '-20' };
+                let ContactRoles = { PRIMARY: '-10', ALTERNATE: '-20' };
 
-                var contactSearchObj = ns_search.create({
+                let contactSearchObj = ns_search.create({
                     type: 'contact',
                     filters: [
                         ['company', 'anyof', customerId],
@@ -185,9 +193,9 @@ define([
                     columns: ['entityid', 'email', 'phone', 'contactrole']
                 });
 
-                var contactNames = {};
+                let contactNames = {};
                 contactSearchObj.run().each(function (result) {
-                    var contactRole = {
+                    let contactRole = {
                         value: result.getValue({ name: 'contactrole' }),
                         text: result.getText({ name: 'contactrole' })
                     };
@@ -201,7 +209,7 @@ define([
                     return true;
                 });
 
-                var contactInfo =
+                let contactInfo =
                     contactNames[ContactRoles.PRIMARY] &&
                     contactNames[ContactRoles.PRIMARY].entityid
                         ? contactNames[ContactRoles.PRIMARY]
@@ -210,25 +218,36 @@ define([
 
                 if (ctc_util.isEmpty(contactInfo)) {
                     // try to get data from custbody_ctc_vcsp_primary_contact
-                    contactSearchObj = ns_search.create({
-                        type: 'contact',
-                        filters: [['internalid', 'anyof', poData.primaryContact]],
-                        columns: ['entityid', 'email', 'phone', 'contactrole']
-                    });
+                    if (poData.primaryContact) {
+                        contactSearchObj = ns_search.create({
+                            type: 'contact',
+                            filters: [['internalid', 'anyof', poData.primaryContact]],
+                            columns: ['entityid', 'email', 'phone', 'contactrole']
+                        });
 
-                    contactSearchObj.run().each(function (result) {
-                        contactInfo = {
-                            entityid: result.getValue({ name: 'entityid' }),
-                            email: result.getValue({ name: 'email' })
-                        };
-                        return true;
-                    });
+                        contactSearchObj.run().each(function (result) {
+                            contactInfo = {
+                                entityid: result.getValue({ name: 'entityid' }),
+                                email: result.getValue({ name: 'email' })
+                            };
+                            return true;
+                        });
+                    }
+                }
+                if (ctc_util.isEmpty(contactInfo)) {
+                    contactInfo = {
+                        entityid: poObj.shipAddressee,
+                        email: poObj.shipEmail,
+                    };
                 }
                 log.audit(logTitle, '// contactInfo: ' + JSON.stringify(contactInfo));
 
-                if (ctc_util.isEmpty(contactInfo)) throw 'Missing Contact Info';
+                if (ctc_util.isEmpty(contactInfo)) throw ns_error.create({
+                    name: 'MISSING_SHIP_CONTACT',
+                    message: 'Missing Contact Info'
+                });
 
-                var shippingContactObj = {
+                let shippingContactObj = {
                     company: addrInfo.addressee.value,
                     contactName: contactInfo.entityid,
                     email: contactInfo.email,
@@ -250,9 +269,9 @@ define([
                             JSON.stringify(field_mapping.shippingContact)
                     );
 
-                    for (var fld in field_mapping.shippingContact) {
+                    for (let fld in field_mapping.shippingContact) {
                         if (!field_mapping.shippingContact[fld]) continue;
-                        var mappedvalue = recPO.getValue({
+                        let mappedvalue = recPO.getValue({
                             fieldId: field_mapping.shippingContact[fld]
                         });
 
@@ -283,16 +302,16 @@ define([
                 PaymentTerm: vendorConfig.paymentTerm
             },
             orderDetails: (function () {
-                var logTitle = [LogTitle, 'GenerateBody', 'orderDetails'].join('::');
+                let logTitle = [LogTitle, 'GenerateBody', 'orderDetails'].join('::');
 
-                var arrItemList = [];
+                let arrItemList = [];
 
                 log.audit(logTitle, '** Order Details: ' + JSON.stringify(poObj.items));
 
-                for (var i = 0, j = itemLength; i < j; i++) {
-                    var itemData = poObj.items[i];
+                for (let i = 0, j = itemLength; i < j; i++) {
+                    let itemData = poObj.items[i];
 
-                    var itemDetails = {
+                    let itemDetails = {
                         lineItemNum: (i + 1).toString(),
                         lineItemDescription: itemData.description,
                         supplierPartId: itemData.quotenumber,
@@ -323,8 +342,8 @@ define([
 
                     if (!itemDetails.supplierPartId) continue;
 
-                    var itemDataIdx = -1;
-                    for (var ii = 0, jj = arrItemList.length; ii < jj; ii++) {
+                    let itemDataIdx = -1;
+                    for (let ii = 0, jj = arrItemList.length; ii < jj; ii++) {
                         if (itemDetails.supplierPartId == arrItemList[ii].supplierPartId) {
                             itemDataIdx = ii;
                             break;
@@ -340,9 +359,9 @@ define([
                 return arrItemList;
             })(),
             CustomFields: (function () {
-                var logTitle = [LogTitle, 'GenerateBody', 'CustomFields'].join('::');
+                let logTitle = [LogTitle, 'GenerateBody', 'CustomFields'].join('::');
 
-                var arr = [];
+                let arr = [];
 
                 if (field_mapping && field_mapping.CUSTOM) {
                     log.audit(
@@ -350,12 +369,12 @@ define([
                         '>> field_mapping.CUSTOM: ' + JSON.stringify(field_mapping.CUSTOM)
                     );
 
-                    var mappedValues = {};
+                    let mappedValues = {};
 
-                    for (var fld in field_mapping.CUSTOM) {
+                    for (let fld in field_mapping.CUSTOM) {
                         if (!field_mapping.CUSTOM[fld]) continue;
 
-                        var mappedvalue = recPO.getValue({ fieldId: field_mapping.CUSTOM[fld] });
+                        let mappedvalue = recPO.getValue({ fieldId: field_mapping.CUSTOM[fld] });
                         mappedValues[fld] = mappedvalue || '';
 
                         log.audit(logTitle, '>> mappedvalue: ' + JSON.stringify(mappedvalue));
@@ -375,7 +394,7 @@ define([
                 // } else {
                 //     shipCode = 'LC';
                 // }
-                // var createdfrom = poObj.createdFrom;
+                // let createdfrom = poObj.createdFrom;
 
                 // arr.push({
                 //     name: 'SHIPPING_CODE',
@@ -396,6 +415,49 @@ define([
                 // });
 
                 return arr;
+            })(),
+            shippingMethod: (function () {
+                var logTitle = [LogTitle, 'GenerateBody', 'shippingMethod'].join('::'),
+                    returnValue = {};
+
+                //shipmethod
+                var shipMethod = recPO.getValue({ fieldId: 'shipmethod' });
+                log.audit(logTitle, '>> shipmethod ' + JSON.stringify(shipMethod));
+                if (!shipMethod) return {};
+
+                var searchShipMethodMap = ns_search.create({
+                    type: constants.Records.VENDOR_SHIPMETHOD,
+                    filters: [[constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]],
+                    columns: [
+                        'name',
+                        {name: constants.Fields.VendorShipMethod.VENDOR_CONFIG},
+                        {name: constants.Fields.VendorShipMethod.SHIP_VALUE},
+                        {name: constants.Fields.VendorShipMethod.SHIP_METHOD_MAP}
+                    ]
+                });
+
+                log.audit(
+                    logTitle,
+                    '>> mapped shipping results: ' +
+                        JSON.stringify(searchShipMethodMap.runPaged().count)
+                );
+
+                if (searchShipMethodMap.runPaged().count) {
+                    var mappedShipMethod;
+                    searchShipMethodMap.run().each(function (result) {
+                        mappedShipMethod = result.getValue({
+                            name: constants.Fields.VendorShipMethod.SHIP_VALUE
+                        });
+                        return true;
+                    });
+
+                    log.audit(logTitle, '>> mapped shipping: ' + JSON.stringify(mappedShipMethod));
+
+                    if (mappedShipMethod) {
+                        returnValue.shippingMethod = mappedShipMethod;
+                    }
+                }
+                return returnValue;
             })()
         };
         returnValue = bodyContentJSON; //JSON.stringify(bodyContentJSON);
@@ -403,38 +465,69 @@ define([
         return returnValue;
     }
 
-    function process(option) {
-        var logTitle = [LogTitle, 'process'].join('::');
+    function processResponse(option) {
+        let logTitle = [LogTitle, 'processResponse'].join('::'),
+            record = option.record,
+            response = option.response,
+            responseBody = option.responseBody,
+            returnValue = option.returnResponse;
+        if ((response && response.isError) || (responseBody && (responseBody.errors || responseBody.statusCode < 200 || responseBody.statusCode >= 300))) {
+            let errorMesg = response.errorMsg;
+            returnValue.errorName = 'Unexpected Error';
+            if (responseBody && responseBody.errors) {
+                errorMesg = JSON.stringify(responseBody.errors);
+            } else {
+                errorMesg = util.isArray(responseBody.statusMessage)
+                    ? responseBody.statusMessage.join('\n')
+                    : responseBody.statusMessage;
+            }
+            returnValue.errorMsg = errorMesg;
+            returnValue.message = 'Send PO failed';
+            returnValue.errorId = record.id;
+            returnValue.isError = true;
+        } else {
+            returnValue.message = 'Send PO successful';
+            returnValue.orderStatus = {};
+        }
+        return returnValue;
+    }
 
-        var recVendorConfig = option.recVendorConfig,
+    function process(option) {
+        let logTitle = [LogTitle, 'process'].join('::');
+
+        let recVendorConfig = option.recVendorConfig,
             key = recVendorConfig.apiKey,
             secret = recVendorConfig.apiSecret,
             url = recVendorConfig.endPoint,
             accessUrl = recVendorConfig.accessEndPoint,
             testRequest = recVendorConfig.testRequest,
             customerNo = recVendorConfig.customerNo,
-            poObj = option.record || option.recPO,
+            record = option.record || option.recPO,
             recPO = option.nativePO;
 
-        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
+        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
 
-        var returnResponse = {
-            transactionNum: poObj.tranId,
-            transactionId: poObj.id
-        };
+        let sendPOResponse,
+            returnResponse = {
+                transactionNum: record.tranId,
+                transactionId: record.id
+            };
 
         try {
-            var token = generateToken({
+            let token = generateToken({
                 key: key,
                 secret: secret,
                 url: accessUrl,
-                poId: poObj.id
+                poId: record.id
             });
-            if (!token) throw 'Missing token for authentication.';
+            if (!token) throw ns_error.create({
+                name: 'MISSING_TOKEN',
+                message: 'Missing token for authentication.'
+            });
 
             // build the request body
-            var sendPOBody = generateBody({
-                record: poObj,
+            let sendPOBody = generateBody({
+                record: record,
                 nativeRecPO: recPO,
                 customerNo: customerNo,
                 config: recVendorConfig,
@@ -445,15 +538,18 @@ define([
             ctc_util.vcLog({
                 title: [LogTitle, 'PO Payload'].join(' - '),
                 content: sendPOBody,
-                transaction: poObj.id
+                transaction: record.id
             });
 
-            if (!sendPOBody) throw 'Unable to generate PO Body Request';
+            if (!sendPOBody) throw ns_error.create({
+                name: 'GENERATE_REQUEST_ERR',
+                message: 'Unable to generate PO Body Request'
+            });
 
-            var sendPOReq = ctc_util.sendRequest({
+            sendPOResponse = ctc_util.sendRequest({
                 header: [LogTitle, 'Send PO'].join(' : '),
                 method: 'post',
-                recordId: poObj.id,
+                recordId: record.id,
                 query: {
                     url: url,
                     headers: {
@@ -464,30 +560,47 @@ define([
                     body: JSON.stringify(sendPOBody)
                 }
             });
-            if (sendPOReq.isError) {
-                var errorMesg = sendPOReq.errorMsg;
+            returnResponse = {
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                logId: sendPOResponse.logId,
+                responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
+                responseCode: sendPOResponse.RESPONSE.code,
+                isError: false,
+                error: null,
+                errorId: record.id,
+                errorName: null,
+                errorMsg: null,
+            };
 
-                if (sendPOReq.PARSED_RESPONSE) {
-                    if (
-                        sendPOReq.PARSED_RESPONSE.statusCode &&
-                        sendPOReq.PARSED_RESPONSE.statusMessage
-                    ) {
-                        errorMesg = util.isArray(sendPOReq.PARSED_RESPONSE.statusMessage)
-                            ? sendPOReq.PARSED_RESPONSE.statusMessage.join('\n')
-                            : sendPOReq.PARSED_RESPONSE.statusMessage;
-                    }
-                }
-                throw errorMesg;
-            }
-
-            returnResponse.responseBody = sendPOReq.PARSED_RESPONSE || sendPOReq.RESPONSE.body;
-            returnResponse.responseCode = sendPOReq.RESPONSE.code;
-            returnResponse.message = 'Success';
-        } catch (error) {
-            var errorMsg = ctc_util.extractError(error);
-
+            returnResponse = processResponse({
+                record: record,
+                response: sendPOResponse,
+                responseBody: returnResponse.responseBody,
+                returnResponse: returnResponse
+            });
+        } catch (e) {
+            log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
+            returnResponse = returnResponse || {
+                transactionNum: record.tranId,
+                transactionId: record.id,
+                isError: true,
+                error: e,
+                errorId: record.id,
+                errorName: e.name,
+                errorMsg: e.message,
+            };
             returnResponse.isError = true;
-            returnResponse.message = errorMsg;
+            if (sendPOResponse) {
+                returnResponse.logId = sendPOResponse.logId || null;
+                returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;
+                if (sendPOResponse.RESPONSE) {
+                    if (!returnResponse.responseBody) {
+                        returnResponse.responseBody = sendPOResponse.RESPONSE.body || null;
+                    }
+                    returnResponse.responseCode = sendPOResponse.RESPONSE.code || null;
+                }
+            }
         } finally {
             log.audit(logTitle, '>> sendPoResp: ' + JSON.stringify(returnResponse));
         }

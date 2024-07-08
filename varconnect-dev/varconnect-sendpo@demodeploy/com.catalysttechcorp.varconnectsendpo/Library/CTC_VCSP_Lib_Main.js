@@ -25,11 +25,11 @@ define([
     '../Library/CTC_VCSP_Constants'
 ], function (NS_Record, libWebService, PO, VCSP_Pref, VCSP_Global) {
     let LogTitle = 'VCSendPO';
-    function _updateNativePO(options) {
+    function _updateNativePO(option) {
         let logTitle = [LogTitle, '_updateNativePO'].join('::');
-        let response = options.response,
+        let response = option.response,
             orderStatus = response.orderStatus,
-            rec = options.purchOrder,
+            rec = option.purchOrder,
             isRecChanged = false;
 
         if (response) {
@@ -152,19 +152,19 @@ define([
         }
     }
 
-    function sendPO(options) {
+    function sendPO(option) {
         let logTitle = [LogTitle, 'sendPO'].join('::'),
-            recId = options.recId,
+            purchaseOrderId = option.purchaseOrderId,
             response,
-            rec = NS_Record.load({
+            record = NS_Record.load({
                 type: NS_Record.Type.PURCHASE_ORDER,
-                id: recId,
+                id: purchaseOrderId,
                 isDynamic: true
             });
-        if (rec) {
-            response = libWebService.process({ nativePO: rec });
+        if (record) {
+            response = libWebService.process({ transaction: record });
             log.audit(logTitle, '>> send PO response: ' + JSON.stringify(response));
-            _updateNativePO({ response: response, purchOrder: rec });
+            _updateNativePO({ response: response, purchOrder: record });
         }
         return response;
     }

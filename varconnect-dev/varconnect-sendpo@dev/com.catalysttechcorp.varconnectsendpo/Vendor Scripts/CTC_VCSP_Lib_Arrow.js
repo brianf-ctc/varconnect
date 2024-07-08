@@ -24,9 +24,9 @@ define([
     'N/runtime',
     'N/log',
     'N/https',
-    '../VO/CTC_VCSP_Response.js',
-    '../Library/CTC_VCSP_Lib_Log.js',
-    '../Library/CTC_VCSP_Constants.js'
+    '../VO/CTC_VCSP_Response',
+    '../Library/CTC_VCSP_Lib_Log',
+    '../Library/CTC_VCSP_Constants'
 ], function (search, record, runtime, log, https, response, vcLog, constants) {
     'use strict';
 
@@ -427,9 +427,6 @@ define([
     }
 
     return {
-        generateToken: generateToken,
-        processRequest: processRequest,
-        generateRequest: generateRequest,
         process: process
     };
 });

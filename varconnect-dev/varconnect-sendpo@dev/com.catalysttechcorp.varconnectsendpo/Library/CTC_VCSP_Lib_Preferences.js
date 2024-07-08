@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
@@ -19,9 +19,13 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Account Preferences
  *
  */
-define(['N/runtime'], function (runtime) {
+define(['N/runtime'], function (NS_Runtime) {
     return {
-        ENABLE_SUBSIDIARIES: runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
-        PICK_PACK_SHIP: runtime.isFeatureInEffect({ feature: 'pickpackship' })
+        isSubsidiariesEnabled: function() {
+            return NS_Runtime.isFeatureInEffect({ feature: 'subsidiaries' });
+        },
+        isPickPackShip: function() {
+            return NS_Runtime.isFeatureInEffect({ feature: 'pickpackship' });
+        }
     };
 });

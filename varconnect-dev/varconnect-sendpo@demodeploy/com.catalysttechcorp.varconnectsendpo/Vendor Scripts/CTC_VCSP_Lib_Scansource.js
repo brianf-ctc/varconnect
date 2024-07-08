@@ -27,50 +27,50 @@ define((require) => {
         let logTitle = [LogTitle, 'process'].join('::');
 
         //get object from parameter
-        let record = option.record || option.recPO;
+        let poObj = option.purchaseOrder;
 
         //set return response
         let sendPOResponse,
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
             };
 
         try {
             let objBody = generateBody(option);
             sendPOResponse = postData(objBody, option);
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: sendPOResponse.logId,
                 responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
                 responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
 
             returnResponse = processResponse({
-                record: record,
+                purchaseOrder: poObj,
                 responseBody: returnResponse.responseBody,
                 returnResponse: returnResponse
             });
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (sendPOResponse) {
@@ -91,33 +91,33 @@ define((require) => {
     };
 
     const generateBody = (option) => {
-        let record = option.record || option.recPO,
-            vendorConfig = option.recVendorConfig;
+        let poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
 
         let objBody = {};
         // objBody.PayerId = 'NA';
         objBody.BusinessUnit = Helper.getBusinessUnit(vendorConfig.businessUnit);
-        objBody.ReferenceNumber = record.id;
-        objBody.PONumber = record.tranId;
-        objBody.EndUserPO = record.custPO;
-        objBody.ManufacturerDropShip = record.isDropShip;
+        objBody.ReferenceNumber = poObj.id + '';
+        objBody.PONumber = poObj.tranId;
+        objBody.EndUserPO = poObj.custPO;
+        objBody.ManufacturerDropShip = poObj.isDropShip;
         // objBody.RequestedDeliveryDate = 'NA';
-        objBody.EnteredByEmailAddress = record.billEmail;
-        objBody.Memo = record.memo;
+        objBody.EnteredByEmailAddress = poObj.billEmail;
+        objBody.Memo = poObj.memo;
         objBody.ShippingInfo = {
             ShipMethodServiceLevelCode: getServiceLevelCode(option),
-            ShipComplete: record.shipComplete,
-            DeliveryPhoneNumber: record.shipPhone,
+            ShipComplete: poObj.shipComplete,
+            DeliveryPhoneNumber: poObj.shipPhone,
             ShippingAddress: (() => {
                 let objShippingAddress = {
-                    Name: record.shipAddressee || record.shipAttention,
-                    Attn: record.shipAttention,
-                    Street1: record.shipAddr1,
-                    Street2: record.shipAddr2,
-                    City: record.shipCity,
-                    State: record.shipState,
-                    PostalCode: record.shipZip,
-                    Country: record.shipCountry
+                    Name: poObj.shipAddressee || poObj.shipAttention,
+                    Attn: poObj.shipAttention,
+                    Street1: poObj.shipAddr1,
+                    Street2: poObj.shipAddr2,
+                    City: poObj.shipCity,
+                    State: poObj.shipState,
+                    PostalCode: poObj.shipZip,
+                    Country: poObj.shipCountry
                 };
                 return objShippingAddress;
             })()
@@ -128,10 +128,10 @@ define((require) => {
         // objBody.ExtendedData = 'NA';
         // objBody.VRD = 'NA';
         objBody.Lines = (() => {
-            let arrLines = record.items.map(function (item) {
+            let arrLines = poObj.items.map(function (item) {
                 let objLine = {};
                 // objLine.POLineNumber = 'NA';
-                objLine.ReferenceLineNumber = item.lineuniquekey;
+                objLine.ReferenceLineNumber = +item.lineuniquekey;
                 objLine.Quantity = item.quantity;
                 objLine.PartNumber = item.item;
                 objLine.Memo = item.memo;
@@ -139,9 +139,9 @@ define((require) => {
             });
             return arrLines;
         })();
-        let cleanUpJSON = function (options) {
-            let objConstructor = options.objConstructor || {}.constructor,
-                obj = options.obj;
+        let cleanUpJSON = function (option) {
+            let objConstructor = option.objConstructor || {}.constructor,
+                obj = option.obj;
             for (let key in obj) {
                 if (obj[key] === null || obj[key] === '' || obj[key] === undefined) {
                     delete obj[key];
@@ -158,8 +158,8 @@ define((require) => {
     };
 
     const postData = (objBody, option) => {
-        let record = option.record || option.recPO,
-            vendorConfig = option.recVendorConfig;
+        let poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
 
         let objHeaders = {
             'Ocp-Apim-Subscription-Key': vendorConfig.subscriptionKey,
@@ -187,7 +187,7 @@ define((require) => {
         let sendPOReq = CTC_Util.sendRequest({
             header: [LogTitle, 'postData'].join(' : '),
             method: 'post',
-            recordId: record.id,
+            recordId: poObj.id,
             query: {
                 body: JSON.stringify(objBody),
                 headers: objHeaders,
@@ -200,8 +200,8 @@ define((require) => {
     var bearerToken = null;
     const getToken = (option) => {
         if (!bearerToken) {
-            let record = option.nativePO || option.recPO,
-                vendorConfig = option.recVendorConfig;
+            let poObj = option.purchaseOrder,
+                vendorConfig = option.vendorConfig;
 
             let tokenReqQuery = {
                 body: {
@@ -224,7 +224,7 @@ define((require) => {
             let tokenResponse = CTC_Util.sendRequest({
                 header: [LogTitle, 'getToken'].join(' : '),
                 method: 'post',
-                recordId: record.id,
+                recordId: poObj.id,
                 query: tokenReqQuery
             });
 
@@ -267,16 +267,16 @@ define((require) => {
     };
 
     const getServiceLevelCode = (option) => {
-        let record = option.record || option.recPO,
-            vendorConfig = option.recVendorConfig;
+        let poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
 
         //set body
         let objBody = {};
         objBody.BusinessUnit = Helper.getBusinessUnit(vendorConfig.businessUnit);
-        objBody.ShipToPostalCode = record.shipZip;
-        objBody.ShipToCountryCode = record.shipCountry;
+        objBody.ShipToPostalCode = poObj.shipZip;
+        objBody.ShipToCountryCode = poObj.shipCountry;
         objBody.Lines = (() => {
-            let arrLines = record.items.map(function (item) {
+            let arrLines = poObj.items.map(function (item) {
                 let objLine = {};
                 objLine.ItemNumber = item.item;
                 objLine.Quantity = item.quantity;
@@ -312,7 +312,7 @@ define((require) => {
         let objResponse = CTC_Util.sendRequest({
             header: [LogTitle, 'getServiceLevelCode'].join(' : '),
             method: 'post',
-            recordId: record.id,
+            recordId: poObj.id,
             query: {
                 body: JSON.stringify(objBody),
                 headers: objHeaders,

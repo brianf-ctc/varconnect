@@ -794,7 +794,7 @@ define(function (require) {
                 scriptId: vc2_constant.SCRIPT.SERVICES_RL,
                 deploymentId: vc2_constant.DEPLOYMENT.SERVICES_RL,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestOption)
+                body: JSON.stringify(serviceQuery)
             };
 
             vc2_util.log('serviceRequest', 'request: ', requestOption);

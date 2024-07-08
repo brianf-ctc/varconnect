@@ -91,6 +91,7 @@ define(function (require) {
     }
 
     function getTokenCache(config) {
+
         var extraParams = vc2_util.extractValues({
             source: config,
             params: ['id', 'subsidiary', 'entry_function', 'partner_id']

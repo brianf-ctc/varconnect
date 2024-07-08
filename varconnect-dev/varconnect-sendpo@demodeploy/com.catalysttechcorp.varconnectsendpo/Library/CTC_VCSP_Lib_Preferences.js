@@ -21,10 +21,10 @@
  */
 define(['N/runtime'], function (NS_Runtime) {
     return {
-        isSubsidiariesEnabled: function () {
+        isSubsidiariesEnabled: function() {
             return NS_Runtime.isFeatureInEffect({ feature: 'subsidiaries' });
         },
-        isPickPackShip: function () {
+        isPickPackShip: function() {
             return NS_Runtime.isFeatureInEffect({ feature: 'pickpackship' });
         }
     };

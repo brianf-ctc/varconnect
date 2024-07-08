@@ -38,7 +38,8 @@ define([
             } else {
                 jQuery('#vcdebugcontent').hide().get(0).value = '';
             }
-        },
+
+        }, 
 
         updateDisplay: function (option) {
             var xmlViewer = jQuery('#custpage_xml_viewer_frame').contents();
@@ -93,7 +94,7 @@ define([
         // pageInit: function () {
         //     console.log('load page');
         // },
-
+        
         showResults: function (scriptContext) {
             Helper.resetDisplay();
 
@@ -143,7 +144,8 @@ define([
             } finally {
             }
 
-            return true;
+            return true
+
         }
     };
     //////////////////////////////////////////////////////////////////////////

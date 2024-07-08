@@ -185,6 +185,16 @@ define(function (require) {
                 FILEPOS: 'custrecord_ctc_vc_bill_file_position'
             }
         },
+        SENDPO_CONFIG: { ID: 'customrecord_ctc_vcsp_vendor_config' },
+        SENDPOVENDOR_CONFIG: {
+            ID: 'customrecord_ctc_vcsp_vendor_config',
+            FIELD: {
+                ID: 'internalid',
+                SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
+                XML_VENDOR: 'custrecord_ctc_vcsp_api_vendor',
+                VENDOR: 'custrecord_ctc_vcsp_vendor'
+            }
+        },
         VENDOR_ITEM_MAPPING: {
             ID: 'customrecord_ctc_vc_item_mapping',
             FIELD: {
@@ -227,7 +237,8 @@ define(function (require) {
 
     var BillCFG = VC2_CONSTANT.RECORD.BILLCREATE_CONFIG,
         VendorCFG = VC2_CONSTANT.RECORD.VENDOR_CONFIG,
-        MainCFG = VC2_CONSTANT.RECORD.MAIN_CONFIG;
+        MainCFG = VC2_CONSTANT.RECORD.MAIN_CONFIG,
+        SendPOVndCFG = VC2_CONSTANT.RECORD.SENDPOVENDOR_CONFIG;
 
     VC2_CONSTANT.MAPPING = {
         MAIN_CONFIG: {
@@ -323,6 +334,11 @@ define(function (require) {
             itemMPNColumnIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
             itemMPNFieldIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
             matchMPNWithPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
+        },
+        SENDPOVND_CONFIG: {
+            id: SendPOVndCFG.FIELD.ID,
+            vendor: SendPOVndCFG.FIELD.VENDOR,
+            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY
         }
     };
 
@@ -449,6 +465,11 @@ define(function (require) {
         },
 
         /// FULFILLMENT ///
+        MISSING_SALESORDER: {
+            message: 'Created from Sales Order record is missing',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+
         FULFILLMENT_NOT_ENABLED: {
             message: 'Item Fulfillment creation is not enabled',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
@@ -567,12 +588,19 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        MISSING_ITEMNO: {
+            code: 'MISSING_ITEMNO',
+            msg: 'Missing Item on Bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         UNMATCHED_ITEMS: {
             code: 'UNMATCHED_ITEMS',
             msg: 'Unmatched items on the bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -663,12 +691,13 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240419.01';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240626.01';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
+        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 
@@ -676,9 +705,18 @@ define(function (require) {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
         PRODUCT_CODE: 2,
         MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY.20240418',
+        KEY: 'LICENSE_KEY.20240626',
         CACHE_NAME: VC2_CONSTANT.CACHE_NAME, //'VC_LICENSE',
         CACHE_TTL: 86400 // 24 hrs
+    };
+
+    VC2_CONSTANT.FIELD_TO_SEARCH_COLUMN_MAP = {
+        TRANSACTION: {
+            vendorname: {
+                name: 'vendorcode',
+                join: 'item'
+            }
+        }
     };
 
     return VC2_CONSTANT;

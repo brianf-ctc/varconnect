@@ -271,7 +271,10 @@ define(function (require) {
             }
         }
 
-        arrData.push({ ordObj: objInvoiceData.ordObj });
+        arrData.push({
+            ordObj: objInvoiceData.ordObj,
+            xmlStr: JSON.stringify(objOrder)
+        });
     }
 
     function getToken(config) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  * @NScriptType UserEventScript
  */
@@ -18,73 +18,151 @@ define([
     'N/record',
     'N/ui/message',
     'N/redirect',
+    'N/url',
+    'N/ui/serverWidget',
     '../Library/CTC_Lib_EventRouter',
     '../Library/CTC_Lib_Utils',
+    '../Library/CTC_VCSP_Lib_Main',
     '../Library/CTC_VCSP_Lib_MainConfiguration',
     '../Library/CTC_VCSP_Lib_LicenseValidator',
     '../Library/CTC_VCSP_Lib_VendorConfig',
-    '../Library/CTC_VCSP_Lib_Main.js',
-    '../Library/CTC_VCSP_Constants.js'
+    '../Library/CTC_VCSP_Constants'
 ], function (
     NS_Runtime,
     NS_Search,
     NS_Record,
     NS_Msg,
     NS_Redirect,
+    NS_Url,
+    NS_ServerWidget,
     EventRouter,
     CTC_Util,
+    libMain,
     libMainConfig,
     libLicenseValidator,
     libVendorConfig,
-    libMain,
     VCSP_Global
 ) {
-    var LogTitle = 'VC:SENDPO';
+    let LogTitle = 'VC:SENDPO';
 
-    var Helper = {
-        hideFields: function (form, arrFields) {
-            if (!arrFields || !arrFields.length) return;
-            arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
+    let Helper = {
+        isEmpty: function (stValue) {
+            return (
+                stValue === '' ||
+                stValue == null ||
+                stValue == undefined ||
+                stValue == 'undefined' ||
+                stValue == 'null' ||
+                (util.isArray(stValue) && stValue.length == 0) ||
+                (util.isObject(stValue) &&
+                    (function (v) {
+                        for (let k in v) return false;
+                        return true;
+                    })(stValue))
+            );
+        },
+        inArray: function (stValue, arrValue) {
+            if (!stValue || !arrValue) return false;
+            let i = arrValue.length - 1;
+            for (; i >= 0; i--) {
+                if (stValue == arrValue[i]) {
+                    break;
+                }
+            }
+            return i > -1;
+        },
+        hideFields: function (option) {
+            let logTitle = [LogTitle, 'hideFields'].join(':'),
+                form = option.form,
+                sublistId = option.sublistId,
+                fieldIds = option.fieldIds;
+            if (!fieldIds || !fieldIds.length) return;
+            fieldIds = util.isArray(fieldIds) ? fieldIds : [fieldIds];
 
-            log.audit('displayAsInlineTextarea', arrFields);
+            log.audit(logTitle, 'Fields: ' + JSON.stringify({
+                sublistId: sublistId,
+                fieldIds: fieldIds
+            }));
 
-            arrFields.forEach(function (fieldId) {
-                var fldObj = form.getField({ id: fieldId });
-                fldObj.updateDisplayType({ displayType: 'hidden' });
+            if (sublistId) {
+                form = form.getSublist({ id: sublistId });
+            }
+            if (!form) {
+                return;
+            }
+
+            fieldIds.forEach(function (fieldId) {
+                let fldObj = form.getField({ id: fieldId });
+                if (fldObj) {
+                    try {
+                        fldObj.updateDisplayType({ displayType: NS_ServerWidget.FieldDisplayType.HIDDEN });
+                    } catch (hideErr) {
+                        log.debug(logTitle, [
+                            'Error hiding ', fieldId, ': ', hideErr.name, '- ', hideErr.message
+                        ].join(''));
+                    }
+                }
+            });
+        },
+        showFields: function (option) {
+            let logTitle = [LogTitle, 'showFields'].join(':'),
+                form = option.form,
+                sublistId = option.sublistId,
+                fieldIds = option.fieldIds;
+            if (!fieldIds || !fieldIds.length) return;
+            fieldIds = util.isArray(fieldIds) ? fieldIds : [fieldIds];
+
+            log.audit(logTitle, 'Fields: ' + JSON.stringify({
+                sublistId: sublistId,
+                fieldIds: fieldIds
+            }));
+
+            if (sublistId) {
+                form = form.getSublist({ id: sublistId });
+            }
+            if (!form) {
+                return;
+            }
+
+            fieldIds.forEach(function (fieldId) {
+                let fldObj = form.getField({ id: fieldId });
+                if (fldObj) {
+                    try {
+                        fldObj.updateDisplayType({ displayType: NS_ServerWidget.FieldDisplayType.NORMAL });
+                    } catch (displayErr) {
+                        log.debug(logTitle, [
+                            'Error displaying ', fieldId, ': ', displayErr.name, '- ', displayErr.message
+                        ].join(''));
+                    }
+                }
             });
         },
         displayAsInlineTextarea: function (form, arrFields) {
+            let logTitle = [LogTitle, 'displayAsInlineTextarea'].join(':');
             if (!arrFields || !arrFields.length) return;
             arrFields = util.isArray(arrFields) ? arrFields : [arrFields];
 
-            log.audit('displayAsInlineTextarea', arrFields);
+            log.audit(logTitle, arrFields);
 
             arrFields.forEach(function (fieldId) {
-                log.audit('displayAsInlineTextarea', fieldId);
+                log.audit(logTitle, 'Original field: ' + fieldId);
                 if (!fieldId) return true;
 
                 try {
-                    var fldOrig = form.getField({ id: fieldId });
-                    log.audit('displayAsInlineTextarea:orig', fldOrig);
+                    let fldOrig = form.getField({ id: fieldId });
+                    log.audit(logTitle, JSON.stringify(fldOrig));
 
                     if (!fldOrig || !fldOrig.defaultValue) return true;
 
-                    var fldNew = form.addField({
+                    let newFieldDetails = {
                         id: ['custpage', fieldId].join('_'),
                         label: fldOrig.label,
                         type: 'inlinehtml'
-                    });
-                    log.audit('displayAsInlineTextarea:new', fldNew);
+                    };
+                    let fldNew = form.addField(newFieldDetails);
+                    log.audit(logTitle, 'New field: ' + JSON.stringify(newFieldDetails));
 
-                    var strValue = fldOrig.defaultValue;
-
-                    //test for JSON
-                    try {
-                        var jsonObj = JSON.parse(strValue);
-                        strValue = JSON.stringify(jsonObj, null, '    ');
-                    } catch (err) {
-                        log.audit('json log test', CTC_Util.extractError(err));
-                    }
+                    let strValue = fldOrig.defaultValue;
 
                     fldNew.defaultValue = [
                         '<div class="uir-field-wrapper uir-long-text" data-field-type="textarea">',
@@ -102,51 +180,389 @@ define([
                     ].join('');
 
                     form.insertField({ field: fldNew, nextfield: fldOrig.id });
-                    fldOrig.updateDisplayType({ displayType: 'hidden' });
+                    fldOrig.updateDisplayType({ displayType: NS_ServerWidget.FieldDisplayType.HIDDEN });
                 } catch (error) {
-                    log.audit('displayAsInlineTextarea', error);
+                    log.audit(logTitle, error);
                     throw error;
                 }
                 return true;
             }); // end: arrFields.forEach
+        },
+    };
+    
+    let purchaseOrderValidation = {};
+    purchaseOrderValidation.setMemoAndHelper = function(option) {
+        let logTitle = [LogTitle, 'setMemoAndHelper'].join('::'),
+            scriptContext = option.scriptContext,
+            vendorCfg = option.vendorConfig;
+        log.debug(logTitle, 'Consolidating line memos to header...');
+        let lineMemos = [],
+            memoField = vendorCfg.memoField || 'memo';
+        for (let i = 0, lineCount = scriptContext.newRecord.getLineCount('item'); i < lineCount; i += 1) {
+            let lineMemo = scriptContext.newRecord.getSublistValue({
+                sublistId: 'item',
+                fieldId: VCSP_Global.Fields.Transaction.Item.MEMO,
+                line: i,
+            });
+            if (lineMemo && lineMemo.trim()) {
+                lineMemos.push([
+                    '@',
+                    (i + 1),
+                    ': ',
+                    lineMemo
+                ].join(''));
+            }
+        }
+        let consolidatedMemo = [
+            scriptContext.newRecord.getValue(memoField),
+            lineMemos.join('\n')
+        ].join('\n').trim();
+        scriptContext.newRecord.setValue(memoField, consolidatedMemo);
+        log.debug(logTitle, 'Adding "Repopulate memo" button...');
+        scriptContext.form.getSublist('item').addButton({
+            id : 'custpage_ctc_vcsp_remergememo',
+            label : 'Repopulate memo',
+            functionName:
+                    `( function(fieldId) {
+                        require(['N/currentRecord'], function(ns_currentRecord) {
+                            let currentRecord = ns_currentRecord.get(),
+                                memo = currentRecord.getValue('${memoField}'),
+                                memoField = currentRecord.getField('${memoField}');
+                            if (!memo || !memo.trim() || window.confirm('This will overwrite the contents of the ' + memoField.label + ' field. Proceed?')) {
+                                let lineMemos = [];
+                                for (let i = 0, lineCount = currentRecord.getLineCount('item'); i < lineCount; i += 1) {
+                                    let lineMemo = currentRecord.getSublistValue({
+                                        sublistId: 'item',
+                                        fieldId: fieldId,
+                                        line: i,
+                                    });
+                                    if (lineMemo && lineMemo.trim()) {
+                                        lineMemos.push([
+                                            '@',
+                                            (i + 1),
+                                            ': ',
+                                            lineMemo
+                                        ].join(''));
+                                    }
+                                }
+                                let consolidatedMemo = lineMemos.join('\\n').trim();
+                                currentRecord.setValue('${memoField}', consolidatedMemo);
+                            }
+                        });
+                    })('` + VCSP_Global.Fields.Transaction.Item.MEMO + `')`
+        });
+    };
+    purchaseOrderValidation.addPopupButton = function(option) {
+        let logTitle = [LogTitle, 'addPopupButton'].join('::'),
+            scriptContext = option.scriptContext,
+            vendorCfg = option.vendorConfig,
+            poid = option.poid;
+        if (scriptContext && scriptContext.form && vendorCfg && vendorCfg.addVendorDetailsEnabled) {
+            // check if vendor details is mapped
+            if (vendorCfg.additionalPOFields) {
+                let vendorDetailsPopupUrl = NS_Url.resolveScript({
+                    deploymentId: VCSP_Global.Scripts.Deployment.VENDOR_DETAILS_SL,
+                    scriptId:  VCSP_Global.Scripts.Script.VENDOR_DETAILS_SL,
+                    params: {
+                        vendorConfigId: vendorCfg.id,
+                        title: 'Additional Vendor Details',
+                        poid: poid,
+                    },
+                    returnExternalUrl: false
+                });
+                log.audit(logTitle, 'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl);
+                if (poid) {
+                    scriptContext.form.addButton({
+                        id: 'custpage_ctc_vcsp_setvenddetl',
+                        label: 'Add VC Vendor Details',
+                        functionName: '(function(url){window.location.href=url;})("' + vendorDetailsPopupUrl + '")'
+                    });
+                } else {
+                    scriptContext.form.addButton({
+                        id: 'custpage_ctc_vcsp_setvenddetl',
+                        label: 'Add VC Vendor Details',
+                        functionName:
+                            `(function(url) {
+                                url = url + '&lineCount=' + nlapiGetLineItemCount('item');
+                                window.open(url, 'vcspctcsendpopopup', 'popup=yes,width=1000,height=750,resizable=yes,scrollbar=yes');
+                            })("` + vendorDetailsPopupUrl + `")`
+                    });
+                }
+            } else {
+                let vendorDetailsPopupUrl = NS_Url.resolveScript({
+                    deploymentId: VCSP_Global.Scripts.Deployment.VENDOR_DETAILS_SL,
+                    scriptId:  VCSP_Global.Scripts.Script.VENDOR_DETAILS_SL,
+                    params: {
+                        title: 'Additional Vendor Details'
+                    },
+                    returnExternalUrl: false
+                });
+                log.audit(logTitle, 'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl);
+                scriptContext.form.addButton({
+                    id: 'custpage_ctc_vcsp_setvenddetl',
+                    label: 'Add VC Vendor Details',
+                    functionName:
+                        `(function(url) {
+                            let subsidiaryId = nlapiGetFieldValue('subsidiary'),
+                                vendorId = nlapiGetFieldValue('entity');
+                            if (subsidiaryId && vendorId) {
+                                url = url + '&subsidiaryId=' + subsidiaryId;
+                                url = url + '&vendorId=' + vendorId;
+                                url = url + '&lines=' + nlapiGetLineItemCount('item');
+                                window.open(url, 'vcspctcsendpopopup', 'popup=yes,width=1000,height=750,resizable=yes,scrollbar=yes');
+                            } else {
+                                window.alert('Please choose a vendor');
+                            }
+                        })("` + vendorDetailsPopupUrl + `")`
+                });
+            }
+        }
+    };
+    purchaseOrderValidation.limitPOLineColumns = function(option) {
+        let logTitle = [LogTitle, 'limitPOLineColumns'].join('::'),
+            poLineSublistId = [ 'recmach', VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER ].join(''),
+            scriptContext = option.scriptContext,
+            vendorCfg = option.vendorConfig,
+            eventType = option.eventType;
+        log.debug(logTitle, 'Event type= ' + eventType);
+        if (scriptContext.form) {
+            let poLineColumnsToDisplay = [],
+                poLineColumnsToDisplayStr = vendorCfg.poLineColumns,
+                poLineColumnsToIgnore = [
+                    'internalid'
+                ];
+            if (poLineColumnsToDisplayStr && poLineColumnsToDisplayStr.length) {
+                poLineColumnsToDisplay = poLineColumnsToDisplayStr.split(/[\s,]+/) || [];
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG );
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG );
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.JSON_DATA );
+            }
+            let poLineColumnsToHide = [];
+            for (let fieldName in VCSP_Global.Fields.VarConnectPOLine) {
+                let fieldId = VCSP_Global.Fields.VarConnectPOLine[fieldName];
+                if (poLineColumnsToDisplay.indexOf(fieldId) == -1 && poLineColumnsToIgnore.indexOf(fieldId) == -1) {
+                    poLineColumnsToHide.push(fieldId);
+                }
+            }
+            log.debug(logTitle, 'Hiding fields: ' + poLineColumnsToHide.join(', '));
+            Helper.hideFields({
+                form: scriptContext.form,
+                sublistId: poLineSublistId,
+                fieldIds: poLineColumnsToHide,
+            });
+            log.debug(logTitle, 'Showing fields: ' + poLineColumnsToDisplay.join(', '));
+            Helper.showFields({
+                form: scriptContext.form,
+                sublistId: poLineSublistId,
+                fieldIds: poLineColumnsToDisplay,
+            });
+        }
+    };
+    purchaseOrderValidation.getPoLineValues = function(option) {
+        let logTitle = [LogTitle, 'getPoLineValues'].join('::'),
+            purchaseOrderId = option.poid || option,
+            poLineColumns = option.columns,
+            returnValue = null;
+        if (purchaseOrderId) {
+            if (poLineColumns) {
+                poLineColumns = JSON.parse(JSON.stringify(poLineColumns));
+            } else {
+                poLineColumns = [];
+                for (let fieldName in VCSP_Global.Fields.VarConnectPOLine) {
+                    poLineColumns.push( VCSP_Global.Fields.VarConnectPOLine[fieldName] );
+                }
+            }
+            poLineColumns.splice(0, 0, NS_Search.createColumn({
+                name: 'internalid',
+                sort: NS_Search.Sort.ASC,
+            }));
+            let poLineSearch = NS_Search.create({
+                type: VCSP_Global.Records.VC_POLINE,
+                filters: [
+                    [ VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER, NS_Search.Operator.ANYOF, purchaseOrderId ],
+                    'and',
+                    [ 'isinactive', NS_Search.Operator.IS, 'F' ]
+                ],
+                columns: poLineColumns
+            });
+            returnValue = CTC_Util.searchAllPaged({
+                searchObj: poLineSearch,
+            });
+        }
+        log.debug(logTitle, JSON.stringify(returnValue));
+        return returnValue;
+    };
+    purchaseOrderValidation.replacePOLineSublist = function(option) {
+        let logTitle = [LogTitle, 'replacePOLineSublist'].join('::'),
+            scriptContext = option.scriptContext,
+            form = scriptContext.form,
+            vendorCfg = option.vendorConfig,
+            eventType = option.eventType,
+            poid = option.poid;
+        log.debug(logTitle, 'Event type= ' + eventType);
+        if (scriptContext.form) {
+            let poLineColumnsToDisplayStr = vendorCfg.poLineColumns;
+            let poLineColumnsToDisplay = [];
+            if (poLineColumnsToDisplayStr && poLineColumnsToDisplayStr.length) {
+                poLineColumnsToDisplay = poLineColumnsToDisplayStr.split(/[\s,]+/);
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG );
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG );
+            }
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1) {
+                poLineColumnsToDisplay.push( VCSP_Global.Fields.VarConnectPOLine.JSON_DATA );
+            }
+            log.debug(logTitle, 'Showing fields: ' + poLineColumnsToDisplay.join(', '));
+            let poLineList = purchaseOrderValidation.getPoLineValues({
+                poid: poid,
+                columns: poLineColumnsToDisplay,
+            });
+            if (poLineList.length) {
+                let sublistId = [ 'recmach', VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER ].join('');
+                let sublist = form.getSublist({
+                    id: sublistId,
+                });
+                let viewSublistId = 'custpage_ctc_vcsp_poline';
+                let viewSublist = form.addSublist({
+                    id: viewSublistId,
+                    label: 'VAR Connect PO Line',
+                    type: NS_ServerWidget.SublistType.INLINEEDITOR,
+                    tab: 'VAR CONNECT'
+                });
+                form.insertSublist({
+                    sublist: viewSublist,
+                    nextsublist: sublistId
+                });
+                let samplePOLineId = poLineList[0].id;
+                log.debug(logTitle, 'Sample PO Line: ' + samplePOLineId);
+                let samplePOLine = NS_Record.load({
+                    type : VCSP_Global.Records.VC_POLINE,
+                    id : samplePOLineId
+                });
+                poLineColumnsToDisplay.forEach(fieldId => {
+                    let fieldObj = samplePOLine.getField({
+                        fieldId: fieldId
+                    });
+                    log.debug(logTitle, 'Adding fields: ' + JSON.stringify(fieldObj));
+                    switch(fieldId) {
+                        case 'id':
+                            viewSublist.addField({
+                                id: fieldId,
+                                label: fieldObj.label,
+                                type: NS_ServerWidget.FieldType.SELECT,
+                                source: VCSP_Global.Records.VC_POLINE,
+                            });
+                            break;
+                        case VCSP_Global.Fields.VarConnectPOLine.JSON_DATA:
+                            viewSublist.addField({
+                                id: fieldId,
+                                label: 'Full Details',
+                                type: NS_ServerWidget.FieldType.TEXTAREA,
+                            });
+                            break;
+                        case VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG:
+                        case VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG:
+                            viewSublist.addField({
+                                id: fieldId,
+                                label: fieldObj.label,
+                                type: NS_ServerWidget.FieldType.SELECT,
+                                source: VCSP_Global.Records.VC_LOG
+                            });
+                            break;
+                        default:
+                            viewSublist.addField({
+                                id: fieldId,
+                                label: fieldObj.label,
+                                type: NS_ServerWidget.FieldType.TEXT,
+                            });
+                            break;
+                    }
+                    for (let i = 0, len = poLineList.length; i < len; i += 1) {
+                        let poLineRow = poLineList[i],
+                            value = null;
+                        switch(fieldId) {
+                            case VCSP_Global.Fields.VarConnectPOLine.JSON_DATA:
+                                value = poLineRow.getText(fieldId) || poLineRow.getValue(fieldId);
+                                // if (value) {
+                                //     let newValue = '<span class="uir-field-truncated-value" data-ns-tooltip="' + value + '">Details</span>';
+                                //     log.debug(logTitle, 'More details=' + newValue);
+                                //     value = newValue;
+                                // }
+                                break;
+                            default:
+                                value = poLineRow.getText(fieldId) || poLineRow.getValue(fieldId);
+                                break;
+                        }
+                        if (!CTC_Util.isEmpty(value)) {
+                            viewSublist.setSublistValue({
+                                id: fieldId,
+                                line: i,
+                                value: value,
+                            });
+                        }
+                    }
+                });
+                if (sublist) {
+                    log.debug(logTitle, 'Removing sublist ' + sublistId);
+                    sublist.displayType = NS_ServerWidget.SublistDisplayType.HIDDEN;
+                }
+            }
+        }
+    };
+    purchaseOrderValidation.initVendorDetails = function(option) {
+        let logTitle = [LogTitle, 'initVendorDetails'].join('::'),
+            scriptContext = option.scriptContext || option,
+            newRecord = scriptContext.newRecord;
+        log.debug(logTitle, 'Setting vendor details...');
+        let vendorDetailValuesStr = newRecord.getValue(VCSP_Global.Fields.Transaction.VENDOR_DETAILS),
+            vendorDetailValues = vendorDetailValuesStr ? CTC_Util.safeParse(vendorDetailValuesStr) : {},
+            actualVendorDetailValues = null;
+        for (let i = 0, len = newRecord.getLineCount('item'); i < len; i += 1) {
+            let orderLine = newRecord.getSublistValue({
+                sublistId: 'item',
+                fieldId: 'orderline',
+                line: i,
+            });
+            actualVendorDetailValues = vendorDetailValues[orderLine];
+            if (actualVendorDetailValues) {
+                newRecord.setValue({
+                    fieldId: VCSP_Global.Fields.Transaction.VENDOR_DETAILS,
+                    value: JSON.stringify(actualVendorDetailValues),
+                });
+                break;
+            }
+        }
+        if (!actualVendorDetailValues) {
+            log.debug(logTitle, 'No vendor details found...');
         }
     };
 
-    //Checks if catalyst license is valid
-    function _validateLicense(options) {
-        var logTitle = [LogTitle, '_validateLicense'].join('::');
-
-        var mainConfig = options.mainConfig,
-            license = mainConfig.license,
-            result = true,
-            response = libLicenseValidator.callValidationSuitelet({
-                license: license,
-                external: true
-            });
-
-        // log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
-        // log.audit(logTitle, '>> license: ' + JSON.stringify(license));
-        // log.audit(logTitle, '>> response: ' + JSON.stringify(response));
-
-        // if (response == 'valid') result = true;
-
-        return result;
-    }
-
-    EventRouter.Action[NS_Record.Type.PURCHASE_ORDER] = {
+    EventRouter.Action['purchaseorder'] = {
         onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            let logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
                 if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
 
+                let mainConfig,
+                    vendorCfg,
+                    popupWindowParams = {};
                 switch (Current.eventType) {
                     case scriptContext.UserEventType.VIEW:
                         /////////////////////////////////
-                        var sessionObj = NS_Runtime.getCurrentSession();
-                        var sessionData = {
+                        let sessionObj = NS_Runtime.getCurrentSession();
+                        let sessionData = {
                                 result: sessionObj.get({ name: 'sendpo-success' }),
                                 error: sessionObj.get({ name: 'sendpo-error' })
                             },
@@ -165,10 +581,9 @@ define([
                             sessionObj.set({ name: 'sendpo-error', value: null });
                             msgOption = {
                                 message:
-                                    // '<br/>Error encountered:  ' +
                                     sessionData.error +
                                     '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
-                                title: 'Send PO Unsuccessful',
+                                title: 'Send PO Failed',
                                 type: NS_Msg.Type.ERROR
                             };
                         }
@@ -177,14 +592,15 @@ define([
                         }
                         /////////////////////////////////
 
-                        var recordData = {};
+                        let recordData = {};
                         if (scriptContext.newRecord) {
                             recordData.type = scriptContext.newRecord.type;
                             recordData.id = scriptContext.newRecord.id;
+                            popupWindowParams.poid = recordData.id;
                         }
                         log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
 
-                        var lookupData = CTC_Util.flatLookup({
+                        let lookupData = CTC_Util.flatLookup({
                             type: recordData.type,
                             id: recordData.id,
                             columns: [
@@ -197,46 +613,57 @@ define([
                         log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
 
                         // check for main config
-                        var mainConfig = libMainConfig.getMainConfiguration();
+                        mainConfig = libMainConfig.getMainConfiguration();
                         log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
-                        if (!mainConfig) return;
+                        if (mainConfig) {
+                            vendorCfg = libVendorConfig.getVendorConfiguration({
+                                vendor: lookupData.entity.value,
+                                subsidiary: lookupData.subsidiary.value
+                            });
+                            log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
+                            if (vendorCfg) {
+                                popupWindowParams.scriptContext = scriptContext;
+                                popupWindowParams.vendorConfig = vendorCfg;
 
-                        // check for valid license
-                        if (!_validateLicense({ mainConfig: mainConfig })) return;
-
-                        var vendorCfg = libVendorConfig.getVendorConfiguration({
-                            vendor: lookupData.entity.value,
-                            subsidiary: lookupData.subsidiary.value
-                        });
-                        log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
-                        if (!vendorCfg) return;
-
-                        if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.MANUAL) {
-                            scriptContext.form.addButton({
-                                id: 'custpage_ctc_vcsp_sendpo',
-                                label: 'Send PO to Vendor',
-                                functionName:
-                                    '(function(url){window.location.href=url;})("' +
-                                    EventRouter.addActionURL('sendPO') +
-                                    '")'
-                            }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
-                        } else {
-                            if (lookupData[VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP]) {
-                                scriptContext.form.addButton({
-                                    id: 'custpage_ctc_vcsp_sendpo',
-                                    label: 'Manually Send PO to Vendor',
-                                    functionName:
-                                        '(function(url){window.location.href=url;})("' +
-                                        EventRouter.addActionURL('sendPO') +
-                                        '")'
-                                }).isDisabled =
-                                    !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.MANUAL) {
+                                    scriptContext.form.addButton({
+                                        id: 'custpage_ctc_vcsp_sendpo',
+                                        label: 'Send PO to Vendor',
+                                        functionName:
+                                            '(function(url){window.location.href=url;})("' +
+                                            EventRouter.addActionURL('sendPO') +
+                                            '")'
+                                    }).isDisabled = !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                } else {
+                                    if (lookupData[VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP]) {
+                                        scriptContext.form.addButton({
+                                            id: 'custpage_ctc_vcsp_sendpo',
+                                            label: 'Manually Send PO to Vendor',
+                                            functionName:
+                                                '(function(url){window.location.href=url;})("' +
+                                                EventRouter.addActionURL('sendPO') +
+                                                '")'
+                                        }).isDisabled =
+                                            !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                    }
+                                }
+                                Helper.displayAsInlineTextarea(scriptContext.form, [
+                                    VCSP_Global.Fields.Transaction.VENDOR_RECEIPT,
+                                    VCSP_Global.Fields.Transaction.VENDOR_DETAILS
+                                ]);
+                                purchaseOrderValidation.replacePOLineSublist({
+                                    vendorConfig: vendorCfg,
+                                    scriptContext: scriptContext,
+                                    eventType: Current.eventType,
+                                    poid: scriptContext.newRecord.id,
+                                });
                             }
                         }
                         break;
                     case scriptContext.UserEventType.CREATE:
+                        purchaseOrderValidation.initVendorDetails(scriptContext);
                     case scriptContext.UserEventType.COPY:
-                        var fieldIdsToBlankOut = [
+                        let fieldIdsToBlankOut = [
                             VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER,
                             VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP,
                             VCSP_Global.Fields.Transaction.VENDOR_RECEIPT
@@ -255,38 +682,61 @@ define([
                             value: false,
                             ignoreFieldChange: true
                         });
+                    case scriptContext.UserEventType.EDIT:
+                        // check for main config
+                        mainConfig = libMainConfig.getMainConfiguration();
+                        log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+                        if (mainConfig) {
+                            let vendorConfigParams = {
+                                vendor: scriptContext.newRecord.getValue('entity'),
+                                subsidiary: scriptContext.newRecord.getValue('subsidiary'),
+                            };
+                            if (vendorConfigParams.vendor && vendorConfigParams.subsidiary) {
+                                vendorCfg = libVendorConfig.getVendorConfiguration(vendorConfigParams);
+                            }
+                            purchaseOrderValidation.setMemoAndHelper({
+                                vendorConfig: vendorCfg,
+                                scriptContext: scriptContext,
+                            });
+                            log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
+                            popupWindowParams.scriptContext = scriptContext;
+                            if (vendorCfg) {
+                                popupWindowParams.vendorConfig = vendorCfg;
+                                purchaseOrderValidation.limitPOLineColumns({
+                                    vendorConfig: vendorCfg,
+                                    scriptContext: scriptContext,
+                                    eventType: Current.eventType,
+                                });
+                            }
+                        }
                         break;
                     default:
                         break;
                 }
-
-                if (Current.eventType == scriptContext.UserEventType.VIEW) {
-                    Helper.displayAsInlineTextarea(scriptContext.form, [
-                        'custbody_ctc_vcsp_vendor_rcpt'
-                    ]);
-                }
+                purchaseOrderValidation.addPopupButton(popupWindowParams);
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: error.name, message: error.message}));
                 return;
             }
         },
         onAfterSubmit: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+            let logTitle = [LogTitle, 'onAfterSubmit'].join('::');
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
 
-                var recordData = {};
+                let recordData = {};
                 if (scriptContext.newRecord) {
                     recordData.type = scriptContext.newRecord.type;
                     recordData.id = scriptContext.newRecord.id;
                 }
                 log.audit(logTitle, '>> Record Data: ' + JSON.stringify(recordData));
 
-                var createdFromRecTypeCol = {
+                if (Current.eventType == scriptContext.UserEventType.DELETE) return;
+                let createdFromRecTypeCol = {
                     name: 'recordtype',
                     join: 'createdFrom'
                 };
-                var searchResults = CTC_Util.searchAllPaged({
+                let searchResults = CTC_Util.searchAllPaged({
                     type: NS_Search.Type.TRANSACTION,
                     filterExpression: [
                         ['recordtype', NS_Search.Operator.IS, NS_Search.Type.PURCHASE_ORDER],
@@ -302,43 +752,37 @@ define([
                         VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP
                     ]
                 });
-                var lookupData = searchResults[0];
+                let lookupData = searchResults[0];
                 log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
 
                 // check for main config
-                var mainConfig = libMainConfig.getMainConfiguration();
+                let mainConfig = libMainConfig.getMainConfiguration();
                 log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
                 if (!mainConfig) return;
 
-                // check for valid license
-                if (!_validateLicense({ mainConfig: mainConfig })) return;
-
-                var vendorCfg = libVendorConfig.getVendorConfiguration({
+                let vendorCfg = libVendorConfig.getVendorConfiguration({
                     vendor: lookupData.getValue('entity'),
                     subsidiary: lookupData.getValue('subsidiary')
                 });
                 log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                 if (!vendorCfg) return;
 
-                // TODO: please test, currently untested
-                var isPendingSendOnCreate;
-                if (vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE) {
-                    var createEventTypes = [
+                let isPendingSendOnCreate = vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE,
+                    isPendingSendOnApprove = vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE;
+                if (isPendingSendOnCreate) {
+                    let createEventTypes = [
                         scriptContext.UserEventType.CREATE,
                         scriptContext.UserEventType.COPY
                     ];
                     isPendingSendOnCreate = createEventTypes.indexOf(Current.eventType) >= 0;
                 }
-                if (
-                    isPendingSendOnCreate ||
-                    vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE
-                ) {
-                    var isToBeSent = !lookupData.getValue(
+                if (isPendingSendOnCreate || isPendingSendOnApprove) {
+                    let isToBeSent = !lookupData.getValue(
                         VCSP_Global.Fields.Transaction.IS_PO_SENT
                     );
-                    var isCreatedFromSalesOrder =
+                    let isCreatedFromSalesOrder =
                         lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
-                    var isApproved = lookupData.getValue('approvalstatus') >= 2;
+                    let isApproved = lookupData.getValue('approvalstatus') >= 2;
                     log.debug(
                         logTitle,
                         JSON.stringify({
@@ -351,8 +795,7 @@ define([
                     if (
                         isToBeSent &&
                         isCreatedFromSalesOrder &&
-                        (isPendingSendOnCreate ||
-                            (isPendingSendOnCreate === undefined && isApproved))
+                        (isPendingSendOnCreate || (isPendingSendOnApprove && isApproved))
                     ) {
                         NS_Redirect.toRecord({
                             type: Current.recordType,
@@ -364,7 +807,74 @@ define([
                     }
                 }
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: error.name, message: error.message}));
+                return;
+            }
+        }
+    };
+
+    let salesOrderValidation = {};
+    salesOrderValidation.addPopupSublistButton = function(option) {
+        let logTitle = [LogTitle, 'addPopupSublistButton'].join('::'),
+            scriptContext = option.scriptContext;
+        if (scriptContext && scriptContext.form) {
+            let vendorDetailsPopupUrl = NS_Url.resolveScript({
+                deploymentId: VCSP_Global.Scripts.Deployment.VENDOR_DETAILS_SL,
+                scriptId:  VCSP_Global.Scripts.Script.VENDOR_DETAILS_SL,
+                params: {
+                    prompt: 'Choose line and vendor',
+                    title: 'Additional Vendor Details'
+                },
+                returnExternalUrl: false
+            });
+            log.audit(logTitle, 'Additional vendor details pop-up prompt url : ' + vendorDetailsPopupUrl);
+            scriptContext.form.getSublist({ id: 'item' }).addButton({
+                id: 'custpage_ctc_vcsp_setvenddetl',
+                label: 'Add VC Vendor Details',
+                functionName:
+                    `(function(url) {
+                        let subsidiaryId = nlapiGetFieldValue('subsidiary');
+                        if (subsidiaryId) {
+                            let lines = [];
+                            for (let i = 1, len = nlapiGetLineItemCount('item'); i <= len; i += 1) {
+                                lines.push(nlapiGetLineItemText('item', 'item', i));
+                            }
+                            url = url + '&subsidiaryId=' + subsidiaryId;
+                            url = url + '&lines=' + encodeURIComponent(JSON.stringify(lines));
+                            window.open(url, 'vcspctcsendpopopup', 'popup=yes,width=1000,height=750,resizable=yes,scrollbar=yes');
+                        } else {
+                            window.alert('Please choose a customer');
+                        }
+                    })("` + vendorDetailsPopupUrl + `")`
+            });
+        }
+    };
+
+    EventRouter.Action['salesorder'] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            let logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            try {
+                log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
+
+                if (Current.execType !== NS_Runtime.ContextType.USER_INTERFACE) return;
+
+                let popupWindowParams = {};
+                switch (Current.eventType) {
+                    case scriptContext.UserEventType.CREATE:
+                    case scriptContext.UserEventType.EDIT:
+                        // check for main config
+                        let mainConfig = libMainConfig.getMainConfiguration();
+                        log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
+                        if (mainConfig) {
+                            popupWindowParams.scriptContext = scriptContext;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                salesOrderValidation.addPopupSublistButton(popupWindowParams);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: error.name, message: error.message}));
                 return;
             }
         }
@@ -372,23 +882,36 @@ define([
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         sendPO: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'action.sendPO'].join('::');
-            var sessObj = NS_Runtime.getCurrentSession();
-            var response;
+            let logTitle = [LogTitle, 'action.sendPO'].join('::');
+            let sessObj = NS_Runtime.getCurrentSession();
+            let response;
 
             try {
                 response = libMain.sendPO({ recId: Current.recordId });
                 log.audit(logTitle, response);
 
-                if (response.isError) throw response.message;
-
                 // add the session
-                sessObj.set({
-                    name: 'sendpo-success',
-                    value: 'PO has been successfully sent to the vendor'
-                });
+                if (response.isError) {
+                    let errorMsg = response.error ? response.error.message : response.errorMsg;
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify({
+                        name: response.error ? response.error.type : response.errorName || 'UNEXPECTED_VC_ERROR',
+                        message: [
+                            '(id=', response.error ? response.error.id : response.errorId || Current.recordId,
+                            ') ', errorMsg
+                        ].join('')
+                    }));
+                    sessObj.set({
+                        name: 'sendpo-error',
+                        value: errorMsg ? errorMsg.replace('\n', '<br />') : 'Unexpected error.'
+                    });
+                } else {
+                    sessObj.set({
+                        name: 'sendpo-success',
+                        value: 'PO has been successfully sent to the vendor.'
+                    });
+                }
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: error.name, message: error.message}));
 
                 sessObj.set({
                     name: 'sendpo-error',
@@ -401,7 +924,7 @@ define([
     };
     EventRouter.Action[VCSP_Global.Records.VENDOR_CONFIG] = {
         onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            let logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
             try {
                 log.audit(logTitle, '>> Current: ' + JSON.stringify(Current));
@@ -409,10 +932,12 @@ define([
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
 
                 Helper.displayAsInlineTextarea(scriptContext.form, [
-                    'custrecord_ctc_vcsp_fieldmapping'
+                    VCSP_Global.Fields.VendorConfig.FIELD_MAP,
+                    VCSP_Global.Fields.VendorConfig.ADDITIONAL_PO_FIELDS,
+                    VCSP_Global.Fields.VendorConfig.PO_LINE_COLUMNS
                 ]);
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: error.name, message: error.message}));
                 return;
             }
         }
@@ -426,20 +951,49 @@ define([
                 scriptContext.newRecord.type,
                 scriptContext.newRecord.id
             ].join('::');
-            var logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
+            let logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
                 returnValue = null;
             EventRouter.initialize(scriptContext);
             log.audit(logTitle, EventRouter.Type);
             try {
+                // check for valid license
+                if (!libLicenseValidator.isLicenseValid()) {
+                    log.audit(logTitle, 'Inactive license key.');
+                    return;
+                }
                 EventRouter.execute(EventRouter.Type.CUSTOM);
                 EventRouter.execute(EventRouter.Type.BEFORE_LOAD);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+            } catch (beforeLoadError) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: beforeLoadError.name, message: beforeLoadError.message}));
                 returnValue = false;
-                throw error;
+                throw beforeLoadError;
             }
             return returnValue;
         },
+        // beforeSubmit: function (scriptContext) {
+        //     LogTitle = [
+        //         LogTitle,
+        //         scriptContext.type,
+        //         scriptContext.newRecord.type,
+        //         scriptContext.newRecord.id
+        //     ].join('::');
+        //     let logTitle = [LogTitle || '', 'onBeforeSubmit'].join('::'),
+        //         returnValue = null;
+        //     EventRouter.initialize(scriptContext);
+        //     try {
+        //         // check for valid license
+        //         if (!libLicenseValidator.isLicenseValid()) {
+        //             log.audit(logTitle, 'Inactive license key.');
+        //             return;
+        //         }
+        //         returnValue = EventRouter.execute(EventRouter.Type.BEFORE_SUBMIT);
+        //     } catch (beforeSubmitError) {
+        //         log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: beforeSubmitError.name, message: beforeSubmitError.message}));
+        //         returnValue = false;
+        //         throw beforeSubmitError;
+        //     }
+        //     return returnValue;
+        // },
         afterSubmit: function (scriptContext) {
             LogTitle = [
                 LogTitle,
@@ -447,13 +1001,18 @@ define([
                 scriptContext.newRecord.type,
                 scriptContext.newRecord.id
             ].join('::');
-            var logTitle = [LogTitle || '', 'onAfterSubmit'].join('::'),
+            let logTitle = [LogTitle || '', 'onAfterSubmit'].join('::'),
                 returnValue = null;
             EventRouter.initialize(scriptContext);
             try {
+                // check for valid license
+                if (!libLicenseValidator.isLicenseValid()) {
+                    log.audit(logTitle, 'Inactive license key.');
+                    return;
+                }
                 returnValue = EventRouter.execute(EventRouter.Type.AFTER_SUBMIT);
             } catch (afterSubmitError) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(afterSubmitError));
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({name: afterSubmitError.name, message: afterSubmitError.message}));
                 returnValue = false;
                 throw afterSubmitError;
             }

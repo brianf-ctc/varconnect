@@ -19,13 +19,13 @@ define(function (require) {
         vc2_util = require('./CTC_VC2_Lib_Utils'),
         vcs_configLib = require('./Services/ctc_svclib_configlib');
 
-    var LogTitle = 'VC_RecordLib';
+    var LogTitle = 'VC2_RecordLib';
 
     var Current = {};
 
     var LineColField = vc2_constant.FIELD.TRANSACTION;
 
-    var VC_RecordLib = {
+    var VC2_RecordLib = {
         transform: function (option) {
             var logTitle = [LogTitle, 'transform'].join('::'),
                 returnValue;
@@ -171,35 +171,13 @@ define(function (require) {
                 mpnField =
                     Current.OrderCFG.itemMPNFieldIdToMatch || Current.MainCFG.itemMPNFieldIdToMatch;
 
-                // //Current.OrderCFG.itemColumnIdToMatch >Current.OrderCFG.itemFieldIdToMatch >Current.MainCFG.itemColumnIdToMatch >Current.MainCFG.itemFieldIdToMatch
-                // if (Current.OrderCFG && !OrderCFG.itemColumnIdToMatch) {
-                //     itemField =Current.OrderCFG.itemFieldIdToMatch;
-                // }
-                // if (
-                //     !itemField &&
-                //     (!OrderCFG || !OrderCFG.itemColumnIdToMatch) &&
-                //    Current.MainCFG &&
-                //     !MainCFG.itemColumnIdToMatch
-                // ) {
-                //     itemField =Current.MainCFG.itemFieldIdToMatch;
-                // }
-                // //Current.OrderCFG.itemMPNColumnIdToMatch >Current.OrderCFG.itemMPNFieldIdToMatch >Current.MainCFG.itemMPNColumnIdToMatch >Current.MainCFG.itemMPNFieldIdToMatch
-                // if (Current.OrderCFG && !OrderCFG.itemMPNColumnIdToMatch) {
-                //     mpnField =Current.OrderCFG.itemMPNFieldIdToMatch;
-                // }
-                // if (
-                //     !mpnField &&
-                //     (!OrderCFG || !OrderCFG.itemMPNColumnIdToMatch) &&
-                //    Current.MainCFG &&
-                //     !MainCFG.itemMPNColumnIdToMatch
-                // ) {
-                //     mpnField =Current.MainCFG.itemMPNFieldIdToMatch;
-                // }
-
                 // exit if both are empty
                 if (!itemField && !mpnField) return false;
 
-                vc2_util.log(logTitle, '## Lookup alt name/mpn: ', [itemField, mpnField]);
+                vc2_util.log(logTitle, '## Lookup alt name/mpn: ', {
+                    itemName: itemField,
+                    mpn: mpnField
+                });
 
                 var searchOption = {
                     type: ns_search.Type.ITEM,
@@ -235,40 +213,10 @@ define(function (require) {
                 vc2_util.log(logTitle, '/// Alt item names: ', altItemNames);
                 returnValue = altItemNames;
 
-                // if (searchResults && searchResults.length) {
-                //     var altItemNames = {
-                //         _sku: false,
-                //         _mpn: false
-                //     };
-                //     searchResults.forEach(function (result) {
-                //         var altItemName = null,
-                //             mpnValue = null;
-                //         if (itemField) {
-                //             altItemName = result.getValue({ name: itemField });
-                //             altItemNames._sku = true;
-                //         }
-                //         if (mpnField) {
-                //             mpnValue = result.getValue({ name: mpnField });
-                //             altItemNames._mpn = true;
-                //         }
-                //         var itemId = result.id;
-                //         altItemNames[itemId] = {
-                //             partNumber: altItemName,
-                //             mpn: mpnValue
-                //         };
-                //         return true;
-                //     });
-                //     returnValue = altItemNames;
-                // }
                 vc2_util.log(logTitle, 'Alt item names=', returnValue);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = false;
-
-                // throw ns_error.create({
-                //     name: 'Unable to extract alternative item names',
-                //     message: vc2_util.extractError(error)
-                // });
             }
             return returnValue;
         },
@@ -388,7 +336,7 @@ define(function (require) {
                     uniqueItemIds = [],
                     arrRecordLines = [];
                 for (var line = 0; line < lineCount; line++) {
-                    var lineData = VC_RecordLib.extractLineValues({
+                    var lineData = VC2_RecordLib.extractLineValues({
                         record: record,
                         sublistId: sublistId,
                         line: line,
@@ -431,11 +379,13 @@ define(function (require) {
                             ? arrRecordLines
                             : arrRecordLines.shift()
                         : false;
-                var altItemNames = VC_RecordLib.extractAlternativeItemName({ item: uniqueItemIds });
+                var altItemNames = VC2_RecordLib.extractAlternativeItemName({
+                    item: uniqueItemIds
+                });
 
                 returnValue.forEach(function (lineData) {
                     if (lineData && lineData.item) {
-                        lineData = VC_RecordLib.getAltPartNumValues({
+                        lineData = VC2_RecordLib.getAltPartNumValues({
                             source: altItemNames,
                             target: lineData
                         });
@@ -448,7 +398,7 @@ define(function (require) {
                         0,
                         GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                     );
-                    returnValue = VC_RecordLib.extractVendorItemNames({
+                    returnValue = VC2_RecordLib.extractVendorItemNames({
                         lines: returnValue
                     });
                 }
@@ -588,6 +538,9 @@ define(function (require) {
                     orderLines = option.orderLines,
                     record = option.record;
 
+                vc2_util.log(logTitle, '*** Item Matching: Start ****');
+                vc2_util.log(logTitle, '// vendor Line: ', vendorLine);
+
                 Current.MainCFG =
                     Current.MainCFG || option.mainConfig || vcs_configLib.mainConfig() || {};
                 Current.OrderCFG = Current.OrderCFG || option.orderConfig || {};
@@ -596,7 +549,7 @@ define(function (require) {
                     GlobalVar = vc2_constant.GLOBAL;
 
                 if (vc2_util.isEmpty(orderLines)) {
-                    orderLines = VC_RecordLib.extractRecordLines({
+                    orderLines = VC2_RecordLib.extractRecordLines({
                         record: record,
                         mainConfig: Current.MainCFG,
                         orderConfig: Current.OrderCFG
@@ -605,11 +558,7 @@ define(function (require) {
                 if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
                 if (vc2_util.isEmpty(orderLines)) throw 'Order lines is required';
 
-                var isDandH = Current.OrderCFG.xmlVendor == VendorList.DandH,
-                    isIngram = vc2_util.inArray(Current.OrderCFG.xmlVendor, [
-                        VendorList.INGRAM_MICRO_V_ONE,
-                        VendorList.INGRAM_MICRO
-                    ]);
+                vc2_util.log(logTitle, '...orderLines: ', orderLines);
 
                 var matchedLines = vc2_util.findMatching({
                     list: orderLines,
@@ -623,11 +572,11 @@ define(function (require) {
                             var matchedValue = null,
                                 returnValue = false;
 
-                            matchedValue = VC_RecordLib.isVendorLineMatched({
+                            matchedValue = VC2_RecordLib.isVendorLineMatched({
                                 orderLine: orderLine,
-                                vendorLine: vendorLine,
-                                mainConfig: Current.MainCFG,
-                                orderConfig: Current.OrderCFG
+                                vendorLine: vendorLine
+                                // mainConfig: Current.MainCFG,
+                                // orderConfig: Current.OrderCFG
                             });
                             returnValue = !!matchedValue;
 
@@ -635,7 +584,10 @@ define(function (require) {
                         }
                     }
                 });
+                vc2_util.log(logTitle, '// matched line ?: ', matchedLines);
+
                 var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
+
                 if (!matchedLines || !matchedLines.length) {
                     // lineValue.LINE_MATCH = false;
                     vendorLine.ORDER_LINE = null;
@@ -733,6 +685,9 @@ define(function (require) {
             if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
             if (vc2_util.isEmpty(orderLine)) throw 'Order line is required';
 
+            vc2_util.log(logTitle, '... is matched? [orderLine] ', orderLine);
+            vc2_util.log(logTitle, '... is matched? [vendorLine] ', vendorLine);
+
             var item = {
                 forcedValue: option.alternativeItemName || orderLine.alternativeItemName,
                 altForcedValue: option.alternativeItemName2 || orderLine.alternativeItemName2,
@@ -748,7 +703,7 @@ define(function (require) {
                 dellQuoteNo: option.dellQuoteNo || orderLine[LineColField.DELL_QUOTE_NO],
                 vendorItemNames: orderLine[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY]
             };
-            // vc2_util.log(logTitle, '.. item values: ', item);
+            vc2_util.log(logTitle, '.. item values: ', item);
 
             var settings = {
                 isDandH:
@@ -771,7 +726,7 @@ define(function (require) {
                         ? Current.OrderCFG.xmlVendor == VendorList.DELL
                         : null
             };
-            // vc2_util.log(logTitle, '... settings:', settings);
+            vc2_util.log(logTitle, '... settings:', settings);
 
             var matchedValue;
             try {
@@ -880,7 +835,7 @@ define(function (require) {
                 if (!vendorLines) throw 'Vendor Lines are missing';
                 if (!orderLine) {
                     if (!vc2_util.isEmpty(record) && !vc2_util.isEmpty(line)) {
-                        orderLine = VC_RecordLib.extractLineValues({
+                        orderLine = VC2_RecordLib.extractLineValues({
                             record: record,
                             line: line,
                             columns: [
@@ -906,7 +861,7 @@ define(function (require) {
                             var vendorLine = this;
 
                             // vc2_util.log(logTitle, '>> vendorLine', vendorLine);
-                            var matchedValue = VC_RecordLib.isVendorLineMatched({
+                            var matchedValue = VC2_RecordLib.isVendorLineMatched({
                                 orderLine: orderLine,
                                 vendorLine: vendorLine,
                                 isDandH: option.isDandH || null,
@@ -1017,78 +972,102 @@ define(function (require) {
             Current.OrderCFG = Current.OrderCFG || option.orderConfig || {};
 
             vc2_util.log(logTitle, '// option: ', option);
+            vc2_util.log(logTitle, '// MainCFG: ', Current.MainCFG);
+            vc2_util.log(logTitle, '// OrderCFG: ', Current.OrderCFG);
 
-            var altNames = option.source,
-                sku = option.sku,
-                mpn = option.mpn,
-                returnValue = option.target,
-                skuColumn =
-                    Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
-                mpnColumn =
-                    Current.OrderCFG.itemMPNColumnIdToMatch ||
-                    Current.MainCFG.itemMPNColumnIdToMatch;
+            // var field.altNames = option.source,
+            //     field.sku: sku = option.sku,
+            //     field.mpn: mpn = option.mpn,
+            //     field.returnValue: returnValue = option.target,
+            //     field.skuColumn: skuColumn =
+            //         Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+            //     field.mpnColumn: mpnColumn =
+            //         Current.OrderCFG.itemMPNColumnIdToMatch ||
+            //         Current.MainCFG.itemMPNColumnIdToMatch;
 
-            var isItemOnlyMatchedWithVendorSKU =
-                Current.OrderCFG.matchItemToPartNumber || Current.MainCFG.matchItemToPartNumber;
+            // var field.isItemMatchedWVendorSKU =
+            //     Current.OrderCFG.matchItemToPartNumber || Current.MainCFG.matchItemToPartNumber;
+            // var field.isMPNMatchedWName =
+            //     Current.OrderCFG.matchMPNWithPartNumber || Current.MainCFG.matchMPNWithPartNumber;
 
-            var isMPNMatchedWithName =
-                Current.OrderCFG.matchMPNWithPartNumber || Current.MainCFG.matchMPNWithPartNumber;
+            var field = {
+                    altNames: option.source,
+                    sku: option.sku,
+                    mpn: option.mpn,
+                    skuColumn:
+                        Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                    mpnColumn:
+                        Current.OrderCFG.itemMPNColumnIdToMatch ||
+                        Current.MainCFG.itemMPNColumnIdToMatch,
+                    isItemMatchedWVendorSKU:
+                        Current.OrderCFG.matchItemToPartNumber ||
+                        Current.MainCFG.matchItemToPartNumber,
+                    isMPNMatchedWName:
+                        Current.OrderCFG.matchMPNWithPartNumber ||
+                        Current.MainCFG.matchMPNWithPartNumber
+                },
+                lineData = option.target;
 
-            // var source = option.source,
-            //     skuColumn =
-            //          option.orderConfig.itemColumnIdToMatch ||
-            //         option.mainConfig.itemColumnIdToMatch,
-            //     mpnColumn =
-            //          option.orderConfig.itemMPNColumnIdToMatch ||
-            //         option.mainConfig.itemMPNColumnIdToMatch,
-            //     sku = option.sku,
-            //     mpn = option.mpn,
-            //     isItemOnlyMatchedWithVendorSKU = vc2_util.isEmpty(
-            //          option.orderConfig.matchItemToPartNumber
-            //     )
-            //         ? option.mainConfig.matchItemToPartNumber
-            //         :  option.orderConfig.matchItemToPartNumber,
-            //     isMPNMatchedWithName = vc2_util.isEmpty( option.orderConfig.matchMPNWithPartNumber)
-            //         ? option.mainConfig.matchMPNWithPartNumber
-            //         :  option.orderConfig.matchMPNWithPartNumber,
-            //     returnValue = option.target;
+            vc2_util.log(logTitle, '... field settings: ', field);
+            vc2_util.log(logTitle, '... line values: ', lineData);
 
-            if (altNames && altNames[returnValue.item]) {
-                if (altNames._sku) {
-                    if (isItemOnlyMatchedWithVendorSKU) {
-                        returnValue.alternativeSKU = altNames[returnValue.item].partNumber;
+            if (field.altNames && field.altNames[lineData.item]) {
+                if (field.altNames._sku) {
+                    if (field.isItemMatchedWVendorSKU) {
+                        lineData.alternativeSKU = field.altNames[lineData.item].partNumber;
                     } else {
-                        returnValue.alternativeItemName = altNames[returnValue.item].partNumber;
+                        lineData.alternativeItemName = field.altNames[lineData.item].partNumber;
                     }
                 }
-                if (altNames._mpn) {
-                    if (isMPNMatchedWithName) {
-                        returnValue.alternativeItemName2 = altNames[returnValue.item].mpn;
+                if (field.altNames._mpn) {
+                    if (field.isMPNMatchedWName) {
+                        lineData.alternativeItemName2 = field.altNames[lineData.item].mpn;
                     } else {
-                        returnValue.alternativeMPN = altNames[returnValue.item].mpn;
+                        lineData.alternativeMPN = field.altNames[lineData.item].mpn;
                     }
                 }
             }
-            if ((!altNames || !altNames._sku) && (sku || skuColumn)) {
-                if (isItemOnlyMatchedWithVendorSKU) {
-                    returnValue.alternativeSKU = sku || returnValue[skuColumn];
+
+            if (field.sku || field.skuColumn) {
+                if (field.isItemMatchedWVendorSKU) {
+                    lineData.alternativeSKU = field.sku || lineData[field.skuColumn];
                 } else {
-                    returnValue.alternativeItemName = sku || returnValue[skuColumn];
+                    lineData.alternativeItemName = field.sku || lineData[field.skuColumn];
                 }
             }
-            if ((!altNames || !altNames._mpn) && (mpn || mpnColumn)) {
-                if (isMPNMatchedWithName) {
-                    returnValue.alternativeItemName2 = mpn || returnValue[mpnColumn];
+
+            if (field.mpn || field.mpnColumn) {
+                if (field.isMPNMatchedWName) {
+                    lineData.alternativeItemName2 = field.mpn || lineData[field.mpnColumn];
                 } else {
-                    returnValue.alternativeMPN = mpn || returnValue[mpnColumn];
+                    lineData.alternativeMPN = field.mpn || lineData[field.mpnColumn];
                 }
             }
-            return returnValue;
+
+            // if ((!field.altNames || !field.altNames._sku) && (field.sku || field.skuColumn)) {
+            //     if (field.isItemMatchedWVendorSKU) {
+            //         lineData.alternativeSKU = field.sku || lineData[field.skuColumn];
+            //     } else {
+            //         lineData.alternativeItemName = field.sku || lineData[field.skuColumn];
+            //     }
+            // }
+
+            // if ((!field.altNames || !field.altNames._mpn) && (field.mpn || field.mpnColumn)) {
+            //     if (field.isMPNMatchedWName) {
+            //         lineData.alternativeItemName2 = field.mpn || lineData[field.mpnColumn];
+            //     } else {
+            //         lineData.alternativeMPN = field.mpn || lineData[field.mpnColumn];
+            //     }
+            // }
+
+            vc2_util.log(logTitle, '// returnValue: ', lineData);
+
+            return lineData;
         }
     };
 
     // line item matching
-    util.extend(VC_RecordLib, {
+    util.extend(VC2_RecordLib, {
         matchOrderLines: function (option) {
             var logTitle = [LogTitle, 'matchOrderLines'].join('::'),
                 returnValue;
@@ -1102,7 +1081,7 @@ define(function (require) {
                 if (vc2_util.isEmpty(arrOrderLines)) {
                     if (!orderRecord) throw 'Missing record or order lines';
 
-                    arrOrderLines = VC_RecordLib.extractRecordLines({
+                    arrOrderLines = VC2_RecordLib.extractRecordLines({
                         record: orderRecord,
                         columns: ['item', 'quantity', 'rate'],
                         findAll: true
@@ -1316,5 +1295,5 @@ define(function (require) {
         }
     });
 
-    return VC_RecordLib;
+    return VC2_RecordLib;
 });

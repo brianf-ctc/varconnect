@@ -12,38 +12,40 @@
  * @NModuleScope Public
  */
 define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_Global) {
-    function _getFieldValue(options) {
-        let recPO = options.recPO,
-            field = options.field;
+    function _getFieldValue(option) {
+        let record = option.transaction,
+            field = option.field;
 
-        return recPO.getValue({ fieldId: field }) ? recPO.getValue({ fieldId: field }) : undefined;
+        return record.getValue({ fieldId: field })
+            ? record.getValue({ fieldId: field })
+            : undefined;
     }
 
-    function _getFieldText(options) {
-        let recPO = options.recPO,
-            field = options.field;
+    function _getFieldText(option) {
+        let record = option.transaction,
+            field = option.field;
 
-        return recPO.getText({ fieldId: field }) ? recPO.getText({ fieldId: field }) : undefined;
+        return record.getText({ fieldId: field }) ? record.getText({ fieldId: field }) : undefined;
     }
 
-    function _getSubrecordValue(options) {
-        let recPO = options.recPO,
-            subrecordId = options.subrecord,
-            field = options.field,
+    function _getSubrecordValue(option) {
+        let record = option.transaction,
+            subrecordId = option.subrecord,
+            field = option.field,
             value;
 
-        let subrecord = recPO.getSubrecord({ fieldId: subrecordId });
+        let subrecord = record.getSubrecord({ fieldId: subrecordId });
         if (subrecord) value = subrecord.getValue({ fieldId: field });
 
         return value;
     }
 
-    function _getSublistValue(options) {
-        let recPO = options.recPO,
-            sublist = options.sublist,
-            field = options.field,
-            line = options.line,
-            val = recPO.getSublistValue({
+    function _getSublistValue(option) {
+        let record = option.transaction,
+            sublist = option.sublist,
+            field = option.field,
+            line = option.line,
+            val = record.getSublistValue({
                 sublistId: sublist,
                 fieldId: field,
                 line: line
@@ -54,12 +56,12 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         return val ? val : undefined;
     }
 
-    function _getSublistText(options) {
-        let recPO = options.recPO,
-            sublist = options.sublist,
-            field = options.field,
-            line = options.line,
-            val = recPO.getSublistText({
+    function _getSublistText(option) {
+        let record = option.transaction,
+            sublist = option.sublist,
+            field = option.field,
+            line = option.line,
+            val = record.getSublistText({
                 sublistId: sublist,
                 fieldId: field,
                 line: line
@@ -68,8 +70,8 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         return val ? val : undefined;
     }
 
-    function _getEntityContactValues(options) {
-        let entityId = options.entityId,
+    function _getEntityContactValues(option) {
+        let entityId = option.entityId,
             returnValue = null;
 
         if (entityId) {
@@ -89,8 +91,8 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         return returnValue;
     }
 
-    function _getSalesOrderValues(options) {
-        let salesOrderId = options.id || options,
+    function _getSalesOrderValues(option) {
+        let salesOrderId = option.id || option,
             returnValue = null;
 
         if (salesOrderId) {
@@ -103,25 +105,27 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         return returnValue || {};
     }
 
-    function PurchaseOrder(recPO) {
-        this.id = recPO.id;
-        this.tranId = recPO.getValue({ fieldId: 'tranid' });
-        this.vendorNumber = recPO.getValue('otherrefnum');
-        this.createdDate = recPO.getValue({ fieldId: 'createddate' });
-        this.entity = recPO.getValue({ fieldId: 'entity' });
-        this.subsidiary = recPO.getValue({ fieldId: 'subsidiary' });
-        this.currency = recPO.getValue({ fieldId: 'currencysymbol' });
-        this.total = recPO.getValue({ fieldId: 'total' });
-        this.tranDate = recPO.getText({ fieldId: 'trandate' });
-        this.memo = recPO.getValue({ fieldId: 'memo' });
-        this.dropShipSO = recPO.getValue({ fieldId: 'dropshipso' });
+    function PurchaseOrder(record) {
+        this.id = record.id;
+        this.tranId = record.getValue({ fieldId: 'tranid' });
+        this.vendorNumber = record.getValue('otherrefnum');
+        this.createdDate = record.getValue({ fieldId: 'createddate' });
+        this.entity = record.getValue({ fieldId: 'entity' });
+        this.subsidiary = record.getValue({ fieldId: 'subsidiary' });
+        this.currency = record.getValue({ fieldId: 'currencysymbol' });
+        this.total = record.getValue({ fieldId: 'total' });
+        this.tranDate = record.getText({ fieldId: 'trandate' });
+        this.memo = record.getValue({ fieldId: 'memo' });
+        this.dropShipSO = record.getValue({ fieldId: 'dropshipso' });
         this.isDropShip = this.dropShipSO ? true : false;
-        this.custPO = recPO.getText({ fieldId: VCSP_Global.Fields.Transaction.CUSTOMER_PO_NUMBER });
-        this.additionalVendorDetails = recPO.getValue({
+        this.custPO = record.getText({
+            fieldId: VCSP_Global.Fields.Transaction.CUSTOMER_PO_NUMBER
+        });
+        this.additionalVendorDetails = record.getValue({
             fieldId: VCSP_Global.Fields.Transaction.VENDOR_DETAILS
         });
 
-        let subRecShipping = recPO.getSubrecord({ fieldId: 'shippingaddress' });
+        let subRecShipping = record.getSubrecord({ fieldId: 'shippingaddress' });
         let addressFields = [
             'attention',
             'addressee',
@@ -144,57 +148,57 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         }
 
         this.shipAttention = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'attention'
         });
         this.shipContact = this.shipAttention;
         this.shipAddressee = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'addressee'
         });
         this.shipAddrName1 = this.shipAttention || this.shipAddressee;
         (this.shipAddrName2 = this.shipAttention ? this.shipAddressee : null),
             (this.shipPhone = _getSubrecordValue({
-                recPO: recPO,
+                transaction: record,
                 subrecord: 'shippingaddress',
                 field: 'addrphone'
             }));
         this.shipAddr1 = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'addr1'
         });
         this.shipAddr2 = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'addr2'
         });
         this.shipCity = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'city'
         });
         this.shipState = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'state'
         });
         this.shipZip = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'zip'
         });
         this.shipCountry = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'shippingaddress',
             field: 'country'
         });
-        this.shipMethod = _getFieldText({ recPO: recPO, field: 'shipmethod' });
+        this.shipMethod = _getFieldText({ transaction: record, field: 'shipmethod' });
 
         let shipToContactDetails = _getEntityContactValues({
-            entityId: _getFieldValue({ recPO: recPO, field: 'shipto' })
+            entityId: _getFieldValue({ transaction: record, field: 'shipto' })
         });
         if (shipToContactDetails) {
             this.shipEmail = shipToContactDetails.email;
@@ -202,148 +206,148 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         }
 
         this.billAttention = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'attention'
         });
         this.billContact = this.billAttention;
         this.billAddressee = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'addressee'
         });
         this.billPhone = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'addrphone'
         });
         this.billAddr1 = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'addr1'
         });
         this.billAddr2 = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'addr2'
         });
         this.billCity = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'city'
         });
         this.billState = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'state'
         });
         this.billZip = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'zip'
         });
         this.billCountry = _getSubrecordValue({
-            recPO: recPO,
+            transaction: record,
             subrecord: 'billingaddress',
             field: 'country'
         });
 
-        this.terms = _getFieldText({ recPO: recPO, field: 'terms' });
+        this.terms = _getFieldText({ transaction: record, field: 'terms' });
 
-        this.createdFrom = _getFieldValue({ recPO: recPO, field: 'createdfrom' });
+        this.createdFrom = _getFieldValue({ transaction: record, field: 'createdfrom' });
         this.dellShippingCode = _getFieldValue({
-            recPO: recPO,
+            transaction: record,
             field: 'custbody_ctc_vcsp_dell_ship_code'
         });
 
-        this.paymentTerms = _getFieldValue({ recPO: recPO, field: 'terms' });
+        this.paymentTerms = _getFieldValue({ transaction: record, field: 'terms' });
 
         this.items = [];
 
-        let itemCount = recPO.getLineCount({ sublistId: 'item' });
+        let itemCount = record.getLineCount({ sublistId: 'item' });
 
         for (let i = 0; i < itemCount; i++) {
             this.items.push({
                 lineuniquekey: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'lineuniquekey',
                     line: i
                 }),
                 item: _getSublistText({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'item',
                     line: i
                 }),
                 description: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'description',
                     line: i
                 }),
                 quantity: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'quantity',
                     line: i
                 }),
                 rate: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'rate',
                     line: i
                 }),
                 amount: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'amount',
                     line: i
                 }),
                 expectedReceiptDate: _getSublistText({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: 'expectedreceiptdate',
                     line: i
                 }),
                 memo: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.MEMO,
                     line: i
                 }),
                 quotenumber: _getSublistText({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.QUOTE_NUMBER,
                     line: i
                 }),
                 manufacturer: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.MANUFACTURER,
                     line: i
                 }),
                 synnexSKU: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.SYNNEX_SKU,
                     line: i
                 }),
                 dellSKU: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.DELL_SKU,
                     line: i
                 }),
                 ingramPartNumber: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.INGRAM_PART_NUMBER,
                     line: i
                 }),
                 dandhPartNumber: _getSublistValue({
-                    recPO: recPO,
+                    transaction: record,
                     sublist: 'item',
                     field: VCSP_Global.Fields.Transaction.Item.DANDH_PART_NUMBER,
                     line: i
@@ -351,24 +355,26 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
             });
         }
 
-        this.setQuote = function (options) {
-            let columnId = options.columnId,
-                nativePO = options.nativePO;
-
-            for (let i = 0; i < this.items.length; i++) {
-                this.items[i].quotenumber =
-                    _getSublistValue({
-                        recPO: nativePO,
-                        sublist: 'item',
-                        field: columnId,
-                        line: i
-                    }) || this.items[i].quotenumber;
+        this.setItemLineValues = function (option) {
+            let columns = option.columns,
+                record = option.transaction;
+            for (let fieldName in columns) {
+                let fieldId = columns[fieldName];
+                for (let i = 0, lineCount = this.items.length; i < lineCount; i++) {
+                    this.items[i][fieldName] =
+                        _getSublistValue({
+                            transaction: record,
+                            sublist: 'item',
+                            field: fieldId,
+                            line: i
+                        }) || this.items[i][fieldName];
+                }
             }
         };
 
-        this.setValuesFromVendorConfig = function (options) {
-            let nativePO = options.nativePO,
-                recVendorConfig = options.recVendorConfig;
+        this.setValuesFromVendorConfig = function (option) {
+            let record = option.transaction,
+                vendorConfig = option.vendorConfig;
 
             let poBillAddress = [
                 this.billAttention,
@@ -383,58 +389,65 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
                 .trim();
 
             if (!poBillAddress || !poBillAddress.length) {
-                this.billAttention = recVendorConfig.Bill.attention;
-                this.billAddressee = recVendorConfig.Bill.addressee;
-                this.billAddr1 = recVendorConfig.Bill.address1;
-                this.billAddr2 = recVendorConfig.Bill.address2;
-                this.billCity = recVendorConfig.Bill.city;
-                this.billState = recVendorConfig.Bill.state;
-                this.billZip = recVendorConfig.Bill.zip;
-                this.billCountry = recVendorConfig.Bill.country;
+                this.billAttention = vendorConfig.Bill.attention;
+                this.billAddressee = vendorConfig.Bill.addressee;
+                this.billAddr1 = vendorConfig.Bill.address1;
+                this.billAddr2 = vendorConfig.Bill.address2;
+                this.billCity = vendorConfig.Bill.city;
+                this.billState = vendorConfig.Bill.state;
+                this.billZip = vendorConfig.Bill.zip;
+                this.billCountry = vendorConfig.Bill.country;
             }
-            this.billContact = recVendorConfig.Bill.attention;
-            this.billEmail = recVendorConfig.Bill.email;
-            this.billPhone = this.billPhone || recVendorConfig.Bill.phoneno;
+            this.billContact = vendorConfig.Bill.attention;
+            this.billEmail = vendorConfig.Bill.email;
+            this.billPhone = this.billPhone || vendorConfig.Bill.phoneno;
 
-            if (recVendorConfig.poNumField) {
+            if (vendorConfig.poNumField) {
                 this.tranId =
-                    recPO.getValue({
-                        fieldId: recVendorConfig.poNumField
+                    record.getValue({
+                        fieldId: vendorConfig.poNumField
                     }) || this.tranId;
             }
 
-            if (recVendorConfig.quoteColumn) {
-                this.setQuote({
-                    columnId: recVendorConfig.quoteColumn,
-                    nativePO: nativePO
-                });
+            let columns = {};
+            if (vendorConfig.itemColumn) {
+                columns.item = vendorConfig.itemColumn;
             }
 
-            if (recVendorConfig.memoField) {
+            if (vendorConfig.quoteColumn) {
+                columns.quotenumber = vendorConfig.quoteColumn;
+            }
+
+            this.setItemLineValues({
+                columns: columns,
+                transaction: record
+            });
+
+            if (vendorConfig.memoField) {
                 this.memo =
-                    recPO.getValue({
-                        fieldId: recVendorConfig.memoField
+                    record.getValue({
+                        fieldId: vendorConfig.memoField
                     }) || this.memo;
             }
 
-            if (recVendorConfig.shipContactField) {
+            if (vendorConfig.shipContactField) {
                 this.shipContact =
-                    recPO.getValue({
-                        fieldId: recVendorConfig.shipContactField
+                    record.getText({
+                        fieldId: vendorConfig.shipContactField
                     }) || this.shipContact;
             }
 
-            if (recVendorConfig.shipEmailField) {
+            if (vendorConfig.shipEmailField) {
                 this.shipEmail =
-                    recPO.getValue({
-                        fieldId: recVendorConfig.shipEmailField
+                    record.getValue({
+                        fieldId: vendorConfig.shipEmailField
                     }) || this.shipEmail;
             }
 
-            if (recVendorConfig.shipPhoneField) {
+            if (vendorConfig.shipPhoneField) {
                 this.shipPhone =
-                    recPO.getValue({
-                        fieldId: recVendorConfig.shipPhoneField
+                    record.getValue({
+                        fieldId: vendorConfig.shipPhoneField
                     }) || this.shipPhone;
             }
         };

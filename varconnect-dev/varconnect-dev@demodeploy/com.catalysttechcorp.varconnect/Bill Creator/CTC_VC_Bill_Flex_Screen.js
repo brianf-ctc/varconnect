@@ -419,7 +419,7 @@ define([
             var LINE_ERROR_MSG = {
                 UNMATCHED_ITEMS: {
                     col: 'erroritem',
-                    msg: 'Item not found'
+                    msg: 'Unmatched Item'
                 },
                 ITEMS_ALREADY_BILLED: {
                     col: 'errorbilled',
@@ -441,6 +441,8 @@ define([
 
             var hasLineErrors = false,
                 arrLineErrors = [];
+
+            vc2_util.log(logTitle, '// total bill lines : ', BillData.BillLines);
 
             (BillData.BillLines || []).forEach(function (billLine) {
                 vc2_util.log(logTitle, '// --- errors: ', billLine.Errors);
@@ -465,9 +467,12 @@ define([
             var itemSublist = FormHelper.renderSublist(
                 vc2_util.extend({ tab: 'tab_lines' }, FormHelper.Sublists.ITEM)
             );
-            vc2_util.log(logTitle, '**** WRITE BILL LINES *****');
 
-            (BillData.BillLines || []).forEach(function (billLine, i) {
+            var arrBillLines = BillData.BillLines || [];
+
+            vc2_util.log(logTitle, '**** WRITE BILL LINES ***** ', arrBillLines.length);
+
+            arrBillLines.forEach(function (billLine, i) {
                 var lineData = {
                     item: billLine.itemName,
                     nsitem: billLine.itemId,
@@ -482,7 +487,8 @@ define([
                     nsrate: billLine.OrderLine.rate,
                     calcamount: billLine.amount,
                     nstaxamt: billLine.taxAmount,
-                    description: billLine.description
+                    description: billLine.description,
+                    line_idx: billLine.lineIdx
                 };
 
                 vc2_util.log(logTitle, '... billLIne: ', billLine);
@@ -730,6 +736,13 @@ define([
             FormHelper.initializeFields();
             FormHelper.initializeSublistFields();
 
+            var BillData = vc_billprocess.preprocessBill({
+                recOrder: Current.PO_REC,
+                recBillFile: Current.BILLFILE_REC,
+                billConfig: Current.BillCFG,
+                orderConfig: Current.OrderCFG
+            });
+
             var JSON_DATA = Current.JSON_DATA,
                 FormField = FormHelper.Fields;
 
@@ -754,10 +767,18 @@ define([
                 lineData = FormHelper.extractLineValues({
                     record: requestObj,
                     groupId: sublistItemOption.group,
-                    columns: ['nsitem', 'quantity', 'rate', 'nsqty', 'nsrate'],
+                    columns: ['nsitem', 'quantity', 'rate', 'nsqty', 'nsrate', 'line_idx'],
                     line: line
                 });
-                JSON_DATA.lines[line].NSITEM = lineData.nsitem;
+                lineData.lineIdx = vc2_util.parseFloat(lineData.line_idx);
+
+                vc2_util.log(logTitle, '>> lines to save: ', [
+                    line,
+                    lineData,
+                    JSON_DATA.lines[line]
+                ]);
+
+                JSON_DATA.lines[lineData.lineIdx].NSITEM = lineData.nsitem;
                 util.extend(JSON_DATA.lines[line], {
                     PRICE: param.ignoreVariance ? lineData.nsrate : lineData.rate,
                     BILLRATE: param.ignoreVariance ? lineData.nsrate : lineData.rate,
@@ -975,7 +996,7 @@ define([
                     vc2_util.log(logTitle, '## ERROR ##', err);
                 }
 
-                vc2_util.log(logTitle, '>> ITEM ID: ', [itemId, Helper.CACHE[cacheKey]]);
+                // vc2_util.log(logTitle, '>> ITEM ID: ', [itemId, Helper.CACHE[cacheKey]]);
             }
 
             return Helper.CACHE[cacheKey];
@@ -1927,6 +1948,14 @@ define([
                     description: {
                         label: 'Description',
                         type: ns_ui.FieldType.TEXT
+                    },
+
+                    line_idx: {
+                        label: 'LineIdx',
+                        type: ns_ui.FieldType.TEXT,
+                        displayType: DEBUG_MODE
+                            ? ns_ui.FieldDisplayType.NORMAL
+                            : ns_ui.FieldDisplayType.HIDDEN
                     },
 
                     matchedlines: {

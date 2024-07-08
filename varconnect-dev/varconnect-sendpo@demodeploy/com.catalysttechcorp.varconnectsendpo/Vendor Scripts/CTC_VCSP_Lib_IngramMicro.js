@@ -80,11 +80,11 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
 
     function sendPOToIngram(option) {
         let logTitle = [LogTitle, 'sendPOToIngram'].join('::'),
-            objPO = option.objPO,
+            poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig,
             body = option.body;
         let ingramTokenRequestQuery = {
-            poId: objPO.id,
+            poId: poObj.id,
             apiKey: vendorConfig.apiKey,
             apiSecret: vendorConfig.apiSecret,
             url: vendorConfig.accessEndPoint
@@ -101,7 +101,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
             'IM-CustomerNumber': vendorConfig.customerNo,
             'IM-CountryCode': vendorConfig.country,
             'IM-SenderID': 'NS_CATALYST',
-            'IM-CorrelationID': objPO.tranId,
+            'IM-CorrelationID': poObj.tranId,
             'Content-Type': 'application/json',
             Authorization: bearerToken
         };
@@ -110,7 +110,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
         let imResponse = CTC_Util.sendRequest({
             header: [LogTitle, 'sendPOToIngram'].join(' : '),
             method: 'post',
-            recordId: objPO.id,
+            recordId: poObj.id,
             query: {
                 url: vendorConfig.testRequest ? vendorConfig.qaEndPoint : vendorConfig.endPoint,
                 headers: headers,
@@ -126,13 +126,15 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
     function generateBody(option) {
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             vendorConfig = option.vendorConfig,
-            record = option.objPO,
+            poObj = option.purchaseOrder,
             additionalVendorDetails = {},
             ingramTemplate = '';
 
-        let arrLines = record.items.map(function (item) {
+        let arrLines = [];
+        for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
+            let item = poObj.items[i];
             let objLine = {};
-            objLine.customerLineNumber = item.lineuniquekey;
+            objLine.customerLineNumber = i + 1; // unable to assign lineuniquekey
             objLine.quantity = item.quantity;
             objLine.endUserPrice = item.rate;
             // objLine.specialBidNumber = 'NA';
@@ -149,45 +151,43 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                 objLine.vendorPartNumber = item.item;
             }
             log.debug(logTitle, item);
-            return objLine;
-        });
+            arrLines.push(objLine);
+        }
 
         ingramTemplate = {
-            customerOrderNumber: record.tranId,
-            endCustomerOrderNumber: record.custPO || record.tranId,
+            customerOrderNumber: poObj.tranId,
+            endCustomerOrderNumber: poObj.custPO || poObj.tranId,
             // specialBidNumber: 'NA',
-            notes: record.memo,
+            notes: poObj.memo,
             acceptBackOrder: true,
             resellerInfo: {
                 resellerId: vendorConfig.customerNo,
-                contact: record.billAttention,
-                companyName: record.billAddressee,
-                addressLine1: record.billAddr1,
-                addressLine2: record.billAddr2,
-                city: record.billCity,
-                state: record.billState,
-                postalCode: record.billZip,
-                countryCode: record.billCountry,
-                phoneNumber: record.billPhone,
-                email: record.billEmail
+                contact: poObj.billAttention,
+                companyName: poObj.billAddressee,
+                addressLine1: poObj.billAddr1,
+                addressLine2: poObj.billAddr2,
+                city: poObj.billCity,
+                state: poObj.billState,
+                postalCode: poObj.billZip,
+                countryCode: poObj.billCountry,
+                phoneNumber: poObj.billPhone,
+                email: poObj.billEmail
             },
             // vmf: {
             //     vendAuthNumber: 'NA',
             // },
             shipToInfo: {
                 // addressId: 'NA',
-                contact: record.shipContact,
-                companyName: record.shipAddressee || record.shipAttention,
-                name1: record.shipAddrName1,
-                name2: record.shipAddrName2,
-                addressLine1: record.shipAddr1,
-                addressLine2: record.shipAddr2,
-                city: record.shipCity,
-                state: record.shipState,
-                postalCode: record.shipZip,
-                countryCode: record.shipCountry,
-                phoneNumber: record.shipPhone,
-                email: record.shipEmail
+                contact: poObj.shipContact,
+                companyName: poObj.shipAddressee || poObj.shipAttention,
+                addressLine1: poObj.shipAddr1,
+                addressLine2: poObj.shipAddr2,
+                city: poObj.shipCity,
+                state: poObj.shipState,
+                postalCode: poObj.shipZip,
+                countryCode: poObj.shipCountry,
+                phoneNumber: poObj.shipPhone,
+                email: poObj.shipEmail
             },
             // endUserInfo: {
             //     endUserId: 'NA',
@@ -208,7 +208,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
             shipmentDetails: {
                 // carrierCode: 'NA',
                 // freightAccountNumber: 'NA',
-                shipComplete: record.shipComplete
+                shipComplete: poObj.shipComplete
                 // requestedDeliveryDate: 'NA',
                 // signatureRequired: 'NA',
                 // shippingInstructions: 'NA',
@@ -227,12 +227,24 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
         if (vendorConfig.Bill.id) {
             ingramTemplate.billToAddressId = vendorConfig.Bill.id;
         }
-        if (record.additionalVendorDetails) {
-            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
-        } else if (vendorConfig.additionalPOFields) {
+        if (poObj.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
+        } else if (
+            vendorConfig.additionalPOFields &&
+            vendorConfig.includeAdditionalDetailsOnSubmit
+        ) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
-                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields),
+                filterValues: {
+                    country: vendorConfig.country,
+                    apiVendor: vendorConfig.apiVendor
+                }
             });
+            CTC_Util.log(
+                'AUDIT',
+                logTitle,
+                'Additional vendor details to submit: ' + JSON.stringify(additionalVendorDetails)
+            );
         }
         if (additionalVendorDetails) {
             for (let fieldId in additionalVendorDetails) {
@@ -301,12 +313,12 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                         }
                     }
                 }
-                log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
+                // log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
         }
-        let cleanUpJSON = function (options) {
-            let objConstructor = options.objConstructor || {}.constructor,
-                obj = options.obj;
+        let cleanUpJSON = function (option) {
+            let objConstructor = option.objConstructor || {}.constructor,
+                obj = option.obj;
             for (let key in obj) {
                 if (obj[key] === null || obj[key] === '' || obj[key] === undefined) {
                     delete obj[key];
@@ -323,7 +335,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
         CTC_Util.vcLog({
             title: [LogTitle, 'Order Request Values'].join(' - '),
             content: ingramTemplate,
-            transaction: record.id
+            transaction: poObj.id
         });
 
         return ingramTemplate;
@@ -443,60 +455,60 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
 
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::'),
-            vendorConfig = option.recVendorConfig,
+            vendorConfig = option.vendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+            poObj = option.purchaseOrder;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
         let sendPOResponse,
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
             };
         try {
             let sendPOBody = generateBody({
-                objPO: record,
+                purchaseOrder: poObj,
                 customerNo: customerNo,
                 vendorConfig: vendorConfig
             });
 
             sendPOResponse = sendPOToIngram({
-                objPO: record,
+                purchaseOrder: poObj,
                 vendorConfig: vendorConfig,
                 body: sendPOBody
             });
 
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: sendPOResponse.logId,
                 responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
                 responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
 
             returnResponse = processResponse({
-                record: record,
+                purchaseOrder: poObj,
                 responseBody: returnResponse.responseBody,
                 returnResponse: returnResponse
             });
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (sendPOResponse) {

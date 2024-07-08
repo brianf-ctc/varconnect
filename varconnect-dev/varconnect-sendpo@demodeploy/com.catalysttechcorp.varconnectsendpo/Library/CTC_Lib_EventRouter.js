@@ -105,7 +105,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                         id: Current.recordId
                     });
                 }
-            } else if (this.Action[Current.recordType]) {
+            } else if (this.Action[Current.recordType] ) {
                 RouterEventFn = this.Action[Current.recordType][eventType];
                 if (RouterEventFn) {
                     result = RouterEventFn.call(EventRouter, scriptContext, Current);
@@ -114,10 +114,10 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                 }
                 return result;
             }
-        },
+        }, 
         addActionURL: function (name) {
             return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join('');
-        }
+        }    
     };
 
     return EventRouter;

@@ -186,6 +186,9 @@ define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], fun
                 if (sums_10.model_number == 'TAX') {
                     ordObj.charges.tax += sums_10.finance_charge;
                 }
+                if (sums_10.model_number == 'MISCELLANEOUS') {
+                    ordObj.charges.other += sums_10.finance_charge;
+                }
 
                 return true;
             });

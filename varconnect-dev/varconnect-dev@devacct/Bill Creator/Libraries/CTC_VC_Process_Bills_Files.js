@@ -320,6 +320,7 @@ define([
                         recordId: CurrentData.PO_ID,
                         details: vc2_util.extractError(error)
                     });
+
                 } finally {
                     log.debug(logTitle, '// FINALLY // returnObj: ' + JSON.stringify(ReturnObj));
 

@@ -13,15 +13,15 @@
  *@NScriptType Suitelet
  *@NModuleScope Public
  */
-define([
-    'N/ui/serverWidget',
-    'N/email',
-    'N/runtime',
-    'N/log',
-    'N/search',
-    'N/record',
-    'N/redirect'
-], function (ui, email, runtime, log, search, record, redirect) {
+define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/record', 'N/redirect'], function (
+    ui,
+    email,
+    runtime,
+    log,
+    search,
+    record,
+    redirect
+) {
     function isEmpty(stValue) {
         if (stValue == '' || stValue == null || stValue == undefined) {
             return true;

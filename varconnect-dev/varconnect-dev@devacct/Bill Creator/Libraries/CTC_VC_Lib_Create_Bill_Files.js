@@ -419,20 +419,36 @@ define([
                 itemAltMPNColId = MainConfig.itemMPNColumnIdToMatch;
             }
             if (itemAltSKUColId) {
-                poColumns.push(
-                    ns_search.createColumn({
-                        name: itemAltSKUColId,
+                itemAltSKUColId = vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] || itemAltSKUColId;
+                if (util.isObject(itemAltSKUColId)) {
+                    util.extend(itemAltSKUColId, {
                         summary: 'GROUP'
-                    })
-                );
+                    });
+                    poColumns.push(ns_search.createColumn(itemAltSKUColId));
+                } else {
+                    poColumns.push(
+                        ns_search.createColumn({
+                            name: itemAltSKUColId,
+                            summary: 'GROUP'
+                        })
+                    );
+                }
             }
             if (itemAltMPNColId) {
-                poColumns.push(
-                    ns_search.createColumn({
-                        name: itemAltMPNColId,
+                itemAltMPNColId = vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] || itemAltMPNColId;
+                if (util.isObject(itemAltMPNColId)) {
+                    util.extend(itemAltMPNColId, {
                         summary: 'GROUP'
-                    })
-                );
+                    });
+                    poColumns.push(ns_search.createColumn(itemAltMPNColId));
+                } else {
+                    poColumns.push(
+                        ns_search.createColumn({
+                            name: itemAltMPNColId,
+                            summary: 'GROUP'
+                        })
+                    );
+                }
             }
             var itemSearch = ns_search.create({
                 type: 'transaction',
@@ -452,6 +468,10 @@ define([
                         summary: 'GROUP'
                     }),
                     value: result.getValue({
+                        name: 'item',
+                        summary: 'GROUP'
+                    }),
+                    item: result.getValue({
                         name: 'item',
                         summary: 'GROUP'
                     })
@@ -739,12 +759,12 @@ define([
 
                         for (var iii = 0; iii < availableSkus.length; iii++) {
                             if (
-                                availableSkus[iii].alternativeItemName == itemNo ||
-                                availableSkus[iii].alternativeItemName2 == itemNo ||
-                                availableSkus[iii].alternativeSKU == vendorSKU ||
-                                availableSkus[iii].alternativeMPN == itemNo ||
-                                availableSkus[iii].text == itemNo ||
-                                availableSkus[iii].vendorItemName == itemNo
+                                (availableSkus[iii].alternativeItemName && availableSkus[iii].alternativeItemName == itemNo) ||
+                                (availableSkus[iii].alternativeItemName2 && availableSkus[iii].alternativeItemName2 == itemNo) ||
+                                (availableSkus[iii].alternativeSKU && availableSkus[iii].alternativeSKU == vendorSKU) ||
+                                (availableSkus[iii].alternativeMPN && availableSkus[iii].alternativeMPN == itemNo) ||
+                                (availableSkus[iii].text && availableSkus[iii].text == itemNo) ||
+                                (availableSkus[iii].vendorItemName && availableSkus[iii].vendorItemName == itemNo)
                             ) {
                                 matchedSku = availableSkus[iii].value;
                                 break;
