@@ -258,10 +258,9 @@ define((require) => {
 
             log.audit(LogTitle, '>> tokenResp: ' + JSON.stringify(tokenResponse.PARSED_RESPONSE));
 
-            bearerToken = [
-                tokenResponse.PARSED_RESPONSE.token_type,
-                tokenResponse.PARSED_RESPONSE.access_token
-            ].join(' ');
+            bearerToken = [tokenResponse.PARSED_RESPONSE.token_type, tokenResponse.PARSED_RESPONSE.access_token].join(
+                ' '
+            );
         }
         return bearerToken;
     };
@@ -326,11 +325,7 @@ define((require) => {
 
         if (responseBody && responseBody.Errors && responseBody.Errors.length) {
             let collectedErrorMessages = [];
-            for (
-                let errCtr = 0, errCount = responseBody.Errors.length;
-                errCtr < errCount;
-                errCtr += 1
-            ) {
+            for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
                 let errorResponse = responseBody.Errors[errCtr],
                     errorMessage = null,
                     errorCode = null;
@@ -404,16 +399,11 @@ define((require) => {
                 if (responseBody.OrderReceived === false) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
-                    returnValue.errorMsg =
-                        responseBody.message || 'ScanSource failed to receive the order.';
+                    returnValue.errorMsg = responseBody.message || 'ScanSource failed to receive the order.';
                 }
                 if (responseBody.Errors && responseBody.Errors.length) {
                     let collectedErrorMessages = [];
-                    for (
-                        let errCtr = 0, errCount = responseBody.Errors.length;
-                        errCtr < errCount;
-                        errCtr += 1
-                    ) {
+                    for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
                         let errorResponse = responseBody.Errors[errCtr],
                             errorMessage = null,
                             errorCode = null;

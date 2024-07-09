@@ -1,268 +1,341 @@
-[{
-    "fieldGroup": "Additional Information",
-    "fields" : [{
-        "name": "customerOrganizationId",
-        "label": "Customer Organization Id",
-        "type": "TEXT",
-        "help": "Used exclusively on orders containing eligible items for manufacturers offering an enrollment deployment/activation program. When desired, provide the manufacturer-issued customer organization ID. Available for U.S. orders only.",
-        "filter": {
-            "country": "US"
-        }
-    }, {
-        "name": "freightBillingAccount",
-        "label": "Freight Billing Account",
-        "type": "TEXT",
-        "help": "The freight account in which the shipping charges will be billed to."
-    }, {
-        "name": "flooringAuthorizationNumber",
-        "label": "Flooring Authorization Number",
-        "type": "TEXT",
-        "help": "Order's associated authorization code/number provided by a financial services entity, applicable for orders utilizing third party invoicing. This would require advanced coordination/approval with D&H Credit Services prior to use."
-    }]
-}, {
-    "fieldGroup": "Additional Shipment Information",
-    "fields" : [{
-        "name": "allowPartialShipment",
-        "label": "Partial Shipment?",
-        "type": "CHECKBOX",
-        "help": "Determines whether to allow partial shipments. If checked, allows for partial shipments when all items and quantities contained in an order are not available at a specific distribution center. This will otherwise prevent partial shipments. Combined with `Back Order` permissions, could cause orders to be cancelled in the event they cannot be completed as desired.",
-        "defaultValue": true
-    }, {
-        "name": "allowBackOrder",
-        "label": "Back Order?",
-        "type": "CHECKBOX",
-        "help": "Determines whether items that are not available are to be backordered. If checked, allows for items to be backordered when unavailable. This will otherwise prevent items from being backordered. Combined with `Partial Shipment` permissions, could cause orders to be cancelled in the event they cannot be completed as desired.",
-        "defaultValue": true
-    }, {
-        "name": "serviceType",
-        "label": "Service Type",
-        "type": "SELECT",
-        "help": "The specific Service Type requested for the shipping Carrier. D&H will selected the best service for your order, if not requested.",
-        "options": [{
-            "value":"",
-            "text":""
-        }, {
-            "value":"pickup",
-            "text":"Pickup"
-        }, {
-            "value":"ground",
-            "text":"Ground"
-        }, {
-            "value":"nextDay",
-            "text":"Next day"
-        }, {
-            "value":"secondDay",
-            "text":"Second day"
-        }, {
-            "value":"nextDaySaturdayDelivery",
-            "text":"Next day / Saturday delivery"
-        }, {
-            "value":"firstClassMail",
-            "text":"First class mail"
-        }, {
-            "value":"priorityMail",
-            "text":"Priority mail"
-        }]
-    }, {
-        "name": "carrier",
-        "label": "Carrier",
-        "type": "SELECT",
-        "help": "The name of the preferred shipping carrier. USPS (US Postal Service), UPSM (UPS MailInnovations), UPSS (UPS Surepost), and FXSP(FedEx SmartPost) are only available to select approved customers. These carriers must use service level 'Ground'. UPS is only available to select approved customers.",
-        "options": [{
-            "value":"",
-            "text":""
-        }, {
-            "value":"pickup",
-            "text":"Pickup"
-        }, {
-            "value":"ups",
-            "text":"UPS"
-        }, {
-            "value":"fedex",
-            "text":"FedEx"
-        }, {
-            "value":"usps",
-            "text":"USPS"
-        }, {
-            "value":"upsm",
-            "text":"UPSM"
-        }, {
-            "value":"upss",
-            "text":"UPSS"
-        }, {
-            "value":"fxsp",
-            "text":"FXSP"
-        }, {
-            "value":"purolator",
-            "text":"Purolator"
-        }]
-    }, {
-        "name": "shipments.branch",
-        "label": "Branch",
-        "type": "SELECT",
-        "options": [
+[
+    {
+        "fieldGroup": "Additional Information",
+        "fields": [
             {
-                "value":"",
-                "text":""
-            }, {
-                "value":"BR01",
-                "text":"Mid-Atlantic"
-            }, {
-                "value":"BR03",
-                "text":"Toronto"
-            }, {
-                "value":"BR04",
-                "text":"West Coast"
-            }, {
-                "value":"BR05",
-                "text":"Midwest"
-            }, {
-                "value":"BR06",
-                "text":"Atlanta"
-            }, {
-                "value":"BR08",
-                "text":"Vancover"
+                "name": "customerOrganizationId",
+                "label": "Customer Organization Id",
+                "type": "TEXT",
+                "help": "Used exclusively on orders containing eligible items for manufacturers offering an enrollment deployment/activation program. When desired, provide the manufacturer-issued customer organization ID. Available for U.S. orders only.",
+                "filter": {
+                    "country": "US"
+                }
+            },
+            {
+                "name": "freightBillingAccount",
+                "label": "Freight Billing Account",
+                "type": "TEXT",
+                "help": "The freight account in which the shipping charges will be billed to."
+            },
+            {
+                "name": "flooringAuthorizationNumber",
+                "label": "Flooring Authorization Number",
+                "type": "TEXT",
+                "help": "Order's associated authorization code/number provided by a financial services entity, applicable for orders utilizing third party invoicing. This would require advanced coordination/approval with D&H Credit Services prior to use."
             }
         ]
-    }]
-}, {
-    "fieldGroup": "End User Information",
-    "fields" : [{
-        "label": "- Additional information pertaining to the registration or fulfillment of the items on the order to an end-user customer",
-        "type": "LABEL"
-    }, {
-        "name": "endUserData.electronicSoftwareDistributionEmail",
-        "label": "Electronic Software Distribution Email",
-        "type": "EMAIL",
-        "help": "E-Mail Address for distribution of electronic software."
-    }, {
-        "name": "endUserData.dateOfSale",
-        "label": "Date of Sale",
-        "type": "DATE",
-        "help": "The end-user's Date of Sale.",
-        "defaultValue": "${record.tranDate}"
-    }, {
-        "name": "endUserData.address.attention",
-        "label": "Attention",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAttention}"
-    }, {
-        "name": "endUserData.address.street",
-        "label": "Address",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddr1}, ${record.shipAddr2}"
-    }, {
-        "name": "endUserData.address.city",
-        "label": "City",
-        "type": "TEXT",
-        "defaultValue": "${record.shipCity}"
-    }, {
-        "name": "endUserData.address.region",
-        "label": "Region",
-        "type": "TEXT",
-        "defaultValue": "${record.shipState}"
-    }, {
-        "name": "endUserData.address.postalCode",
-        "label": "Zip Code",
-        "type": "TEXT",
-        "defaultValue": "${record.shipZip}"
-    }, {
-        "name": "endUserData.address.country",
-        "label": "Country",
-        "type": "TEXT",
-        "defaultValue": "${record.shipCountry}"
-    }, {
-        "name": "endUserData.reseller.accountNumber",
-        "label": "Reseller Account Number",
-        "type": "TEXT",
-        "help": "The reseller customer's ten digit account number."
-    }, {
-        "name": "endUserData.reseller.phone",
-        "label": "Reseller Phone",
-        "type": "PHONE",
-        "defaultValue": "${record.shipPhone}"
-    }, {
-        "name": "endUserData.reseller.email",
-        "label": "Reseller Email",
-        "type": "EMAIL",
-        "defaultValue": "${record.shipEmail}"
-    }, {
-        "name": "endUserData.contact.phone",
-        "label": "Contact Phone",
-        "type": "PHONE",
-        "defaultValue": "${record.shipPhone}"
-    }, {
-        "name": "endUserData.contact.fax",
-        "label": "Contact Fax",
-        "type": "PHONE"
-    }, {
-        "name": "endUserData.contact.email",
-        "label": "Contact Email",
-        "type": "EMAIL",
-        "defaultValue": "${record.shipEmail}"
-    }, {
-        "name": "endUserData.domain.domainName",
-        "label": "Domain/Site Name",
-        "type": "TEXT"
-    }, {
-        "name": "endUserData.domain.domainAdministratorEmailAddress",
-        "label": "Domain Administrator E-mail",
-        "type": "EMAIL"
-    }, {
-        "name": "endUserData.modelNumber",
-        "label": "Model Number",
-        "type": "TEXT"
-    }, {
-        "name": "endUserData.department",
-        "label": "Department",
-        "type": "TEXT"
-    }, {
-        "name": "endUserData.serialNumbers",
-        "label": "Serial Number(s)",
-        "type": "TEXTAREA",
-        "help": "A list of serial numbers for the end-user's order.",
-        "split": true
-    }, {
-        "name": "endUserData.supportPlan.updateType",
-        "label": "Support Plan Update Type",
-        "type": "SELECT",
-        "help": "Plan Type requested if ordering a Support product.",
-        "options": [{
-            "value":"",
-            "text":""
-        }, {
-            "value":"New",
-            "text":"New"
-        }, {
-            "value":"Renewal",
-            "text":"Renewal"
-        }, {
-            "value":"Upgrade",
-            "text":"Upgrade"
-        }]
-    }, {
-        "name": "endUserData.supportPlan.supportStartDate",
-        "label": "Support Plan Start Date",
-        "type": "DATE",
-        "help": "When the Support Plan Update Type being purchased is \"New\" then do not populate the Support Plan Start Date as D&H will default the Start Date based on the support product. Otherwise, indicate date in which Support should start."
-    }, {
-        "name": "endUserData.supportPlan.warrantySku",
-        "label": "Support Plan Warranty SKU",
-        "type": "TEXT"
-    }, {
-        "name": "endUserData.cisco.ccoId",
-        "label": "Cisco CCOID",
-        "type": "TEXT"
-    }]
-}, {
-    "fieldGroup": "Request Item Pricing",
-    "fields": [{
-        "label": "- Determines whether the item's rate will be sent to D&H as the requested unit price for the item. Customized pricing is only available for specific accounts. Please contact your sales representative for questions.",
-        "type": "LABEL"
-    }, {      
-        "name": "shipments.lines.__requestUnitPrice",
-        "sublist": "item",
-        "label": "Send rate?",
-        "type": "CHECKBOX"
-    }]
-}]
+    },
+    {
+        "fieldGroup": "Additional Shipment Information",
+        "fields": [
+            {
+                "name": "allowPartialShipment",
+                "label": "Partial Shipment?",
+                "type": "CHECKBOX",
+                "help": "Determines whether to allow partial shipments. If checked, allows for partial shipments when all items and quantities contained in an order are not available at a specific distribution center. This will otherwise prevent partial shipments. Combined with `Back Order` permissions, could cause orders to be cancelled in the event they cannot be completed as desired.",
+                "defaultValue": true
+            },
+            {
+                "name": "allowBackOrder",
+                "label": "Back Order?",
+                "type": "CHECKBOX",
+                "help": "Determines whether items that are not available are to be backordered. If checked, allows for items to be backordered when unavailable. This will otherwise prevent items from being backordered. Combined with `Partial Shipment` permissions, could cause orders to be cancelled in the event they cannot be completed as desired.",
+                "defaultValue": true
+            },
+            {
+                "name": "serviceType",
+                "label": "Service Type",
+                "type": "SELECT",
+                "help": "The specific Service Type requested for the shipping Carrier. D&H will selected the best service for your order, if not requested.",
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "pickup",
+                        "text": "Pickup"
+                    },
+                    {
+                        "value": "ground",
+                        "text": "Ground"
+                    },
+                    {
+                        "value": "nextDay",
+                        "text": "Next day"
+                    },
+                    {
+                        "value": "secondDay",
+                        "text": "Second day"
+                    },
+                    {
+                        "value": "nextDaySaturdayDelivery",
+                        "text": "Next day / Saturday delivery"
+                    },
+                    {
+                        "value": "firstClassMail",
+                        "text": "First class mail"
+                    },
+                    {
+                        "value": "priorityMail",
+                        "text": "Priority mail"
+                    }
+                ]
+            },
+            {
+                "name": "carrier",
+                "label": "Carrier",
+                "type": "SELECT",
+                "help": "The name of the preferred shipping carrier. USPS (US Postal Service), UPSM (UPS MailInnovations), UPSS (UPS Surepost), and FXSP(FedEx SmartPost) are only available to select approved customers. These carriers must use service level 'Ground'. UPS is only available to select approved customers.",
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "pickup",
+                        "text": "Pickup"
+                    },
+                    {
+                        "value": "ups",
+                        "text": "UPS"
+                    },
+                    {
+                        "value": "fedex",
+                        "text": "FedEx"
+                    },
+                    {
+                        "value": "usps",
+                        "text": "USPS"
+                    },
+                    {
+                        "value": "upsm",
+                        "text": "UPSM"
+                    },
+                    {
+                        "value": "upss",
+                        "text": "UPSS"
+                    },
+                    {
+                        "value": "fxsp",
+                        "text": "FXSP"
+                    },
+                    {
+                        "value": "purolator",
+                        "text": "Purolator"
+                    }
+                ]
+            },
+            {
+                "name": "shipments.branch",
+                "label": "Branch",
+                "type": "SELECT",
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "BR01",
+                        "text": "Mid-Atlantic"
+                    },
+                    {
+                        "value": "BR03",
+                        "text": "Toronto"
+                    },
+                    {
+                        "value": "BR04",
+                        "text": "West Coast"
+                    },
+                    {
+                        "value": "BR05",
+                        "text": "Midwest"
+                    },
+                    {
+                        "value": "BR06",
+                        "text": "Atlanta"
+                    },
+                    {
+                        "value": "BR08",
+                        "text": "Vancover"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "fieldGroup": "End User Information",
+        "fields": [
+            {
+                "label": "- Additional information pertaining to the registration or fulfillment of the items on the order to an end-user customer",
+                "type": "LABEL"
+            },
+            {
+                "name": "endUserData.electronicSoftwareDistributionEmail",
+                "label": "Electronic Software Distribution Email",
+                "type": "EMAIL",
+                "help": "E-Mail Address for distribution of electronic software."
+            },
+            {
+                "name": "endUserData.dateOfSale",
+                "label": "Date of Sale",
+                "type": "DATE",
+                "help": "The end-user's Date of Sale.",
+                "defaultValue": "${record.tranDate}"
+            },
+            {
+                "name": "endUserData.address.attention",
+                "label": "Attention",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAttention}"
+            },
+            {
+                "name": "endUserData.address.street",
+                "label": "Address",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr1}, ${record.shipAddr2}"
+            },
+            {
+                "name": "endUserData.address.city",
+                "label": "City",
+                "type": "TEXT",
+                "defaultValue": "${record.shipCity}"
+            },
+            {
+                "name": "endUserData.address.region",
+                "label": "Region",
+                "type": "TEXT",
+                "defaultValue": "${record.shipState}"
+            },
+            {
+                "name": "endUserData.address.postalCode",
+                "label": "Zip Code",
+                "type": "TEXT",
+                "defaultValue": "${record.shipZip}"
+            },
+            {
+                "name": "endUserData.address.country",
+                "label": "Country",
+                "type": "TEXT",
+                "defaultValue": "${record.shipCountry}"
+            },
+            {
+                "name": "endUserData.reseller.accountNumber",
+                "label": "Reseller Account Number",
+                "type": "TEXT",
+                "help": "The reseller customer's ten digit account number."
+            },
+            {
+                "name": "endUserData.reseller.phone",
+                "label": "Reseller Phone",
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
+            },
+            {
+                "name": "endUserData.reseller.email",
+                "label": "Reseller Email",
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
+            },
+            {
+                "name": "endUserData.contact.phone",
+                "label": "Contact Phone",
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
+            },
+            {
+                "name": "endUserData.contact.fax",
+                "label": "Contact Fax",
+                "type": "PHONE"
+            },
+            {
+                "name": "endUserData.contact.email",
+                "label": "Contact Email",
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
+            },
+            {
+                "name": "endUserData.domain.domainName",
+                "label": "Domain/Site Name",
+                "type": "TEXT"
+            },
+            {
+                "name": "endUserData.domain.domainAdministratorEmailAddress",
+                "label": "Domain Administrator E-mail",
+                "type": "EMAIL"
+            },
+            {
+                "name": "endUserData.modelNumber",
+                "label": "Model Number",
+                "type": "TEXT"
+            },
+            {
+                "name": "endUserData.department",
+                "label": "Department",
+                "type": "TEXT"
+            },
+            {
+                "name": "endUserData.serialNumbers",
+                "label": "Serial Number(s)",
+                "type": "TEXTAREA",
+                "help": "A list of serial numbers for the end-user's order.",
+                "split": true
+            },
+            {
+                "name": "endUserData.supportPlan.updateType",
+                "label": "Support Plan Update Type",
+                "type": "SELECT",
+                "help": "Plan Type requested if ordering a Support product.",
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "New",
+                        "text": "New"
+                    },
+                    {
+                        "value": "Renewal",
+                        "text": "Renewal"
+                    },
+                    {
+                        "value": "Upgrade",
+                        "text": "Upgrade"
+                    }
+                ]
+            },
+            {
+                "name": "endUserData.supportPlan.supportStartDate",
+                "label": "Support Plan Start Date",
+                "type": "DATE",
+                "help": "When the Support Plan Update Type being purchased is \"New\" then do not populate the Support Plan Start Date as D&H will default the Start Date based on the support product. Otherwise, indicate date in which Support should start."
+            },
+            {
+                "name": "endUserData.supportPlan.warrantySku",
+                "label": "Support Plan Warranty SKU",
+                "type": "TEXT"
+            },
+            {
+                "name": "endUserData.cisco.ccoId",
+                "label": "Cisco CCOID",
+                "type": "TEXT"
+            }
+        ]
+    },
+    {
+        "fieldGroup": "Request Item Pricing",
+        "fields": [
+            {
+                "label": "- Determines whether the item's rate will be sent to D&H as the requested unit price for the item. Customized pricing is only available for specific accounts. Please contact your sales representative for questions.",
+                "type": "LABEL"
+            },
+            {
+                "name": "shipments.lines.__requestUnitPrice",
+                "sublist": "item",
+                "label": "Send rate?",
+                "type": "CHECKBOX"
+            }
+        ]
+    }
+]

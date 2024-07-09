@@ -214,8 +214,7 @@ define([
                 });
 
                 let contactInfo =
-                    contactNames[ContactRoles.PRIMARY] &&
-                    contactNames[ContactRoles.PRIMARY].entityid
+                    contactNames[ContactRoles.PRIMARY] && contactNames[ContactRoles.PRIMARY].entityid
                         ? contactNames[ContactRoles.PRIMARY]
                         : contactNames[ContactRoles.ALTERNATE];
                 log.audit(logTitle, '// contactInfo: ' + JSON.stringify(contactInfo));
@@ -270,8 +269,7 @@ define([
                 if (field_mapping && field_mapping.shippingContact) {
                     log.audit(
                         logTitle,
-                        '>> field_mapping.shippingContact: ' +
-                            JSON.stringify(field_mapping.shippingContact)
+                        '>> field_mapping.shippingContact: ' + JSON.stringify(field_mapping.shippingContact)
                     );
 
                     for (let fld in field_mapping.shippingContact) {
@@ -369,10 +367,7 @@ define([
                 let arr = [];
 
                 if (field_mapping && field_mapping.CUSTOM) {
-                    log.audit(
-                        logTitle,
-                        '>> field_mapping.CUSTOM: ' + JSON.stringify(field_mapping.CUSTOM)
-                    );
+                    log.audit(logTitle, '>> field_mapping.CUSTOM: ' + JSON.stringify(field_mapping.CUSTOM));
 
                     let mappedValues = {};
 
@@ -432,9 +427,7 @@ define([
 
                 var searchShipMethodMap = ns_search.create({
                     type: constants.Records.VENDOR_SHIPMETHOD,
-                    filters: [
-                        [constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]
-                    ],
+                    filters: [[constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]],
                     columns: [
                         'name',
                         { name: constants.Fields.VendorShipMethod.VENDOR_CONFIG },
@@ -445,8 +438,7 @@ define([
 
                 log.audit(
                     logTitle,
-                    '>> mapped shipping results: ' +
-                        JSON.stringify(searchShipMethodMap.runPaged().count)
+                    '>> mapped shipping results: ' + JSON.stringify(searchShipMethodMap.runPaged().count)
                 );
 
                 if (searchShipMethodMap.runPaged().count) {
@@ -466,8 +458,7 @@ define([
                 }
 
                 if (poObj['poShippingAccountNo']) {
-                    returnValue.carrier =
-                        poObj['poShippingMethod_text'] || returnValue.shippingMethod;
+                    returnValue.carrier = poObj['poShippingMethod_text'] || returnValue.shippingMethod;
                     returnValue.mean = poObj['poShippingMethod_text'] || returnValue.shippingMethod;
                     returnValue.custShippingContractNum = poObj['poShippingAccountNo_text'];
                     returnValue.shippingMethod = 'DC';
@@ -489,10 +480,7 @@ define([
             returnValue = option.returnResponse;
         if (
             (response && response.isError) ||
-            (responseBody &&
-                (responseBody.errors ||
-                    responseBody.statusCode < 200 ||
-                    responseBody.statusCode >= 300))
+            (responseBody && (responseBody.errors || responseBody.statusCode < 200 || responseBody.statusCode >= 300))
         ) {
             let errorMesg = response.errorMsg;
             returnValue.errorName = 'Unexpected Error';

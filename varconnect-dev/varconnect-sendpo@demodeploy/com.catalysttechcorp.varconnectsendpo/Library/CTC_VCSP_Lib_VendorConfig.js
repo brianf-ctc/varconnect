@@ -144,9 +144,7 @@ define([
                 name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS
             }),
             additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
-            includeAdditionalDetailsOnSubmit: vendorConfigRecord.getValue(
-                VendorConfig.ADD_DETAILS_ON_SUBMIT
-            ),
+            includeAdditionalDetailsOnSubmit: vendorConfigRecord.getValue(VendorConfig.ADD_DETAILS_ON_SUBMIT),
             poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS),
             businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT)
         };
@@ -304,10 +302,7 @@ define([
             vendorId = option.vendor,
             returnValue = null;
         // init search details
-        let searchColumns = [
-                { name: VendorConfig.ADDITIONAL_PO_FIELDS },
-                { name: VendorConfig.FIELD_MAP }
-            ],
+        let searchColumns = [{ name: VendorConfig.ADDITIONAL_PO_FIELDS }, { name: VendorConfig.FIELD_MAP }],
             searchDetails;
         if (vendorConfigId) {
             returnValue = getVendorConfiguration({
@@ -329,10 +324,7 @@ define([
                 ],
                 columns: searchColumns
             };
-            log.debug(
-                logTitle,
-                'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails)
-            );
+            log.debug(logTitle, 'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails));
             let vendorSearch = NS_Search.create(searchDetails);
             let results = vendorSearch.run().getRange({
                 start: 0,

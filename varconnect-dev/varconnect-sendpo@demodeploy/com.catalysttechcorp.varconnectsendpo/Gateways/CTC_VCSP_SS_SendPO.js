@@ -12,12 +12,12 @@
  * @NModuleScope Public
  * @NScriptType ScheduledScript
  */
-define([
-    'N/record',
-    'N/runtime',
-    './../Library/CTC_Lib_Utils',
-    '../Library/CTC_VCSP_Lib_Main'
-], function (NS_Record, NS_Runtime, CTC_Util, LibMain) {
+define(['N/record', 'N/runtime', './../Library/CTC_Lib_Utils', '../Library/CTC_VCSP_Lib_Main'], function (
+    NS_Record,
+    NS_Runtime,
+    CTC_Util,
+    LibMain
+) {
     var LogTitle = 'VCSP_SendPO';
 
     var CURRENT = {},
@@ -49,9 +49,7 @@ define([
                     error: errorMsg
                 };
             } finally {
-                returnValue = util.isString(returnValue)
-                    ? returnValue
-                    : JSON.stringify(returnValue);
+                returnValue = util.isString(returnValue) ? returnValue : JSON.stringify(returnValue);
 
                 CTC_Util.log('AUDIT', logTitle, '// RESPONSE: ' + returnValue);
                 CTC_Util.setNSCache({

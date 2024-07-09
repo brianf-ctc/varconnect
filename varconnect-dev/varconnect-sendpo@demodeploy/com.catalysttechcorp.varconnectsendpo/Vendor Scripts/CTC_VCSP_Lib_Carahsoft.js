@@ -240,16 +240,11 @@ define((require) => {
                 if (responseBody.OrderReceived === false) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
-                    returnValue.errorMsg =
-                        responseBody.message || 'Carahsoft failed to receive the order.';
+                    returnValue.errorMsg = responseBody.message || 'Carahsoft failed to receive the order.';
                 }
                 if (responseBody.Errors && responseBody.Errors.length) {
                     let collectedErrorMessages = [];
-                    for (
-                        let errCtr = 0, errCount = responseBody.Errors.length;
-                        errCtr < errCount;
-                        errCtr += 1
-                    ) {
+                    for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
                         let errorResponse = responseBody.Errors[errCtr],
                             errorMessage = null,
                             errorCode = null;
@@ -348,10 +343,7 @@ define((require) => {
             }
         }
         if (CTC_Util.isEmpty(stReturn)) {
-            log.error(
-                'getQuoteWithValue',
-                `Quote number is empty. Items: ${JSON.stringify(arrItems)}`
-            );
+            log.error('getQuoteWithValue', `Quote number is empty. Items: ${JSON.stringify(arrItems)}`);
         }
         return stReturn;
     };

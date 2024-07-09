@@ -198,9 +198,7 @@ define([
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize
-                            ? pagedResults.data
-                            : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results
@@ -255,9 +253,7 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (let fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
                 }
             }
             return arrData;
@@ -331,17 +327,11 @@ define([
                     option.errorMsg ||
                     (option.error ? CTC_Util.extractError(option.error) : '');
 
-                logOption.BODY = util.isString(logOption.BODY)
-                    ? logOption.BODY
-                    : JSON.stringify(logOption.BODY);
+                logOption.BODY = util.isString(logOption.BODY) ? logOption.BODY : JSON.stringify(logOption.BODY);
 
                 if (
                     option.status &&
-                    CTC_Util.inArray(option.status, [
-                        LOG_STATUS.ERROR,
-                        LOG_STATUS.INFO,
-                        LOG_STATUS.SUCCESS
-                    ])
+                    CTC_Util.inArray(option.status, [LOG_STATUS.ERROR, LOG_STATUS.INFO, LOG_STATUS.SUCCESS])
                 )
                     logOption.STATUS = option.status;
                 else if (option.isError || option.error || option.errorMessage || option.errorMsg)
@@ -349,8 +339,7 @@ define([
                 else if (option.isSuccess) logOption.STATUS = LOG_STATUS.SUCCESS;
                 else logOption.STATUS = LOG_STATUS.INFO;
 
-                logOption.TRANSACTION =
-                    option.recordId || option.transaction || option.id || option.internalid || '';
+                logOption.TRANSACTION = option.recordId || option.transaction || option.id || option.internalid || '';
 
                 logOption.DATE = new Date();
                 log.audit(logTitle, logOption);
@@ -376,8 +365,7 @@ define([
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -424,21 +412,15 @@ define([
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
                     retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 0,
-                    responseType: option.hasOwnProperty('responseType')
-                        ? option.responseType
-                        : 'JSON',
-                    maxRetry: option.hasOwnProperty('maxRetry')
-                        ? option.maxRetry
-                        : _DEFAULT.maxRetries || 0,
+                    responseType: option.hasOwnProperty('responseType') ? option.responseType : 'JSON',
+                    maxRetry: option.hasOwnProperty('maxRetry') ? option.maxRetry : _DEFAULT.maxRetries || 0,
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
                     isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
                     isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: CTC_Util.inArray(option.method, _DEFAULT.validMethods)
-                        ? option.method
-                        : 'get'
+                    method: CTC_Util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
                 };
 
             if (option.isXML) param.isJSON = false;
@@ -496,9 +478,7 @@ define([
                 CTC_Util.vcLog({
                     title:
                         [param.logHeader + ': Error', errorMsg].join(' - ') +
-                        (param.doRetry
-                            ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')'
-                            : ''),
+                        (param.doRetry ? ' (retry:' + param.retryCount + '/' + param.maxRetry + ')' : ''),
                     content: { error: errorMsg, details: returnValue.details },
                     transaction: param.logTranId,
                     isError: true
@@ -534,15 +514,10 @@ define([
             if (!parsedResp) throw 'Unable to parse response';
 
             // check for faultstring
-            if (parsedResp.fault && parsedResp.fault.faultstring)
-                throw parsedResp.fault.faultstring;
+            if (parsedResp.fault && parsedResp.fault.faultstring) throw parsedResp.fault.faultstring;
 
             // check response.errors
-            if (
-                parsedResp.errors &&
-                util.isArray(parsedResp.errors) &&
-                !CTC_Util.isEmpty(parsedResp.errors)
-            ) {
+            if (parsedResp.errors && util.isArray(parsedResp.errors) && !CTC_Util.isEmpty(parsedResp.errors)) {
                 var respErrors = parsedResp.errors
                     .map(function (err) {
                         return [err.id, err.message].join(': ');
@@ -552,8 +527,7 @@ define([
             }
 
             // chek for error_description
-            if (parsedResp.error && parsedResp.error_description)
-                throw parsedResp.error_description;
+            if (parsedResp.error && parsedResp.error_description) throw parsedResp.error_description;
 
             // ARROW: ResponseHeader
 
@@ -624,23 +598,13 @@ define([
                 CTC_Util.CACHE[cacheKey] = folderInfo;
             }
 
-            return option.doReturnArray && option.doReturnArray === true
-                ? folderInfo
-                : folderInfo.shift();
+            return option.doReturnArray && option.doReturnArray === true ? folderInfo : folderInfo.shift();
         },
         searchFile: function (option) {
             let fileName = option.filename || option.name;
             if (!fileName) return false;
 
-            let arrCols = [
-                'name',
-                'folder',
-                'documentsize',
-                'url',
-                'created',
-                'modified',
-                'filetype'
-            ];
+            let arrCols = ['name', 'folder', 'documentsize', 'url', 'created', 'modified', 'filetype'];
             let searchOption = {
                 type: 'file',
                 columns: arrCols,
@@ -680,9 +644,7 @@ define([
                 CTC_Util.CACHE[cacheKey] = fileInfo;
             }
 
-            return option.doReturnArray && option.doReturnArray === true
-                ? fileInfo
-                : fileInfo.shift();
+            return option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
         },
         log: function (option, title, message) {
             let logType = option.type || option,
@@ -865,8 +827,7 @@ define([
                     }
                     if (
                         xmlNode.hasChildNodes() &&
-                        (xmlNode.childNodes.length > 1 ||
-                            xmlNode.childNodes[0].nodeType != NS_Xml.NodeType.TEXT_NODE)
+                        (xmlNode.childNodes.length > 1 || xmlNode.childNodes[0].nodeType != NS_Xml.NodeType.TEXT_NODE)
                     ) {
                         let childNodes = xmlNode.childNodes;
                         for (let i = 0, x = childNodes.length; i < x; i += 1) {

@@ -34,8 +34,7 @@ define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'
                     let fileName = option.filename || option.name;
                     if (!fileName) return false;
 
-                    let folderId =
-                        option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
+                    let folderId = option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
                     let fileInfo = CTC_Util.searchFile({
                         name: fileName,
                         folder: folderId
@@ -66,10 +65,7 @@ define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'
                 let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
                 returnValue = CTC_ServerSideUtil.CACHE[cacheKey];
 
-                if (
-                    CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) ||
-                    option.noCache == true
-                ) {
+                if (CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) || option.noCache == true) {
                     let scriptId = option.scriptId;
                     if (!scriptId) {
                         if (!option.currentScript) {

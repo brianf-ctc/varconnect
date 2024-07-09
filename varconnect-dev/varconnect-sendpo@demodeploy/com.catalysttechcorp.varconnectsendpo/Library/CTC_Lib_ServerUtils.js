@@ -7,19 +7,13 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
- * 
+ *
  * @description Utility functions that are only supported on server side scripts.
  * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
-define([
-    'N/file',
-    'N/render', 
-    'N/runtime',
-    '../Library/CTC_Lib_Utils',
-    './CTC_VCSP_Constants'],
-function (
+define(['N/file', 'N/render', 'N/runtime', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'], function (
     NS_File,
     NS_Render,
     NS_Runtime,
@@ -66,7 +60,7 @@ function (
         getCurrentFolder: function (options) {
             let returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
-                options = options || {};
+            options = options || {};
 
             try {
                 let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(options)].join('::');
@@ -110,7 +104,7 @@ function (
 
             return returnValue;
         },
-        renderTemplate: function(options) {
+        renderTemplate: function (options) {
             let templateBody = options.body,
                 poObj = options.purchaseOrder || {},
                 returnValue;
@@ -132,7 +126,7 @@ function (
             returnValue = templateRenderer.renderAsString();
             // CTC_Util.log('DEBUG', 'renderTemplate.renderedBody', returnValue);
             return returnValue;
-        },
+        }
     };
     return CTC_ServerSideUtil;
 });

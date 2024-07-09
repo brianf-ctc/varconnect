@@ -16,9 +16,7 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
         let record = option.transaction,
             field = option.field;
 
-        return record.getValue({ fieldId: field })
-            ? record.getValue({ fieldId: field })
-            : undefined;
+        return record.getValue({ fieldId: field }) ? record.getValue({ fieldId: field }) : undefined;
     }
 
     function _getFieldText(option) {

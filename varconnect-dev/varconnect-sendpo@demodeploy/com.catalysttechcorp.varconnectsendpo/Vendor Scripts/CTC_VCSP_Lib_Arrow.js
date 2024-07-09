@@ -82,9 +82,7 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                 method: 'post',
                 recordId: CURRENT.recordId,
                 query: {
-                    url: CURRENT.config.testRequest
-                        ? CURRENT.config.qaEndPoint
-                        : CURRENT.config.endPoint,
+                    url: CURRENT.config.testRequest ? CURRENT.config.qaEndPoint : CURRENT.config.endPoint,
                     body: JSON.stringify(CURRENT.payloadObj),
                     headers: {
                         Authorization: 'Bearer ' + CURRENT.accessToken,

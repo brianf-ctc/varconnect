@@ -1,1115 +1,1448 @@
-[{
-    "fieldGroup": "Additional Information",
-    "fields" : [{
-        "name": "ExpectedDate",
-        "label": "Expected Delivery Date",
-        "type": "DATE"
-    }, {
-        "name": "ExpectedShipDate",
-        "label": "Expected Synnex Ship Date",
-        "type": "DATE"
-    }, {
-        "name": "SpecialHandle",
-        "label": "Special Handle?",
-        "type": "CHECKBOX",
-        "help": "The definition of \"Special Handle\" is pre-agreed between customer and TD SYNNEX. This is usually for \"Configuration\" or \"Production Value Ad\" request."
-    }, {
-        "name": "BackOrderFlag",
-        "label": "Allow Back Order?",
-        "type": "CHECKBOX",
-        "defaultValue": true
-    }, {
-        "name": "BackOrderWarehouse",
-        "label": "Back Order Warehouse",
-        "type": "SELECT",
-        "help": "\"PO\" means fill BO from selected or \"best\" for PO.<br/>\"FIRST\" (default) means fill BO from first available warehouse.",
-        "options": [{
-            "text": "",
-            "value": ""
-        }, {
-            "text": "PO",
-            "value": "PO"
-        }, {
-            "text": "FIRST",
-            "value": "FIRST"
-        }]
-    }, {
-        "name": "POLineShipComplete",
-        "label": "PO Line Ship Complete?",
-        "type": "CHECKBOX"
-    }, {
-        "name": "WarehouseSplit",
-        "label": "Warehouse Split?",
-        "type": "CHECKBOX",
-        "defaultValue": true
-    }, {
-        "name": "ShipFromWarehouse",
-        "label": "Ship from Warehouse",
-        "type": "SELECT",
-        "help": "Ships entire PO from selected warehouse number.",
-        "filter": {
-            "country": "US"
-        },
-        "options": [{
-            "value": "",
-            "text": ""
-        }, {
-            "value": "16",
-            "text": "16 Miami FL 33172"
-        }, {
-            "value": "3",
-            "text": "3 Fremont CA 94539"
-        }, {
-            "value": "9",
-            "text": "9 Chantilly VA 20151"
-        }, {
-            "value": "5",
-            "text": "5 Richardson TX 75081"
-        }, {
-            "value": "6",
-            "text": "6 Glendale Heights IL 60139"
-        }, {
-            "value": "7",
-            "text": "7 Olive Branch MS 38654"
-        }, {
-            "value": "8",
-            "text": "8 Keasby NJ 08832"
-        }, {
-            "value": "10",
-            "text": "10 Beaverton OR 97008"
-        }, {
-            "value": "4",
-            "text": "4 Norcross GA 30071"
-        }, {
-            "value": "12",
-            "text": "12 Ontario CA 91761"
-        }, {
-            "value": "14",
-            "text": "14 Columbus OH 43123"
-        }, {
-            "value": "79",
-            "text": "79 Olive Branch MS 38654"
-        }, {
-            "value": "89",
-            "text": "89 Keasby NJ 08832"
-        }, {
-            "value": "129",
-            "text": "129 Ontario CA 91761"
-        }, {
-            "value": "149",
-            "text": "149 Columbus OH 43123"
-        }]
-    }, {
-        "name": "ShipFromWarehouse",
-        "label": "Ship from Warehouse",
-        "type": "SELECT",
-        "help": "Ships entire PO from selected warehouse number.",
-        "filter": {
-            "country": "CA"
-        },
-        "options": [{
-            "value": "",
-            "text": ""
-        }, {
-            "value": "US",
-            "text": "(Joint US/Canada)"
-        }, {
-            "value": "26",
-            "text": "26 Halifax N.S. B3S 1B3"
-        }, {
-            "value": "29",
-            "text": "29 Guelph Ontario N1H 6J3"
-        }, {
-            "value": "31",
-            "text": "31 Calgary Alberta T2C 4X3"
-        }, {
-            "value": "81",
-            "text": "81 Richmond B.C. V6W 1G3"
-        }]
-    }, {
-        "name": "SpecialPriceType",
-        "label": "Special Price Type",
-        "type": "SELECT",
-        "options": [{
-            "value": "",
-            "text": ""
-        }, {
-            "value": "VendorPromotion",
-            "text": "Vendor Promotion"
-        }, {
-            "value": "FederalGovernment",
-            "text": "Federal Government"
-        }, {
-            "value": "StateGovernment",
-            "text": "State Government"
-        }, {
-            "value": "Education",
-            "text": "Education"
-        }]
-    }, {
-        "name": "SpecialPriceReferenceNumber",
-        "label": "Vendor Promotion Reference Number",
-        "type": "TEXT",
-        "help": "Applicable only when `Special Price Type` is set to \"Vendor Promotion\"."
-    }]
-}, {
-    "fieldGroup": "Additional Shipment Information",
-    "fields" : [{
-        "name": "ShipComment",
-        "label": "Ship Comment",
-        "type": "TEXT",
-        "help": "Ship Comments to be printed in Shipping document (Packing Memo).<br/><br/>Any comments that are entered will force the transaction into your TD SYNNEX Sales Rep’s sales queue forsales review, and manual order release."
-        }, {
-        "name": "ShipCommentInternal",
-        "label": "Ship Comment (Internal)",
-        "type": "TEXT",
-        "help": "Shipping instructions to be read ONLY by TD SYNNEX internal warehouse staff, not to be printed in shipping document nor packing memo for end-customer to read.<br/><br/>Any comments that are entered will force the transaction into your TD SYNNEX Sales Rep’s sales queue forsales review, and manual order release."
-        }, {
-        "name": "Shipment.ShipMethod.Code",
-        "label": "Ship-Method Code",
-        "type": "SELECT",
-        "help": "Not ALL carriers are available in your delivery area. Please check with your TD SYNNEX sales rep if you are unsure which carrier is available for you to use as a resource. Please contact Catalyst to limit the displayed list of ship-method codes.",
-        "filter": {
-            "country": "US"
-        },
-        "options": [{
-            "value":"",
-            "text":""
-        }, {
-            "value":"AAAC",
-            "text":"AAA Cooper Trucking"
-        }, {
-            "value":"ABFC",
-            "text":"ABF CUST SHIP"
-        }, {
-            "value":"ABFT",
-            "text":"ABF TIMEKEEPER"
-        }, {
-            "value":"AIP",
-            "text":"AIT Whiteglove TV B2C"
-        }, {
-            "value":"AIPT",
-            "text":"AIT THRESHOLD B2C TV PRICING"
-        }, {
-            "value":"AIT",
-            "text":"AIT Deferred Economy Service"
-        }, {
-            "value":"AIT1",
-            "text":"AIT One Day Service by 5PM"
-        }, {
-            "value":"AIT2",
-            "text":"AIT 2 Day Service by 5PM"
-        }, {
-            "value":"AIT3",
-            "text":"AIT Guaranteed 3 Day Service"
-        }, {
-            "value":"ASA1",
-            "text":"Asoc Global One Day"
-        }, {
-            "value":"ASA2",
-            "text":"Asoc Global 2 Day"
-        }, {
-            "value":"ASAF",
-            "text":"Asoc Global Defer"
-        }, {
-            "value":"ATLC",
-            "text":"ATL Courier"
-        }, {
-            "value":"AVTL",
-            "text":"Averitt  Express TL"
-        }, {
-            "value":"BAX1",
-            "text":"BAX Schenker One Day Global"
-        }, {
-            "value":"BAX2",
-            "text":"BAX Schenker 2 day Global"
-        }, {
-            "value":"CD",
-            "text":"Circle Delivery"
-        }, {
-            "value":"CHR",
-            "text":"C.H. Robinson"
-        }, {
-            "value":"CLDN",
-            "text":"CELADON TRUCKING"
-        }, {
-            "value":"CLG",
-            "text":"Column Logistics"
-        }, {
-            "value":"COO1",
-            "text":"CorTrans 1 day"
-        }, {
-            "value":"COO2",
-            "text":"CorTrans 2 day"
-        }, {
-            "value":"COO3",
-            "text":"CorTrans 3 day"
-        }, {
-            "value":"COOG",
-            "text":"CorTrans Deferred"
-        }, {
-            "value":"CPU",
-            "text":"Third-Party Customer Pick Up"
-        }, {
-            "value":"CSX",
-            "text":"CSX Trucking"
-        }, {
-            "value":"DE",
-            "text":"Local Delivery"
-        }, {
-            "value":"DETR",
-            "text":"Dynamex Local Dely Pallets"
-        }, {
-            "value":"DEVN",
-            "text":"Dynamex Local Dely Vans"
-        }, {
-            "value":"DH",
-            "text":"D H L"
-        }, {
-            "value":"DHI",
-            "text":"D H L International"
-        }, {
-            "value":"DHL2",
-            "text":"DHL 2 Day"
-        }, {
-            "value":"DHLP",
-            "text":"DHL Overnight"
-        }, {
-            "value":"DOTL",
-            "text":"DOTLINE TRANSPORTATION"
-        }, {
-            "value":"DSV",
-            "text":"Direct Ship Fr Vendr"
-        }, {
-            "value":"DW",
-            "text":"Dawes Transportation"
-        }, {
-            "value":"E1",
-            "text":"CEVA Next Day"
-        }, {
-            "value":"E2",
-            "text":"CEVA 2nd Day"
-        }, {
-            "value":"E3",
-            "text":"CEVA 3-5 DAY"
-        }, {
-            "value":"EDEL",
-            "text":"Electronic Delivery (Email)"
-        }, {
-            "value":"ELOB",
-            "text":"Edge Logistics"
-        }, {
-            "value":"EUSA",
-            "text":"EAGLE USA INIT"
-        }, {
-            "value":"EXDO",
-            "text":"Expeditors Int'l"
-        }, {
-            "value":"EXPS",
-            "text":"EXPEDITORS SPOT"
-        }, {
-            "value":"F2",
-            "text":"FedEx 2 Day"
-        }, {
-            "value":"F2F",
-            "text":"FedEx 2 Day Freight"
-        }, {
-            "value":"FEDI",
-            "text":"Federal Express-Intl"
-        }, {
-            "value":"FFS",
-            "text":"FedEx Frt Sat Del"
-        }, {
-            "value":"FG",
-            "text":"FedEx Ground"
-        }, {
-            "value":"FGC",
-            "text":"FedEx Ground Canada"
-        }, {
-            "value":"FHD",
-            "text":"FedEx Home Delivery"
-        }, {
-            "value":"FI",
-            "text":"FedEx Int'l"
-        }, {
-            "value":"FMWT",
-            "text":"FedEx Multi Weight"
-        }, {
-            "value":"FO",
-            "text":"FedEx Standard Overnight"
-        }, {
-            "value":"FOF",
-            "text":"FEDEX STD. OVER FRT."
-        }, {
-            "value":"FP",
-            "text":"FedEx Priority Overnight"
-        }, {
-            "value":"FPF",
-            "text":"FedEx Pri Over Frt."
-        }, {
-            "value":"FPFI",
-            "text":"Fed Ex Hvy Priority Intl"
-        }, {
-            "value":"FPI",
-            "text":"Fedex Priority International"
-        }, {
-            "value":"FPIC",
-            "text":"Fed Ex Intl Priority CWT"
-        }, {
-            "value":"FPIN",
-            "text":"Fed Ex Intl Priority"
-        }, {
-            "value":"FS",
-            "text":"FedEx Saturday Delivery"
-        }, {
-            "value":"FWC",
-            "text":"Forwarded Will Call"
-        }, {
-            "value":"FX",
-            "text":"FedEx Express Saver"
-        }, {
-            "value":"FXF",
-            "text":"FedEx Ex Saver Frt"
-        }, {
-            "value":"FXFI",
-            "text":"Fed Ex Freight Economy Intl"
-        }, {
-            "value":"FXIC",
-            "text":"Fed Ex Intl Economy CWT"
-        }, {
-            "value":"FXIN",
-            "text":"Fed Ex Intl Economy"
-        }, {
-            "value":"FXLE",
-            "text":"FedEx LTL Economy"
-        }, {
-            "value":"FXLP",
-            "text":"FedEx LTL Priority"
-        }, {
-            "value":"FXNL",
-            "text":"FED EX NATIONAL LTL SPOT"
-        }, {
-            "value":"HS",
-            "text":"Hold Ship"
-        }, {
-            "value":"HUBG",
-            "text":"Hub Group"
-        }, {
-            "value":"HZA",
-            "text":"Horizon Alliance"
-        }, {
-            "value":"JBHT",
-            "text":"JB Hunt Truckload"
-        }, {
-            "value":"JET",
-            "text":"JET Del Service"
-        }, {
-            "value":"JIT",
-            "text":"JIT Transportation"
-        }, {
-            "value":"JITG",
-            "text":"JIT LTL-Ground"
-        }, {
-            "value":"KAE",
-            "text":"KLS Air Express"
-        }, {
-            "value":"KLS",
-            "text":"KLS AIR EXPRESS"
-        }, {
-            "value":"LDWY",
-            "text":"Landstar TL SPOT Rate"
-        }, {
-            "value":"LYA1",
-            "text":"LYNDEN INTERNATIONAL"
-        }, {
-            "value":"LYA2",
-            "text":"LYNDEN INTERNATIONAL"
-        }, {
-            "value":"LYH1",
-            "text":"LYNDEN INTERNATIONAL"
-        }, {
-            "value":"LYH2",
-            "text":"LYNDEN INTERNATIONAL"
-        }, {
-            "value":"MERS",
-            "text":"MERIT TRANSPORTATION"
-        }, {
-            "value":"MERT",
-            "text":"MERIT TL"
-        }, {
-            "value":"MLO",
-            "text":"MENLO Logistics Ground"
-        }, {
-            "value":"MLO1",
-            "text":"MENLO Logistics 1 Day Service"
-        }, {
-            "value":"MLO2",
-            "text":"MENLO Logistics 2 Day Service"
-        }, {
-            "value":"MO",
-            "text":"Moran Transportation"
-        }, {
-            "value":"MSOH",
-            "text":"Mid South Transport, Inc."
-        }, {
-            "value":"MTF2",
-            "text":"FedEx 2 Day"
-        }, {
-            "value":"MTFG",
-            "text":"FedEx Ground"
-        }, {
-            "value":"MTFO",
-            "text":"FedEx Standard Overnight"
-        }, {
-            "value":"MTFP",
-            "text":"FedEx Priority Overnight"
-        }, {
-            "value":"MTFS",
-            "text":"FedEx Saturday Delivery"
-        }, {
-            "value":"MTFX",
-            "text":"FedEx Express Saver"
-        }, {
-            "value":"ODI",
-            "text":"Old Dominion Frt Line"
-        }, {
-            "value":"OL",
-            "text":"OLIVER TRUCKING"
-        }, {
-            "value":"OMNI",
-            "text":"OMNI Logistics deferred 3-5"
-        }, {
-            "value":"ONTM",
-            "text":"ON TIME TRUCKING DNJ LTL ONLY"
-        }, {
-            "value":"OTFT",
-            "text":"ON TRACK FREIGHT SYSTEMS TRUCK"
-        }, {
-            "value":"PAAF",
-            "text":"PILOT FREIGHT DEFERRED 3-5"
-        }, {
-            "value":"PAF1",
-            "text":"Pilot Freight 1 Day"
-        }, {
-            "value":"PAF2",
-            "text":"Pilot Freight 2 Day"
-        }, {
-            "value":"PAF3",
-            "text":"Pilot Freight 3 Day"
-        }, {
-            "value":"PGL1",
-            "text":"Pegasus Next Day"
-        }, {
-            "value":"PGL2",
-            "text":"Pegasus 2 Day Service"
-        }, {
-            "value":"PGL3",
-            "text":"Pegasus 3 Day Service"
-        }, {
-            "value":"PGL5",
-            "text":"Pegasus 5 Day Service"
-        }, {
-            "value":"PRL",
-            "text":"PRO-LINE Inc."
-        }, {
-            "value":"PYLE",
-            "text":"A Duie Pyle"
-        }, {
-            "value":"RI",
-            "text":"FOLLOW ROUTING GUIDE"
-        }, {
-            "value":"RPM",
-            "text":"RPM TL"
-        }, {
-            "value":"SBA",
-            "text":"Service by Air"
-        }, {
-            "value":"SK1",
-            "text":"Seko Nxt Bus Day Exp"
-        }, {
-            "value":"SK2",
-            "text":"Seko 2nd Bus Day Eco"
-        }, {
-            "value":"SK3",
-            "text":"Seko 3rd Bus Day"
-        }, {
-            "value":"SK5",
-            "text":"Seko 3-5 Day Surface"
-        }, {
-            "value":"SPMK",
-            "text":"SPEEDMARK-Air_International"
-        }, {
-            "value":"STI",
-            "text":"Service Transport Inc."
-        }, {
-            "value":"SY",
-            "text":"Sky Way"
-        }, {
-            "value":"TRN1",
-            "text":"Transport Specialist MS small"
-        }, {
-            "value":"TTSI",
-            "text":"TOTAL TRANSPORTATION SERVICES"
-        }, {
-            "value":"U3",
-            "text":"UPS 3 Day Select"
-        }, {
-            "value":"UB",
-            "text":"UPS 2 Day Air"
-        }, {
-            "value":"UH",
-            "text":"UPS Ground CWT"
-        }, {
-            "value":"UH1S",
-            "text":"UPS Next Day Sav CWT"
-        }, {
-            "value":"UH2N",
-            "text":"UPS 2Day by Noon CWT"
-        }, {
-            "value":"UHEP",
-            "text":"UPS Worldwide Express CWT"
-        }, {
-            "value":"UHEX",
-            "text":"UPS Worldwide Expedited CWT"
-        }, {
-            "value":"UHW1",
-            "text":"UPS Next Day CWT"
-        }, {
-            "value":"UHW2",
-            "text":"UPS 2 Day Air CWT"
-        }, {
-            "value":"UHW3",
-            "text":"UPS 3 Day Air CWT"
-        }, {
-            "value":"UHXP",
-            "text":"UPS Worldwide Exprs Saver CWT"
-        }, {
-            "value":"UI",
-            "text":"UPS International"
-        }, {
-            "value":"UMIF",
-            "text":"UPS Mail Innov Flats less 1 lb"
-        }, {
-            "value":"UMIP",
-            "text":"UPS Mail Innov Parcel"
-        }, {
-            "value":"UP",
-            "text":"UPS Ground"
-        }, {
-            "value":"UPEP",
-            "text":"UPS Worldwide Express"
-        }, {
-            "value":"UPEX",
-            "text":"UPS Worldwide Expedited"
-        }, {
-            "value":"UPSA",
-            "text":"UPS Standard to Canada"
-        }, {
-            "value":"UPXP",
-            "text":"UPS Worldwide Express Saver"
-        }, {
-            "value":"UR",
-            "text":"UPS Next Day Air"
-        }, {
-            "value":"URS",
-            "text":"UPS Next Day Air Saver"
-        }, {
-            "value":"US",
-            "text":"UPS Saturday Delivery"
-        }, {
-            "value":"USH",
-            "text":"USF Holland"
-        }, {
-            "value":"WC",
-            "text":"TD SYNNEX Will Call"
-        }, {
-            "value":"WHS",
-            "text":"Warehouse Select"
-        }, {
-            "value":"WRDS",
-            "text":"Western Regional Delivery"
-        }, {
-            "value":"YF",
-            "text":"YRCW"
-        }]
-    }, {
-        "name": "Shipment.ShipMethod.Code",
-        "label": "Ship-Method Code",
-        "type": "SELECT",
-        "help": "Not ALL carriers are available in your delivery area. Please check with your TD SYNNEX sales rep if you are unsure which carrier is available for you to use as a resource. Please contact Catalyst to limit the displayed list of ship-method codes.",
-        "filter": {
-            "country": "CA"
-        },
-        "options": [{
-            "value": "CEV",
-            "text": "CEVA Logistics"
-        }, {
-            "value": "CEVT",
-            "text": "CEVA - TH Service"
-        }, {
-            "value": "CEVW",
-            "text": "CEVA - WH Service"
-        }, {
-            "value": "CPC",
-            "text": "Canada Post Corporation"
-        }, {
-            "value": "CPCE",
-            "text": "CANADA POST - EXPEDITED PARCEL"
-        }, {
-            "value": "CPCP",
-            "text": "CANADA POST - PRIORITY NEXT AM"
-        }, {
-            "value": "CPCR",
-            "text": "CANADA POST - REGULAR PARCEL"
-        }, {
-            "value": "CPCX",
-            "text": "CANADA POST – XPRESSPOST"
-        }, {
-            "value": "DARC",
-            "text": "Day and Ross Calgary"
-        }, {
-            "value": "DARG",
-            "text": "Day and Ross Guelph"
-        }, {
-            "value": "DARH",
-            "text": "Day and Ross Halifax"
-        }, {
-            "value": "DARV",
-            "text": "Day and Ross Vancouver"
-        }, {
-            "value": "DARX",
-            "text": "Day & Ross Small Orders"
-        }, {
-            "value": "DSV",
-            "text": "Drop Ship Vendor"
-        }, {
-            "value": "EDEL",
-            "text": "Electronic Delivery (email)"
-        }, {
-            "value": "FDXH",
-            "text": "FedEx Express"
-        }, {
-            "value": "FWC",
-            "text": "Forwarded Will Call"
-        }, {
-            "value": "KNH",
-            "text": "K & H Dispatch"
-        }, {
-            "value": "KNHS",
-            "text": "K&H Special"
-        }, {
-            "value": "OXR",
-            "text": "Onward Express Rush"
-        }, {
-            "value": "P10X",
-            "text": "Purolator Express 10:30am"
-        }, {
-            "value": "P9X",
-            "text": "Purolator Express 9:00am"
-        }, {
-            "value": "PSA",
-            "text": "Purolator Saturday"
-        }, {
-            "value": "PUA",
-            "text": "Purolator Express Air"
-        }, {
-            "value": "PUG",
-            "text": "Purolator Ground"
-        }, {
-            "value": "PUX",
-            "text": "Purolator Express Ground"
-        }, {
-            "value": "QR2",
-            "text": "Quick-Run Overnight"
-        }, {
-            "value": "ROD1",
-            "text": "Routes Display Dist 1 pallet"
-        }, {
-            "value": "ROD2",
-            "text": "Routes Display Dist 2 pallet"
-        }, {
-            "value": "ROD3",
-            "text": "Routes Display Dist 3 pallet"
-        }, {
-            "value": "RODQ",
-            "text": "Routes Distribution Quarters"
-        }, {
-            "value": "ROU",
-            "text": "Routes LTL"
-        }, {
-            "value": "ROUI",
-            "text": "ROUTES INBOUND"
-        }, {
-            "value": "ROUQ",
-            "text": "Routes quarters guelph"
-        }, {
-            "value": "ROUS",
-            "text": "Routes Display Special"
-        }, {
-            "value": "ROUT",
-            "text": "Routes Truck Load"
-        }, {
-            "value": "S40H",
-            "text": "SCHENKER 40 FT HIGH CUBE CONT"
-        }, {
-            "value": "SAIR",
-            "text": "SCHENKER AIRFREIGHT"
-        }, {
-            "value": "SC20",
-            "text": "Schenker 20' Container"
-        }, {
-            "value": "SC40",
-            "text": "Schenker 40' Container"
-        }, {
-            "value": "SC45",
-            "text": "Schenker 45' Container"
-        }, {
-            "value": "SC4H",
-            "text": "Schenker 40' High Cube Contnr"
-        }, {
-            "value": "SDL",
-            "text": "Dynamex Exp - Same Day Local"
-        }, {
-            "value": "SDS",
-            "text": "Dynamex Exp - Same Day Direct"
-        }, {
-            "value": "SDT",
-            "text": "Sameday Truck"
-        }, {
-            "value": "SFTL",
-            "text": "SCHENKER FULL TRUCKLOAD"
-        }, {
-            "value": "SLCL",
-            "text": "SCHENKER LESS THAN CONTAINER"
-        }, {
-            "value": "SLTL",
-            "text": "SCHENKER LESS THAN TRUCKLOAD"
-        }, {
-            "value": "ST2",
-            "text": "Strait Consolidate Stx"
-        }, {
-            "value": "STX",
-            "text": "Strait Express"
-        }, {
-            "value": "UPG",
-            "text": "UPS Standard"
-        }, {
-            "value": "UPGC",
-            "text": "UPS Ground for Collect"
-        }, {
-            "value": "UPSS",
-            "text": "UPS Express Saver"
-        }, {
-            "value": "UPX",
-            "text": "UPS Express Saver"
-        }, {
-            "value": "WC",
-            "text": "Customer Pick-Up"
-        }, {
-            "value": "WCET",
-            "text": "Pick-Up in Etobicoke"
-        }, {
-            "value": "WCGU",
-            "text": "Pick-Up Guelph"
-        }, {
-            "value": "WCMI",
-            "text": "Customer Pick-Up"
-        }, {
-            "value": "WCRO",
-            "text": "Logitec Display Shipment"
-        }, {
-            "value": "WHS",
-            "text": "Warehouse Select"
-        }]
-    }, {
-        "name": "Shipment.FreightAccountNumber",
-        "label": "3rd-Party Freight AC#",
-        "type": "TEXT",
-        "help": "Account to be billed by carrier (e.g. FEDEX). If not specified then freight is charged to the party pre-agreed by TD SYNNEX sales and customers."
-    }]
-}, {
-    "fieldGroup": "Additional Bill-To Information",
-    "fields" : [{
-        "name": "Payment.BillTo.SynnexLocationNumber",
-        "label": "Synnex Location Number",
-        "type": "TEXT",
-        "help": "Customers with multiple bill-to locations may use this field to indicate the Location Number (CPOP.BillToLocation.SYNNLoc#) to be used."
-    }]
-}, {
-    "fieldGroup": "Software License Information",
-    "fields" : [{
-        "label": "- This section is required when placing a Software License PO.",
-        "type": "RESETBUTTON"
-    }, {
-        "name": "SoftWareLicense.AuthorizationNumber",
-        "label": "Authorization Number",
-        "type": "TEXT",
-        "help": "Authorization Number given by Software Vendors."
-    }, {
-        "name": "SoftWareLicense.ReOrder",
-        "label": "Reorder?",
-        "type": "CHECKBOX",
-        "help": "Required for Software License PO."
-    },  {
-        "name": "SoftWareLicense.Licensee.AddressName1",
-        "label": "Address Name 1",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipAddrName1}"
-    }, {
-        "name": "SoftWareLicense.Licensee.AddressName2",
-        "label": "Address Name 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddrName2}"
-    }, {
-        "name": "SoftWareLicense.Licensee.AddressLine1",
-        "label": "Address Line 1",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipAddr1}"
-    }, {
-        "name": "SoftWareLicense.Licensee.AddressLine2",
-        "label": "Address Line 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddr2}"
-    }, {
-        "name": "SoftWareLicense.Licensee.City",
-        "label": "City",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipCity}"
-    }, {
-        "name": "SoftWareLicense.Licensee.State",
-        "label": "State",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipState}"
-    }, {
-        "name": "SoftWareLicense.Licensee.ZipCode",
-        "label": "Zip Code",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipZip}"
-    }, {
-        "name": "SoftWareLicense.Licensee.Country",
-        "label": "Country",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipCountry}"
-    }, {
-        "name": "SoftWareLicense.Licensee.LicenseeContact.ContactName",
-        "label": "Contact Name",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipContact}"
-    }, {
-        "name": "SoftWareLicense.Licensee.LicenseeContact.PhoneNumber",
-        "label": "Phone Number",
-        "type": "PHONE",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipPhone}"
-    }, {
-        "name": "SoftWareLicense.Licensee.LicenseeContact.FaxNumber",
-        "label": "Fax Number",
-        "type": "PHONE",
-        "help": "Required for Software License PO."
-    }, {
-        "name": "SoftWareLicense.Licensee.LicenseeContact.EmailAddress",
-        "label": "Email Address",
-        "type": "EMAIL",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipEmail}"
-    }]
-}, {
-    "fieldGroup": "Reseller Information",
-    "fields" : [{
-        "label": "- This section is required for Software License PO - or - when the PO is billed directly to the end user.",
-        "type": "RESETBUTTON"
-    }, {
-        "name": "Customer.AddressName1",
-        "label": "Address Name 1",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipAddrName1}"
-    }, {
-        "name": "Customer.AddressName2",
-        "label": "Address Name 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddrName2}"
-    }, {
-        "name": "Customer.AddressLine1",
-        "label": "Address Line 1",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipAddr1}"
-    }, {
-        "name": "Customer.AddressLine2",
-        "label": "Address Line 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddr2}"
-    }, {
-        "name": "Customer.City",
-        "label": "City",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipCity}"
-    }, {
-        "name": "Customer.State",
-        "label": "State",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipState}"
-    }, {
-        "name": "Customer.ZipCode",
-        "label": "Zip Code",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipZip}"
-    }, {
-        "name": "Customer.Country",
-        "label": "Country",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipCountry}"
-    }, {
-        "name": "Customer.CustomerContact.ContactName",
-        "label": "Contact Name",
-        "type": "TEXT",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipContact}"
-    }, {
-        "name": "Customer.CustomerContact.PhoneNumber",
-        "label": "Phone Number",
-        "type": "PHONE",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipPhone}"
-    }, {
-        "name": "Customer.CustomerContact.FaxNumber",
-        "label": "Fax Number",
-        "type": "PHONE",
-        "help": "Required for Software License PO."
-    }, {
-        "name": "Customer.CustomerContact.EmailAddress",
-        "label": "Email Address",
-        "type": "EMAIL",
-        "help": "Required for Software License PO.",
-        "defaultValue": "${record.shipEmail}"
-    }]
-}, {
-    "fieldGroup": "End User Information",
-    "fields" : [{
-        "label": "- This section is required when the PO is billed directly to the end user.",
-        "type": "RESETBUTTON"
-    }, {
-        "name": "EndUser.SynnexAccountNumber",
-        "label": "Synnex Account Number",
-        "type": "TEXT",
-        "help": "If this tag is not populated/provided and this PO is meant to be billed to this end user, then TD SYNNEX will assume this end user does not have account# yet and will create an account automatically."
-    }, {
-        "name": "EndUser.EndUserType",
-        "label": "End User Type",
-        "type": "SELECT",
-        "help": "If this tag is not populated, then we assume this end user is a non-Government/Educational End User. <br/>Values: F- Federal Government, L- State Government or Local Government, E- Education.",
-        "options": [{
-            "text": "",
-            "value": ""
-        }, {
-            "text": "F",
-            "value": "F"
-        }, {
-            "text": "L",
-            "value": "L"
-        }, {
-            "text": "E",
-            "value": "E"
-        }]
-    }, {
-        "name": "EndUser.AddressName1",
-        "label": "Address Name 1",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddrName1}"
-    }, {
-        "name": "EndUser.AddressName2",
-        "label": "Address Name 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddrName2}"
-    }, {
-        "name": "EndUser.AddressLine1",
-        "label": "Address Line 1",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddr1}"
-    }, {
-        "name": "EndUser.AddressLine2",
-        "label": "Address Line 2",
-        "type": "TEXT",
-        "defaultValue": "${record.shipAddr2}"
-    }, {
-        "name": "EndUser.City",
-        "label": "City",
-        "type": "TEXT",
-        "defaultValue": "${record.shipCity}"
-    }, {
-        "name": "EndUser.State",
-        "label": "State",
-        "type": "TEXT",
-        "defaultValue": "${record.shipState}"
-    }, {
-        "name": "EndUser.ZipCode",
-        "label": "Zip Code",
-        "type": "TEXT",
-        "defaultValue": "${record.shipZip}"
-    }, {
-        "name": "EndUser.Country",
-        "label": "Country",
-        "type": "TEXT",
-        "defaultValue": "${record.shipCountry}"
-    }, {
-        "name": "EndUser.EndUserContact.ContactName",
-        "label": "Contact Name",
-        "type": "TEXT",
-        "defaultValue": "${record.shipContact}"
-    }, {
-        "name": "EndUser.EndUserContact.PhoneNumber",
-        "label": "Phone Number",
-        "type": "PHONE",
-        "defaultValue": "${record.shipPhone}"
-    }, {
-        "name": "EndUser.EndUserContact.FaxNumber",
-        "label": "Fax Number",
-        "type": "PHONE"
-    }, {
-        "name": "EndUser.EndUserContact.EmailAddress",
-        "label": "Email Address",
-        "type": "EMAIL",
-        "defaultValue": "${record.shipEmail}"
-    }, {
-        "name": "EndUser.EndUserPODate",
-        "label": "End User PO Date",
-        "type": "DATE"
-    }, {
-        "name": "EndUser.EndUserShipExpense",
-        "label": "End User Ship Expense",
-        "type": "CURRENCY",
-        "help": "End-User Shipping & Handling Expense per Reseller, ONLY for End-User Bill to PO/orders!"
-    }, {
-        "name": "EndUser.ContractCode",
-        "label": "Contract Code",
-        "type": "TEXT",
-        "help": "The Contract Code between end user and reseller."
-    }, {
-        "name": "EndUser.ContractFeeCode",
-        "label": "Contract Fee Code",
-        "type": "TEXT",
-        "help": "The Contract <u>Fee Code</u> between end user and reseller."
-    }, {
-        "name": "EndUser.ContractFee",
-        "label": "Contract Fee",
-        "type": "CURRENCY",
-        "help": "The Contract <u>Fee</u> between end user and reseller."
-    }, {
-        "name": "EndUser.ContractDeliveryDate",
-        "label": "Contract Delivery Date",
-        "type": "DATE",
-        "help": "The Contract Delivery Date agreed between end user and reseller."
-    }]
-}]
+[
+    {
+        "fieldGroup": "Additional Information",
+        "fields": [
+            {
+                "name": "ExpectedDate",
+                "label": "Expected Delivery Date",
+                "type": "DATE"
+            },
+            {
+                "name": "ExpectedShipDate",
+                "label": "Expected Synnex Ship Date",
+                "type": "DATE"
+            },
+            {
+                "name": "SpecialHandle",
+                "label": "Special Handle?",
+                "type": "CHECKBOX",
+                "help": "The definition of \"Special Handle\" is pre-agreed between customer and TD SYNNEX. This is usually for \"Configuration\" or \"Production Value Ad\" request."
+            },
+            {
+                "name": "BackOrderFlag",
+                "label": "Allow Back Order?",
+                "type": "CHECKBOX",
+                "defaultValue": true
+            },
+            {
+                "name": "BackOrderWarehouse",
+                "label": "Back Order Warehouse",
+                "type": "SELECT",
+                "help": "\"PO\" means fill BO from selected or \"best\" for PO.<br/>\"FIRST\" (default) means fill BO from first available warehouse.",
+                "options": [
+                    {
+                        "text": "",
+                        "value": ""
+                    },
+                    {
+                        "text": "PO",
+                        "value": "PO"
+                    },
+                    {
+                        "text": "FIRST",
+                        "value": "FIRST"
+                    }
+                ]
+            },
+            {
+                "name": "POLineShipComplete",
+                "label": "PO Line Ship Complete?",
+                "type": "CHECKBOX"
+            },
+            {
+                "name": "WarehouseSplit",
+                "label": "Warehouse Split?",
+                "type": "CHECKBOX",
+                "defaultValue": true
+            },
+            {
+                "name": "ShipFromWarehouse",
+                "label": "Ship from Warehouse",
+                "type": "SELECT",
+                "help": "Ships entire PO from selected warehouse number.",
+                "filter": {
+                    "country": "US"
+                },
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "16",
+                        "text": "16 Miami FL 33172"
+                    },
+                    {
+                        "value": "3",
+                        "text": "3 Fremont CA 94539"
+                    },
+                    {
+                        "value": "9",
+                        "text": "9 Chantilly VA 20151"
+                    },
+                    {
+                        "value": "5",
+                        "text": "5 Richardson TX 75081"
+                    },
+                    {
+                        "value": "6",
+                        "text": "6 Glendale Heights IL 60139"
+                    },
+                    {
+                        "value": "7",
+                        "text": "7 Olive Branch MS 38654"
+                    },
+                    {
+                        "value": "8",
+                        "text": "8 Keasby NJ 08832"
+                    },
+                    {
+                        "value": "10",
+                        "text": "10 Beaverton OR 97008"
+                    },
+                    {
+                        "value": "4",
+                        "text": "4 Norcross GA 30071"
+                    },
+                    {
+                        "value": "12",
+                        "text": "12 Ontario CA 91761"
+                    },
+                    {
+                        "value": "14",
+                        "text": "14 Columbus OH 43123"
+                    },
+                    {
+                        "value": "79",
+                        "text": "79 Olive Branch MS 38654"
+                    },
+                    {
+                        "value": "89",
+                        "text": "89 Keasby NJ 08832"
+                    },
+                    {
+                        "value": "129",
+                        "text": "129 Ontario CA 91761"
+                    },
+                    {
+                        "value": "149",
+                        "text": "149 Columbus OH 43123"
+                    }
+                ]
+            },
+            {
+                "name": "ShipFromWarehouse",
+                "label": "Ship from Warehouse",
+                "type": "SELECT",
+                "help": "Ships entire PO from selected warehouse number.",
+                "filter": {
+                    "country": "CA"
+                },
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "US",
+                        "text": "(Joint US/Canada)"
+                    },
+                    {
+                        "value": "26",
+                        "text": "26 Halifax N.S. B3S 1B3"
+                    },
+                    {
+                        "value": "29",
+                        "text": "29 Guelph Ontario N1H 6J3"
+                    },
+                    {
+                        "value": "31",
+                        "text": "31 Calgary Alberta T2C 4X3"
+                    },
+                    {
+                        "value": "81",
+                        "text": "81 Richmond B.C. V6W 1G3"
+                    }
+                ]
+            },
+            {
+                "name": "SpecialPriceType",
+                "label": "Special Price Type",
+                "type": "SELECT",
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "VendorPromotion",
+                        "text": "Vendor Promotion"
+                    },
+                    {
+                        "value": "FederalGovernment",
+                        "text": "Federal Government"
+                    },
+                    {
+                        "value": "StateGovernment",
+                        "text": "State Government"
+                    },
+                    {
+                        "value": "Education",
+                        "text": "Education"
+                    }
+                ]
+            },
+            {
+                "name": "SpecialPriceReferenceNumber",
+                "label": "Vendor Promotion Reference Number",
+                "type": "TEXT",
+                "help": "Applicable only when `Special Price Type` is set to \"Vendor Promotion\"."
+            }
+        ]
+    },
+    {
+        "fieldGroup": "Additional Shipment Information",
+        "fields": [
+            {
+                "name": "ShipComment",
+                "label": "Ship Comment",
+                "type": "TEXT",
+                "help": "Ship Comments to be printed in Shipping document (Packing Memo).<br/><br/>Any comments that are entered will force the transaction into your TD SYNNEX Sales Rep’s sales queue forsales review, and manual order release."
+            },
+            {
+                "name": "ShipCommentInternal",
+                "label": "Ship Comment (Internal)",
+                "type": "TEXT",
+                "help": "Shipping instructions to be read ONLY by TD SYNNEX internal warehouse staff, not to be printed in shipping document nor packing memo for end-customer to read.<br/><br/>Any comments that are entered will force the transaction into your TD SYNNEX Sales Rep’s sales queue forsales review, and manual order release."
+            },
+            {
+                "name": "Shipment.ShipMethod.Code",
+                "label": "Ship-Method Code",
+                "type": "SELECT",
+                "help": "Not ALL carriers are available in your delivery area. Please check with your TD SYNNEX sales rep if you are unsure which carrier is available for you to use as a resource. Please contact Catalyst to limit the displayed list of ship-method codes.",
+                "filter": {
+                    "country": "US"
+                },
+                "options": [
+                    {
+                        "value": "",
+                        "text": ""
+                    },
+                    {
+                        "value": "AAAC",
+                        "text": "AAA Cooper Trucking"
+                    },
+                    {
+                        "value": "ABFC",
+                        "text": "ABF CUST SHIP"
+                    },
+                    {
+                        "value": "ABFT",
+                        "text": "ABF TIMEKEEPER"
+                    },
+                    {
+                        "value": "AIP",
+                        "text": "AIT Whiteglove TV B2C"
+                    },
+                    {
+                        "value": "AIPT",
+                        "text": "AIT THRESHOLD B2C TV PRICING"
+                    },
+                    {
+                        "value": "AIT",
+                        "text": "AIT Deferred Economy Service"
+                    },
+                    {
+                        "value": "AIT1",
+                        "text": "AIT One Day Service by 5PM"
+                    },
+                    {
+                        "value": "AIT2",
+                        "text": "AIT 2 Day Service by 5PM"
+                    },
+                    {
+                        "value": "AIT3",
+                        "text": "AIT Guaranteed 3 Day Service"
+                    },
+                    {
+                        "value": "ASA1",
+                        "text": "Asoc Global One Day"
+                    },
+                    {
+                        "value": "ASA2",
+                        "text": "Asoc Global 2 Day"
+                    },
+                    {
+                        "value": "ASAF",
+                        "text": "Asoc Global Defer"
+                    },
+                    {
+                        "value": "ATLC",
+                        "text": "ATL Courier"
+                    },
+                    {
+                        "value": "AVTL",
+                        "text": "Averitt  Express TL"
+                    },
+                    {
+                        "value": "BAX1",
+                        "text": "BAX Schenker One Day Global"
+                    },
+                    {
+                        "value": "BAX2",
+                        "text": "BAX Schenker 2 day Global"
+                    },
+                    {
+                        "value": "CD",
+                        "text": "Circle Delivery"
+                    },
+                    {
+                        "value": "CHR",
+                        "text": "C.H. Robinson"
+                    },
+                    {
+                        "value": "CLDN",
+                        "text": "CELADON TRUCKING"
+                    },
+                    {
+                        "value": "CLG",
+                        "text": "Column Logistics"
+                    },
+                    {
+                        "value": "COO1",
+                        "text": "CorTrans 1 day"
+                    },
+                    {
+                        "value": "COO2",
+                        "text": "CorTrans 2 day"
+                    },
+                    {
+                        "value": "COO3",
+                        "text": "CorTrans 3 day"
+                    },
+                    {
+                        "value": "COOG",
+                        "text": "CorTrans Deferred"
+                    },
+                    {
+                        "value": "CPU",
+                        "text": "Third-Party Customer Pick Up"
+                    },
+                    {
+                        "value": "CSX",
+                        "text": "CSX Trucking"
+                    },
+                    {
+                        "value": "DE",
+                        "text": "Local Delivery"
+                    },
+                    {
+                        "value": "DETR",
+                        "text": "Dynamex Local Dely Pallets"
+                    },
+                    {
+                        "value": "DEVN",
+                        "text": "Dynamex Local Dely Vans"
+                    },
+                    {
+                        "value": "DH",
+                        "text": "D H L"
+                    },
+                    {
+                        "value": "DHI",
+                        "text": "D H L International"
+                    },
+                    {
+                        "value": "DHL2",
+                        "text": "DHL 2 Day"
+                    },
+                    {
+                        "value": "DHLP",
+                        "text": "DHL Overnight"
+                    },
+                    {
+                        "value": "DOTL",
+                        "text": "DOTLINE TRANSPORTATION"
+                    },
+                    {
+                        "value": "DSV",
+                        "text": "Direct Ship Fr Vendr"
+                    },
+                    {
+                        "value": "DW",
+                        "text": "Dawes Transportation"
+                    },
+                    {
+                        "value": "E1",
+                        "text": "CEVA Next Day"
+                    },
+                    {
+                        "value": "E2",
+                        "text": "CEVA 2nd Day"
+                    },
+                    {
+                        "value": "E3",
+                        "text": "CEVA 3-5 DAY"
+                    },
+                    {
+                        "value": "EDEL",
+                        "text": "Electronic Delivery (Email)"
+                    },
+                    {
+                        "value": "ELOB",
+                        "text": "Edge Logistics"
+                    },
+                    {
+                        "value": "EUSA",
+                        "text": "EAGLE USA INIT"
+                    },
+                    {
+                        "value": "EXDO",
+                        "text": "Expeditors Int'l"
+                    },
+                    {
+                        "value": "EXPS",
+                        "text": "EXPEDITORS SPOT"
+                    },
+                    {
+                        "value": "F2",
+                        "text": "FedEx 2 Day"
+                    },
+                    {
+                        "value": "F2F",
+                        "text": "FedEx 2 Day Freight"
+                    },
+                    {
+                        "value": "FEDI",
+                        "text": "Federal Express-Intl"
+                    },
+                    {
+                        "value": "FFS",
+                        "text": "FedEx Frt Sat Del"
+                    },
+                    {
+                        "value": "FG",
+                        "text": "FedEx Ground"
+                    },
+                    {
+                        "value": "FGC",
+                        "text": "FedEx Ground Canada"
+                    },
+                    {
+                        "value": "FHD",
+                        "text": "FedEx Home Delivery"
+                    },
+                    {
+                        "value": "FI",
+                        "text": "FedEx Int'l"
+                    },
+                    {
+                        "value": "FMWT",
+                        "text": "FedEx Multi Weight"
+                    },
+                    {
+                        "value": "FO",
+                        "text": "FedEx Standard Overnight"
+                    },
+                    {
+                        "value": "FOF",
+                        "text": "FEDEX STD. OVER FRT."
+                    },
+                    {
+                        "value": "FP",
+                        "text": "FedEx Priority Overnight"
+                    },
+                    {
+                        "value": "FPF",
+                        "text": "FedEx Pri Over Frt."
+                    },
+                    {
+                        "value": "FPFI",
+                        "text": "Fed Ex Hvy Priority Intl"
+                    },
+                    {
+                        "value": "FPI",
+                        "text": "Fedex Priority International"
+                    },
+                    {
+                        "value": "FPIC",
+                        "text": "Fed Ex Intl Priority CWT"
+                    },
+                    {
+                        "value": "FPIN",
+                        "text": "Fed Ex Intl Priority"
+                    },
+                    {
+                        "value": "FS",
+                        "text": "FedEx Saturday Delivery"
+                    },
+                    {
+                        "value": "FWC",
+                        "text": "Forwarded Will Call"
+                    },
+                    {
+                        "value": "FX",
+                        "text": "FedEx Express Saver"
+                    },
+                    {
+                        "value": "FXF",
+                        "text": "FedEx Ex Saver Frt"
+                    },
+                    {
+                        "value": "FXFI",
+                        "text": "Fed Ex Freight Economy Intl"
+                    },
+                    {
+                        "value": "FXIC",
+                        "text": "Fed Ex Intl Economy CWT"
+                    },
+                    {
+                        "value": "FXIN",
+                        "text": "Fed Ex Intl Economy"
+                    },
+                    {
+                        "value": "FXLE",
+                        "text": "FedEx LTL Economy"
+                    },
+                    {
+                        "value": "FXLP",
+                        "text": "FedEx LTL Priority"
+                    },
+                    {
+                        "value": "FXNL",
+                        "text": "FED EX NATIONAL LTL SPOT"
+                    },
+                    {
+                        "value": "HS",
+                        "text": "Hold Ship"
+                    },
+                    {
+                        "value": "HUBG",
+                        "text": "Hub Group"
+                    },
+                    {
+                        "value": "HZA",
+                        "text": "Horizon Alliance"
+                    },
+                    {
+                        "value": "JBHT",
+                        "text": "JB Hunt Truckload"
+                    },
+                    {
+                        "value": "JET",
+                        "text": "JET Del Service"
+                    },
+                    {
+                        "value": "JIT",
+                        "text": "JIT Transportation"
+                    },
+                    {
+                        "value": "JITG",
+                        "text": "JIT LTL-Ground"
+                    },
+                    {
+                        "value": "KAE",
+                        "text": "KLS Air Express"
+                    },
+                    {
+                        "value": "KLS",
+                        "text": "KLS AIR EXPRESS"
+                    },
+                    {
+                        "value": "LDWY",
+                        "text": "Landstar TL SPOT Rate"
+                    },
+                    {
+                        "value": "LYA1",
+                        "text": "LYNDEN INTERNATIONAL"
+                    },
+                    {
+                        "value": "LYA2",
+                        "text": "LYNDEN INTERNATIONAL"
+                    },
+                    {
+                        "value": "LYH1",
+                        "text": "LYNDEN INTERNATIONAL"
+                    },
+                    {
+                        "value": "LYH2",
+                        "text": "LYNDEN INTERNATIONAL"
+                    },
+                    {
+                        "value": "MERS",
+                        "text": "MERIT TRANSPORTATION"
+                    },
+                    {
+                        "value": "MERT",
+                        "text": "MERIT TL"
+                    },
+                    {
+                        "value": "MLO",
+                        "text": "MENLO Logistics Ground"
+                    },
+                    {
+                        "value": "MLO1",
+                        "text": "MENLO Logistics 1 Day Service"
+                    },
+                    {
+                        "value": "MLO2",
+                        "text": "MENLO Logistics 2 Day Service"
+                    },
+                    {
+                        "value": "MO",
+                        "text": "Moran Transportation"
+                    },
+                    {
+                        "value": "MSOH",
+                        "text": "Mid South Transport, Inc."
+                    },
+                    {
+                        "value": "MTF2",
+                        "text": "FedEx 2 Day"
+                    },
+                    {
+                        "value": "MTFG",
+                        "text": "FedEx Ground"
+                    },
+                    {
+                        "value": "MTFO",
+                        "text": "FedEx Standard Overnight"
+                    },
+                    {
+                        "value": "MTFP",
+                        "text": "FedEx Priority Overnight"
+                    },
+                    {
+                        "value": "MTFS",
+                        "text": "FedEx Saturday Delivery"
+                    },
+                    {
+                        "value": "MTFX",
+                        "text": "FedEx Express Saver"
+                    },
+                    {
+                        "value": "ODI",
+                        "text": "Old Dominion Frt Line"
+                    },
+                    {
+                        "value": "OL",
+                        "text": "OLIVER TRUCKING"
+                    },
+                    {
+                        "value": "OMNI",
+                        "text": "OMNI Logistics deferred 3-5"
+                    },
+                    {
+                        "value": "ONTM",
+                        "text": "ON TIME TRUCKING DNJ LTL ONLY"
+                    },
+                    {
+                        "value": "OTFT",
+                        "text": "ON TRACK FREIGHT SYSTEMS TRUCK"
+                    },
+                    {
+                        "value": "PAAF",
+                        "text": "PILOT FREIGHT DEFERRED 3-5"
+                    },
+                    {
+                        "value": "PAF1",
+                        "text": "Pilot Freight 1 Day"
+                    },
+                    {
+                        "value": "PAF2",
+                        "text": "Pilot Freight 2 Day"
+                    },
+                    {
+                        "value": "PAF3",
+                        "text": "Pilot Freight 3 Day"
+                    },
+                    {
+                        "value": "PGL1",
+                        "text": "Pegasus Next Day"
+                    },
+                    {
+                        "value": "PGL2",
+                        "text": "Pegasus 2 Day Service"
+                    },
+                    {
+                        "value": "PGL3",
+                        "text": "Pegasus 3 Day Service"
+                    },
+                    {
+                        "value": "PGL5",
+                        "text": "Pegasus 5 Day Service"
+                    },
+                    {
+                        "value": "PRL",
+                        "text": "PRO-LINE Inc."
+                    },
+                    {
+                        "value": "PYLE",
+                        "text": "A Duie Pyle"
+                    },
+                    {
+                        "value": "RI",
+                        "text": "FOLLOW ROUTING GUIDE"
+                    },
+                    {
+                        "value": "RPM",
+                        "text": "RPM TL"
+                    },
+                    {
+                        "value": "SBA",
+                        "text": "Service by Air"
+                    },
+                    {
+                        "value": "SK1",
+                        "text": "Seko Nxt Bus Day Exp"
+                    },
+                    {
+                        "value": "SK2",
+                        "text": "Seko 2nd Bus Day Eco"
+                    },
+                    {
+                        "value": "SK3",
+                        "text": "Seko 3rd Bus Day"
+                    },
+                    {
+                        "value": "SK5",
+                        "text": "Seko 3-5 Day Surface"
+                    },
+                    {
+                        "value": "SPMK",
+                        "text": "SPEEDMARK-Air_International"
+                    },
+                    {
+                        "value": "STI",
+                        "text": "Service Transport Inc."
+                    },
+                    {
+                        "value": "SY",
+                        "text": "Sky Way"
+                    },
+                    {
+                        "value": "TRN1",
+                        "text": "Transport Specialist MS small"
+                    },
+                    {
+                        "value": "TTSI",
+                        "text": "TOTAL TRANSPORTATION SERVICES"
+                    },
+                    {
+                        "value": "U3",
+                        "text": "UPS 3 Day Select"
+                    },
+                    {
+                        "value": "UB",
+                        "text": "UPS 2 Day Air"
+                    },
+                    {
+                        "value": "UH",
+                        "text": "UPS Ground CWT"
+                    },
+                    {
+                        "value": "UH1S",
+                        "text": "UPS Next Day Sav CWT"
+                    },
+                    {
+                        "value": "UH2N",
+                        "text": "UPS 2Day by Noon CWT"
+                    },
+                    {
+                        "value": "UHEP",
+                        "text": "UPS Worldwide Express CWT"
+                    },
+                    {
+                        "value": "UHEX",
+                        "text": "UPS Worldwide Expedited CWT"
+                    },
+                    {
+                        "value": "UHW1",
+                        "text": "UPS Next Day CWT"
+                    },
+                    {
+                        "value": "UHW2",
+                        "text": "UPS 2 Day Air CWT"
+                    },
+                    {
+                        "value": "UHW3",
+                        "text": "UPS 3 Day Air CWT"
+                    },
+                    {
+                        "value": "UHXP",
+                        "text": "UPS Worldwide Exprs Saver CWT"
+                    },
+                    {
+                        "value": "UI",
+                        "text": "UPS International"
+                    },
+                    {
+                        "value": "UMIF",
+                        "text": "UPS Mail Innov Flats less 1 lb"
+                    },
+                    {
+                        "value": "UMIP",
+                        "text": "UPS Mail Innov Parcel"
+                    },
+                    {
+                        "value": "UP",
+                        "text": "UPS Ground"
+                    },
+                    {
+                        "value": "UPEP",
+                        "text": "UPS Worldwide Express"
+                    },
+                    {
+                        "value": "UPEX",
+                        "text": "UPS Worldwide Expedited"
+                    },
+                    {
+                        "value": "UPSA",
+                        "text": "UPS Standard to Canada"
+                    },
+                    {
+                        "value": "UPXP",
+                        "text": "UPS Worldwide Express Saver"
+                    },
+                    {
+                        "value": "UR",
+                        "text": "UPS Next Day Air"
+                    },
+                    {
+                        "value": "URS",
+                        "text": "UPS Next Day Air Saver"
+                    },
+                    {
+                        "value": "US",
+                        "text": "UPS Saturday Delivery"
+                    },
+                    {
+                        "value": "USH",
+                        "text": "USF Holland"
+                    },
+                    {
+                        "value": "WC",
+                        "text": "TD SYNNEX Will Call"
+                    },
+                    {
+                        "value": "WHS",
+                        "text": "Warehouse Select"
+                    },
+                    {
+                        "value": "WRDS",
+                        "text": "Western Regional Delivery"
+                    },
+                    {
+                        "value": "YF",
+                        "text": "YRCW"
+                    }
+                ]
+            },
+            {
+                "name": "Shipment.ShipMethod.Code",
+                "label": "Ship-Method Code",
+                "type": "SELECT",
+                "help": "Not ALL carriers are available in your delivery area. Please check with your TD SYNNEX sales rep if you are unsure which carrier is available for you to use as a resource. Please contact Catalyst to limit the displayed list of ship-method codes.",
+                "filter": {
+                    "country": "CA"
+                },
+                "options": [
+                    {
+                        "value": "CEV",
+                        "text": "CEVA Logistics"
+                    },
+                    {
+                        "value": "CEVT",
+                        "text": "CEVA - TH Service"
+                    },
+                    {
+                        "value": "CEVW",
+                        "text": "CEVA - WH Service"
+                    },
+                    {
+                        "value": "CPC",
+                        "text": "Canada Post Corporation"
+                    },
+                    {
+                        "value": "CPCE",
+                        "text": "CANADA POST - EXPEDITED PARCEL"
+                    },
+                    {
+                        "value": "CPCP",
+                        "text": "CANADA POST - PRIORITY NEXT AM"
+                    },
+                    {
+                        "value": "CPCR",
+                        "text": "CANADA POST - REGULAR PARCEL"
+                    },
+                    {
+                        "value": "CPCX",
+                        "text": "CANADA POST – XPRESSPOST"
+                    },
+                    {
+                        "value": "DARC",
+                        "text": "Day and Ross Calgary"
+                    },
+                    {
+                        "value": "DARG",
+                        "text": "Day and Ross Guelph"
+                    },
+                    {
+                        "value": "DARH",
+                        "text": "Day and Ross Halifax"
+                    },
+                    {
+                        "value": "DARV",
+                        "text": "Day and Ross Vancouver"
+                    },
+                    {
+                        "value": "DARX",
+                        "text": "Day & Ross Small Orders"
+                    },
+                    {
+                        "value": "DSV",
+                        "text": "Drop Ship Vendor"
+                    },
+                    {
+                        "value": "EDEL",
+                        "text": "Electronic Delivery (email)"
+                    },
+                    {
+                        "value": "FDXH",
+                        "text": "FedEx Express"
+                    },
+                    {
+                        "value": "FWC",
+                        "text": "Forwarded Will Call"
+                    },
+                    {
+                        "value": "KNH",
+                        "text": "K & H Dispatch"
+                    },
+                    {
+                        "value": "KNHS",
+                        "text": "K&H Special"
+                    },
+                    {
+                        "value": "OXR",
+                        "text": "Onward Express Rush"
+                    },
+                    {
+                        "value": "P10X",
+                        "text": "Purolator Express 10:30am"
+                    },
+                    {
+                        "value": "P9X",
+                        "text": "Purolator Express 9:00am"
+                    },
+                    {
+                        "value": "PSA",
+                        "text": "Purolator Saturday"
+                    },
+                    {
+                        "value": "PUA",
+                        "text": "Purolator Express Air"
+                    },
+                    {
+                        "value": "PUG",
+                        "text": "Purolator Ground"
+                    },
+                    {
+                        "value": "PUX",
+                        "text": "Purolator Express Ground"
+                    },
+                    {
+                        "value": "QR2",
+                        "text": "Quick-Run Overnight"
+                    },
+                    {
+                        "value": "ROD1",
+                        "text": "Routes Display Dist 1 pallet"
+                    },
+                    {
+                        "value": "ROD2",
+                        "text": "Routes Display Dist 2 pallet"
+                    },
+                    {
+                        "value": "ROD3",
+                        "text": "Routes Display Dist 3 pallet"
+                    },
+                    {
+                        "value": "RODQ",
+                        "text": "Routes Distribution Quarters"
+                    },
+                    {
+                        "value": "ROU",
+                        "text": "Routes LTL"
+                    },
+                    {
+                        "value": "ROUI",
+                        "text": "ROUTES INBOUND"
+                    },
+                    {
+                        "value": "ROUQ",
+                        "text": "Routes quarters guelph"
+                    },
+                    {
+                        "value": "ROUS",
+                        "text": "Routes Display Special"
+                    },
+                    {
+                        "value": "ROUT",
+                        "text": "Routes Truck Load"
+                    },
+                    {
+                        "value": "S40H",
+                        "text": "SCHENKER 40 FT HIGH CUBE CONT"
+                    },
+                    {
+                        "value": "SAIR",
+                        "text": "SCHENKER AIRFREIGHT"
+                    },
+                    {
+                        "value": "SC20",
+                        "text": "Schenker 20' Container"
+                    },
+                    {
+                        "value": "SC40",
+                        "text": "Schenker 40' Container"
+                    },
+                    {
+                        "value": "SC45",
+                        "text": "Schenker 45' Container"
+                    },
+                    {
+                        "value": "SC4H",
+                        "text": "Schenker 40' High Cube Contnr"
+                    },
+                    {
+                        "value": "SDL",
+                        "text": "Dynamex Exp - Same Day Local"
+                    },
+                    {
+                        "value": "SDS",
+                        "text": "Dynamex Exp - Same Day Direct"
+                    },
+                    {
+                        "value": "SDT",
+                        "text": "Sameday Truck"
+                    },
+                    {
+                        "value": "SFTL",
+                        "text": "SCHENKER FULL TRUCKLOAD"
+                    },
+                    {
+                        "value": "SLCL",
+                        "text": "SCHENKER LESS THAN CONTAINER"
+                    },
+                    {
+                        "value": "SLTL",
+                        "text": "SCHENKER LESS THAN TRUCKLOAD"
+                    },
+                    {
+                        "value": "ST2",
+                        "text": "Strait Consolidate Stx"
+                    },
+                    {
+                        "value": "STX",
+                        "text": "Strait Express"
+                    },
+                    {
+                        "value": "UPG",
+                        "text": "UPS Standard"
+                    },
+                    {
+                        "value": "UPGC",
+                        "text": "UPS Ground for Collect"
+                    },
+                    {
+                        "value": "UPSS",
+                        "text": "UPS Express Saver"
+                    },
+                    {
+                        "value": "UPX",
+                        "text": "UPS Express Saver"
+                    },
+                    {
+                        "value": "WC",
+                        "text": "Customer Pick-Up"
+                    },
+                    {
+                        "value": "WCET",
+                        "text": "Pick-Up in Etobicoke"
+                    },
+                    {
+                        "value": "WCGU",
+                        "text": "Pick-Up Guelph"
+                    },
+                    {
+                        "value": "WCMI",
+                        "text": "Customer Pick-Up"
+                    },
+                    {
+                        "value": "WCRO",
+                        "text": "Logitec Display Shipment"
+                    },
+                    {
+                        "value": "WHS",
+                        "text": "Warehouse Select"
+                    }
+                ]
+            },
+            {
+                "name": "Shipment.FreightAccountNumber",
+                "label": "3rd-Party Freight AC#",
+                "type": "TEXT",
+                "help": "Account to be billed by carrier (e.g. FEDEX). If not specified then freight is charged to the party pre-agreed by TD SYNNEX sales and customers."
+            }
+        ]
+    },
+    {
+        "fieldGroup": "Additional Bill-To Information",
+        "fields": [
+            {
+                "name": "Payment.BillTo.SynnexLocationNumber",
+                "label": "Synnex Location Number",
+                "type": "TEXT",
+                "help": "Customers with multiple bill-to locations may use this field to indicate the Location Number (CPOP.BillToLocation.SYNNLoc#) to be used."
+            }
+        ]
+    },
+    {
+        "fieldGroup": "Software License Information",
+        "fields": [
+            {
+                "label": "- This section is required when placing a Software License PO.",
+                "type": "RESETBUTTON"
+            },
+            {
+                "name": "SoftWareLicense.AuthorizationNumber",
+                "label": "Authorization Number",
+                "type": "TEXT",
+                "help": "Authorization Number given by Software Vendors."
+            },
+            {
+                "name": "SoftWareLicense.ReOrder",
+                "label": "Reorder?",
+                "type": "CHECKBOX",
+                "help": "Required for Software License PO."
+            },
+            {
+                "name": "SoftWareLicense.Licensee.AddressName1",
+                "label": "Address Name 1",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipAddrName1}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.AddressName2",
+                "label": "Address Name 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName2}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.AddressLine1",
+                "label": "Address Line 1",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipAddr1}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.AddressLine2",
+                "label": "Address Line 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr2}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.City",
+                "label": "City",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipCity}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.State",
+                "label": "State",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipState}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.ZipCode",
+                "label": "Zip Code",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipZip}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.Country",
+                "label": "Country",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipCountry}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.LicenseeContact.ContactName",
+                "label": "Contact Name",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipContact}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.LicenseeContact.PhoneNumber",
+                "label": "Phone Number",
+                "type": "PHONE",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipPhone}"
+            },
+            {
+                "name": "SoftWareLicense.Licensee.LicenseeContact.FaxNumber",
+                "label": "Fax Number",
+                "type": "PHONE",
+                "help": "Required for Software License PO."
+            },
+            {
+                "name": "SoftWareLicense.Licensee.LicenseeContact.EmailAddress",
+                "label": "Email Address",
+                "type": "EMAIL",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipEmail}"
+            }
+        ]
+    },
+    {
+        "fieldGroup": "Reseller Information",
+        "fields": [
+            {
+                "label": "- This section is required for Software License PO - or - when the PO is billed directly to the end user.",
+                "type": "RESETBUTTON"
+            },
+            {
+                "name": "Customer.AddressName1",
+                "label": "Address Name 1",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipAddrName1}"
+            },
+            {
+                "name": "Customer.AddressName2",
+                "label": "Address Name 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName2}"
+            },
+            {
+                "name": "Customer.AddressLine1",
+                "label": "Address Line 1",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipAddr1}"
+            },
+            {
+                "name": "Customer.AddressLine2",
+                "label": "Address Line 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr2}"
+            },
+            {
+                "name": "Customer.City",
+                "label": "City",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipCity}"
+            },
+            {
+                "name": "Customer.State",
+                "label": "State",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipState}"
+            },
+            {
+                "name": "Customer.ZipCode",
+                "label": "Zip Code",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipZip}"
+            },
+            {
+                "name": "Customer.Country",
+                "label": "Country",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipCountry}"
+            },
+            {
+                "name": "Customer.CustomerContact.ContactName",
+                "label": "Contact Name",
+                "type": "TEXT",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipContact}"
+            },
+            {
+                "name": "Customer.CustomerContact.PhoneNumber",
+                "label": "Phone Number",
+                "type": "PHONE",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipPhone}"
+            },
+            {
+                "name": "Customer.CustomerContact.FaxNumber",
+                "label": "Fax Number",
+                "type": "PHONE",
+                "help": "Required for Software License PO."
+            },
+            {
+                "name": "Customer.CustomerContact.EmailAddress",
+                "label": "Email Address",
+                "type": "EMAIL",
+                "help": "Required for Software License PO.",
+                "defaultValue": "${record.shipEmail}"
+            }
+        ]
+    },
+    {
+        "fieldGroup": "End User Information",
+        "fields": [
+            {
+                "label": "- This section is required when the PO is billed directly to the end user.",
+                "type": "RESETBUTTON"
+            },
+            {
+                "name": "EndUser.SynnexAccountNumber",
+                "label": "Synnex Account Number",
+                "type": "TEXT",
+                "help": "If this tag is not populated/provided and this PO is meant to be billed to this end user, then TD SYNNEX will assume this end user does not have account# yet and will create an account automatically."
+            },
+            {
+                "name": "EndUser.EndUserType",
+                "label": "End User Type",
+                "type": "SELECT",
+                "help": "If this tag is not populated, then we assume this end user is a non-Government/Educational End User. <br/>Values: F- Federal Government, L- State Government or Local Government, E- Education.",
+                "options": [
+                    {
+                        "text": "",
+                        "value": ""
+                    },
+                    {
+                        "text": "F",
+                        "value": "F"
+                    },
+                    {
+                        "text": "L",
+                        "value": "L"
+                    },
+                    {
+                        "text": "E",
+                        "value": "E"
+                    }
+                ]
+            },
+            {
+                "name": "EndUser.AddressName1",
+                "label": "Address Name 1",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName1}"
+            },
+            {
+                "name": "EndUser.AddressName2",
+                "label": "Address Name 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName2}"
+            },
+            {
+                "name": "EndUser.AddressLine1",
+                "label": "Address Line 1",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr1}"
+            },
+            {
+                "name": "EndUser.AddressLine2",
+                "label": "Address Line 2",
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr2}"
+            },
+            {
+                "name": "EndUser.City",
+                "label": "City",
+                "type": "TEXT",
+                "defaultValue": "${record.shipCity}"
+            },
+            {
+                "name": "EndUser.State",
+                "label": "State",
+                "type": "TEXT",
+                "defaultValue": "${record.shipState}"
+            },
+            {
+                "name": "EndUser.ZipCode",
+                "label": "Zip Code",
+                "type": "TEXT",
+                "defaultValue": "${record.shipZip}"
+            },
+            {
+                "name": "EndUser.Country",
+                "label": "Country",
+                "type": "TEXT",
+                "defaultValue": "${record.shipCountry}"
+            },
+            {
+                "name": "EndUser.EndUserContact.ContactName",
+                "label": "Contact Name",
+                "type": "TEXT",
+                "defaultValue": "${record.shipContact}"
+            },
+            {
+                "name": "EndUser.EndUserContact.PhoneNumber",
+                "label": "Phone Number",
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
+            },
+            {
+                "name": "EndUser.EndUserContact.FaxNumber",
+                "label": "Fax Number",
+                "type": "PHONE"
+            },
+            {
+                "name": "EndUser.EndUserContact.EmailAddress",
+                "label": "Email Address",
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
+            },
+            {
+                "name": "EndUser.EndUserPODate",
+                "label": "End User PO Date",
+                "type": "DATE"
+            },
+            {
+                "name": "EndUser.EndUserShipExpense",
+                "label": "End User Ship Expense",
+                "type": "CURRENCY",
+                "help": "End-User Shipping & Handling Expense per Reseller, ONLY for End-User Bill to PO/orders!"
+            },
+            {
+                "name": "EndUser.ContractCode",
+                "label": "Contract Code",
+                "type": "TEXT",
+                "help": "The Contract Code between end user and reseller."
+            },
+            {
+                "name": "EndUser.ContractFeeCode",
+                "label": "Contract Fee Code",
+                "type": "TEXT",
+                "help": "The Contract <u>Fee Code</u> between end user and reseller."
+            },
+            {
+                "name": "EndUser.ContractFee",
+                "label": "Contract Fee",
+                "type": "CURRENCY",
+                "help": "The Contract <u>Fee</u> between end user and reseller."
+            },
+            {
+                "name": "EndUser.ContractDeliveryDate",
+                "label": "Contract Delivery Date",
+                "type": "DATE",
+                "help": "The Contract Delivery Date agreed between end user and reseller."
+            }
+        ]
+    }
+]
