@@ -75,10 +75,10 @@ define([
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             returnValue = '';
 
-        let poObj = option.record,
-            recPO = option.nativeRecPO,
+        let poObj = option.purchaseOrder,
+            record = option.transaction,
             customerNo = option.customerNo,
-            vendorConfig = option.config,
+            vendorConfig = option.vendorConfig,
             itemLength = poObj.items.length,
             testRequest = option.testRequest;
 
@@ -123,13 +123,15 @@ define([
             shippingContact: (function () {
                 let logTitle = [LogTitle, 'GenerateBody', 'shippingContact'].join('::');
 
-                let shipSubRec = recPO.getSubrecord({ fieldId: 'shippingaddress' });
+                let shipSubRec = record.getSubrecord({ fieldId: 'shippingaddress' });
                 log.audit(logTitle, '// shipSubRec: ' + JSON.stringify(shipSubRec));
 
                 let poData = {
-                    shipto: recPO.getValue({ fieldId: 'shipto' }),
-                    createdfrom: recPO.getValue({ fieldId: 'createdfrom' }),
-                    primaryContact: recPO.getValue({ fieldId: 'custbody_ctc_vcsp_primary_contact' })
+                    shipto: record.getValue({ fieldId: 'shipto' }),
+                    createdfrom: record.getValue({ fieldId: 'createdfrom' }),
+                    primaryContact: record.getValue({
+                        fieldId: 'custbody_ctc_vcsp_primary_contact'
+                    })
                 };
                 log.audit(logTitle, '// poData: ' + JSON.stringify(poData));
 
@@ -212,8 +214,7 @@ define([
                 });
 
                 let contactInfo =
-                    contactNames[ContactRoles.PRIMARY] &&
-                    contactNames[ContactRoles.PRIMARY].entityid
+                    contactNames[ContactRoles.PRIMARY] && contactNames[ContactRoles.PRIMARY].entityid
                         ? contactNames[ContactRoles.PRIMARY]
                         : contactNames[ContactRoles.ALTERNATE];
                 log.audit(logTitle, '// contactInfo: ' + JSON.stringify(contactInfo));
@@ -268,13 +269,12 @@ define([
                 if (field_mapping && field_mapping.shippingContact) {
                     log.audit(
                         logTitle,
-                        '>> field_mapping.shippingContact: ' +
-                            JSON.stringify(field_mapping.shippingContact)
+                        '>> field_mapping.shippingContact: ' + JSON.stringify(field_mapping.shippingContact)
                     );
 
                     for (let fld in field_mapping.shippingContact) {
                         if (!field_mapping.shippingContact[fld]) continue;
-                        let mappedvalue = recPO.getValue({
+                        let mappedvalue = record.getValue({
                             fieldId: field_mapping.shippingContact[fld]
                         });
 
@@ -367,17 +367,14 @@ define([
                 let arr = [];
 
                 if (field_mapping && field_mapping.CUSTOM) {
-                    log.audit(
-                        logTitle,
-                        '>> field_mapping.CUSTOM: ' + JSON.stringify(field_mapping.CUSTOM)
-                    );
+                    log.audit(logTitle, '>> field_mapping.CUSTOM: ' + JSON.stringify(field_mapping.CUSTOM));
 
                     let mappedValues = {};
 
                     for (let fld in field_mapping.CUSTOM) {
                         if (!field_mapping.CUSTOM[fld]) continue;
 
-                        let mappedvalue = recPO.getValue({ fieldId: field_mapping.CUSTOM[fld] });
+                        let mappedvalue = record.getValue({ fieldId: field_mapping.CUSTOM[fld] });
                         mappedValues[fld] = mappedvalue || '';
 
                         log.audit(logTitle, '>> mappedvalue: ' + JSON.stringify(mappedvalue));
@@ -424,15 +421,13 @@ define([
                     returnValue = {};
 
                 //shipmethod
-                var shipMethod = recPO.getValue({ fieldId: 'shipmethod' });
+                var shipMethod = record.getValue({ fieldId: 'shipmethod' });
                 log.audit(logTitle, '>> shipmethod ' + JSON.stringify(shipMethod));
                 if (!shipMethod) return {};
 
                 var searchShipMethodMap = ns_search.create({
                     type: constants.Records.VENDOR_SHIPMETHOD,
-                    filters: [
-                        [constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]
-                    ],
+                    filters: [[constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]],
                     columns: [
                         'name',
                         { name: constants.Fields.VendorShipMethod.VENDOR_CONFIG },
@@ -443,8 +438,7 @@ define([
 
                 log.audit(
                     logTitle,
-                    '>> mapped shipping results: ' +
-                        JSON.stringify(searchShipMethodMap.runPaged().count)
+                    '>> mapped shipping results: ' + JSON.stringify(searchShipMethodMap.runPaged().count)
                 );
 
                 if (searchShipMethodMap.runPaged().count) {
@@ -462,6 +456,14 @@ define([
                         returnValue.shippingMethod = mappedShipMethod;
                     }
                 }
+
+                if (poObj['poShippingAccountNo']) {
+                    returnValue.carrier = poObj['poShippingMethod_text'] || returnValue.shippingMethod;
+                    returnValue.mean = poObj['poShippingMethod_text'] || returnValue.shippingMethod;
+                    returnValue.custShippingContractNum = poObj['poShippingAccountNo_text'];
+                    returnValue.shippingMethod = 'DC';
+                }
+
                 return returnValue;
             })()
         };
@@ -472,16 +474,13 @@ define([
 
     function processResponse(option) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
-            record = option.record,
+            poObj = option.purchaseOrder,
             response = option.response,
             responseBody = option.responseBody,
             returnValue = option.returnResponse;
         if (
             (response && response.isError) ||
-            (responseBody &&
-                (responseBody.errors ||
-                    responseBody.statusCode < 200 ||
-                    responseBody.statusCode >= 300))
+            (responseBody && (responseBody.errors || responseBody.statusCode < 200 || responseBody.statusCode >= 300))
         ) {
             let errorMesg = response.errorMsg;
             returnValue.errorName = 'Unexpected Error';
@@ -494,7 +493,7 @@ define([
             }
             returnValue.errorMsg = errorMesg;
             returnValue.message = 'Send PO failed';
-            returnValue.errorId = record.id;
+            returnValue.errorId = poObj.id;
             returnValue.isError = true;
         } else {
             returnValue.message = 'Send PO successful';
@@ -506,22 +505,22 @@ define([
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::');
 
-        let recVendorConfig = option.recVendorConfig,
-            key = recVendorConfig.apiKey,
-            secret = recVendorConfig.apiSecret,
-            url = recVendorConfig.endPoint,
-            accessUrl = recVendorConfig.accessEndPoint,
-            testRequest = recVendorConfig.testRequest,
-            customerNo = recVendorConfig.customerNo,
-            record = option.record || option.recPO,
-            recPO = option.nativePO;
+        let vendorConfig = option.vendorConfig,
+            key = vendorConfig.apiKey,
+            secret = vendorConfig.apiSecret,
+            url = vendorConfig.endPoint,
+            accessUrl = vendorConfig.accessEndPoint,
+            testRequest = vendorConfig.testRequest,
+            customerNo = vendorConfig.customerNo,
+            poObj = option.purchaseOrder,
+            record = option.transaction;
 
-        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
 
         let sendPOResponse,
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
             };
 
         try {
@@ -529,7 +528,7 @@ define([
                 key: key,
                 secret: secret,
                 url: accessUrl,
-                poId: record.id
+                poId: poObj.id
             });
             if (!token)
                 throw ns_error.create({
@@ -539,10 +538,10 @@ define([
 
             // build the request body
             let sendPOBody = generateBody({
-                record: record,
-                nativeRecPO: recPO,
+                purchaseOrder: poObj,
+                transaction: record,
                 customerNo: customerNo,
-                config: recVendorConfig,
+                vendorConfig: vendorConfig,
                 testRequest: testRequest
             });
             log.audit(logTitle, sendPOBody);
@@ -550,7 +549,7 @@ define([
             ctc_util.vcLog({
                 title: [LogTitle, 'PO Payload'].join(' - '),
                 content: sendPOBody,
-                transaction: record.id
+                transaction: poObj.id
             });
 
             if (!sendPOBody)
@@ -562,7 +561,7 @@ define([
             sendPOResponse = ctc_util.sendRequest({
                 header: [LogTitle, 'Send PO'].join(' : '),
                 method: 'post',
-                recordId: record.id,
+                recordId: poObj.id,
                 query: {
                     url: url,
                     headers: {
@@ -574,20 +573,20 @@ define([
                 }
             });
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: sendPOResponse.logId,
                 responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
                 responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
 
             returnResponse = processResponse({
-                record: record,
+                purchaseOrder: poObj,
                 response: sendPOResponse,
                 responseBody: returnResponse.responseBody,
                 returnResponse: returnResponse
@@ -595,11 +594,11 @@ define([
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };

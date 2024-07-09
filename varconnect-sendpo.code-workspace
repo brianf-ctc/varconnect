@@ -1,10 +1,13 @@
 {
 	"folders": [
 		{
-			"path": "varconnect-sendpo"
+			"path": "../varconnect-sendpo"
 		},
 		{
 			"path": "varconnect-dev"
+		},
+		{
+			"path": "."
 		}
 	]
 }

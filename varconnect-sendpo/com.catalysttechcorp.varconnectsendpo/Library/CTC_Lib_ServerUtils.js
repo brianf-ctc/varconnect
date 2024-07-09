@@ -13,9 +13,10 @@
  * @NModuleScope Public
  */
 
-define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'], function (
+define(['N/file', 'N/render', 'N/runtime', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'], function (
     NS_File,
     NS_Render,
+    NS_Runtime,
     CTC_Util,
     VCSP_Global
 ) {
@@ -24,17 +25,17 @@ define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'
 
     let CTC_ServerSideUtil = {
         CACHE: {},
-        getFileContent: function (option) {
+        getFileContent: function (options) {
             let returnValue = null;
             let logTitle = [LogTitle, 'getFileContent'];
 
             try {
-                let fileId = option.fileId;
+                let fileId = options.fileId;
                 if (!fileId) {
-                    let fileName = option.filename || option.name;
+                    let fileName = options.filename || options.name;
                     if (!fileName) return false;
 
-                    let folderId = option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
+                    let folderId = options.folder || options.folderId || CTC_ServerSideUtil.getCurrentFolder();
                     let fileInfo = CTC_Util.searchFile({
                         name: fileName,
                         folder: folderId
@@ -56,23 +57,23 @@ define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'
 
             return returnValue;
         },
-        getCurrentFolder: function (option) {
+        getCurrentFolder: function (options) {
             let returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
-            option = option || {};
+            options = options || {};
 
             try {
-                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
+                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(options)].join('::');
                 returnValue = CTC_ServerSideUtil.CACHE[cacheKey];
 
-                if (CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) || option.noCache == true) {
-                    let scriptId = option.scriptId;
+                if (CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) || options.noCache == true) {
+                    let scriptId = options.scriptId;
                     if (!scriptId) {
-                        if (!option.currentScript) {
-                            if (!option.runtime) option.runtime = NS_Runtime;
-                            option.currentScript = option.runtime.getCurrentScript();
+                        if (!options.currentScript) {
+                            if (!options.runtime) options.runtime = NS_Runtime;
+                            options.currentScript = options.runtime.getCurrentScript();
                         }
-                        scriptId = option.currentScript.id;
+                        scriptId = options.currentScript.id;
                     }
                     if (!scriptId) return false;
 
@@ -104,9 +105,28 @@ define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'
             return returnValue;
         },
         renderTemplate: function (options) {
-            // TODO
+            let templateBody = options.body,
+                poObj = options.purchaseOrder || {},
+                returnValue;
+            // CTC_Util.log('DEBUG', 'renderTemplate.templateBody', templateBody);
+            // CTC_Util.log('DEBUG', 'renderTemplate.record', poObj);
+            let templateRenderer = NS_Render.create();
+            templateRenderer.templateContent = templateBody;
+            templateRenderer.addCustomDataSource({
+                format: NS_Render.DataSource.OBJECT,
+                alias: 'record',
+                data: poObj
+            });
+            let user = NS_Runtime.getCurrentUser();
+            templateRenderer.addCustomDataSource({
+                format: NS_Render.DataSource.OBJECT,
+                alias: 'currentUser',
+                data: user
+            });
+            returnValue = templateRenderer.renderAsString();
+            // CTC_Util.log('DEBUG', 'renderTemplate.renderedBody', returnValue);
+            return returnValue;
         }
     };
-
     return CTC_ServerSideUtil;
 });

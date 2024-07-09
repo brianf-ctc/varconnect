@@ -13,13 +13,13 @@
  *
  */
 
-define([
-    'N/search',
-    'N/xml',
-    'N/format',
-    '../Library/CTC_VCSP_Constants',
-    '../Library/CTC_Lib_Utils'
-], function (NS_Search, NS_Xml, NS_Format, VCSP_Global, CTC_Util) {
+define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
+    NS_Search,
+    NS_Xml,
+    NS_Format,
+    VCSP_Global,
+    CTC_Util
+) {
     let LogTitle = 'WS:Synnex';
 
     let Helper = {};
@@ -98,7 +98,7 @@ define([
 
     function processResponse(option) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
-            record = option.record,
+            poObj = option.purchaseOrder,
             returnValue = option.returnResponse,
             xmlDoc = NS_Xml.Parser.fromString({
                 text: option.responseBody
@@ -114,14 +114,10 @@ define([
         orderStatus.successLines = [];
         orderStatus.errorLines = [];
         orderStatus.lineNotes = [];
-        if (
-            responseNodesArray &&
-            responseNodesArray.length &&
-            responseNodesArray[0].hasChildNodes()
-        ) {
+        if (responseNodesArray && responseNodesArray.length && responseNodesArray[0].hasChildNodes()) {
             let orderResponseNodes = responseNodesArray[0].childNodes;
-            for (let i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
-                lineUniqueKeys.push(record.items[i].lineuniquekey);
+            for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
+                lineUniqueKeys.push(poObj.items[i].lineuniquekey);
             }
             for (let i = 0, len = orderResponseNodes.length; i < len; i += 1) {
                 switch (orderResponseNodes[i].nodeName) {
@@ -135,20 +131,18 @@ define([
                         orderStatus.note = orderResponseNodes[i].textContent;
                         break;
                     case 'ResponseDateTime':
-                        orderStatus.order_date = Helper.formatFromSynnexDate(
-                            orderResponseNodes[i].textContent
-                        );
+                        orderStatus.order_date = Helper.formatFromSynnexDate(orderResponseNodes[i].textContent);
                         break;
                     case 'ErrorMessage':
                         orderStatus.errorMessage = orderResponseNodes[i].textContent;
                         returnValue.errorName = orderStatus.errorMessage;
-                        returnValue.errorId = record.id;
+                        returnValue.errorId = poObj.id;
                         returnValue.isError = true;
                         break;
                     case 'ErrorDetail':
                         orderStatus.errorDetail = orderResponseNodes[i].textContent;
                         returnValue.errorMsg = orderStatus.errorDetail;
-                        returnValue.errorId = record.id;
+                        returnValue.errorId = poObj.id;
                         returnValue.isError = true;
                         break;
                     default:
@@ -159,13 +153,7 @@ define([
                         node: orderResponseNodes[i],
                         json: json_data
                     });
-                    log.debug(
-                        logTitle,
-                        'Parsing ' +
-                            orderResponseNodes[i].nodeName +
-                            ': ' +
-                            JSON.stringify(json_data)
-                    );
+                    log.debug(logTitle, 'Parsing ' + orderResponseNodes[i].nodeName + ': ' + JSON.stringify(json_data));
                 }
             }
             let itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
@@ -216,8 +204,7 @@ define([
                                 itemDetails.order_type = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'OrderNumber':
-                                itemDetails.vendor_order_number =
-                                    itemChildNodes[y].textContent || 'NA';
+                                itemDetails.vendor_order_number = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SKU':
                                 itemDetails.vendor_sku = itemChildNodes[y].textContent || 'NA';
@@ -232,8 +219,7 @@ define([
                                 itemDetails.ship_from = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SynnexInternalReference':
-                                itemDetails.internal_reference_num =
-                                    itemChildNodes[y].textContent || 'NA';
+                                itemDetails.internal_reference_num = itemChildNodes[y].textContent || 'NA';
                                 break;
                             default:
                                 break;
@@ -253,7 +239,7 @@ define([
                 } else {
                     returnValue.errorMsg = orderStatus.note;
                 }
-                returnValue.errorId = record.id;
+                returnValue.errorId = poObj.id;
                 returnValue.isError = true;
                 returnValue.message = 'Send PO failed';
             } else {
@@ -264,13 +250,9 @@ define([
                         orderStatus.errorLines.push(itemDetails);
                         if (itemDetails.note && itemDetails.note != 'NA') {
                             orderStatus.lineNotes.push(
-                                [
-                                    itemDetails.order_status,
-                                    '@',
-                                    itemDetails.vendor_line,
-                                    ': ',
-                                    itemDetails.note
-                                ].join('')
+                                [itemDetails.order_status, '@', itemDetails.vendor_line, ': ', itemDetails.note].join(
+                                    ''
+                                )
                             );
                         }
                     }
@@ -282,8 +264,7 @@ define([
                         ' line item(s) succeeded and ' +
                         orderStatus.errorLines.length +
                         ' failed';
-                    if (orderStatus.lineNotes.length)
-                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
+                    if (orderStatus.lineNotes.length) returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
                 } else if (orderStatus.errorLines.length) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
@@ -311,7 +292,7 @@ define([
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             returnValue = '';
 
-        let record = option.record,
+        let poObj = option.purchaseOrder,
             additionalVendorDetails = null,
             customerNo = option.customerNo,
             vendorConfig = option.vendorConfig,
@@ -324,34 +305,34 @@ define([
             Credential: credentials,
             OrderRequest: {
                 CustomerNumber: customerNo,
-                PONumber: record.tranId,
+                PONumber: poObj.tranId,
                 PODateTime: Helper.formatToSynnexDate(
                     NS_Format.parse({
-                        value: record.createdDate,
+                        value: poObj.createdDate,
                         type: NS_Format.Type.DATETIME
                     })
                 ),
                 XMLPOSubmitDateTime: Helper.formatToSynnexDate(new Date()),
-                DropShipFlag: record.isDropShip ? 'Y' : 'N',
-                ShipComplete: record.shipComplete ? 'Y' : 'N',
-                EndUserPONumber: record.tranId,
-                Comment: record.memo,
+                DropShipFlag: poObj.isDropShip ? 'Y' : 'N',
+                ShipComplete: poObj.shipComplete ? 'Y' : 'N',
+                EndUserPONumber: poObj.tranId,
+                Comment: poObj.memo,
                 Shipment: {
                     ShipFromWarehouse: 'ANY',
                     ShipTo: {
-                        AddressName1: record.shipAddrName1,
-                        AddressName2: record.shipAddrName2,
-                        AddressLine1: record.shipAddr1,
-                        AddressLine2: record.shipAddr2,
-                        City: record.shipCity,
-                        State: record.shipState,
-                        ZipCode: record.shipZip,
-                        Country: record.shipCountry
+                        AddressName1: poObj.shipAddrName1,
+                        AddressName2: poObj.shipAddrName2,
+                        AddressLine1: poObj.shipAddr1,
+                        AddressLine2: poObj.shipAddr2,
+                        City: poObj.shipCity,
+                        State: poObj.shipState,
+                        ZipCode: poObj.shipZip,
+                        Country: poObj.shipCountry
                     },
                     ShipToContact: {
-                        ContactName: record.shipAddressee,
-                        PhoneNumber: record.shipPhone,
-                        EmailAddress: record.shipEmail
+                        ContactName: poObj.shipAddressee,
+                        PhoneNumber: poObj.shipPhone,
+                        EmailAddress: poObj.shipEmail
                     }
                     // ShipMethod: {
                     //     Code: 'NA',
@@ -362,14 +343,14 @@ define([
                         '/attributes': {
                             code: customerNo
                         },
-                        AddressName1: record.billAttention || record.billAddressee,
-                        AddressName2: record.billAttention ? record.billAddressee : null,
-                        AddressLine1: record.billAddr1,
-                        AddressLine2: record.billAddr2,
-                        City: record.billCity,
-                        State: record.billState,
-                        ZipCode: record.billZip,
-                        Country: record.billCountry
+                        AddressName1: poObj.billAttention || poObj.billAddressee,
+                        AddressName2: poObj.billAttention ? poObj.billAddressee : null,
+                        AddressLine1: poObj.billAddr1,
+                        AddressLine2: poObj.billAddr2,
+                        City: poObj.billCity,
+                        State: poObj.billState,
+                        ZipCode: poObj.billZip,
+                        Country: poObj.billCountry
                     }
                 },
                 Items: (function (record) {
@@ -389,7 +370,7 @@ define([
                         items.push(lineItem);
                     }
                     return items;
-                })(record)
+                })(poObj)
             },
             _toXmlAttributes: function (object) {
                 let xmlBody = '';
@@ -425,13 +406,7 @@ define([
                                 xmlBody.push('</' + property + '>');
                             }
                         } else if (object[property] !== undefined) {
-                            xmlBody.push(
-                                [
-                                    '<' + property + '>',
-                                    object[property],
-                                    '</' + property + '>'
-                                ].join('')
-                            );
+                            xmlBody.push(['<' + property + '>', object[property], '</' + property + '>'].join(''));
                         }
                     }
                 }
@@ -452,22 +427,27 @@ define([
                 return xmlBody;
             }
         };
-        if (record.additionalVendorDetails) {
-            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
-        } else if (vendorConfig.additionalPOFields) {
+        if (poObj.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
+        } else if (vendorConfig.additionalPOFields && vendorConfig.includeAdditionalDetailsOnSubmit) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
-                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields),
+                filterValues: {
+                    country: vendorConfig.country,
+                    apiVendor: vendorConfig.apiVendor
+                }
             });
+            CTC_Util.log(
+                'AUDIT',
+                logTitle,
+                'Additional vendor details to submit: ' + JSON.stringify(additionalVendorDetails)
+            );
         }
         if (additionalVendorDetails) {
             for (let fieldId in additionalVendorDetails) {
                 let fieldHierarchy = fieldId.split('.');
                 let fieldContainer = requestDetails.OrderRequest;
-                for (
-                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
-                    i < len;
-                    i += 1
-                ) {
+                for (let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1; i < len; i += 1) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
                         fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
@@ -480,20 +460,34 @@ define([
                 }
                 // log.debug(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
+            // check if SoftWareLicense was intended to be included
+            if (requestDetails.OrderRequest.SoftWareLicense) {
+                let softWareLicenseKeys = Object.keys(requestDetails.OrderRequest.SoftWareLicense);
+                if (
+                    !softWareLicenseKeys ||
+                    softWareLicenseKeys.length == 0 ||
+                    (softWareLicenseKeys.length == 1 &&
+                        softWareLicenseKeys[0] == 'ReOrder' &&
+                        !requestDetails.OrderRequest.SoftWareLicense.ReOrder)
+                ) {
+                    delete requestDetails.OrderRequest.SoftWareLicense;
+                }
+            }
         }
+        CTC_Util.cleanUpJSON(requestDetails.OrderRequest);
         log.audit(logTitle, 'Order Request: ' + JSON.stringify(requestDetails.OrderRequest));
         returnValue = requestDetails.toXml();
         CTC_Util.vcLog({
             title: [LogTitle, 'Order Request Values'].join(' - '),
             content: returnValue,
-            transaction: record.id
+            transaction: poObj.id
         });
         return returnValue;
     }
 
     function sendPOToSynnex(option) {
         let logTitle = [LogTitle, 'sendPOToSynnex'].join('::'),
-            record = option.record,
+            poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig,
             body = option.body,
             synnexRequestQuery = {
@@ -512,7 +506,7 @@ define([
         let sendPOResponse = CTC_Util.sendRequest({
             header: [LogTitle, 'Send PO'].join(' : '),
             method: 'post',
-            recordId: record.id,
+            recordId: poObj.id,
             isXML: true,
             query: synnexRequestQuery
         });
@@ -522,58 +516,58 @@ define([
 
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::'),
-            vendorConfig = option.recVendorConfig,
+            vendorConfig = option.vendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+            poObj = option.purchaseOrder;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
         let sendPOResponse,
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
             };
         try {
             let sendPOBody = generateBody({
-                record: record,
+                purchaseOrder: poObj,
                 customerNo: customerNo,
                 vendorConfig: vendorConfig
             });
             sendPOResponse = sendPOToSynnex({
-                record: record,
+                purchaseOrder: poObj,
                 vendorConfig: vendorConfig,
                 body: sendPOBody
             });
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: sendPOResponse.logId,
                 responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
                 responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
 
             returnResponse = processResponse({
-                record: record,
+                purchaseOrder: poObj,
                 responseBody: returnResponse.responseBody,
                 returnResponse: returnResponse
             });
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (sendPOResponse) {

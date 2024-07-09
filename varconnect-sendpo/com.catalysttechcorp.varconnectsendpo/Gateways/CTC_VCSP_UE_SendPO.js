@@ -20,6 +20,8 @@ define([
     'N/redirect',
     'N/url',
     'N/ui/serverWidget',
+    'N/task',
+    'N/redirect',
     '../Library/CTC_Lib_EventRouter',
     '../Library/CTC_Lib_Utils',
     '../Library/CTC_VCSP_Lib_Main',
@@ -35,6 +37,8 @@ define([
     NS_Redirect,
     NS_Url,
     NS_ServerWidget,
+    NS_Task,
+    NS_Redir,
     EventRouter,
     CTC_Util,
     libMain,
@@ -105,14 +109,7 @@ define([
                     } catch (hideErr) {
                         log.debug(
                             logTitle,
-                            [
-                                'Error hiding ',
-                                fieldId,
-                                ': ',
-                                hideErr.name,
-                                '- ',
-                                hideErr.message
-                            ].join('')
+                            ['Error hiding ', fieldId, ': ', hideErr.name, '- ', hideErr.message].join('')
                         );
                     }
                 }
@@ -152,14 +149,7 @@ define([
                     } catch (displayErr) {
                         log.debug(
                             logTitle,
-                            [
-                                'Error displaying ',
-                                fieldId,
-                                ': ',
-                                displayErr.name,
-                                '- ',
-                                displayErr.message
-                            ].join('')
+                            ['Error displaying ', fieldId, ': ', displayErr.name, '- ', displayErr.message].join('')
                         );
                     }
                 }
@@ -217,7 +207,181 @@ define([
                 }
                 return true;
             }); // end: arrFields.forEach
+        },
+        forceDeploy: function (option) {
+            var logTitle = [LogTitle, 'forceDeploy'].join('::');
+            var returnValue = null;
+
+            var FN = {
+                randomStr: function (len) {
+                    len = len || 5;
+                    var str = new Date().getTime().toString();
+                    return str.substring(str.length - len, str.length);
+                },
+                deploy: function (scriptId, deployId, scriptParams, taskType) {
+                    var logTitle = [LogTitle, 'forceDeploy:deploy'].join('::');
+                    var returnValue = false;
+
+                    try {
+                        var taskInfo = {
+                            taskType: taskType,
+                            scriptId: scriptId
+                        };
+                        if (deployId) taskInfo.deploymentId = deployId;
+                        if (scriptParams) taskInfo.params = scriptParams;
+
+                        var objTask = NS_Task.create(taskInfo);
+
+                        var taskId = objTask.submit();
+                        var taskStatus = NS_Task.checkStatus({
+                            taskId: taskId
+                        });
+
+                        // check the status
+                        log.audit(
+                            logTitle,
+                            '## DEPLOY status: ' +
+                                JSON.stringify({
+                                    id: taskId,
+                                    status: taskStatus
+                                })
+                        );
+                        returnValue = taskId;
+                    } catch (e) {
+                        CTC_Util.logError(logTitle, CTC_Util.extractError(e));
+                    }
+
+                    return returnValue;
+                },
+                copyDeploy: function (scriptId) {
+                    var logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
+                    var returnValue = false;
+                    try {
+                        var searchDeploy = NS_Search.create({
+                            type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+                            filters: [
+                                ['script.scriptid', 'is', scriptId],
+                                'AND',
+                                ['status', 'is', 'NOTSCHEDULED'],
+                                'AND',
+                                ['isdeployed', 'is', 'T']
+                            ],
+                            columns: ['scriptid']
+                        });
+                        var newDeploy = null;
+
+                        searchDeploy.run().each(function (result) {
+                            if (!result.id) return false;
+                            newDeploy = NS_Record.copy({
+                                type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+                                id: result.id
+                            });
+
+                            var newScriptId = result.getValue({ name: 'scriptid' });
+                            newScriptId = newScriptId.toUpperCase().split('CUSTOMDEPLOY')[1];
+                            newScriptId = [newScriptId.substring(0, 20), FN.randomStr()].join('_');
+
+                            newDeploy.setValue({ fieldId: 'status', value: 'NOTSCHEDULED' });
+                            newDeploy.setValue({ fieldId: 'isdeployed', value: true });
+                            newDeploy.setValue({
+                                fieldId: 'scriptid',
+                                value: newScriptId.toLowerCase().trim()
+                            });
+                        });
+
+                        return newDeploy
+                            ? newDeploy.save({
+                                  enableSourcing: false,
+                                  ignoreMandatoryFields: true
+                              })
+                            : false;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ': ' + e.message);
+                        throw e;
+                    }
+                },
+                copyAndDeploy: function (scriptId, params, taskType) {
+                    FN.copyDeploy(scriptId);
+                    FN.deploy(scriptId, null, params, taskType);
+                }
+            };
+            ////////////////////////////////////////
+            try {
+                if (!option.scriptId)
+                    throw error.create({
+                        name: 'MISSING_REQD_PARAM',
+                        message: 'missing script id',
+                        notifyOff: true
+                    });
+
+                if (!option.taskType) {
+                    option.taskType = NS_Task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = option.isMapReduce
+                        ? NS_Task.TaskType.MAP_REDUCE
+                        : option.isSchedScript
+                        ? NS_Task.TaskType.SCHEDULED_SCRIPT
+                        : option.taskType;
+                }
+
+                log.audit(logTitle, '// params: ' + JSON.stringify(option));
+
+                returnValue =
+                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
+                    FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
+                    FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
+
+                log.audit(logTitle, '// deploy: ' + JSON.stringify(returnValue));
+            } catch (e) {
+                CTC_Util.logError(logTitle, CTC_Util.extractError(e));
+                throw e;
+            }
+            ////////////////////////////////////////
+
+            // initiate the cleanup
+            // this.cleanUpDeployment(option);
+
+            return returnValue;
         }
+        // cleanUpDeployment: function (option) {
+        //     var logTitle = [LogTitle, 'cleanUpDeployment'].join('::');
+
+        //     var searchDeploy = NS_Search.create({
+        //         type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+        //         filters: [
+        //             ['script.scriptid', 'is', option.scriptId],
+        //             'AND',
+        //             ['status', 'is', 'NOTSCHEDULED'],
+        //             'AND',
+        //             ['isdeployed', 'is', 'T']
+        //         ],
+        //         columns: ['scriptid']
+        //     });
+
+        //     var maxAllowed = option.max || 100; // only allow 100
+        //     var arrResults = vc2_util.searchGetAllResult(searchDeploy);
+
+        //     vc2_util.log(logTitle, '>> cleanup : ', {
+        //         maxAllowed: maxAllowed,
+        //         totalResults: arrResults.length
+        //     });
+        //     if (maxAllowed > arrResults.length) return;
+
+        //     var currentScript = ns_runtime.getCurrentScript();
+        //     var countDelete = arrResults.length - maxAllowed;
+        //     var idx = 0;
+
+        //     while (countDelete-- && currentScript.getRemainingUsage() > 100) {
+        //         try {
+        //             NS_Record.delete({
+        //                 type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+        //                 id: arrResults[idx++].id
+        //             });
+        //         } catch (del_err) {}
+        //     }
+        //     vc2_util.log(logTitle, '// Total deleted: ', idx);
+
+        //     return true;
+        // }
     };
 
     let purchaseOrderValidation = {};
@@ -227,12 +391,8 @@ define([
             vendorCfg = option.vendorConfig;
         log.debug(logTitle, 'Consolidating line memos to header...');
         let lineMemos = [],
-            memoField = vendorCfg.memoField || 'memo';
-        for (
-            let i = 0, lineCount = scriptContext.newRecord.getLineCount('item');
-            i < lineCount;
-            i += 1
-        ) {
+            memoField = vendorCfg ? vendorCfg.memoField || 'memo' : 'memo';
+        for (let i = 0, lineCount = scriptContext.newRecord.getLineCount('item'); i < lineCount; i += 1) {
             let lineMemo = scriptContext.newRecord.getSublistValue({
                 sublistId: 'item',
                 fieldId: VCSP_Global.Fields.Transaction.Item.MEMO,
@@ -242,9 +402,7 @@ define([
                 lineMemos.push(['@', i + 1, ': ', lineMemo].join(''));
             }
         }
-        let consolidatedMemo = [scriptContext.newRecord.getValue(memoField), lineMemos.join('\n')]
-            .join('\n')
-            .trim();
+        let consolidatedMemo = [scriptContext.newRecord.getValue(memoField), lineMemos.join('\n')].join('\n').trim();
         scriptContext.newRecord.setValue(memoField, consolidatedMemo);
         log.debug(logTitle, 'Adding "Repopulate memo" button...');
         scriptContext.form.getSublist('item').addButton({
@@ -300,18 +458,12 @@ define([
                     },
                     returnExternalUrl: false
                 });
-                log.audit(
-                    logTitle,
-                    'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl
-                );
+                log.audit(logTitle, 'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl);
                 if (poid) {
                     scriptContext.form.addButton({
                         id: 'custpage_ctc_vcsp_setvenddetl',
                         label: 'Add VC Vendor Details',
-                        functionName:
-                            '(function(url){window.location.href=url;})("' +
-                            vendorDetailsPopupUrl +
-                            '")'
+                        functionName: '(function(url){window.location.href=url;})("' + vendorDetailsPopupUrl + '")'
                     });
                 } else {
                     scriptContext.form.addButton({
@@ -335,10 +487,7 @@ define([
                     },
                     returnExternalUrl: false
                 });
-                log.audit(
-                    logTitle,
-                    'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl
-                );
+                log.audit(logTitle, 'Additional vendor details pop-up url: ' + vendorDetailsPopupUrl);
                 scriptContext.form.addButton({
                     id: 'custpage_ctc_vcsp_setvenddetl',
                     label: 'Add VC Vendor Details',
@@ -363,9 +512,7 @@ define([
     };
     purchaseOrderValidation.limitPOLineColumns = function (option) {
         let logTitle = [LogTitle, 'limitPOLineColumns'].join('::'),
-            poLineSublistId = ['recmach', VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER].join(
-                ''
-            ),
+            poLineSublistId = ['recmach', VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER].join(''),
             scriptContext = option.scriptContext,
             vendorCfg = option.vendorConfig,
             eventType = option.eventType;
@@ -377,28 +524,19 @@ define([
             if (poLineColumnsToDisplayStr && poLineColumnsToDisplayStr.length) {
                 poLineColumnsToDisplay = poLineColumnsToDisplayStr.split(/[\s,]+/) || [];
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG);
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG);
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA);
             }
             let poLineColumnsToHide = [];
             for (let fieldName in VCSP_Global.Fields.VarConnectPOLine) {
                 let fieldId = VCSP_Global.Fields.VarConnectPOLine[fieldName];
-                if (
-                    poLineColumnsToDisplay.indexOf(fieldId) == -1 &&
-                    poLineColumnsToIgnore.indexOf(fieldId) == -1
-                ) {
+                if (poLineColumnsToDisplay.indexOf(fieldId) == -1 && poLineColumnsToIgnore.indexOf(fieldId) == -1) {
                     poLineColumnsToHide.push(fieldId);
                 }
             }
@@ -441,11 +579,7 @@ define([
             let poLineSearch = NS_Search.create({
                 type: VCSP_Global.Records.VC_POLINE,
                 filters: [
-                    [
-                        VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER,
-                        NS_Search.Operator.ANYOF,
-                        purchaseOrderId
-                    ],
+                    [VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER, NS_Search.Operator.ANYOF, purchaseOrderId],
                     'and',
                     ['isinactive', NS_Search.Operator.IS, 'F']
                 ],
@@ -472,19 +606,13 @@ define([
             if (poLineColumnsToDisplayStr && poLineColumnsToDisplayStr.length) {
                 poLineColumnsToDisplay = poLineColumnsToDisplayStr.split(/[\s,]+/);
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.CREATE_LOG);
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.UPDATE_LOG);
             }
-            if (
-                poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1
-            ) {
+            if (poLineColumnsToDisplay.indexOf(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA) == -1) {
                 poLineColumnsToDisplay.push(VCSP_Global.Fields.VarConnectPOLine.JSON_DATA);
             }
             log.debug(logTitle, 'Showing fields: ' + poLineColumnsToDisplay.join(', '));
@@ -493,10 +621,7 @@ define([
                 columns: poLineColumnsToDisplay
             });
             if (poLineList.length) {
-                let sublistId = [
-                    'recmach',
-                    VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER
-                ].join('');
+                let sublistId = ['recmach', VCSP_Global.Fields.VarConnectPOLine.PURCHASE_ORDER].join('');
                 let sublist = form.getSublist({
                     id: sublistId
                 });
@@ -592,12 +717,8 @@ define([
             scriptContext = option.scriptContext || option,
             newRecord = scriptContext.newRecord;
         log.debug(logTitle, 'Setting vendor details...');
-        let vendorDetailValuesStr = newRecord.getValue(
-                VCSP_Global.Fields.Transaction.VENDOR_DETAILS
-            ),
-            vendorDetailValues = vendorDetailValuesStr
-                ? CTC_Util.safeParse(vendorDetailValuesStr)
-                : {},
+        let vendorDetailValuesStr = newRecord.getValue(VCSP_Global.Fields.Transaction.VENDOR_DETAILS),
+            vendorDetailValues = vendorDetailValuesStr ? CTC_Util.safeParse(vendorDetailValuesStr) : {},
             actualVendorDetailValues = null;
         for (let i = 0, len = newRecord.getLineCount('item'); i < len; i += 1) {
             let orderLine = newRecord.getSublistValue({
@@ -631,40 +752,9 @@ define([
                 let mainConfig,
                     vendorCfg,
                     popupWindowParams = {};
+
                 switch (Current.eventType) {
                     case scriptContext.UserEventType.VIEW:
-                        /////////////////////////////////
-                        let sessionObj = NS_Runtime.getCurrentSession();
-                        let sessionData = {
-                                result: sessionObj.get({ name: 'sendpo-success' }),
-                                error: sessionObj.get({ name: 'sendpo-error' })
-                            },
-                            msgOption = {};
-                        log.audit(logTitle, '>> sessionData: ' + JSON.stringify(sessionData));
-
-                        if (sessionData.result) {
-                            sessionObj.set({ name: 'sendpo-success', value: null });
-                            msgOption = {
-                                message: sessionData.result,
-                                title: 'Send PO Successful',
-                                type: NS_Msg.Type.CONFIRMATION
-                            };
-                        }
-                        if (sessionData.error) {
-                            sessionObj.set({ name: 'sendpo-error', value: null });
-                            msgOption = {
-                                message:
-                                    sessionData.error +
-                                    '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.',
-                                title: 'Send PO Failed',
-                                type: NS_Msg.Type.ERROR
-                            };
-                        }
-                        if (msgOption.message) {
-                            scriptContext.form.addPageInitMessage(msgOption);
-                        }
-                        /////////////////////////////////
-
                         let recordData = {};
                         if (scriptContext.newRecord) {
                             recordData.type = scriptContext.newRecord.type;
@@ -685,6 +775,84 @@ define([
                         });
                         log.audit(logTitle, '>> lookupData: ' + JSON.stringify(lookupData));
 
+                        ////////////////
+                        var cacheTaskID = CTC_Util.getNSCache({
+                                key: 'sendpo-taskid:' + Current.recordId
+                            }),
+                            cacheResponse = CTC_Util.getNSCache({
+                                key: 'sendpo-response:' + Current.recordId,
+                                isJSON: true
+                            }),
+                            isSendPOEnabled = !lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+
+                        log.audit(logTitle, '// cache task id: ' + JSON.stringify([cacheTaskID, cacheResponse]));
+
+                        if (cacheTaskID) {
+                            var sendPOTask = NS_Task.checkStatus({ taskId: cacheTaskID });
+                            var sendPOMsg = {
+                                title: 'Please wait...',
+                                message: 'Sending PO in progress.',
+                                type: NS_Msg.Type.WARNING
+                            };
+                            log.audit(logTitle, '// cache task status: ' + JSON.stringify(sendPOTask));
+
+                            if (CTC_Util.inArray(sendPOTask.status, ['PENDING', 'PROCESSING'])) {
+                                isSendPOEnabled = false;
+
+                                var redirToURL =
+                                    '/app/common/scripting/scriptstatus.nl?daterange=TODAY&sortcol=dcreated&sortdir=DESC&rnd=' +
+                                    new Date().getTime();
+
+                                sendPOMsg.message +=
+                                    '&nbsp;' +
+                                    ('[' + sendPOTask.status + '] &nbsp; ') +
+                                    '<br/><br/><p><a href="javascript:(function(){location.reload(1);})()"> Refresh</a> | ' +
+                                    ('<a href="' + redirToURL + '" target="_blank">Check script status</a></p>');
+                            } else if (CTC_Util.inArray(sendPOTask.status, ['FAILED'])) {
+                                sendPOMsg.type = NS_Msg.Type.ERROR;
+                                sendPOMsg.title = 'Send PO Error';
+                                sendPOMsg.message = JSON.stringify(cacheResponse);
+
+                                CTC_Util.removeCache({
+                                    key: 'sendpo-response:' + Current.recordId
+                                });
+                                CTC_Util.removeCache({ key: 'sendpo-taskid:' + Current.recordId });
+                            } else if (CTC_Util.inArray(sendPOTask.status, ['COMPLETE'])) {
+                                if (!cacheResponse || cacheResponse.isError) {
+                                    sendPOMsg.type = NS_Msg.Type.ERROR;
+                                    sendPOMsg.title = 'Send PO Error';
+
+                                    sendPOMsg.message = cacheResponse
+                                        ? cacheResponse.error ||
+                                          cacheResponse.errorMessage ||
+                                          cacheResponse.errorMsg ||
+                                          cacheResponse.message ||
+                                          'Unexpected error occurred'
+                                        : 'Unexpected error occurred';
+
+                                    sendPOMsg.message +=
+                                        '<br/><br/> See the details at the bottom on the VAR Connect Tab &gt;&gt; VAR Connect Logs.';
+
+                                    // remove the logs
+                                } else {
+                                    sendPOMsg.type = NS_Msg.Type.CONFIRMATION;
+                                    sendPOMsg.message = JSON.stringify(cacheResponse);
+                                }
+
+                                CTC_Util.removeCache({
+                                    key: 'sendpo-response:' + Current.recordId
+                                });
+                                CTC_Util.removeCache({ key: 'sendpo-taskid:' + Current.recordId });
+
+                                //     // delete the cache
+                            }
+
+                            scriptContext.form.addPageInitMessage(sendPOMsg);
+                        }
+
+                        ////////////////
+                        /////////////////////////////////
+
                         // check for main config
                         mainConfig = libMainConfig.getMainConfiguration();
                         log.audit(logTitle, '>> mainConfig: ' + JSON.stringify(mainConfig));
@@ -693,7 +861,7 @@ define([
                                 vendor: lookupData.entity.value,
                                 subsidiary: lookupData.subsidiary.value
                             });
-                            log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
+                            // CTC_Util.log('AUDIT', logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                             if (vendorCfg) {
                                 popupWindowParams.scriptContext = scriptContext;
                                 popupWindowParams.vendorConfig = vendorCfg;
@@ -704,10 +872,9 @@ define([
                                         label: 'Send PO to Vendor',
                                         functionName:
                                             '(function(url){window.location.href=url;})("' +
-                                            EventRouter.addActionURL('sendPO') +
+                                            EventRouter.addActionURL('schedSendPO') +
                                             '")'
-                                    }).isDisabled =
-                                        !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                    }).isDisabled = !isSendPOEnabled;
                                 } else {
                                     if (lookupData[VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP]) {
                                         scriptContext.form.addButton({
@@ -715,10 +882,9 @@ define([
                                             label: 'Manually Send PO to Vendor',
                                             functionName:
                                                 '(function(url){window.location.href=url;})("' +
-                                                EventRouter.addActionURL('sendPO') +
+                                                EventRouter.addActionURL('schedSendPO') +
                                                 '")'
-                                        }).isDisabled =
-                                            !!lookupData[VCSP_Global.Fields.Transaction.IS_PO_SENT];
+                                        }).isDisabled = !isSendPOEnabled;
                                     }
                                 }
                                 Helper.displayAsInlineTextarea(scriptContext.form, [
@@ -766,17 +932,16 @@ define([
                                 subsidiary: scriptContext.newRecord.getValue('subsidiary')
                             };
                             if (vendorConfigParams.vendor && vendorConfigParams.subsidiary) {
-                                vendorCfg =
-                                    libVendorConfig.getVendorConfiguration(vendorConfigParams);
+                                vendorCfg = libVendorConfig.getVendorConfiguration(vendorConfigParams);
                             }
                             purchaseOrderValidation.setMemoAndHelper({
                                 vendorConfig: vendorCfg,
                                 scriptContext: scriptContext
                             });
                             log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
-                            popupWindowParams.scriptContext = scriptContext;
+                            // popupWindowParams.scriptContext = scriptContext;
                             if (vendorCfg) {
-                                popupWindowParams.vendorConfig = vendorCfg;
+                                // popupWindowParams.vendorConfig = vendorCfg;
                                 purchaseOrderValidation.limitPOLineColumns({
                                     vendorConfig: vendorCfg,
                                     scriptContext: scriptContext,
@@ -790,10 +955,7 @@ define([
                 }
                 purchaseOrderValidation.addPopupButton(popupWindowParams);
             } catch (error) {
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message })
-                );
+                log.error(logTitle, error);
                 return;
             }
         },
@@ -845,21 +1007,14 @@ define([
                 log.audit(logTitle, '>> vendorCfg: ' + JSON.stringify(vendorCfg));
                 if (!vendorCfg) return;
 
-                let isPendingSendOnCreate =
-                        vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE,
-                    isPendingSendOnApprove =
-                        vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE;
+                let isPendingSendOnCreate = vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_CREATE,
+                    isPendingSendOnApprove = vendorCfg.eventType == VCSP_Global.Lists.PO_EVENT.ON_APPROVE;
                 if (isPendingSendOnCreate) {
-                    let createEventTypes = [
-                        scriptContext.UserEventType.CREATE,
-                        scriptContext.UserEventType.COPY
-                    ];
+                    let createEventTypes = [scriptContext.UserEventType.CREATE, scriptContext.UserEventType.COPY];
                     isPendingSendOnCreate = createEventTypes.indexOf(Current.eventType) >= 0;
                 }
                 if (isPendingSendOnCreate || isPendingSendOnApprove) {
-                    let isToBeSent = !lookupData.getValue(
-                        VCSP_Global.Fields.Transaction.IS_PO_SENT
-                    );
+                    let isToBeSent = !lookupData.getValue(VCSP_Global.Fields.Transaction.IS_PO_SENT);
                     let isCreatedFromSalesOrder =
                         lookupData.getValue(createdFromRecTypeCol) == NS_Record.Type.SALES_ORDER;
                     let isApproved = lookupData.getValue('approvalstatus') >= 2;
@@ -887,10 +1042,7 @@ define([
                     }
                 }
             } catch (error) {
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message })
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message }));
                 return;
             }
         }
@@ -910,10 +1062,7 @@ define([
                 },
                 returnExternalUrl: false
             });
-            log.audit(
-                logTitle,
-                'Additional vendor details pop-up prompt url : ' + vendorDetailsPopupUrl
-            );
+            log.audit(logTitle, 'Additional vendor details pop-up prompt url : ' + vendorDetailsPopupUrl);
             scriptContext.form.getSublist({ id: 'item' }).addButton({
                 id: 'custpage_ctc_vcsp_setvenddetl',
                 label: 'Add VC Vendor Details',
@@ -962,23 +1111,44 @@ define([
                 }
                 salesOrderValidation.addPopupSublistButton(popupWindowParams);
             } catch (error) {
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message })
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message }));
                 return;
             }
         }
     };
 
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
+        schedSendPO: function (scriptContext, Current) {
+            let logTitle = [LogTitle, 'action.schedSendPO'].join('::');
+            let sessObj = NS_Runtime.getCurrentSession();
+            let response;
+
+            // SEND TO SS SEND PO
+            var taskOption = {
+                isSchedScript: true,
+                scriptId: 'customscript_ctc_vcsp_ss_sendpo',
+                scriptParams: {
+                    custscript_ctc_vcsp_sendpo_poid: Current.recordId
+                }
+            };
+            log.audit(logTitle, '// task deploy: ' + JSON.stringify(taskOption));
+
+            var taskIdStr = Helper.forceDeploy(taskOption);
+            CTC_Util.setNSCache({ key: 'sendpo-taskid:' + Current.recordId, value: taskIdStr });
+
+            // redirect
+            NS_Redir.toRecord({
+                type: Current.recordType,
+                id: Current.recordId
+            });
+        },
         sendPO: function (scriptContext, Current) {
             let logTitle = [LogTitle, 'action.sendPO'].join('::');
             let sessObj = NS_Runtime.getCurrentSession();
             let response;
 
             try {
-                response = libMain.sendPO({ recId: Current.recordId });
+                response = libMain.sendPO({ purchaseOrderId: Current.recordId });
                 log.audit(logTitle, response);
 
                 // add the session
@@ -993,9 +1163,7 @@ define([
                                     : response.errorName || 'UNEXPECTED_VC_ERROR',
                                 message: [
                                     '(id=',
-                                    response.error
-                                        ? response.error.id
-                                        : response.errorId || Current.recordId,
+                                    response.error ? response.error.id : response.errorId || Current.recordId,
                                     ') ',
                                     errorMsg
                                 ].join('')
@@ -1012,10 +1180,7 @@ define([
                     });
                 }
             } catch (error) {
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message })
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message }));
 
                 sessObj.set({
                     name: 'sendpo-error',
@@ -1041,10 +1206,7 @@ define([
                     VCSP_Global.Fields.VendorConfig.PO_LINE_COLUMNS
                 ]);
             } catch (error) {
-                log.error(
-                    logTitle,
-                    '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message })
-                );
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify({ name: error.name, message: error.message }));
                 return;
             }
         }
@@ -1052,12 +1214,9 @@ define([
 
     var USER_EVENT = {
         beforeLoad: function (scriptContext) {
-            LogTitle = [
-                LogTitle,
-                scriptContext.type,
-                scriptContext.newRecord.type,
-                scriptContext.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, scriptContext.type, scriptContext.newRecord.type, scriptContext.newRecord.id].join(
+                '::'
+            );
             let logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
                 returnValue = null;
             EventRouter.initialize(scriptContext);
@@ -1109,12 +1268,9 @@ define([
         //     return returnValue;
         // },
         afterSubmit: function (scriptContext) {
-            LogTitle = [
-                LogTitle,
-                scriptContext.type,
-                scriptContext.newRecord.type,
-                scriptContext.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, scriptContext.type, scriptContext.newRecord.type, scriptContext.newRecord.id].join(
+                '::'
+            );
             let logTitle = [LogTitle || '', 'onAfterSubmit'].join('::'),
                 returnValue = null;
             EventRouter.initialize(scriptContext);

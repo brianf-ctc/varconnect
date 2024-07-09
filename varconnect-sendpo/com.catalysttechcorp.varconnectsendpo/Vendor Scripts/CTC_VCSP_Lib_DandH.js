@@ -12,16 +12,15 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/format',
-    'N/error',
-    '../Library/CTC_VCSP_Constants',
-    '../Library/CTC_Lib_Utils'
-], function (NS_Format, NS_Error, VCSP_Global, CTC_Util) {
+define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
+    NS_Format,
+    NS_Error,
+    VCSP_Global,
+    CTC_Util
+) {
     const LogTitle = 'WS:DandH';
     let errorMessages = {
-        STATUS_401:
-            'Authorization information is invalid. Please check Send PO Vendor configuration.',
+        STATUS_401: 'Authorization information is invalid. Please check Send PO Vendor configuration.',
         STATUS_404: 'URL not found. Please check Send PO Vendor configuration.'
     };
 
@@ -91,11 +90,11 @@ define([
 
     function sendPOToDAndH(option) {
         let logTitle = [LogTitle, 'sendPOToDAndH'].join('::'),
-            objPO = option.objPO,
+            poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig,
             body = option.body,
             dnhTokenRequestQuery = {
-                poId: objPO.id,
+                poId: poObj.id,
                 apiKey: vendorConfig.apiKey,
                 apiSecret: vendorConfig.apiSecret,
                 url: vendorConfig.accessEndPoint
@@ -130,7 +129,7 @@ define([
         let dnhResponse = CTC_Util.sendRequest({
             header: [LogTitle, 'sendPOToDAndH'].join(' : '),
             method: 'post',
-            recordId: objPO.id,
+            recordId: poObj.id,
             query: {
                 url: vendorConfig.testRequest ? vendorConfig.qaEndPoint : vendorConfig.endPoint,
                 headers: headers,
@@ -144,11 +143,11 @@ define([
     function generateBody(option) {
         let logTitle = [LogTitle, 'generateBody'].join('::'),
             vendorConfig = option.vendorConfig,
-            record = option.objPO,
+            poObj = option.purchaseOrder,
             additionalVendorDetails = {},
             dnhTemplate = '';
 
-        let arrLines = record.items.map(function (item) {
+        let arrLines = poObj.items.map(function (item) {
             let objLine = {
                 // unitPrice: item.rate,
                 item: item.dandhPartNumber || item.item,
@@ -160,10 +159,10 @@ define([
         });
 
         dnhTemplate = {
-            customerPurchaseOrder: record.custPO || record.tranId, // Required
+            customerPurchaseOrder: poObj.custPO || poObj.tranId, // Required
             shipping: {
-                // serviceType: objPO.shipMethod, // Enum: [pickup, ground, nextDay, secondDay, nextDaySaturdayDelivery, firstClassMail, priorityMail]
-                // carrier: objPO.shipMethod, // Enum: [pickup, ups, fedex, usps, upsm, upss, fxsp, purolator]
+                // serviceType: poObj.shipMethod, // Enum: [pickup, ground, nextDay, secondDay, nextDaySaturdayDelivery, firstClassMail, priorityMail]
+                // carrier: poObj.shipMethod, // Enum: [pickup, ups, fedex, usps, upsm, upss, fxsp, purolator]
                 allowPartialShipment: true,
                 allowBackOrder: true
             },
@@ -197,7 +196,7 @@ define([
                 //     fax: '',
                 //     email: '',
                 // },
-                purchaseOrderNumber: record.tranid
+                purchaseOrderNumber: poObj.tranid
                 // organization: '',
                 // modelNumber: '',
                 // department: '',
@@ -213,16 +212,16 @@ define([
             deliveryAddress: {
                 address: {
                     // All fields in address are required
-                    country: record.shipCountry,
-                    city: record.shipCity,
-                    street: [record.shipAddr1, record.shipAddr2].join('\r\n'),
-                    postalCode: record.shipZip,
-                    region: record.shipState
+                    country: poObj.shipCountry,
+                    city: poObj.shipCity,
+                    street: [poObj.shipAddr1, poObj.shipAddr2].join('\r\n'),
+                    postalCode: poObj.shipZip,
+                    region: poObj.shipState
                 },
-                attention: record.shipAttention,
-                deliveryName: record.shipAddressee
+                attention: poObj.shipAttention,
+                deliveryName: poObj.shipAddressee
             },
-            specialInstructions: record.memo,
+            specialInstructions: poObj.memo,
             // freightBillingAccount: '',
             // flooringAuthorizationNumber: '',
             shipments: [
@@ -234,8 +233,8 @@ define([
             ]
             // clientReferenceData: {}, // any additional data to be stored with the order
         };
-        if (record.additionalVendorDetails) {
-            additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
+        if (poObj.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
         } else if (vendorConfig.additionalPOFields) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                 fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
@@ -245,11 +244,7 @@ define([
             for (let fieldId in additionalVendorDetails) {
                 let fieldHierarchy = fieldId.split('.');
                 let fieldContainer = dnhTemplate;
-                for (
-                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
-                    i < len;
-                    i += 1
-                ) {
+                for (let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1; i < len; i += 1) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
                         // container is an array, distribute values across container elements
@@ -264,12 +259,11 @@ define([
                                 switch (fieldIdComponent) {
                                     case 'requestUnitPrice':
                                         if (additionalVendorDetails[fieldId][j] == 'T') {
-                                            lineObj.unitPrice = record.items[j].rate;
+                                            lineObj.unitPrice = poObj.items[j].rate;
                                         }
                                         break;
                                     default:
-                                        lineObj[fieldIdComponent] =
-                                            additionalVendorDetails[fieldId][j];
+                                        lineObj[fieldIdComponent] = additionalVendorDetails[fieldId][j];
                                         break;
                                 }
                             }
@@ -280,10 +274,7 @@ define([
                         // container is an array, reference as is
                         if (fieldIdComponent.indexOf('__') == 0) {
                             fieldIdComponent = fieldIdComponent.slice(2);
-                            if (
-                                fieldContainer[fieldIdComponent] &&
-                                util.isArray(fieldContainer[fieldIdComponent])
-                            ) {
+                            if (fieldContainer[fieldIdComponent] && util.isArray(fieldContainer[fieldIdComponent])) {
                                 fieldContainer = fieldContainer[fieldIdComponent];
                             } else {
                                 fieldContainer[fieldIdComponent] = [];
@@ -292,10 +283,7 @@ define([
                             // container is an array, reference first element
                         } else if (fieldIdComponent.indexOf('_') == 0) {
                             fieldIdComponent = fieldIdComponent.slice(1);
-                            if (
-                                fieldContainer[fieldIdComponent] &&
-                                util.isArray(fieldContainer[fieldIdComponent])
-                            ) {
+                            if (fieldContainer[fieldIdComponent] && util.isArray(fieldContainer[fieldIdComponent])) {
                                 fieldContainer = fieldContainer[fieldIdComponent][0];
                             } else {
                                 fieldContainer[fieldIdComponent] = [{}];
@@ -313,7 +301,7 @@ define([
             }
         }
         let dtTranDate = NS_Format.parse({
-            value: record.tranDate,
+            value: poObj.tranDate,
             type: NS_Format.Type.DATE
         });
         log.debug(logTitle, 'dtTranDate=' + dtTranDate);
@@ -330,7 +318,7 @@ define([
 
     function processResponse(option) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
-            record = option.record,
+            poObj = option.purchaseOrder,
             returnValue = option.returnResponse,
             responseBody = option.responseBody || returnValue.responseBody,
             orderStatus = {},
@@ -344,8 +332,8 @@ define([
             orderStatus.errorLines = [];
             orderStatus.lineNotes = [];
             if (responseBody) {
-                for (let i = 0, itemCount = record.items.length; i < itemCount; i += 1) {
-                    lineUniqueKeys.push(record.items[i].lineuniquekey);
+                for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
+                    lineUniqueKeys.push(poObj.items[i].lineuniquekey);
                 }
                 let shippingDetails = responseBody.shipping || {};
                 let endUserDataDetails = responseBody.endUserData || {};
@@ -359,41 +347,24 @@ define([
                             itemJsonData = JSON.parse(JSON.stringify(responseBody));
                         if (shipmentDetails.lines && shipmentDetails.lines.length) {
                             // valid lines
-                            for (
-                                let line = 0, lineCount = shipmentDetails.lines.length;
-                                line < lineCount;
-                                line += 1
-                            ) {
-                                log.audit(
-                                    logTitle,
-                                    'shipment line=' + JSON.stringify(shipmentDetails.lines)
-                                );
+                            for (let line = 0, lineCount = shipmentDetails.lines.length; line < lineCount; line += 1) {
+                                log.audit(logTitle, 'shipment line=' + JSON.stringify(shipmentDetails.lines));
                                 let lineDetails = shipmentDetails.lines[line];
                                 delete itemJsonData.shipments;
-                                itemJsonData.shipments = JSON.parse(
-                                    JSON.stringify(shipmentDetails)
-                                );
+                                itemJsonData.shipments = JSON.parse(JSON.stringify(shipmentDetails));
                                 delete itemJsonData.shipments.lines;
                                 itemJsonData.shipments.line = lineDetails;
-                                let itemJsonDataStr = JSON.stringify(itemJsonData).replace(
-                                    /,/g,
-                                    ',<br>'
-                                );
+                                let itemJsonDataStr = JSON.stringify(itemJsonData).replace(/,/g, ',<br>');
                                 if (itemJsonDataStr == '{}') itemJsonDataStr = 'NA';
                                 let itemDetails = {
                                     line_unique_key: lineDetails.externalLineNumber,
-                                    line_number:
-                                        lineUniqueKeys.indexOf(lineDetails.externalLineNumber) + 1,
+                                    line_number: lineUniqueKeys.indexOf(lineDetails.externalLineNumber) + 1,
                                     vendor_line: 'NA',
                                     order_status: 'accepted',
                                     order_type: 'NA',
                                     vendor_order_number: responseBody.orderNumber || 'NA',
-                                    customer_order_number:
-                                        responseBody.customerPurchaseOrder || 'NA',
-                                    order_date:
-                                        Helper.formatFromISODateString(
-                                            endUserDataDetails.dateOfSale
-                                        ) || 'NA',
+                                    customer_order_number: responseBody.customerPurchaseOrder || 'NA',
+                                    order_date: Helper.formatFromISODateString(endUserDataDetails.dateOfSale) || 'NA',
                                     vendor_sku: lineDetails.item || 'NA',
                                     item_number: 'NA',
                                     note: responseBody.specialInstructions,
@@ -410,12 +381,8 @@ define([
                                     internal_reference_num: 'NA',
                                     json_data: itemJsonDataStr
                                 };
-                                if (
-                                    endUserDataDetails.serialNumbers &&
-                                    endUserDataDetails.serialNumbers.length
-                                ) {
-                                    itemDetails.serial_num =
-                                        endUserDataDetails.serialNumbers.join('\n');
+                                if (endUserDataDetails.serialNumbers && endUserDataDetails.serialNumbers.length) {
+                                    itemDetails.serial_num = endUserDataDetails.serialNumbers.join('\n');
                                 }
                                 if (lineDetails.clientReferenceData) {
                                     itemDetails.internal_reference_num = JSON.stringify(
@@ -452,15 +419,12 @@ define([
                         ' line item(s) and ' +
                         orderStatus.errorLines.length +
                         ' failed line(s)';
-                    if (orderStatus.lineNotes.length)
-                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
+                    if (orderStatus.lineNotes.length) returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
                 } else if (orderStatus.errorLines.length) {
                     returnValue.message = 'Send PO failed.\n' + orderStatus.lineNotes.join('\n');
                 } else {
                     returnValue.message =
-                        'Send PO successful with ' +
-                        orderStatus.successLines.length +
-                        ' line item(s).';
+                        'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
                 }
                 returnValue.orderStatus = orderStatus;
             }
@@ -470,36 +434,36 @@ define([
 
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::'),
-            vendorConfig = option.recVendorConfig,
+            vendorConfig = option.vendorConfig,
             customerNo = vendorConfig.customerNo,
-            record = option.record || option.recPO;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(record));
+            poObj = option.purchaseOrder;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
         let returnResponse = {
-            transactionNum: record.tranId,
-            transactionId: record.id
+            transactionNum: poObj.tranId,
+            transactionId: poObj.id
         };
         let dnhResponse;
         try {
             let sendPOBody = generateBody({
-                objPO: record,
+                purchaseOrder: poObj,
                 customerNo: customerNo,
                 vendorConfig: vendorConfig
             });
             dnhResponse = sendPOToDAndH({
-                objPO: record,
+                purchaseOrder: poObj,
                 vendorConfig: vendorConfig,
                 body: sendPOBody
             });
 
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: dnhResponse.logId,
                 responseBody: dnhResponse.PARSED_RESPONSE || dnhResponse.RESPONSE.body,
                 responseCode: dnhResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
@@ -513,7 +477,7 @@ define([
                 returnResponse.errorMsg = sendError.message;
             } else {
                 returnResponse = processResponse({
-                    record: record,
+                    purchaseOrder: poObj,
                     responseBody: returnResponse.responseBody,
                     returnResponse: returnResponse
                 });
@@ -523,17 +487,17 @@ define([
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (dnhResponse) {

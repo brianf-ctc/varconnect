@@ -79,35 +79,41 @@
                 "name": "endUserInfo.companyName",
                 "label": "Company Name",
                 "type": "TEXT",
-                "maxLength": 40
+                "maxLength": 40,
+                "defaultValue": "${record.shipAddressee}"
             },
             {
                 "name": "endUserInfo.contact",
                 "label": "Contact",
                 "type": "TEXT",
-                "maxLength": 70
+                "maxLength": 70,
+                "defaultValue": "${record.shipAttention}"
             },
             {
                 "name": "endUserInfo.name1",
                 "label": "Name 1",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName1}"
             },
             {
                 "name": "endUserInfo.name2",
                 "label": "Name 2",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddrName2}"
             },
             {
                 "name": "endUserInfo.addressLine1",
                 "label": "Address Line 1",
                 "type": "TEXT",
-                "maxLength": 70
+                "maxLength": 70,
+                "defaultValue": "${record.shipAddr1}"
             },
             {
                 "name": "endUserInfo.addressLine2",
                 "label": "Address Line 2",
                 "type": "TEXT",
-                "maxLength": 70
+                "maxLength": 70,
+                "defaultValue": "${record.shipAddr2}"
             },
             {
                 "name": "endUserInfo.addressLine3",
@@ -126,37 +132,43 @@
                 "label": "City",
                 "type": "TEXT",
                 "maxLength": 25,
-                "help": "The end user/customer's city. Required for Impulse countries."
+                "help": "The end user/customer's city. Required for Impulse countries.",
+                "defaultValue": "${record.shipCity}"
             },
             {
                 "name": "endUserInfo.state",
                 "label": "State",
                 "type": "TEXT",
                 "maxLength": 3,
-                "help": "The end user/customer's state. Required for Impulse countries but optional for EMEA countries."
+                "help": "The end user/customer's state. Required for Impulse countries but optional for EMEA countries.",
+                "defaultValue": "${record.shipState}"
             },
             {
                 "name": "endUserInfo.postalCode",
                 "label": "Postal Code",
                 "type": "TEXT",
                 "maxLength": 10,
-                "help": "The end user/customer's zip or postal code. Required for Impulse countries."
+                "help": "The end user/customer's zip or postal code. Required for Impulse countries.",
+                "defaultValue": "${record.shipZip}"
             },
             {
                 "name": "endUserInfo.countryCode",
                 "label": "Country Code",
                 "type": "TEXT",
-                "maxLength": 2
+                "maxLength": 2,
+                "defaultValue": "${record.shipCountry}"
             },
             {
                 "name": "endUserInfo.phoneNumber",
                 "label": "Phone Number",
-                "type": "PHONE"
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
             },
             {
                 "name": "endUserInfo.email",
                 "label": "Email",
-                "type": "EMAIL"
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
             }
         ]
     },

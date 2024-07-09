@@ -29,50 +29,50 @@ define((require) => {
         let logTitle = [LogTitle, 'process'].join('::');
 
         //get object from parameter
-        let record = option.recPO || option.nativePO;
+        let poObj = option.purchaseOrder;
 
         //set return response
         let sendPOResponse,
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
             };
 
         try {
             let objBody = generateBody(option);
             sendPOResponse = postData(objBody, option);
             returnResponse = {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 logId: sendPOResponse.logId,
                 responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
                 responseCode: sendPOResponse.RESPONSE.code,
                 isError: false,
                 error: null,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: null,
                 errorMsg: null
             };
 
             returnResponse = processResponse({
-                record: record,
+                record: poObj,
                 responseBody: returnResponse.responseBody,
                 returnResponse: returnResponse
             });
         } catch (e) {
             log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
             returnResponse = returnResponse || {
-                transactionNum: record.tranId,
-                transactionId: record.id,
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
                 isError: true,
                 error: e,
-                errorId: record.id,
+                errorId: poObj.id,
                 errorName: e.name,
                 errorMsg: e.message
             };
             returnResponse.isError = true;
             returnResponse.error = e;
-            returnResponse.errorId = record.id;
+            returnResponse.errorId = poObj.id;
             returnResponse.errorName = e.name;
             returnResponse.errorMsg = e.message;
             if (sendPOResponse) {
@@ -93,7 +93,7 @@ define((require) => {
     };
 
     const generateBody = (option) => {
-        let record = option.nativePO || option.recPO,
+        let record = option.transaction,
             itemLength = record.getLineCount('item');
 
         let objSalesRep = getSalesRep(record);
@@ -106,7 +106,7 @@ define((require) => {
             OrderAmount: record.getValue('total'),
             SalesRep: objSalesRep.name,
             SalesRepEmail: objSalesRep.email,
-            Quote_ID: getQuoteWithValue(option.recPO.items),
+            Quote_ID: getQuoteWithValue(option.purchaseOrder.items),
             EndUserPoNumber: record.getValue('tranid'),
             Notes: record.getValue('memo')
         };
@@ -174,8 +174,8 @@ define((require) => {
     };
 
     const postData = (objBody, option) => {
-        let record = option.recPO || option.nativePO,
-            vendorConfig = option.recVendorConfig;
+        let poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
 
         let objHeaders = {
             Authorization: getToken(option),
@@ -192,7 +192,7 @@ define((require) => {
         let sendPOReq = CTC_Util.sendRequest({
             header: [LogTitle, 'postData'].join(' : '),
             method: 'post',
-            recordId: record.id,
+            recordId: poObj.id,
             query: {
                 body: JSON.stringify(objBody),
                 headers: objHeaders,
@@ -240,16 +240,11 @@ define((require) => {
                 if (responseBody.OrderReceived === false) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
-                    returnValue.errorMsg =
-                        responseBody.message || 'Carahsoft failed to receive the order.';
+                    returnValue.errorMsg = responseBody.message || 'Carahsoft failed to receive the order.';
                 }
                 if (responseBody.Errors && responseBody.Errors.length) {
                     let collectedErrorMessages = [];
-                    for (
-                        let errCtr = 0, errCount = responseBody.Errors.length;
-                        errCtr < errCount;
-                        errCtr += 1
-                    ) {
+                    for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
                         let errorResponse = responseBody.Errors[errCtr],
                             errorMessage = null,
                             errorCode = null;
@@ -305,14 +300,14 @@ define((require) => {
     };
 
     const getToken = (option) => {
-        let record = option.recPO || option.nativePO,
-            vendorConfig = option.recVendorConfig;
+        let poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
 
         let logTitle = [LogTitle, 'getToken'].join('::');
         let tokenReq = CTC_Util.sendRequest({
             header: [LogTitle, 'getToken'].join(' : '),
             method: 'post',
-            recordId: record.id,
+            recordId: poObj.id,
             query: {
                 body: {
                     grant_type: 'client_credentials',
@@ -348,10 +343,7 @@ define((require) => {
             }
         }
         if (CTC_Util.isEmpty(stReturn)) {
-            log.error(
-                'getQuoteWithValue',
-                `Quote number is empty. Items: ${JSON.stringify(arrItems)}`
-            );
+            log.error('getQuoteWithValue', `Quote number is empty. Items: ${JSON.stringify(arrItems)}`);
         }
         return stReturn;
     };

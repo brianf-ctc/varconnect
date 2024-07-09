@@ -180,37 +180,44 @@
                 "name": "endUserData.dateOfSale",
                 "label": "Date of Sale",
                 "type": "DATE",
-                "help": "The end-user's Date of Sale."
+                "help": "The end-user's Date of Sale.",
+                "defaultValue": "${record.tranDate}"
             },
             {
                 "name": "endUserData.address.attention",
                 "label": "Attention",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipAttention}"
             },
             {
                 "name": "endUserData.address.street",
                 "label": "Address",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipAddr1}, ${record.shipAddr2}"
             },
             {
                 "name": "endUserData.address.city",
                 "label": "City",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipCity}"
             },
             {
                 "name": "endUserData.address.region",
                 "label": "Region",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipState}"
             },
             {
                 "name": "endUserData.address.postalCode",
                 "label": "Zip Code",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipZip}"
             },
             {
                 "name": "endUserData.address.country",
                 "label": "Country",
-                "type": "TEXT"
+                "type": "TEXT",
+                "defaultValue": "${record.shipCountry}"
             },
             {
                 "name": "endUserData.reseller.accountNumber",
@@ -221,17 +228,20 @@
             {
                 "name": "endUserData.reseller.phone",
                 "label": "Reseller Phone",
-                "type": "PHONE"
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
             },
             {
                 "name": "endUserData.reseller.email",
                 "label": "Reseller Email",
-                "type": "EMAIL"
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
             },
             {
                 "name": "endUserData.contact.phone",
                 "label": "Contact Phone",
-                "type": "PHONE"
+                "type": "PHONE",
+                "defaultValue": "${record.shipPhone}"
             },
             {
                 "name": "endUserData.contact.fax",
@@ -241,7 +251,8 @@
             {
                 "name": "endUserData.contact.email",
                 "label": "Contact Email",
-                "type": "EMAIL"
+                "type": "EMAIL",
+                "defaultValue": "${record.shipEmail}"
             },
             {
                 "name": "endUserData.domain.domainName",

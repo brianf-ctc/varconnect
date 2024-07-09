@@ -27,7 +27,7 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
 ) {
     let VC_LICENSE = {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
-        PRODUCT_CODE: 4,
+        PRODUCT_CODE: 2, // unified license with VAR Connect Order Update
         MAX_RETRY: 3,
         KEY: 'LICENSE_KEY',
         CACHE_NAME: 'VCSP_LICENSE',
@@ -49,17 +49,13 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
                     url:
                         VC_LICENSE.URL +
                         '?' +
-                        [
-                            'producttypeid=' + VC_LICENSE.PRODUCT_CODE,
-                            'nsaccountid=' + ns_runtime.accountId
-                        ].join('&')
+                        ['producttypeid=' + VC_LICENSE.PRODUCT_CODE, 'nsaccountid=' + ns_runtime.accountId].join('&')
                 };
                 log.audit(logTitle, '#### Send Request query: ' + JSON.stringify(queryOption));
                 response = ns_https.request(queryOption);
                 log.audit(logTitle, '#### Response: ' + JSON.stringify(response));
                 if (!response || !response.body) throw 'Unable to get response';
-                if (!response.code || response.code !== 200)
-                    throw 'Received invalid response code - ' + response.code;
+                if (!response.code || response.code !== 200) throw 'Received invalid response code - ' + response.code;
                 // turn off retry from this point, since we can confirm that we are able to connect
                 doRetry = false;
                 let parsedResp = LibLicense.safeParse(response.body);
@@ -104,15 +100,12 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
                     log.audit(
                         logTitle,
                         '// CACHE STORED: ' +
-                            ['key: ' + VC_LICENSE.KEY, 'ttl: ' + VC_LICENSE.CACHE_TTL + 's'].join(
-                                ', '
-                            )
+                            ['key: ' + VC_LICENSE.KEY, 'ttl: ' + VC_LICENSE.CACHE_TTL + 's'].join(', ')
                     );
                 } else {
                     log.audit(logTitle, '// CACHE RETRIEVED: key: ' + VC_LICENSE.KEY);
                 }
-                if (vcLicenseResp.error || vcLicenseResp.hasError)
-                    throw vcLicenseResp.error || vcLicenseResp.errorMsg;
+                if (vcLicenseResp.error || vcLicenseResp.hasError) throw vcLicenseResp.error || vcLicenseResp.errorMsg;
                 if (!vcLicenseResp.status) throw 'Unable to fetch license status';
                 if (vcLicenseResp.status != 'active') throw 'License is not active';
                 returnValue = vcLicenseResp;
@@ -153,8 +146,7 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
             let errorMessage = util.isString(option)
                 ? option
                 : option.message || option.error || JSON.stringify(option);
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
             return errorMessage;
         },
         roundOff: function (value) {
@@ -164,7 +156,7 @@ define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], fun
         }
     };
 
-    function isLicenseValid(options) {
+    function isLicenseValid(option) {
         let returnValue = false,
             response = LibLicense.validate({
                 doRetry: true

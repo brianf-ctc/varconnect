@@ -12,13 +12,13 @@
  * @NModuleScope Public
  * @NScriptType ClientScript
  */
-define([
-    'N/currentRecord',
-    'N/url',
-    'N/https',
-    'N/ui/message',
-    '../Library/CTC_VCSP_Constants.js'
-], function (currentRecord, url, https, message, constants) {
+define(['N/currentRecord', 'N/url', 'N/https', 'N/ui/message', '../Library/CTC_VCSP_Constants.js'], function (
+    currentRecord,
+    url,
+    https,
+    message,
+    constants
+) {
     var msgObj;
 
     function _callSendPOSuitelet(options) {

@@ -64,6 +64,7 @@ define([], function () {
                 QA_API_SECRET: 'custrecord_ctc_vcsp_api_secret_qa',
                 QA_SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_qa',
                 PONUM_FIELD: 'custrecord_ctc_vcsp_ponum_field',
+                ITEM_COLUMN: 'custrecord_ctc_vcsp_item_field',
                 QUOTE_COLUMN: 'custrecord_ctc_vcsp_quoteno_field',
                 MEMO_FIELD: 'custrecord_ctc_vcsp_memo_field',
                 SHIP_CONTACT_FIELD: 'custrecord_ctc_vcsp_shipcontact_field',
@@ -71,6 +72,7 @@ define([], function () {
                 SHIP_PHONE_FIELD: 'custrecord_ctc_vcsp_shipphone_field',
                 ENABLE_ADD_VENDOR_DETAILS: 'custrecord_ctc_vcsp_show_details',
                 ADDITIONAL_PO_FIELDS: 'custrecord_ctc_vcsp_po_fields',
+                ADD_DETAILS_ON_SUBMIT: 'custrecord_ctc_vcsp_auto_include_details',
                 PO_LINE_COLUMNS: 'custrecord_ctc_vcsp_line_cols',
                 Bill: {
                     ID: 'custrecord_ctc_vcsp_bill_addrid',

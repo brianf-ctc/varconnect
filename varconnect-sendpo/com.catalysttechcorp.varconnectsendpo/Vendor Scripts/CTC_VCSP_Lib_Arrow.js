@@ -8,7 +8,7 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.x
+ * @NApiVersion 2.1
  * @NModuleScope Public
  * @description Library File for Arrow PO Creation
  */
@@ -18,107 +18,120 @@
  * Script Name: CTC VCSP Lib Arrow
  * Author: john.ramonel
  */
-define([
-    'N/search',
-    'N/record',
-    'N/runtime',
-    'N/log',
-    'N/https',
-    '../VO/CTC_VCSP_Response',
-    '../Library/CTC_VCSP_Lib_Log',
-    '../Library/CTC_VCSP_Constants'
-], function (search, record, runtime, log, https, response, vcLog, constants) {
+define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
+    NS_Format,
+    VCSP_Global,
+    CTC_Util
+) {
     'use strict';
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns string
-     **/
-    function generateToken(obj) {
-        if (!obj) var obj = {};
-        //obj.apiKey = '8e88d6d7-5f9d-4614-9f10-28a6f725c69d';
-        //obj.apiSecret = '4a95b3a7-02c3-4be7-9761-9e8ee12d2957';
-        obj.grantType = 'client_credentials';
-        //obj.accessEndPoint = 'https://qaecsoag.arrow.com/api/oauth/token';
+    const LogTitle = 'WS:Arrow';
+    let CURRENT = {};
 
-        var headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
+    let LibArrowAPI = {
+        generateToken: function (option) {
+            let logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
+            option = option || {};
 
-        var jsonBody = {
-            client_id: obj.apiKey,
-            client_secret: obj.apiSecret,
-            grant_type: obj.grantType
-        };
+            let config = CURRENT.config,
+                url = config.accessEndPoint,
+                apiKey = config.apiKey,
+                apiSecret = config.apiSecret;
+            if (config.testRequest) {
+                url = config.qaAccessEndPoint;
+                apiKey = config.qaApiKey;
+                apiSecret = config.qaApiSecret;
+            }
 
-        var body = convertToXWWW(jsonBody);
-
-        var response = https.post({
-            url: obj.accessEndPoint,
-            body: body,
-            headers: headers
-        });
-
-        if (response) {
-            var responseBody = JSON.parse(response.body);
-
-            log.debug({
-                title: 'Response Body',
-                details: response.body
+            let tokenReq = CTC_Util.sendRequest({
+                header: [LogTitle, 'Generate Token'].join(' '),
+                method: 'post',
+                recordId: CURRENT.recordId,
+                doRetry: true,
+                maxRetry: 3,
+                query: {
+                    url: url,
+                    body: CTC_Util.convertToQuery({
+                        client_id: apiKey,
+                        client_secret: apiSecret,
+                        scope: ['api://', apiKey, '/.default'].join(''),
+                        grant_type: 'client_credentials'
+                    }),
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }
             });
 
-            if (response.code == 200) {
-                log.debug({
-                    title: 'Token Generated',
-                    details: responseBody.access_token
-                });
-                return responseBody.access_token;
-            } else {
-                // retry 1 more time
-                var response = https.post({
-                    url: obj.url,
-                    body: body,
-                    headers: headers
-                });
-                if (response.code == 200) {
-                    log.debug({
-                        title: 'Token Generated',
-                        details: responseBody.access_token
-                    });
-                    return responseBody.access_token;
-                } else {
-                    log.error({
-                        title: 'generateToken Failure',
-                        details: response
-                    });
-                    return null;
+            CTC_Util.handleJSONResponse(tokenReq);
+            let tokenResp = tokenReq.PARSED_RESPONSE;
+            if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+
+            returnValue = tokenResp.access_token;
+            CURRENT.accessToken = tokenResp.access_token;
+
+            return returnValue;
+        },
+        sendOrder: function (option) {
+            let logTitle = [LogTitle, 'sendOrder'].join('::');
+            option = option || {};
+
+            let sendPOResponse = CTC_Util.sendRequest({
+                header: [LogTitle, 'Send Order'].join(' '),
+                method: 'post',
+                recordId: CURRENT.recordId,
+                query: {
+                    url: CURRENT.config.testRequest ? CURRENT.config.qaEndPoint : CURRENT.config.endPoint,
+                    body: JSON.stringify(CURRENT.payloadObj),
+                    headers: {
+                        Authorization: 'Bearer ' + CURRENT.accessToken,
+                        Accept: 'application/json',
+                        'Ocp-Apim-Subscription-Key': CURRENT.config.testRequest
+                            ? CURRENT.config.qaSubscriptionKey
+                            : CURRENT.config.subscriptionKey,
+                        'Content-Type': 'application/json'
+                    }
                 }
+            });
+            log.audit(logTitle, '>> Arrow: ' + JSON.stringify(sendPOResponse));
+            return sendPOResponse;
+        },
+        validateResponse: function (parsedResponse) {
+            if (!parsedResponse) throw 'Unable to read the response';
+            let hasErrors, errorMsgs;
+
+            if (!parsedResponse.TransactionStatus || parsedResponse.TransactionStatus == 'ERROR') {
+                hasErrors = true;
+                errorMsgs = parsedResponse.TransactionMessage;
             }
+
+            if (hasErrors && errorMsgs) throw errorMsgs;
+            return true;
         }
-    }
+    };
 
     /**
      * @memberOf CTC_VC_Lib_Arrow
      * @param {object}
-     * @description obj.poObj = contains the Actual PO obj from NetSuite, obj.vendorConfig = VAR Connect Vendor Config Fields
+     * @description option.poObj = contains the Actual PO option from NetSuite, option.vendorConfig = VAR Connect Vendor Config Fields
      * @returns object
      **/
-    function generateRequest(obj) {
-        var reqBody = {};
-        var poDetails = {};
-        var soldTo = {};
-        var billTo = {};
-        var shipTo = {};
-        var endUser = {};
-        var poLines = []; // array of poLine objects
-        var poObj = obj.poObj; // NS Purchase Order Obj
-        var vendorConfig = obj.vendorConfig;
+    function generateBody(option) {
+        let logTitle = [LogTitle, 'generateBody'].join('::');
 
-        log.emergency({ title: 'generateRequest', details: obj });
+        let reqBody = {};
+        let poDetails = {};
+        let soldTo = {};
+        let billTo = {};
+        let shipTo = {};
+        let endUser = {};
+        let poLines = []; // array of poLine objects
+        let poObj = option.purchaseOrder;
+        let vendorConfig = option.vendorConfig;
 
         // Header Rec Object
-        var headerRec = {};
+        let headerRec = {};
         headerRec.TransactionType = 'RESELLER_PO_CREATE'; // constant
         headerRec.SourceTransactionKeyID = null;
         headerRec.RequestTimestamp = null;
@@ -127,45 +140,49 @@ define([
         headerRec.PartnerID = vendorConfig.customerNo;
 
         // PO Details Object
-        //var poTypeObj = formatArrowPOType(poObj.getValue({fieldId: 'custbody_ctc_po_link_type'}));
+        // let poTypeObj = formatArrowPOType(poObj.getValue({fieldId: 'custbody_ctc_po_link_type'}));
         poDetails.CustPoNumber = poObj.tranId;
         poDetails.TotalPOPrice = poObj.total;
         poDetails.Comments = poObj.memo || null;
-        poDetails.PoDate = formatArrowDate(poObj.trandate);
+        poDetails.PoDate = formatToArrowDate(
+            NS_Format.parse({
+                value: poObj.tranDate,
+                type: NS_Format.Type.DATE
+            })
+        );
         poDetails.CustPoType = 'DS'; // Constant -- values are DS for Dropship, SA for standard
         poDetails.FobCode = 'ORIGIN'; // constant -- values are ORIGIN for Dropship, DESTINATION for standard
         poDetails.ShipViaCode = 'ZZ'; // constant for arrow
         poDetails.ShipViaDescription = 'ELECTRONIC DISTRIBUTION'; // constant for arrow
         poDetails.PoCurrency = 'USD'; // constant -- for Arrow US
         poDetails.ArrowQuote = {};
-        poDetails.ArrowQuote.ArrowQuoteNumber = poObj.items[0].quotenumber.toString();
-
-        var billToObj = getBillingInfo(poObj);
-        //    	var shipToObj = getShippingInfo(poObj);
+        poDetails.ArrowQuote.ArrowQuoteNumber = poObj.items[0].quotenumber
+            ? poObj.items[0].quotenumber.toString()
+            : null;
 
         // soldTo Object
-        soldTo.SoldToName = vendorConfig.Bill.addressee || null;
-        soldTo.SoldToAddrLine1 = vendorConfig.Bill.address1 || null;
-        soldTo.SoldToAddrLine2 = vendorConfig.Bill.address2 || null;
-        soldTo.SoldToCity = vendorConfig.Bill.city || null;
-        soldTo.SoldToState = vendorConfig.Bill.state || null;
-        soldTo.SoldToZip = vendorConfig.Bill.zip || null;
-        soldTo.SoldToCountry = vendorConfig.Bill.country || 'US';
-        soldTo.SoldToContactName = vendorConfig.Bill.addressee || null;
-        soldTo.SoldToContactPhone = billToObj.phone || null;
-        soldTo.SoldToContactEmail = billToObj.email || null;
+        soldTo.SoldToName = poObj.billAddressee || null;
+        soldTo.SoldToAddrLine1 = poObj.billAddr1 || null;
+        soldTo.SoldToAddrLine2 = poObj.billAddr2 || null;
+        soldTo.SoldToCity = poObj.billCity || null;
+        soldTo.SoldToState = poObj.billState || null;
+        soldTo.SoldToZip = poObj.billZip || null;
+        soldTo.SoldToCountry = poObj.billCountry || 'US';
+        soldTo.SoldToContactName = poObj.billContact || null;
+        soldTo.SoldToContactPhone = poObj.billPhone || null;
+        soldTo.SoldToContactEmail = poObj.billEmail || null;
 
         // billTo Object
-        billTo.BillToName = vendorConfig.Bill.addressee || null;
-        billTo.BillToAddrLine1 = vendorConfig.Bill.address1 || null;
-        billTo.BillToAddrLine2 = vendorConfig.Bill.address2 || null;
-        billTo.BillToCity = vendorConfig.Bill.city || null;
-        billTo.BillToState = vendorConfig.Bill.state || null;
-        billTo.BillToZip = vendorConfig.Bill.zip || null;
-        billTo.BillToCountry = vendorConfig.Bill.country || 'US';
-        billTo.BillToContactName = vendorConfig.Bill.addressee || null;
-        billTo.BillToContactPhone = billToObj.phone || null;
-        billTo.BillToContactEmail = billToObj.email || null;
+        billTo.BillToName = poObj.billAddressee || null;
+        billTo.BillToAddrLine1 = poObj.billAddr1 || null;
+        billTo.BillToAddrLine2 = poObj.billAddr2 || null;
+        billTo.BillToCity = poObj.billCity || null;
+        billTo.BillToState = poObj.billState || null;
+        billTo.BillToZip = poObj.billZip || null;
+        billTo.BillToCountry = poObj.billCountry || 'US';
+        billTo.BillToContactName = poObj.billContact || null;
+        billTo.BillToContactPhone = poObj.billPhone || null;
+        billTo.BillToContactEmail = poObj.billEmail || null;
 
         // shipTo Object
         shipTo.ShipToName = poObj.shipAddressee || null;
@@ -192,10 +209,10 @@ define([
         endUser.EndUserContactEmail = poObj.shipEmail || null;
 
         // poLines Object
-        var lineCount = poObj.items.length;
+        let lineCount = poObj.items.length;
         if (lineCount) {
-            for (var i = 0; i < lineCount; i++) {
-                var poLine = {};
+            for (let i = 0; i < lineCount; i++) {
+                let poLine = {};
                 poLine.CustPoLineItemNbr = i + 1;
                 poLine.VendorPartNum = poObj.items[i].item;
                 poLine.PartDescription = poObj.items[i].description || null;
@@ -210,7 +227,7 @@ define([
         }
 
         // formation of Actual Req Data to be sent to Arrow
-        var purchaseOrder = {};
+        let purchaseOrder = {};
         purchaseOrder.HeaderRec = headerRec;
         purchaseOrder.poDetails = poDetails;
         purchaseOrder.poDetails.SoldTo = soldTo;
@@ -221,90 +238,57 @@ define([
 
         reqBody.PurchaseOrder = purchaseOrder;
 
-        vcLog.recordLog({
-            header: 'Request',
-            body: JSON.stringify(reqBody),
+        let cleanUpJSON = function (option) {
+            let objConstructor = option.objConstructor || {}.constructor,
+                obj = option.obj;
+            for (let key in obj) {
+                if (obj[key] === null || obj[key] === '' || obj[key] === undefined) {
+                    delete obj[key];
+                } else if (obj[key].constructor === objConstructor) {
+                    cleanUpJSON({
+                        obj: obj[key],
+                        objConstructor: objConstructor
+                    });
+                }
+            }
+        };
+        cleanUpJSON({ obj: reqBody });
+        log.debug(logTitle, '>> Arrow Template Object: ' + JSON.stringify(reqBody));
+        CTC_Util.vcLog({
+            title: [LogTitle, 'Order Request Values'].join(' - '),
+            content: reqBody,
             transaction: poObj.id
         });
 
         return reqBody;
     }
 
-    function getBillingInfo(obj) {
-        var billToObj = {};
-        //
-        //    	var subrec = obj.getSubrecord({
-        //    		fieldId: 'billingaddress'
-        //    	});
-        //
-        //    	billToObj.country = subrec.getValue({fieldId: 'country'}) || 'US'; //default to US
-        //    	billToObj.addr1 = subrec.getValue({fieldId: 'addr1'}) || null;
-        //    	billToObj.addr2 = subrec.getValue({fieldId: 'addr2'}) || null;
-        //    	billToObj.city = subrec.getValue({fieldId: 'city'}) || null;
-        //    	billToObj.state = subrec.getValue({fieldId: 'state'}) || null;
-        //    	billToObj.zip = subrec.getValue({fieldId: 'zip'}) || null;
-        //    	billToObj.addressee = subrec.getValue({fieldId: 'addressee'}) || null;
-        //
-        var vendorInfo = search.lookupFields({
-            type: search.Type.VENDOR,
-            id: obj.entity,
-            columns: ['email', 'phone']
-        });
-
-        billToObj.phone = vendorInfo.phone || null;
-        billToObj.email = vendorInfo.email || null;
-
-        return billToObj;
-    }
-
-    function getShippingInfo(obj) {
-        var shipToObj = {};
-
-        var subrec = obj.getSubrecord({
-            fieldId: 'shippingaddress'
-        });
-
-        shipToObj.country = subrec.getValue({ fieldId: 'country' }) || 'US'; //default to US
-        shipToObj.addr1 = subrec.getValue({ fieldId: 'addr1' }) || null;
-        shipToObj.addr2 = subrec.getValue({ fieldId: 'addr2' }) || null;
-        shipToObj.city = subrec.getValue({ fieldId: 'city' }) || null;
-        shipToObj.state = subrec.getValue({ fieldId: 'state' }) || null;
-        shipToObj.zip = subrec.getValue({ fieldId: 'zip' }) || null;
-        shipToObj.addressee = subrec.getValue({ fieldId: 'addressee' }) || null;
-
-        var customerInfo = search.lookupFields({
-            type: search.Type.CUSTOMER,
-            id: obj.getValue({ fieldId: 'shipto' }),
-            columns: ['email', 'phone']
-        });
-
-        shipToObj.phone = customerInfo.phone || null;
-        shipToObj.email = customerInfo.email || null;
-
-        return shipToObj;
-    }
-
     function formatArrowPOType(strPoType) {
-        var obj = {};
+        let logTitle = [LogTitle, 'formatArrowPOType'].join('::');
+        let option = {};
         if (strPoType == 'Drop Shipment') {
-            obj.poType = 'DS';
-            obj.fobCode = 'ORIGIN';
+            option.poType = 'DS';
+            option.fobCode = 'ORIGIN';
         } else {
-            obj.poType = 'SA';
-            obj.fobCode = 'DESTINATION';
+            option.poType = 'SA';
+            option.fobCode = 'DESTINATION';
         }
 
-        return obj;
+        return option;
     }
 
-    function formatArrowDate(strDate) {
-        var arrDate = strDate.split('/');
-        if (arrDate) {
-            var strMonth = padDigits(arrDate[0], 2);
-            var strDay = padDigits(arrDate[1], 2);
-            return arrDate[2] + strMonth + strDay;
+    function formatToArrowDate(dateToFormat) {
+        let logTitle = [LogTitle, 'formatToArrowDate'].join('::'),
+            formattedDate = '';
+        if (dateToFormat && dateToFormat instanceof Date) {
+            // yyyymmdd
+            formattedDate = [
+                padDigits(dateToFormat.getFullYear(), 2),
+                padDigits(dateToFormat.getMonth() + 1, 2),
+                padDigits(dateToFormat.getDate(), 2)
+            ].join('');
         }
-        return '';
+        return formattedDate;
     }
 
     function padDigits(number, digits) {
@@ -313,117 +297,105 @@ define([
 
     /**
      * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
+     * @param {object} option
      * @returns object
      **/
-    function processRequest(obj) {
-        //if(!obj)
-        //	var obj = {};
-        //obj.vendorConfig.url = 'https://qaecsoag.arrow.com/ArrowECS/SalesOrder_RS/Status';
-        //obj.partnerId = '81e07b92-a53a-459b-a1fe-92537ab1abcijk'
+    function processRequest(option) {
+        let logTitle = [LogTitle, 'processRequest'].join('::');
 
-        var token = generateToken(obj.vendorConfig);
-        var headers = {
-            Authorization: 'Bearer ' + token,
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-        };
-        log.emergency({ title: 'Arrow poObj', details: obj.poObj });
+        LibArrowAPI.generateToken();
+        if (!CURRENT.accessToken) throw 'Unable to generate access token';
 
-        var responseObj = https.post({
-            url: obj.vendorConfig.endPoint,
-            body: JSON.stringify(obj.poObj),
-            headers: headers
-        });
+        let sendPOResponse = LibArrowAPI.sendOrder(option);
 
-        vcLog.recordLog({
-            header: 'Response',
-            body: JSON.stringify(responseObj),
-            transaction: obj.recPO.id
-        });
+        if (sendPOResponse.isError) throw sendPOResponse.errorMsg;
+        CTC_Util.handleJSONResponse(sendPOResponse);
+        LibArrowAPI.validateResponse(sendPOResponse.PARSED_RESPONSE);
 
-        return responseObj;
-        //    	if(responseObj){
-        //    		log.debug({title: 'Response', details: response});
-        //    		var responseBody = JSON.parse(response.body);
-        //    		log.debug({ title: 'Response Body', details: responseBody});
-        //   		return responseBody;
-        //    	}
+        return sendPOResponse;
     }
 
     /**
      * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
+     * @param {object} option
      * @returns object
      **/
-    function processResponse(obj) {
-        var objBody = obj.responseBody;
-        var orderDate = null;
-        return objBody;
+    function processResponse(option) {
+        let logTitle = [LogTitle, 'processResponse'].join('::'),
+            returnValue = option.returnResponse,
+            responseBody = option.responseBody || returnValue.responseBody;
+        if (responseBody) {
+            returnValue.message = 'Send PO successful';
+        }
+        return returnValue;
     }
 
-    /**
-     * @memberOf CTC_VC_Lib_Arrow
-     * @param {object} obj
-     * @returns object
-     **/
-    function convertToXWWW(json) {
-        if (typeof json !== 'object') {
-            return null;
-        }
+    function process(option) {
+        let logTitle = [LogTitle, 'process'].join('::'),
+            poObj = option.purchaseOrder,
+            vendorConfig = option.vendorConfig;
+        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
+        let sendPOResponse,
+            returnResponse = {
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id
+            };
+        try {
+            CURRENT.recordId = poObj.id;
+            CURRENT.config = vendorConfig;
 
-        var u = encodeURIComponent;
-        var urljson = '';
-        var keys = Object.keys(json);
-        for (var i = 0; i < keys.length; i++) {
-            urljson += u(keys[i]) + '=' + u(json[keys[i]]);
-            if (i < keys.length - 1) urljson += '&';
-        }
-        return urljson;
-    }
+            let requestBody = generateBody({
+                purchaseOrder: poObj,
+                vendorConfig: vendorConfig
+            });
+            CURRENT.payloadObj = requestBody;
 
-    function process(options) {
-        log.emergency({ title: 'Inside Arrow Library PROCESS', details: options });
-        var poObj = options.recPO,
-            vendorConfig = options.recVendorConfig,
-            resp = null;
-
-        var requestBody = generateRequest({
-            poObj: poObj,
-            vendorConfig: vendorConfig
-        });
-
-        var responseObj = processRequest({
-            poObj: requestBody,
-            vendorConfig: vendorConfig,
-            recPO: poObj
-        });
-
-        if (responseObj) {
-            resp = new response({
-                code: responseObj.code,
-                message: responseObj.body
+            sendPOResponse = processRequest({
+                payload: requestBody,
+                vendorConfig: vendorConfig,
+                purchaseOrder: poObj
             });
 
-            var responseBody = JSON.parse(responseObj.body);
+            returnResponse = {
+                transactionNum: poObj.tranId,
+                transactionId: poObj.id,
+                logId: sendPOResponse.logId,
+                responseBody: sendPOResponse.PARSED_RESPONSE || sendPOResponse.RESPONSE.body,
+                responseCode: sendPOResponse.RESPONSE.code,
+                isError: false,
+                error: null,
+                errorId: poObj.id,
+                errorName: null,
+                errorMsg: null
+            };
 
-            if (resp.code == 200) {
-                if (responseBody.hasOwnProperty('TransactionKeyID')) {
-                    var arrowTransactionID = responseBody.TransactionKeyID;
-                    var values = {};
-                    values[constants.Fields.Transaction.VENDOR_PO_NUMBER] = arrowTransactionID;
-                    record.submitFields({
-                        type: record.Type.PURCHASE_ORDER,
-                        id: poObj.id,
-                        values: values
-                    });
-                    resp.message = null;
+            returnResponse = processResponse({
+                purchaseOrder: poObj,
+                responseBody: returnResponse.responseBody,
+                returnResponse: returnResponse
+            });
+        } catch (e) {
+            log.error(logTitle, 'FATAL ERROR:: ' + e.name + ': ' + e.message);
+            returnResponse = returnResponse || {};
+            returnResponse.isError = true;
+            returnResponse.error = e;
+            returnResponse.errorId = poObj.id;
+            returnResponse.errorName = e.name;
+            returnResponse.errorMsg = e.message;
+            if (sendPOResponse) {
+                returnResponse.logId = sendPOResponse.logId || null;
+                returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;
+                if (sendPOResponse.RESPONSE) {
+                    if (!returnResponse.responseBody) {
+                        returnResponse.responseBody = sendPOResponse.RESPONSE.body || null;
+                    }
+                    returnResponse.responseCode = sendPOResponse.RESPONSE.code || null;
                 }
             }
+        } finally {
+            log.audit(logTitle, '>> sendPoResp: ' + JSON.stringify(returnResponse));
         }
-        log.debug({ title: 'resp', details: resp });
-        log.emergency({ title: 'responseObj', details: responseObj.body });
-        return resp;
+        return returnResponse;
     }
 
     return {
