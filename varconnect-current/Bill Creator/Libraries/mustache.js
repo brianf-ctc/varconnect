@@ -216,8 +216,7 @@
 
                 if (!openSection) throw new Error('Unopened section "' + value + '" at ' + start);
 
-                if (openSection[1] !== value)
-                    throw new Error('Unclosed section "' + openSection[1] + '" at ' + start);
+                if (openSection[1] !== value) throw new Error('Unclosed section "' + openSection[1] + '" at ' + start);
             } else if (type === 'name' || type === '{' || type === '&') {
                 nonSpace = true;
             } else if (type === '=') {
@@ -229,8 +228,7 @@
         // Make sure there are no open sections when we're done.
         openSection = sections.pop();
 
-        if (openSection)
-            throw new Error('Unclosed section "' + openSection[1] + '" at ' + scanner.pos);
+        if (openSection) throw new Error('Unclosed section "' + openSection[1] + '" at ' + scanner.pos);
 
         return nestTokens(squashTokens(tokens));
     }
@@ -285,8 +283,7 @@
                 case '/':
                     section = sections.pop();
                     section[5] = token[2];
-                    collector =
-                        sections.length > 0 ? sections[sections.length - 1][4] : nestedTokens;
+                    collector = sections.length > 0 ? sections[sections.length - 1][4] : nestedTokens;
                     break;
                 default:
                     collector.push(token);
@@ -522,13 +519,7 @@
      * If the template doesn't use higher-order sections, this argument may
      * be omitted.
      */
-    Writer.prototype.renderTokens = function renderTokens(
-        tokens,
-        context,
-        partials,
-        originalTemplate,
-        tags
-    ) {
+    Writer.prototype.renderTokens = function renderTokens(tokens, context, partials, originalTemplate, tags) {
         var buffer = '';
 
         var token, symbol, value;
@@ -537,10 +528,8 @@
             token = tokens[i];
             symbol = token[0];
 
-            if (symbol === '#')
-                value = this.renderSection(token, context, partials, originalTemplate);
-            else if (symbol === '^')
-                value = this.renderInverted(token, context, partials, originalTemplate);
+            if (symbol === '#') value = this.renderSection(token, context, partials, originalTemplate);
+            else if (symbol === '^') value = this.renderInverted(token, context, partials, originalTemplate);
             else if (symbol === '>') value = this.renderPartial(token, context, partials, tags);
             else if (symbol === '&') value = this.unescapedValue(token, context);
             else if (symbol === 'name') value = this.escapedValue(token, context);
@@ -552,12 +541,7 @@
         return buffer;
     };
 
-    Writer.prototype.renderSection = function renderSection(
-        token,
-        context,
-        partials,
-        originalTemplate
-    ) {
+    Writer.prototype.renderSection = function renderSection(token, context, partials, originalTemplate) {
         var self = this;
         var buffer = '';
         var value = context.lookup(token[1]);
@@ -572,18 +556,9 @@
 
         if (isArray(value)) {
             for (var j = 0, valueLength = value.length; j < valueLength; ++j) {
-                buffer += this.renderTokens(
-                    token[4],
-                    context.push(value[j]),
-                    partials,
-                    originalTemplate
-                );
+                buffer += this.renderTokens(token[4], context.push(value[j]), partials, originalTemplate);
             }
-        } else if (
-            typeof value === 'object' ||
-            typeof value === 'string' ||
-            typeof value === 'number'
-        ) {
+        } else if (typeof value === 'object' || typeof value === 'string' || typeof value === 'number') {
             buffer += this.renderTokens(token[4], context.push(value), partials, originalTemplate);
         } else if (isFunction(value)) {
             if (typeof originalTemplate !== 'string')
@@ -599,12 +574,7 @@
         return buffer;
     };
 
-    Writer.prototype.renderInverted = function renderInverted(
-        token,
-        context,
-        partials,
-        originalTemplate
-    ) {
+    Writer.prototype.renderInverted = function renderInverted(token, context, partials, originalTemplate) {
         var value = context.lookup(token[1]);
 
         // Use JavaScript's definition of falsy. Include empty arrays.
@@ -617,8 +587,7 @@
         if (!partials) return;
 
         var value = isFunction(partials) ? partials(token[1]) : partials[token[1]];
-        if (value != null)
-            return this.renderTokens(this.parse(value, tags), context, partials, value);
+        if (value != null) return this.renderTokens(this.parse(value, tags), context, partials, value);
     };
 
     Writer.prototype.unescapedValue = function unescapedValue(token, context) {

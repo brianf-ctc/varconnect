@@ -47,10 +47,10 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials'
                         }),
                         headers: {
@@ -95,15 +95,11 @@ define([
                 var faultStr = request.PARSED_RESPONSE
                     ? // check fault/faultString
                       (function (resp) {
-                          return resp.Fault && resp.Fault.faultstring
-                              ? resp.Fault.faultstring
-                              : false;
+                          return resp.Fault && resp.Fault.faultstring ? resp.Fault.faultstring : false;
                       })(request.PARSED_RESPONSE) ||
                       // check error/error_description
                       (function (resp) {
-                          return resp.error && resp.error_description
-                              ? resp.error_description
-                              : false;
+                          return resp.error && resp.error_description ? resp.error_description : false;
                       })(request.PARSED_RESPONSE) ||
                       request.errorMsg
                     : request.errorMsg;
@@ -130,7 +126,7 @@ define([
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     method: 'POST',
                     query: {
-                        url: CURRENT.vendorConfig.endPoint,
+                        url: CURRENT.orderConfig.endPoint,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
@@ -161,17 +157,16 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
 
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
                 var itemArray = [];
 
                 var arrResponse = this.processRequest(option);
 
-                if (!arrResponse || !arrResponse.purchaseOrderDetails)
-                    throw 'Missing purchase order details';
+                if (!arrResponse || !arrResponse.purchaseOrderDetails) throw 'Missing purchase order details';
 
                 var orderDetail = arrResponse.purchaseOrderDetails.shift();
                 if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
@@ -218,16 +213,12 @@ define([
                         }
                     }
 
-                    if (
-                        dellOrder.trackingInformation &&
-                        util.isArray(dellOrder.trackingInformation)
-                    ) {
+                    if (dellOrder.trackingInformation && util.isArray(dellOrder.trackingInformation)) {
                         var arrTracking = [];
 
                         dellOrder.trackingInformation.forEach(function (tracking) {
                             if (vc2_util.isEmpty(tracking.waybill)) return false;
-                            if (!vc2_util.inArray(tracking.waybill, arrTracking))
-                                arrTracking.push(tracking.waybill);
+                            if (!vc2_util.inArray(tracking.waybill, arrTracking)) arrTracking.push(tracking.waybill);
 
                             if (!orderItem.carrier || orderItem.carrier == 'NA') {
                                 orderItem.carrier = tracking.carrierName;
@@ -243,15 +234,9 @@ define([
 
                     // check is_shipped from status
                     orderItem.is_shipped = orderItem.line_status
-                        ? vc2_util.inArray(
-                              orderItem.line_status.toUpperCase(),
-                              LibDellAPI.ValidShippedStatus
-                          )
+                        ? vc2_util.inArray(orderItem.line_status.toUpperCase(), LibDellAPI.ValidShippedStatus)
                         : orderItem.order_status
-                        ? vc2_util.inArray(
-                              orderItem.order_status.toUpperCase(),
-                              LibDellAPI.ValidShippedStatus
-                          )
+                        ? vc2_util.inArray(orderItem.order_status.toUpperCase(), LibDellAPI.ValidShippedStatus)
                         : false;
 
                     // check is_shipped from shipped date
@@ -292,10 +277,10 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 LibDellAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';

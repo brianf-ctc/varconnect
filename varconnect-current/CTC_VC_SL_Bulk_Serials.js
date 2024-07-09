@@ -13,15 +13,15 @@
  * @NScriptType Suitelet
  */
 
-define([
-    'N/ui/serverWidget',
-    'N/email',
-    'N/runtime',
-    'N/log',
-    'N/search',
-    'N/record',
-    'N/http'
-], function (ui, email, runtime, log, search, rec, http) {
+define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/record', 'N/http'], function (
+    ui,
+    email,
+    runtime,
+    log,
+    search,
+    rec,
+    http
+) {
     const SUBLIST_ID = 'custpage_orders';
 
     function onRequest(context) {

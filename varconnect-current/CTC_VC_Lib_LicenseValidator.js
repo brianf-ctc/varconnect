@@ -12,13 +12,14 @@
  * @NModuleScope Public
  */
 
-define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], function (
-    ns_url,
-    ns_https,
-    ns_runtime,
-    ns_cache,
-    vc2_constant
-) {
+define([
+    'N/url',
+    'N/https',
+    'N/runtime',
+    'N/cache',
+    './CTC_VC2_Constants.js',
+    './Services/ctc_svclib_configlib'
+], function (ns_url, ns_https, ns_runtime, ns_cache, vc2_constant, vcs_configLib) {
     function callValidationSuitelet_2(option) {
         var license = option.license,
             external = option.external ? true : null,
@@ -44,14 +45,16 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
         return result;
     }
 
-    var VC_LICENSE = {
-        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
-        PRODUCT_CODE: 2,
-        MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY__20231123',
-        CACHE_NAME: 'VC_LICENSE',
-        CACHE_TTL: 86400 // 24 hrs
-    };
+    var VC_LICENSE = vc2_constant.LICENSE;
+
+    // {
+    //     URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+    //     PRODUCT_CODE: 2,
+    //     MAX_RETRY: 3,
+    //     KEY: 'LICENSE_KEY__20231123',
+    //     CACHE_NAME: 'VC_LICENSE',
+    //     CACHE_TTL: 86400 // 24 hrs
+    // };
 
     var LibLicense = {
         fetchLicense: function (option) {
@@ -76,16 +79,12 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                         ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
                         ('&nsaccountid=' + ns_runtime.accountId)
                 };
-                log.audit(
-                    logTitle,
-                    logPrefix + 'Send Request query: ' + JSON.stringify(queryOption)
-                );
+                log.audit(logTitle, logPrefix + 'Send Request query: ' + JSON.stringify(queryOption));
                 response = ns_https.request(queryOption);
                 log.audit(logTitle, logPrefix + 'Response: ' + JSON.stringify(response));
 
                 if (!response || !response.body) throw 'Unable to get response';
-                if (!response.code || response.code !== 200)
-                    throw 'Received invalid response code - ' + response.code;
+                if (!response.code || response.code !== 200) throw 'Received invalid response code - ' + response.code;
 
                 // turn off retry from this point, since we can confirm that we are able to connect
                 doRetry = false;
@@ -147,8 +146,7 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                     log.audit(logTitle, logPrefix + '// CACHE RETRIEVED: key: ' + VC_LICENSE.KEY);
                 }
 
-                if (vcLicenseResp.error || vcLicenseResp.hasError)
-                    throw vcLicenseResp.error || vcLicenseResp.errorMsg;
+                if (vcLicenseResp.error || vcLicenseResp.hasError) throw vcLicenseResp.error || vcLicenseResp.errorMsg;
 
                 if (!vcLicenseResp.status) throw 'Unable to fetch license status';
                 if (vcLicenseResp.status != 'active') throw 'License is not active';
@@ -197,8 +195,7 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -220,9 +217,12 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                 returnValue;
 
             try {
-                response = LibLicense.validate({ doRetry: true, retryMax: 3 });
-                log.audit(logTitle, response);
-                if (response.hasError) throw response.errorMsg;
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError) throw response.errorMsg;
+
+                // response = LibLicense.validate({ doRetry: true, retryMax: 3 });
+                // log.audit(logTitle, response);
+                // if (response.hasError) throw response.errorMsg;
 
                 returnValue = 'valid';
             } catch (error) {

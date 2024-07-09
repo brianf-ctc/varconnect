@@ -19,12 +19,12 @@
  * Author: shawn.blackburn
  */
 
-define([
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js',
-    './Bill Creator/Libraries/moment',
-    'N/cache'
-], function (vc2_util, vc2_constant, moment, cache) {
+define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libraries/moment', 'N/cache'], function (
+    vc2_util,
+    vc2_constant,
+    moment,
+    cache
+) {
     'use strict';
 
     var LogTitle = 'WS:ScanSource',
@@ -46,12 +46,12 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials',
-                            scope: CURRENT.vendorConfig.oauthScope
+                            scope: CURRENT.orderConfig.oauthScope
                         }),
                         headers: {
                             'Ocp-Apim-Subscription-Key': '4c83c3da-f5e5-4901-954f-399ef8175603', // add this to the config record
@@ -75,13 +75,13 @@ define([
             return returnValue;
         },
         getTokenCache: function () {
-            var token = vc2_util.getNSCache({ key: 'VC_SCANSOURCE_TOKEN' });
+            var token = vc2_util.getNSCache({ key: 'VC_SCANSOURCE_TOKEN_00' });
             if (vc2_util.isEmpty(token)) token = this.generateToken();
 
             if (!vc2_util.isEmpty(token)) {
                 vc2_util.setNSCache({
-                    key: 'VC_SCANSOURCE_TOKEN',
-                    cacheTTL: 14400,
+                    key: 'VC_SCANSOURCE_TOKEN_00',
+                    cacheTTL: 3599,
                     value: token
                 });
                 CURRENT.accessToken = token;
@@ -98,8 +98,8 @@ define([
                     method: 'get',
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint +
-                            ('/list?customerNumber=' + CURRENT.vendorConfig.customerNo) +
+                            CURRENT.orderConfig.endPoint +
+                            ('/list?customerNumber=' + CURRENT.orderConfig.customerNo) +
                             ('&poNumber=' + CURRENT.recordNum),
                         headers: CURRENT.Headers
                     }
@@ -123,11 +123,9 @@ define([
                     method: 'get',
                     query: {
                         url:
-                            CURRENT.vendorConfig.endPoint +
-                            ('/detail?salesOrderNumber=' +
-                                option.OrderNumber +
-                                '&customerNumber=') +
-                            (CURRENT.vendorConfig.customerNo + '&excludeSerialTracking=false'),
+                            CURRENT.orderConfig.endPoint +
+                            ('/detail?salesOrderNumber=' + option.OrderNumber + '&customerNumber=') +
+                            (CURRENT.orderConfig.customerNo + '&excludeSerialTracking=false'),
                         headers: CURRENT.Headers
                     }
                 });
@@ -170,10 +168,10 @@ define([
         try {
             CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-            CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
             vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-            if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
             // LibScansource.generateToken();
             LibScansource.getTokenCache();
@@ -233,10 +231,7 @@ define([
                     var shipment = { tracking: [] };
                     (deliveryLine.Parcels || []).forEach(function (parcel) {
                         if (parcel.CarrierCode) shipment.carrier = parcel.CarrierCode;
-                        if (
-                            parcel.TrackingNumber &&
-                            !vc2_util.inArray(parcel.TrackingNumber, shipment.tracking)
-                        )
+                        if (parcel.TrackingNumber && !vc2_util.inArray(parcel.TrackingNumber, shipment.tracking))
                             shipment.tracking.push(parcel.TrackingNumber);
                     });
                     vc2_util.log(logTitle, '...shipment:  ', shipment);
@@ -247,8 +242,7 @@ define([
                             order_num: orderDetail.SalesOrderNumber,
                             line_num:
                                 Math.floor(
-                                    deliveryLine.DeliveryDocumentNumber +
-                                        ('.' + lineItem.DeliveryDocumentLineNumber)
+                                    deliveryLine.DeliveryDocumentNumber + ('.' + lineItem.DeliveryDocumentLineNumber)
                                 ) * 1,
                             vendorSKU: lineItem.ItemNumber,
                             ship_qty: parseInt(lineItem.QuantityShipped),

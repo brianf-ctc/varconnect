@@ -91,13 +91,9 @@ define([
                     if (chargeInfo.description) {
                         if (chargeInfo.description.match(/freight/gi)) {
                             // add it to as shipping charge
-                            invoiceData.ordObj.charges.shipping += vc2_util.parseFloat(
-                                chargeInfo.amount
-                            );
+                            invoiceData.ordObj.charges.shipping += vc2_util.parseFloat(chargeInfo.amount);
                         } else {
-                            invoiceData.ordObj.charges.other += vc2_util.parseFloat(
-                                chargeInfo.amount
-                            );
+                            invoiceData.ordObj.charges.other += vc2_util.parseFloat(chargeInfo.amount);
                         }
                     } else {
                         invoiceData.ordObj.charges.other += vc2_util.parseFloat(chargeInfo.amount);
@@ -165,15 +161,12 @@ define([
                 });
                 vc2_util.handleJSONResponse(searchOrderReq);
 
-                var searchOrderResp =
-                    searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
+                var searchOrderResp = searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
 
                 if (searchOrderReq.isError || vc2_util.isEmpty(searchOrderResp)) {
                     throw (
                         searchOrderReq.errorMsg +
-                        (searchOrderReq.details
-                            ? '\n' + JSON.stringify(searchOrderReq.details)
-                            : '')
+                        (searchOrderReq.details ? '\n' + JSON.stringify(searchOrderReq.details) : '')
                     );
                 }
 
@@ -204,9 +197,7 @@ define([
                         // auto skip cancelled orders
                         if (
                             subOrderInfo.subOrderStatus &&
-                            vc2_util.inArray(subOrderInfo.subOrderStatus.toUpperCase(), [
-                                'CANCELLED'
-                            ])
+                            vc2_util.inArray(subOrderInfo.subOrderStatus.toUpperCase(), ['CANCELLED'])
                         ) {
                             continue;
                         }
@@ -298,15 +289,12 @@ define([
                 });
                 vc2_util.handleJSONResponse(orderDetailsReq);
 
-                var orderDetailsResp =
-                    orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
+                var orderDetailsResp = orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
 
                 if (orderDetailsReq.isError || vc2_util.isEmpty(orderDetailsReq)) {
                     throw (
                         orderDetailsReq.errorMsg +
-                        (orderDetailsReq.details
-                            ? '\n' + JSON.stringify(orderDetailsReq.details)
-                            : '')
+                        (orderDetailsReq.details ? '\n' + JSON.stringify(orderDetailsReq.details) : '')
                     );
                 }
 
@@ -317,8 +305,7 @@ define([
                     vc2_util.log(logTitle, '>> chargeInfo: ', chargeInfo);
 
                     if (!chargeInfo.subOrderNumber) continue;
-                    if (!objMischCharges[chargeInfo.subOrderNumber])
-                        objMischCharges[chargeInfo.subOrderNumber] = [];
+                    if (!objMischCharges[chargeInfo.subOrderNumber]) objMischCharges[chargeInfo.subOrderNumber] = [];
 
                     objMischCharges[chargeInfo.subOrderNumber].push({
                         description: chargeInfo.chargeDescription,
@@ -404,25 +391,19 @@ define([
                     vc2_util.handleJSONResponse(invoiceDetailsReq);
                     vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
 
-                    var invoiceDetailsResp =
-                        invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+                    var invoiceDetailsResp = invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
                     if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
                         throw (
                             invoiceDetailsReq.errorMsg +
-                            (invoiceDetailsReq.details
-                                ? '\n' + JSON.stringify(invoiceDetailsReq.details)
-                                : '')
+                            (invoiceDetailsReq.details ? '\n' + JSON.stringify(invoiceDetailsReq.details) : '')
                         );
                     }
                 } else {
                     invoiceDetailsResp = loadResponse;
                 }
 
-                if (
-                    !invoiceDetailsResp.serviceresponse ||
-                    !invoiceDetailsResp.serviceresponse.invoicedetailresponse
-                )
+                if (!invoiceDetailsResp.serviceresponse || !invoiceDetailsResp.serviceresponse.invoicedetailresponse)
                     continue;
 
                 var invoiceInfo = invoiceDetailsResp.serviceresponse.invoicedetailresponse,
@@ -454,11 +435,7 @@ define([
                     invoiceInfo && invoiceInfo.lines ? invoiceInfo.lines.length : 0
                 );
 
-                for (
-                    var ii = 0, jj = invoiceInfo.lines ? invoiceInfo.lines.length : 0;
-                    ii < jj;
-                    ii++
-                ) {
+                for (var ii = 0, jj = invoiceInfo.lines ? invoiceInfo.lines.length : 0; ii < jj; ii++) {
                     var lineInfo = invoiceInfo.lines[ii];
                     vc2_util.log(logTitle, '>> ...Line Info: ', lineInfo);
 
@@ -508,16 +485,13 @@ define([
                         invoiceData.lines[lineIdx].QUANTITY += lineData.QUANTITY;
 
                         if (!vc2_util.isEmpty(lineData.SERIAL)) {
-                            if (!invoiceData.lines[lineIdx].SERIAL)
-                                invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
+                            if (!invoiceData.lines[lineIdx].SERIAL) invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL;
                             else
                                 invoiceData.lines[lineIdx].SERIAL = lineData.SERIAL.concat(
                                     invoiceData.lines[lineIdx].SERIAL
                                 );
                             // trim unique serials
-                            invoiceData.lines[lineIdx].SERIAL = vc2_util.uniqueArray(
-                                invoiceData.lines[lineIdx].SERIAL
-                            );
+                            invoiceData.lines[lineIdx].SERIAL = vc2_util.uniqueArray(invoiceData.lines[lineIdx].SERIAL);
                         }
 
                         if (!vc2_util.isEmpty(lineData.TRACKING)) {

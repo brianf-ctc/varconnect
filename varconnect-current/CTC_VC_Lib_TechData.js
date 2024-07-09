@@ -65,7 +65,7 @@ define([
                     method: 'post',
                     isXML: true,
                     query: {
-                        url: CURRENT.vendorConfig.endPoint,
+                        url: CURRENT.orderConfig.endPoint,
                         headers: {
                             'Content-Type': 'text/xml; charset=utf-8',
                             'Content-Length': 'length'
@@ -73,8 +73,8 @@ define([
                         body:
                             '<XML_InvoiceDetailByPO_Submit>' +
                             '<Header>' +
-                            ('<UserName>' + CURRENT.vendorConfig.user + '</UserName>') +
-                            ('<Password>' + CURRENT.vendorConfig.password + '</Password>') +
+                            ('<UserName>' + CURRENT.orderConfig.user + '</UserName>') +
+                            ('<Password>' + CURRENT.orderConfig.password + '</Password>') +
                             '</Header>' +
                             '<Detail>' +
                             '<POInfo>' +
@@ -128,11 +128,10 @@ define([
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
@@ -160,12 +159,11 @@ define([
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 returnValue = LibTechDataXML.getInvoiceDetail(option);
             } catch (error) {
@@ -238,11 +236,7 @@ define([
                     if (!vc2_util.isEmpty(orderItem.line_num)) {
                         orderItem.line_no = vc2_util.parseFloat(orderItem.line_num);
 
-                        if (
-                            !vc2_util.isEmpty(orderItem.line_no) &&
-                            orderItem.line_no &&
-                            orderItem.line_no % 100 == 0
-                        )
+                        if (!vc2_util.isEmpty(orderItem.line_no) && orderItem.line_no && orderItem.line_no % 100 == 0)
                             orderItem.line_no = orderItem.line_no / 100;
                     }
 

@@ -18,12 +18,12 @@
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
  */
-define([
-    'N/search',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_search, vc2_util, vc2_constant, moment) {
+define(['N/search', './CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libraries/moment'], function (
+    ns_search,
+    vc2_util,
+    vc2_constant,
+    moment
+) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -70,10 +70,10 @@ define([
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
                             grant_type: 'client_credentials'
                         }),
                         headers: {
@@ -118,16 +118,13 @@ define([
                 var reqValidOrders = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     query: {
-                        url:
-                            CURRENT.vendorConfig.endPoint +
-                            '/search?customerOrderNumber=' +
-                            CURRENT.recordNum,
+                        url: CURRENT.orderConfig.endPoint + '/search?customerOrderNumber=' + CURRENT.recordNum,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
                             'Content-Type': 'application/json',
-                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
-                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
                             'IM-CustomerOrderNumber': CURRENT.recordNum,
                             'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
                         }
@@ -146,13 +143,7 @@ define([
                     var ingramOrder = respIngramOrders.orders[i];
 
                     if (!ingramOrder.orderStatus) continue;
-                    if (
-                        vc2_util.inArray(
-                            ingramOrder.orderStatus.toUpperCase(),
-                            LibIngramAPI.SkippedStatus
-                        )
-                    )
-                        continue;
+                    if (vc2_util.inArray(ingramOrder.orderStatus.toUpperCase(), LibIngramAPI.SkippedStatus)) continue;
 
                     arrOrderDetails.push(ingramOrder);
                 }
@@ -172,19 +163,20 @@ define([
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                vc2_util.log(logTitle, '//// GET ORDER DETAILS:', ingramOrder.ingramOrderNumber);
+                vc2_util.log(logTitle, '/// GET ORDER DETAILS:', ingramOrder);
+                if (!ingramOrder.ingramOrderNumber) throw 'Ingram Order is required';
 
                 var reqOrderDetails = vc2_util.sendRequest({
                     header: [LogTitle, 'Order Details'].join(' '),
                     recordId: CURRENT.recordId,
                     query: {
-                        url: CURRENT.vendorConfig.endPoint + '/' + ingramOrder.ingramOrderNumber,
+                        url: CURRENT.orderConfig.endPoint + '/' + ingramOrder.ingramOrderNumber,
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
                             'Content-Type': 'application/json',
-                            'IM-CustomerNumber': CURRENT.vendorConfig.customerNo,
-                            'IM-CountryCode': CURRENT.vendorConfig.country,
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
                             'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
                         }
                     }
@@ -195,48 +187,9 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = vc2_util.extractError(error);
+                // throw error;
             }
 
-            return returnValue;
-        },
-        getNSRecord: function (option) {
-            var logTitle = [LogTitle, 'getNSRecord'].join('::'),
-                returnValue;
-
-            return false;
-
-            var orderNumber = option.ingramOrderNumber;
-            orderNumber = orderNumber.replace(/[^a-z0-9]/gi, '');
-            orderNumber = [CURRENT.vendorConfig.fulfillmentPrefix, orderNumber].join('');
-
-            var searchOption = {
-                type: 'itemfulfillment',
-                filters: [
-                    ['type', 'anyof', 'ItemShip'],
-                    'AND',
-                    ['mainline', 'is', 'T'],
-                    'AND',
-                    [
-                        "formulatext: REGEXP_REPLACE({custbody_ctc_if_vendor_order_match}, '[^a-zA-Z0-9]', '')",
-                        'is',
-                        orderNumber
-                    ]
-                ],
-                columns: ['internalid', 'transactionnumber', 'custbody_ctc_if_vendor_order_match']
-            };
-
-            var nsItemFF = null;
-            ns_search
-                .create(searchOption)
-                .run()
-                .each(function (row) {
-                    nsItemFF = row.id;
-                    return true;
-                });
-
-            returnValue = nsItemFF;
-
-            vc2_util.log(logTitle, '/// nsitemff: ', nsItemFF);
             return returnValue;
         },
         extractLineData: function (respLineData) {
@@ -248,13 +201,9 @@ define([
 
                 // initialize the line data
                 var lineData = {
-                    line_num: respLineData.customerLineNumber
-                        ? respLineData.customerLineNumber
-                        : 'NA',
+                    line_num: respLineData.customerLineNumber ? respLineData.customerLineNumber : 'NA',
                     item_num: respLineData.vendorPartNumber ? respLineData.vendorPartNumber : 'NA',
-                    item_num_alt: respLineData.ingramPartNumber
-                        ? respLineData.ingramPartNumber
-                        : 'NA',
+                    item_num_alt: respLineData.ingramPartNumber ? respLineData.ingramPartNumber : 'NA',
                     vendorSKU: respLineData.ingramPartNumber ? respLineData.ingramPartNumber : 'NA',
                     order_num: respLineData.subOrderNumber ? respLineData.subOrderNumber : 'NA',
                     line_status: respLineData.lineStatus ? respLineData.lineStatus : 'NA',
@@ -270,10 +219,7 @@ define([
                 lineData.line_no = vc2_util.parseFloat(lineData.line_num);
 
                 /// extract serials, tracking
-                var shipment = LibIngramAPI.extractShipmentDetails(
-                    respLineData.shipmentDetails,
-                    lineData
-                );
+                var shipment = LibIngramAPI.extractShipmentDetails(respLineData.shipmentDetails, lineData);
 
                 util.extend(lineData, {
                     ship_date: shipment.ship_date || 'NA',
@@ -281,14 +227,9 @@ define([
                     order_eta: respLineData.promisedDeliveryDate || shipment.order_eta || 'NA',
                     carrier: shipment.carrier || 'NA',
                     order_eta_ship: shipment.order_eta_ship || 'NA',
-                    serial_num:
-                        shipment.serialNos && shipment.serialNos.length
-                            ? shipment.serialNos.join(',')
-                            : 'NA',
+                    serial_num: shipment.serialNos && shipment.serialNos.length ? shipment.serialNos.join(',') : 'NA',
                     tracking_num:
-                        shipment.trackingNos && shipment.trackingNos.length
-                            ? shipment.trackingNos.join(',')
-                            : 'NA'
+                        shipment.trackingNos && shipment.trackingNos.length ? shipment.trackingNos.join(',') : 'NA'
                 });
 
                 var estimatedDates = this.extractEstimatedDates(respLineData.estimatedDates);
@@ -370,9 +311,7 @@ define([
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
                 if (trackingDetails[i].trackingNumber) {
-                    trackingNos = trackingNos.concat(
-                        trackingDetails[i].trackingNumber.split(/[\W]+/g)
-                    );
+                    trackingNos = trackingNos.concat(trackingDetails[i].trackingNumber.split(/[\W]+/g));
                 }
             }
 
@@ -443,8 +382,7 @@ define([
                 dateObj;
 
             try {
-                dateObj =
-                    dateStr && dateStr !== 'NA' ? moment(dateStr, 'YYYY-MM-DD').toDate() : null;
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr, 'YYYY-MM-DD').toDate() : null;
             } catch (err) {}
 
             // vc2_util.log(logTitle, '// dateStr: ', {
@@ -487,8 +425,7 @@ define([
                         order_date: shipmentDetail.invoiceDate || shipData.order_date,
                         ship_date: shipmentDetail.shippedDate || shipData.ship_date,
                         order_eta: shipmentDetail.estimatedDeliveryDate || shipData.order_eta || '',
-                        order_eta_ship:
-                            shipmentDetail.estimatedDeliveryDate || shipData.order_eta_ship
+                        order_eta_ship: shipmentDetail.estimatedDeliveryDate || shipData.order_eta_ship
                     });
 
                     if (!shipmentDetail.carrierDetails) continue;
@@ -531,22 +468,15 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum;
-                CURRENT.vendorConfig = option.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
                 var itemArray = [];
 
                 // detect if v6.1 or v6.0
-                if (
-                    CURRENT.vendorConfig.endPoint &&
-                    CURRENT.vendorConfig.endPoint.match(/\/v6.1\//)
-                ) {
-                    vc2_util.log(
-                        logTitle,
-                        '*** VER 6.1 Endpoint *** ',
-                        CURRENT.vendorConfig.endPoint
-                    );
+                if (CURRENT.orderConfig.endPoint && CURRENT.orderConfig.endPoint.match(/\/v6.1\//)) {
+                    vc2_util.log(logTitle, '*** VER 6.1 Endpoint *** ', CURRENT.orderConfig.endPoint);
                     CURRENT.apiver = APIVER.ver61;
                     LibIngramAPI = LibIngramAPIV61;
                 }
@@ -565,9 +495,7 @@ define([
 
                     var defaultETA = {
                         date: moment(ingramOrderDate).add(1, 'day').toDate(),
-                        text: moment(ingramOrderDate)
-                            .add(1, 'day')
-                            .format(vc2_constant.GLOBAL.DATE_FORMAT)
+                        text: moment(ingramOrderDate).add(1, 'day').format(vc2_constant.GLOBAL.DATE_FORMAT)
                     };
 
                     vc2_util.log(logTitle, logPrefix + '// defaultETA: ', defaultETA);
@@ -576,18 +504,9 @@ define([
                         ? arrResponse.OrderDetails[validOrder.ingramOrderNumber]
                         : null;
 
-                    if (
-                        !respOrderDetails ||
-                        !respOrderDetails.lines ||
-                        !respOrderDetails.lines.length
-                    )
-                        continue;
+                    if (!respOrderDetails || !respOrderDetails.lines || !respOrderDetails.lines.length) continue;
 
-                    vc2_util.log(
-                        logTitle,
-                        logPrefix + '// Order Detail num lines: ',
-                        respOrderDetails.lines.length
-                    );
+                    vc2_util.log(logTitle, logPrefix + '// Order Detail num lines: ', respOrderDetails.lines.length);
 
                     for (var ii = 0, jj = respOrderDetails.lines.length; ii < jj; ii++) {
                         var orderItem = LibIngramAPI.extractLineData(respOrderDetails.lines[ii]);
@@ -598,9 +517,6 @@ define([
                                 orderItem.line_status.toUpperCase(),
                                 LibIngramAPI.ValidShippedStatus
                             )
-                            // LibIngramAPI.getNSRecord({
-                            //     ingramOrderNumber: lineData.order_num
-                            // }) || null
                         });
 
                         if (!orderItem.order_eta || orderItem.order_eta == 'NA') {
@@ -623,11 +539,7 @@ define([
                                 shippedDate <= new Date()
                             ]);
 
-                            if (
-                                shippedDate &&
-                                util.isDate(shippedDate) &&
-                                shippedDate <= new Date()
-                            )
+                            if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
                                 orderItem.is_shipped = true;
                         }
 
@@ -656,10 +568,10 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 // generate the
                 LibIngramAPI.getTokenCache();
@@ -667,6 +579,8 @@ define([
 
                 var arrValidOrders = LibIngramAPI.getValidOrders(),
                     arrOrderDetails = {};
+
+                vc2_util.log(logTitle, '...arrValidOrders: ', arrValidOrders);
 
                 for (var i = 0, j = arrValidOrders.length; i < j; i++) {
                     var validOrder = arrValidOrders[i];

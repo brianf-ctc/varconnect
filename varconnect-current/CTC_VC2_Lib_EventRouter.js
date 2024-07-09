@@ -11,12 +11,8 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
-    ns_record,
-    ns_runtime,
-    ns_url,
-    ns_redir
-) {
+define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (ns_record, ns_runtime, ns_url, ns_redir) {
+    // --------- Helper Functions --------- //
     var Helper = {
         isEmpty: function (stValue) {
             return (
@@ -41,16 +37,22 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
     };
 
     var EventRouter = {
+        // Define the types of user events this router can handle
         Type: {
             BEFORE_LOAD: 'onBeforeLoad',
             BEFORE_SUBMIT: 'onBeforeSubmit',
             AFTER_SUBMIT: 'onAfterSubmit',
             CUSTOM: 'Custom'
         },
+        // Query parameter name for custom actions
         ParamStr: 'routeract',
+        // Store information about the current event being processed
         Current: {},
+        // Store the script context
         ScriptContext: null,
+        // Dictionary to hold event handler functions for each record type, custom actions
         Action: {},
+        // Initialize the router with event context
         initialize: function (scriptContext) {
             var Current = {
                 eventType: scriptContext.type,
@@ -70,6 +72,8 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
 
             return Current;
         },
+
+        // Main function to route and execute event handlers
         execute: function (eventType) {
             if (!eventType) return; // exit
 
@@ -80,11 +84,12 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                 RouterEventFn,
                 result;
 
+            // Handle custom actions triggered by URL parameters
             if (eventType == this.Type.CUSTOM) {
+                // check if there is
                 if (!this.Action[eventType]) return;
                 if (!Helper.inArray(Current.execType, [ContextType.USER_INTERFACE])) return;
-                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT]))
-                    return;
+                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT])) return;
 
                 var paramAction = scriptContext.request.parameters[this.ParamStr];
                 RouterEventFn = this.Action[eventType][paramAction];
@@ -100,14 +105,26 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                         id: Current.recordId
                     });
                 }
-            } else if (this.Action[Current.recordType]) {
-                RouterEventFn = this.Action[Current.recordType][eventType];
-                if (!util.isFunction(RouterEventFn)) return;
+            }
+            // Handle standard user events (beforeLoad, etc.)
+            else if (this.Action[Current.recordType]) {
+                var RouterAction = this.Action[Current.recordType];
 
-                result = RouterEventFn.call(EventRouter, scriptContext, Current);
+                // force an array
+                RouterAction = util.isArray(RouterAction) ? RouterAction : [RouterAction];
+
+                for (var i = 0, j = RouterAction.length; i < j; i++) {
+                    RouterEventFn = RouterAction[i][eventType];
+                    if (!util.isFunction(RouterEventFn)) continue;
+
+                    result = RouterEventFn.call(EventRouter, scriptContext, Current);
+                    if (!result) break; // event must return true to continue
+                }
+
                 return result;
             }
         },
+        // Generate a URL to trigger a custom action
         addActionURL: function (name) {
             return [this.Current.recordUrl, '&', this.ParamStr, '=', name].join('');
         }

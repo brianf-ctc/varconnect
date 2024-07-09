@@ -41,10 +41,11 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                     doRetry: true,
                     maxRetry: 3,
                     query: {
-                        url: CURRENT.vendorConfig.accessEndPoint,
+                        url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
-                            client_id: CURRENT.vendorConfig.apiKey,
-                            client_secret: CURRENT.vendorConfig.apiSecret,
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
+                            scope: ['api://', CURRENT.orderConfig.apiKey, '/.default'].join(''),
                             grant_type: 'client_credentials'
                         }),
                         headers: {
@@ -72,7 +73,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             if (!vc2_util.isEmpty(token)) {
                 vc2_util.setNSCache({
                     key: 'VC_ARROW_TOKEN',
-                    cacheTTL: 14400,
+                    cacheTTL: 3500,
                     value: token
                 });
                 CURRENT.accessToken = token;
@@ -90,7 +91,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                     recordId: CURRENT.recordId,
                     method: 'post',
                     query: {
-                        url: CURRENT.vendorConfig.endPoint,
+                        url: CURRENT.orderConfig.endPoint,
                         body: JSON.stringify({
                             RequestHeader: {
                                 TransactionType: 'RESELLER_ORDER_STATUS',
@@ -98,7 +99,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                                 SourceTransactionKeyID: null,
                                 RequestTimestamp: null,
                                 Country: 'US',
-                                PartnerID: CURRENT.vendorConfig.customerNo
+                                PartnerID: CURRENT.orderConfig.customerNo
                             },
                             OrderRequest: {
                                 ResellerPOList: {
@@ -125,10 +126,13 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Ocp-Apim-Subscription-Key': CURRENT.orderConfig.oauthScope
                         }
                     }
                 });
+                if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
+
                 vc2_util.handleJSONResponse(reqOrderStatus);
                 LibArrowAPI.validateResponse(reqOrderStatus.PARSED_RESPONSE);
 
@@ -169,12 +173,12 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 LibArrowAPI.getTokenCache();
                 if (!CURRENT.accessToken) throw 'Unable to generate access token';
@@ -194,26 +198,28 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var response = option.response,
                     itemArray = [];
 
                 var objOrderResponse = response.OrderResponse;
-                if (
-                    !objOrderResponse ||
-                    !objOrderResponse.OrderDetails ||
-                    !objOrderResponse.OrderDetails.length
-                )
+                if (!objOrderResponse || !objOrderResponse.OrderDetails || !objOrderResponse.OrderDetails.length)
                     throw 'Missing order details';
 
                 var orderResp = objOrderResponse.OrderDetails[0];
                 var orderDate, arrowSONum;
+
+                // validate the response)
+
+                if (!orderResp || !orderResp.Status || orderResp.Status !== 'SUCCESS') {
+                    throw orderResp && orderResp.Message ? orderResp.Message : 'Order Not Found';
+                }
 
                 if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
                 if (orderResp.hasOwnProperty('Reseller')) {
@@ -294,11 +300,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                                     shippedDate <= new Date()
                                 ]);
 
-                                if (
-                                    shippedDate &&
-                                    util.isDate(shippedDate) &&
-                                    shippedDate <= new Date()
-                                )
+                                if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
                                     orderItem.is_shipped = true;
                             }
 
@@ -326,12 +328,12 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var responseBody = this.processRequest();
                 if (!responseBody) throw 'Unable to get response';

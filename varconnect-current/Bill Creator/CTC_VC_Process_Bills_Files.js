@@ -17,23 +17,22 @@ define([
     'N/record',
     'N/runtime',
     'N/error',
-    'N/https',
     './Libraries/CTC_VC_Lib_BillProcess',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Constants',
+    './../Services/ctc_svclib_configlib',
     './Libraries/moment'
 ], function (
     ns_search,
     ns_record,
     ns_runtime,
     ns_error,
-    ns_https,
     vc_billprocess,
     vc_billfile,
     vc2_util,
     vc2_constant,
+    vcs_configLib,
     moment
 ) {
     var LogTitle = 'VC PROCESS BILL',
@@ -226,11 +225,12 @@ define([
                     });
                     vc2_util.log(logTitle, '... CurrentData: ', CurrentData);
 
-                    var vendorCfg = Helper.loadVendorConfig(CurrentData);
+                    var BillCFG = vcs_configLib.billVendorConfig({ poId: CurrentData.PO_ID });
+
                     var statusNote = [
                         'PO Status: ' + CurrentData.poStatus.text,
                         'Bill File receivable? ' + JSON.stringify(CurrentData.isBillReceivable),
-                        'Fulfillment enabled? ' + JSON.stringify(vendorCfg.ENABLE_FULFILLLMENT)
+                        'Fulfillment enabled? ' + JSON.stringify(BillCFG.enableFulfillment)
                     ].join(' ');
 
                     // add it to the VC Logs
@@ -262,11 +262,7 @@ define([
 
                     /// ITEM FULFILLMENT  ///////////
                     var respItemff = {};
-                    if (
-                        vendorCfg.ENABLE_FULFILLLMENT &&
-                        CurrentData.isBillReceivable &&
-                        CurrentData.isOrderReceivable
-                    ) {
+                    if (BillCFG.enableFulfillment && CurrentData.isBillReceivable && CurrentData.isOrderReceivable) {
                         respItemff = Helper.createItemFulfillment({
                             currentData: currentValues,
                             billFileData: CurrentData.billFile
@@ -314,12 +310,13 @@ define([
 
                     ReturnObj.isError = true;
                     ReturnObj.errorMsg = vc2_util.extractError(error);
+                    ReturnObj.status = error.Status || BILL_CREATOR.Status.ERROR;
 
-                    // vc2_util.vcLogError({
-                    //     title: 'Bill Creator | Error',
-                    //     recordId: current.PO_ID,
-                    //     details: vc2_util.extractError(error)
-                    // });
+                    vc2_util.vcLogError({
+                        title: 'Bill Creator | Error',
+                        recordId: CurrentData.PO_ID,
+                        details: vc2_util.extractError(error)
+                    });
                 } finally {
                     log.debug(logTitle, '// FINALLY // returnObj: ' + JSON.stringify(ReturnObj));
 
@@ -522,9 +519,7 @@ define([
                 if (itemFFResponse.itemff) {
                     vc_billfile.addNote({
                         id: recordData.id,
-                        note:
-                            'Item Fulfillment succesfully created...  ' +
-                            ('[id:' + itemFFResponse.itemff + ']')
+                        note: 'Item Fulfillment succesfully created...  ' + ('[id:' + itemFFResponse.itemff + ']')
                     });
                 }
 
@@ -558,11 +553,7 @@ define([
                         var itemFFResponse = itemFFReq.PARSED_RESPONSE;
                         if (!itemFFResponse) throw 'Unable to parse response body';
 
-                        vc2_util.log(
-                            logTitle,
-                            '... (serials) response: ',
-                            serialsAddReq.PARSED_RESPONSE
-                        );
+                        vc2_util.log(logTitle, '... (serials) response: ', serialsAddReq.PARSED_RESPONSE);
                     }
                 }
                 /// SERIALS PROCESSING ///
@@ -586,6 +577,10 @@ define([
                 returnValue;
             option = option || {};
             var arrExistingBills = [];
+
+            vc2_util.log(logTitle, '>> option: ', option);
+
+            if (!option.invoiceNo) throw 'Missing Invoice No';
 
             var vendorbillSearchObj = ns_search.create({
                 type: 'vendorbill',
@@ -611,10 +606,7 @@ define([
                 return true;
             });
 
-            log.audit(
-                logTitle,
-                LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills)
-            );
+            log.audit(logTitle, LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills));
             returnValue = arrExistingBills;
 
             return returnValue;

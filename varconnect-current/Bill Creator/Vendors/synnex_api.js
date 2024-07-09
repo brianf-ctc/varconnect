@@ -25,8 +25,6 @@ define(function (require) {
     var log = require('N/log');
     var util = require('N/util');
     var xml = require('N/xml');
-    var https = require('N/https');
-    var search = require('N/search');
 
     //Custom modules
     var vc2_util = require('./../../CTC_VC2_Lib_Utils');
@@ -50,9 +48,7 @@ define(function (require) {
                     if (xml.attributes.length)
                         // element with attributes  ..
                         for (var i = 0; i < xml.attributes.length; i++)
-                            o['@' + xml.attributes[i].nodeName] = (
-                                xml.attributes[i].nodeValue || ''
-                            ).toString();
+                            o['@' + xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue || '').toString();
                     if (xml.firstChild) {
                         // element has child nodes ..
                         var textChild = 0,
@@ -60,11 +56,7 @@ define(function (require) {
                             hasElementChild = false;
                         for (var n = xml.firstChild; n; n = n.nextSibling) {
                             if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
-                            else if (
-                                n.nodeType == NodeType.TEXT &&
-                                n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                            )
-                                textChild++;
+                            else if (n.nodeType == NodeType.TEXT && n.nodeValue.match(/[^ \f\n\r\t\v]/)) textChild++;
                             // non-whitespace text
                             else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
                         }
@@ -99,9 +91,7 @@ define(function (require) {
                         } else if (cdataChild) {
                             // cdata
                             if (cdataChild > 1) o = X.escape(X.innerXml(xml));
-                            else
-                                for (var n = xml.firstChild; n; n = n.nextSibling)
-                                    o['#cdata'] = X.escape(n.nodeValue);
+                            else for (var n = xml.firstChild; n; n = n.nextSibling) o['#cdata'] = X.escape(n.nodeValue);
                         }
                     }
                     if (!xml.attributes.length && !xml.firstChild) o = null;
@@ -117,9 +107,7 @@ define(function (require) {
                     for (var i = 0, n = o.length; i < n; i++) o[i] = X.toJson(o[i], '', ind + '');
                     json +=
                         (name ? ':[' : '[') +
-                        (o.length > 1
-                            ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
-                            : o.join('')) +
+                        (o.length > 1 ? '' + ind + '' + o.join(',' + ind + '') + '' + ind : o.join('')) +
                         ']';
                 } else if (o == null) json += (name && ':') + 'null';
                 else if (typeof o == 'object') {
@@ -127,9 +115,7 @@ define(function (require) {
                     for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                     json +=
                         (name ? ':{' : '{') +
-                        (arr.length > 1
-                            ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
-                            : arr.join('')) +
+                        (arr.length > 1 ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind : arr.join('')) +
                         '}';
                 } else if (typeof o == 'string') json += (name && ':') + '"' + o.toString() + '"';
                 else json += (name && ':') + o.toString();
@@ -156,8 +142,7 @@ define(function (require) {
                                 s += '</' + n.nodeName + '>';
                             } else s += '/>';
                         } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
-                        else if (n.nodeType == NodeType.CDATA)
-                            s += '<![CDATA[' + n.nodeValue + ']]>';
+                        else if (n.nodeType == NodeType.CDATA) s += '<![CDATA[' + n.nodeValue + ']]>';
                         return s;
                     };
                     for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
@@ -167,11 +152,7 @@ define(function (require) {
             escape: function (txt) {
                 return (
                     txt &&
-                    txt
-                        .replace(/[\\]/g, '\\\\')
-                        .replace(/[\"]/g, '\\"')
-                        .replace(/[\n]/g, '\\n')
-                        .replace(/[\r]/g, '\\r')
+                    txt.replace(/[\\]/g, '\\\\').replace(/[\"]/g, '\\"').replace(/[\n]/g, '\\n').replace(/[\r]/g, '\\r')
                 );
             },
             removeWhite: function (e) {
@@ -303,16 +284,57 @@ define(function (require) {
                 if (!util.isArray(invoiceData.Items.Item)) {
                     invoiceData.Items.Item = [invoiceData.Items.Item];
                 }
+
+                // check for tracking
+                var invoiceTracking =
+                        invoiceData.Tracking && invoiceData.Tracking.TrackNumber
+                            ? invoiceData.Tracking.TrackNumber
+                            : null,
+                    arrTrackingNos;
+                if (!vc2_util.isEmpty(invoiceTracking)) {
+                    vc2_util.log(logTitle, '... tracking nos:', invoiceTracking);
+                    var arrTracking = invoiceTracking.split(/\s*,\s*/g);
+
+                    arrTrackingNos = vc2_util.uniqueArray(arrTracking);
+                    vc2_util.log(logTitle, '... tracking nos:', arrTrackingNos);
+                }
+
                 for (var ii = 0, jj = invoiceData.Items.Item.length; ii < jj; ii++) {
                     var itemData = invoiceData.Items.Item[ii];
 
-                    myObj.lines.push({
+                    var itemObj = {
                         processed: false,
                         ITEMNO: itemData.ManuafacturerPartNumber,
+                        SKU: itemData.SKU,
                         PRICE: vc2_util.parseFloat(itemData.UnitPrice),
                         QUANTITY: vc2_util.parseFloat(itemData.ShipQuantity),
                         DESCRIPTION: itemData.ProductDescription
-                    });
+                    };
+
+                    // check for serials
+                    var itemSerialNos = itemData.SerialNo,
+                        arrSerialNos = [];
+
+                    if (itemSerialNos && itemSerialNos.length) {
+                        if (!util.isArray(itemSerialNos)) itemSerialNos = [itemSerialNos];
+                        vc2_util.log(logTitle, '... serial nos:', itemSerialNos);
+
+                        itemSerialNos.forEach(function (seriaNo) {
+                            // remove the 'SN:'
+                            seriaNo = seriaNo.replace(/^SN:\s*/gi, '');
+                            arrSerialNos.push(seriaNo);
+                            return true;
+                        });
+
+                        vc2_util.log(logTitle, '... serial nos:', arrSerialNos);
+                        itemObj.SERIAL = vc2_util.uniqueArray(arrSerialNos);
+                    }
+
+                    if (!vc2_util.isEmpty(arrTrackingNos)) itemObj.TRACKING = arrTrackingNos;
+
+                    vc2_util.log(logTitle, '... itemObj:', itemObj);
+
+                    myObj.lines.push(itemObj);
                 }
 
                 returnArr.push({ ordObj: myObj, xmlStr: response });

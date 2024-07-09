@@ -51,7 +51,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         'custcol_ctc_vc_order_placed_date', //8
         'custcol_ctc_vc_eta_date', //9
         'custcol_ctc_vc_shipped_date', //10
-        'custcol_ctc_xml_inb_tracking_num' //11
+        'custcol_ctc_xml_inb_tracking_num', //11
+        'custcol_ctc_vc_delivery_eta_date'
     ];
 
     var xmlFieldsDef = {
@@ -68,7 +69,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
         DATE: [
             'custcol_ctc_vc_order_placed_date',
             'custcol_ctc_vc_eta_date',
-            'custcol_ctc_vc_shipped_date'
+            'custcol_ctc_vc_shipped_date',
+            'custcol_ctc_vc_delivery_eta_date'
         ]
     };
 
@@ -88,12 +90,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     function afterSubmit(context) {
         var logTitle = [LogTitle, 'afterSubmit'].join('::');
 
-        PARAM.RESTRICT_INVOICE = ns_runtime
-            .getCurrentScript()
-            .getParameter(PARAM_FLD.RESTRICT_INVOICE);
-        PARAM.RESTRICT_SALESORD = ns_runtime
-            .getCurrentScript()
-            .getParameter(PARAM_FLD.RESTRICT_SALESORD);
+        PARAM.RESTRICT_INVOICE = ns_runtime.getCurrentScript().getParameter(PARAM_FLD.RESTRICT_INVOICE);
+        PARAM.RESTRICT_SALESORD = ns_runtime.getCurrentScript().getParameter(PARAM_FLD.RESTRICT_SALESORD);
 
         log.debug(
             logTitle,
@@ -104,10 +102,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
             })
         );
 
-        if (
-            context.type == context.UserEventType.CREATE ||
-            context.type == context.UserEventType.EDIT
-        ) {
+        if (context.type == context.UserEventType.CREATE || context.type == context.UserEventType.EDIT) {
             var current_rec = context.newRecord;
             var currentID = current_rec.id;
             var createdFromSO = current_rec.getValue({ fieldId: 'createdfrom' });
@@ -202,8 +197,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 var soLineNum = getLineNum(soRec, soLineKey);
                 log.debug({
                     title: 'Update SO V2',
-                    details:
-                        'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
+                    details: 'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
                 });
 
                 if (!isEmpty(transLineNum)) {
@@ -655,8 +649,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                     currentNumbersList = newCurrent.split('\n');
 
                     /** check to see if the field already exceeds the max length **/
-                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
-                        errorFound = true;
+                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg) errorFound = true;
 
                     if (!errorFound) {
                         for (var j = 0; j < scannedNums.length; j++) {

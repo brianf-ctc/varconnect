@@ -37,8 +37,7 @@ define(function (require) {
 
     function _getPODetails(poNum) {
         var columns = [nsSearch.createColumn({ name: 'entity' })];
-        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
-            columns.push(nsSearch.createColumn({ name: 'subsidiary' }));
+        if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) columns.push(nsSearch.createColumn({ name: 'subsidiary' }));
 
         var poObj = {},
             purchaseorderSearchObj = nsSearch.create({
@@ -55,8 +54,7 @@ define(function (require) {
         var searchResultCount = purchaseorderSearchObj.runPaged().count;
         log.debug('purchaseorderSearchObj result count', searchResultCount);
         purchaseorderSearchObj.run().each(function (result) {
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
-                poObj['subsidiary'] = result.getValue('subsidiary');
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) poObj['subsidiary'] = result.getValue('subsidiary');
             poObj['vendor'] = result.getValue('entity');
             poObj['id'] = result.id;
 
@@ -69,27 +67,25 @@ define(function (require) {
     function _loadDebugVendorConfig(options) {
         var xmlVendor = options.xmlVendor,
             xmlSubsidiary = options.xmlSubsidiary,
-            vendorConfig = libVendorConfig.getDebugVendorConfiguration({
+            OrderCFG = libVendorConfig.getDebugVendorConfiguration({
                 xmlVendor: xmlVendor,
                 subsidiary: xmlSubsidiary
             });
 
-        if (!vendorConfig) {
+        if (!OrderCFG) {
             log.debug('No configuration set up for xml vendor ' + xmlVendor);
-        } else return vendorConfig;
+        } else return OrderCFG;
     }
 
     function _loadVendorConfig(vendor, subsidiary) {
-        var vendorConfig = libVendorConfig.getVendorConfiguration({
+        var OrderCFG = libVendorConfig.getVendorConfiguration({
             vendor: vendor,
             subsidiary: subsidiary
         });
 
-        if (!vendorConfig) {
-            log.debug(
-                'No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary
-            );
-        } else return vendorConfig;
+        if (!OrderCFG) {
+            log.debug('No configuration set up for vendor ' + vendor + ' and subsidiary ' + subsidiary);
+        } else return OrderCFG;
     }
 
     function showVendorName() {
@@ -107,12 +103,12 @@ define(function (require) {
             alert('Please Select a vendor and enter a PO number');
         } else {
             var xmlContent = 'Your PO = ' + ponum;
-            var vendorConfig = _loadDebugVendorConfig({
+            var OrderCFG = _loadDebugVendorConfig({
                 xmlVendor: xmlVendor,
                 xmlSubsidiary: objPO.subsidiary
             });
             var elementIdToShow, elementIdToHide;
-            if (!vendorConfig) {
+            if (!OrderCFG) {
                 alert('Please Select a valid PO with vendor properly configured');
             } else {
                 jQuery('#custpage_xml__loader').show();
@@ -123,14 +119,14 @@ define(function (require) {
                             var outputObj;
                             try {
                                 outputObj = libWebService.handleRequest({
-                                    vendorConfig: vendorConfig,
+                                    orderConfig: OrderCFG,
                                     poNum: ponum,
                                     poId: objPO.id,
                                     country:
-                                        vendorConfig.country == 'CA'
+                                        OrderCFG.country == 'CA'
                                             ? vc2_constant.LIST.COUNTRY.CA
                                             : vc2_constant.LIST.COUNTRY.US,
-                                    countryCode: vendorConfig.country
+                                    countryCode: OrderCFG.country
                                 });
                             } catch (processErr) {
                                 outputObj =
@@ -146,14 +142,9 @@ define(function (require) {
                             resolve(outputObj);
                         });
                         promiseResponse.then(function (outputObj) {
-                            console.log(
-                                'debug lib: webservice return ' + JSON.stringify(outputObj)
-                            );
+                            console.log('debug lib: webservice return ' + JSON.stringify(outputObj));
                             if (outputObj) {
-                                if (
-                                    vendorConfig.xmlVendor ==
-                                    vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO
-                                ) {
+                                if (OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO) {
                                     xmlContent =
                                         '<!--Retrieved XML-->\n' +
                                         outputObj.detailxml +
@@ -178,14 +169,11 @@ define(function (require) {
                                         elementIdToHide = 'custpage_xml__viewer';
                                     }
                                 } else if (
-                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
-                                    vendorConfig.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_API ||
-                                    vendorConfig.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_V_ONE
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.ARROW ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.DELL ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.SYNNEX_API ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_API ||
+                                    OrderCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.INGRAM_MICRO_V_ONE
                                 ) {
                                     xmlContent = JSON.stringify(outputObj);
                                     try {
@@ -252,14 +240,11 @@ define(function (require) {
                                         }
                                     }
                                 }
-                                xmlViewerDocument.getElementById(elementIdToShow).style.display =
-                                    '';
-                                xmlViewerDocument.getElementById(elementIdToHide).style.display =
-                                    'none';
+                                xmlViewerDocument.getElementById(elementIdToShow).style.display = '';
+                                xmlViewerDocument.getElementById(elementIdToHide).style.display = 'none';
                             }
-                            xmlViewerDocument.getElementById(
-                                elementIdToShow || 'custpage_xml__viewer'
-                            ).style.display = '';
+                            xmlViewerDocument.getElementById(elementIdToShow || 'custpage_xml__viewer').style.display =
+                                '';
                             xmlViewerDocument.getElementById(
                                 [elementIdToShow || 'custpage_xml__viewer', '_content'].join('')
                             ).innerHTML = xmlContent;
@@ -285,21 +270,18 @@ define(function (require) {
             var promiseObj = new Promise(function (resolve) {
                 var outputObj,
                     objPO = _getPODetails(poNum),
-                    vendorConfig = _loadDebugVendorConfig({
+                    OrderCFG = _loadDebugVendorConfig({
                         xmlVendor: xmlVendor,
                         xmlSubsidiary: objPO.subsidiary
                     });
 
                 try {
                     outputObj = libWebService.handleRequest({
-                        vendorConfig: vendorConfig,
+                        orderConfig: OrderCFG,
                         poNum: poNum,
                         poId: objPO.id,
-                        country:
-                            vendorConfig.country == 'CA'
-                                ? vc2_constant.LIST.COUNTRY.CA
-                                : vc2_constant.LIST.COUNTRY.US,
-                        countryCode: vendorConfig.country
+                        country: OrderCFG.country == 'CA' ? vc2_constant.LIST.COUNTRY.CA : vc2_constant.LIST.COUNTRY.US,
+                        countryCode: OrderCFG.country
                     });
                 } catch (processErr) {
                     outputObj =
@@ -307,9 +289,7 @@ define(function (require) {
                         (processErr.name + ': ') +
                         (processErr.message + ']');
                     console.log(
-                        'debug lib: ' +
-                            (processErr.name + '- ') +
-                            (processErr.message + '==\n' + processErr.stack)
+                        'debug lib: ' + (processErr.name + '- ') + (processErr.message + '==\n' + processErr.stack)
                     );
                 }
                 resolve(outputObj);
@@ -359,8 +339,7 @@ define(function (require) {
         };
         var QTask = function (task) {
             this.isDone = false;
-            this.name =
-                task.name || ['taskName', queueList.length + 1, new Date().getTime()].join('_');
+            this.name = task.name || ['taskName', queueList.length + 1, new Date().getTime()].join('_');
 
             this.markDone = function () {
                 this.isDone = true;
@@ -497,11 +476,7 @@ define(function (require) {
                     str += shift[deep] + ar[ix];
                     inComment = true;
                     // end comment  or <![CDATA[...]]> //
-                    if (
-                        ar[ix].search(/-->/) > -1 ||
-                        ar[ix].search(/\]>/) > -1 ||
-                        ar[ix].search(/!DOCTYPE/) > -1
-                    ) {
+                    if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1 || ar[ix].search(/!DOCTYPE/) > -1) {
                         inComment = false;
                     }
                 }
@@ -514,18 +489,13 @@ define(function (require) {
                 else if (
                     /^<\w/.exec(ar[ix - 1]) &&
                     /^<\/\w/.exec(ar[ix]) &&
-                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) ==
-                        /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
+                    /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) == /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
                 ) {
                     str += ar[ix];
                     if (!inComment) deep--;
                 }
                 // <elm> //
-                else if (
-                    ar[ix].search(/<\w/) > -1 &&
-                    ar[ix].search(/<\//) == -1 &&
-                    ar[ix].search(/\/>/) == -1
-                ) {
+                else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) == -1 && ar[ix].search(/\/>/) == -1) {
                     str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
                 }
                 // <elm>...</elm> //
@@ -599,9 +569,7 @@ define(function (require) {
         //----------------------------------------------------------------------------
 
         function isSubquery(str, parenthesisLevel) {
-            return (
-                parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length)
-            );
+            return parenthesisLevel - (str.replace(/\(/g, '').length - str.replace(/\)/g, '').length);
         }
 
         function split_sql(str, tab) {
@@ -735,9 +703,7 @@ define(function (require) {
         };
 
         vkbeautify.prototype.cssmin = function (text, preserveComments) {
-            var str = preserveComments
-                ? text
-                : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
+            var str = preserveComments ? text : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
             return str
                 .replace(/\s{1,}/g, ' ')

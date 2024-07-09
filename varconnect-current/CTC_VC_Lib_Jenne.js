@@ -49,9 +49,7 @@ define([
                         if (xml.attributes.length)
                             // element with attributes  ..
                             for (var i = 0; i < xml.attributes.length; i++)
-                                o['@' + xml.attributes[i].nodeName] = (
-                                    xml.attributes[i].nodeValue || ''
-                                ).toString();
+                                o['@' + xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue || '').toString();
                         if (xml.firstChild) {
                             // element has child nodes ..
                             var textChild = 0,
@@ -59,10 +57,7 @@ define([
                                 hasElementChild = false;
                             for (var n = xml.firstChild; n; n = n.nextSibling) {
                                 if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
-                                else if (
-                                    n.nodeType == NodeType.TEXT &&
-                                    n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                                )
+                                else if (n.nodeType == NodeType.TEXT && n.nodeValue.match(/[^ \f\n\r\t\v]/))
                                     textChild++;
                                 // non-whitespace text
                                 else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
@@ -113,13 +108,10 @@ define([
                 toJson: function (o, name, ind) {
                     var json = name ? '"' + name + '"' : '';
                     if (o instanceof Array) {
-                        for (var i = 0, n = o.length; i < n; i++)
-                            o[i] = X.toJson(o[i], '', ind + '');
+                        for (var i = 0, n = o.length; i < n; i++) o[i] = X.toJson(o[i], '', ind + '');
                         json +=
                             (name ? ':[' : '[') +
-                            (o.length > 1
-                                ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
-                                : o.join('')) +
+                            (o.length > 1 ? '' + ind + '' + o.join(',' + ind + '') + '' + ind : o.join('')) +
                             ']';
                     } else if (o == null) json += (name && ':') + 'null';
                     else if (typeof o == 'object') {
@@ -127,12 +119,9 @@ define([
                         for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                         json +=
                             (name ? ':{' : '{') +
-                            (arr.length > 1
-                                ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
-                                : arr.join('')) +
+                            (arr.length > 1 ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind : arr.join('')) +
                             '}';
-                    } else if (typeof o == 'string')
-                        json += (name && ':') + '"' + o.toString() + '"';
+                    } else if (typeof o == 'string') json += (name && ':') + '"' + o.toString() + '"';
                     else json += (name && ':') + o.toString();
                     return json;
                 },
@@ -157,8 +146,7 @@ define([
                                     s += '</' + n.nodeName + '>';
                                 } else s += '/>';
                             } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
-                            else if (n.nodeType == NodeType.CDATA)
-                                s += '<![CDATA[' + n.nodeValue + ']]>';
+                            else if (n.nodeType == NodeType.CDATA) s += '<![CDATA[' + n.nodeValue + ']]>';
                             return s;
                         };
                         for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
@@ -221,7 +209,7 @@ define([
                     recordId: CURRENT.recordId,
                     method: 'post',
                     query: {
-                        url: option.vendorConfig.endPoint,
+                        url: option.orderConfig.endPoint,
                         headers: {
                             SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
                             'Content-Type': 'text/xml'
@@ -233,8 +221,8 @@ define([
                             ' xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
                             '<soap:Body>' +
                             '<AdvanceShipNoticeGet_v2 xmlns="http://WebService.jenne.com">' +
-                            ('<email>' + option.vendorConfig.user + '</email>') +
-                            ('<password>' + option.vendorConfig.password + '</password>') +
+                            ('<email>' + option.orderConfig.user + '</email>') +
+                            ('<password>' + option.orderConfig.password + '</password>') +
                             ('<poNumber>' + option.poNum + '</poNumber>') +
                             '<startDate></startDate>' +
                             '<endDate></endDate>' +
@@ -355,12 +343,12 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 returnValue = libJenneAPI.AdvanceShipNoticeGet(option);
             } catch (error) {
@@ -377,12 +365,12 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var xmlResponse = option.xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
@@ -446,11 +434,11 @@ define([
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
-                if (!CURRENT.vendorConfig) throw 'Missing vendor configuration!';
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 var xmlResponse = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: xmlResponse });
@@ -462,344 +450,4 @@ define([
             return returnValue;
         }
     };
-
-    // /**
-    //  * @memberOf CTC_VC_Lib_Ingram_v1
-    //  * @param {object} option
-    //  * @returns object
-    //  **/
-    // function processRequest(option) {
-    //     var headers = {
-    //         SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
-    //         'Content-Type': 'text/xml'
-    //     };
-
-    //     var body =
-    //         '<?xml version="1.0" encoding="utf-8"?>' +
-    //         ' <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' +
-    //         '  xmlns:xsd="http://www.w3.org/2001/XMLSchema"' +
-    //         '  xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
-    //         '  <soap:Body>' +
-    //         '   <AdvanceShipNoticeGet_v2' +
-    //         '    xmlns="http://WebService.jenne.com">' +
-    //         '    <email>' +
-    //         option.vendorConfig.user +
-    //         '</email>' +
-    //         '    <password>' +
-    //         option.vendorConfig.password +
-    //         '</password>' +
-    //         '    <poNumber>' +
-    //         option.poNum +
-    //         '</poNumber>' +
-    //         '    <startDate></startDate>' +
-    //         '    <endDate></endDate>' +
-    //         '   </AdvanceShipNoticeGet_v2>' +
-    //         '  </soap:Body>' +
-    //         ' </soap:Envelope>';
-
-    //     log.audit({
-    //         title: 'request body',
-    //         details: body
-    //     });
-
-    //     vcLog.recordLog({
-    //         header: 'Jenne Get PO Request',
-    //         body: JSON.stringify(body),
-    //         transaction: option.poId,
-    //         isDebugMode: option.fromDebug
-    //     });
-
-    //     var response = ns_https.post({
-    //         url: option.vendorConfig.endPoint,
-    //         body: body,
-    //         headers: headers
-    //     });
-
-    //     vcLog.recordLog({
-    //         header: 'Jenne Get PO Response',
-    //         body: JSON.stringify(response),
-    //         transaction: option.poId,
-    //         isDebugMode: option.fromDebug
-    //     });
-
-    //     if (response) {
-    //         log.debug({
-    //             title: 'Response',
-    //             details: response
-    //         });
-
-    //         var x = ns_xml.Parser.fromString(response.body);
-
-    //         var j = xmlToJson(x.documentElement);
-
-    //         log.debug({
-    //             title: 'XML Converted to JSON',
-    //             details: j
-    //         });
-
-    //         var responseBody =
-    //             j['soap:Body'].AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result;
-
-    //         log.debug({
-    //             title: 'Response Body',
-    //             details: responseBody
-    //         });
-
-    //         return responseBody;
-    //     }
-    // }
-
-    // outputObj = {
-    //   order_date: "",
-    //   order_num: "",
-    //   line_num: "",
-    //   item_num: "",
-    //   ship_qty: "",
-    //   ship_date: "",
-    //   order_eta: "",
-    //   carrier: "",
-    //   tracking_num: "1Z1..,1Z2...,1Z3... ",
-    //   serials: "123,456,789"
-    // }
-
-    // function processResponse(obj) {
-    //     log.debug('processResponse', JSON.stringify(obj));
-
-    //     var outputArray = [];
-
-    //     if (obj.responseBody.Error) {
-    //         var errorNumber = obj.responseBody.Error.ErrorNumber['#text'];
-    //         var errorDescription = obj.responseBody.Error.ErrorDescription['#text'];
-    //         if (errorNumber || errorDescription) {
-    //             throw '(' + errorNumber + ') ' + errorDescription;
-    //         }
-    //     }
-
-    //     var shipments = obj.responseBody.AdvanceShipNotices.AdvanceShipNotice_v2;
-
-    //     if (util.isArray(shipments))
-    //         shipments.forEach(function (asn) {
-    //             outputArray = _processASN({
-    //                 asn: asn,
-    //                 outputArray: outputArray
-    //             });
-    //         });
-    //     else
-    //         outputArray = _processASN({
-    //             asn: shipments,
-    //             outputArray: outputArray
-    //         });
-
-    //     log.audit({
-    //         title: 'outputArray',
-    //         details: outputArray
-    //     });
-
-    //     return outputArray;
-    // }
-
-    // function _processASN(options) {
-    //     var asn = options.asn,
-    //         outputArray = options.outputArray;
-
-    //     log.debug('entered asn', asn);
-
-    //     if (JSON.stringify(asn).length > 2) {
-    //         log.debug('entered', 'has own property');
-
-    //         var carton = asn.ASNcartons.ASNcarton_v2;
-
-    //         // still sorting this out but sometimes asn.ASNcartons.ASNcarton_v2 is an array and ASNcartonDetails.ASNcartonDetail_v2 is an object
-    //         // but sometimes it's the other way around.  since these are nested objects writing two different version of the same code seems to be
-    //         // the best way to handle it.
-
-    //         //            if (Array.isArray(carton) == true) {
-    //         if (util.isArray(carton)) {
-    //             carton.forEach(function (cartonDetail) {
-    //                 _processCarton({
-    //                     asn: asn,
-    //                     carton: cartonDetail,
-    //                     outputArray: outputArray
-    //                 });
-    //             });
-    //         } else {
-    //             var cartonDetail = carton.ASNcartonDetails.ASNcartonDetail_v2;
-    //             _processCarton({
-    //                 asn: asn,
-    //                 carton: carton,
-    //                 outputArray: outputArray
-    //             });
-    //         }
-    //     }
-
-    //     return outputArray;
-    // }
-
-    // function _processCarton(options) {
-    //     var asn = options.asn,
-    //         carton = options.carton,
-    //         outputArray = options.outputArray;
-
-    //     var cartonDetail = carton.ASNcartonDetails.ASNcartonDetail_v2;
-
-    //     if (util.isArray(cartonDetail)) {
-    //         cartonDetail.forEach(function (cartonDetails) {
-    //             _processCartonDetails({
-    //                 asn: asn,
-    //                 carton: carton,
-    //                 cartonDetails: cartonDetails,
-    //                 outputArray: outputArray
-    //             });
-    //         });
-    //     } else {
-    //         _processCartonDetails({
-    //             asn: asn,
-    //             carton: carton,
-    //             cartonDetails: cartonDetail,
-    //             outputArray: outputArray
-    //         });
-    //     }
-    // }
-
-    // function _processCartonDetails(options) {
-    //     var asn = options.asn,
-    //         carton = options.carton,
-    //         cartonDetails = options.cartonDetails,
-    //         outputArray = options.outputArray;
-
-    //     var o = {};
-
-    //     // change date format
-    //     // from YYYY-MM-DD to MM/DD/YYYY
-    //     log.debug('mapping', 'odate');
-    //     var odate = asn.OrderDate['#text'];
-    //     o.ship_date = odate.slice(5, 7) + '/' + odate.slice(8, 10) + '/' + odate.slice(0, 4);
-
-    //     log.debug('mapping', 'order_num');
-    //     o.order_num = asn.OrderNumber['#text'];
-    //     log.debug('mapping', 'line_num');
-    //     o.line_num = asn.ASNcartons.ASNcarton_v2.CartonNo['#text'];
-    //     log.debug('mapping', 'item_num');
-    //     o.item_num = cartonDetails.PartNumber['#text'];
-    //     log.debug('mapping', 'ship_qty');
-    //     o.ship_qty = parseInt(cartonDetails.QtyShipped['#text']);
-
-    //     // change date format
-    //     // from YYYY-MM-DD to MM/DD/YYYY
-    //     log.debug('mapping', 'sdate');
-    //     var sdate = carton.DateShipped['#text'];
-    //     o.ship_date = sdate.slice(5, 7) + '/' + sdate.slice(8, 10) + '/' + sdate.slice(0, 4);
-
-    //     o.order_eta = '';
-    //     log.debug('mapping', 'carrier');
-    //     o.carrier = carton.ShipVia['#text'];
-    //     log.debug('mapping', 'tracking');
-    //     o.tracking_num = carton.TrackingNo['#text'];
-    //     log.debug('mapping', 'serial');
-    //     o.serial_num = cartonDetails.SerialNumber['#text'];
-
-    //     outputArray.push(o);
-    // }
-
-    // function xmlToJson(xmlNode, parentName) {
-    //     var logTitle = [LogTitle, 'xmlToJson'].join('::'),
-    //         returnValue = [];
-
-    //     // Create the return object
-    //     var obj = {}; //Object.create(null);
-    //     var elemName = (parentName || '') + '/' + xmlNode.nodeName;
-
-    //     try {
-    //         vc2_util.log(logTitle, elemName + ': ', [
-    //             xmlNode.nodeValue,
-    //             xmlNode.nodeType,
-    //             xmlNode.hasChildNodes(),
-    //             xmlNode.childNodes.length
-    //         ]);
-
-    //         if (xmlNode.nodeType == ns_xml.NodeType.ELEMENT_NODE) {
-    //             if (xmlNode.hasAttributes()) {
-    //                 obj['@attributes'] = {}; //Object.create(null);
-    //                 for (var attr in xmlNode.attributes) {
-    //                     if (xmlNode.hasAttribute({ name: attr })) {
-    //                         obj['@attributes'][attr] = xmlNode.getAttribute({ name: attr });
-    //                     }
-    //                 }
-    //             }
-    //         } else if (xmlNode.nodeType == ns_xml.NodeType.TEXT_NODE) {
-    //             // text
-    //             obj = xmlNode.nodeValue;
-    //         }
-
-    //         // do children
-    //         if (xmlNode.hasChildNodes()) {
-    //             for (var i = 0, j = xmlNode.childNodes.length; i < j; i++) {
-    //                 var childItem = xmlNode.childNodes[i];
-    //                 var nodeName = childItem.nodeName;
-
-    //                 if (nodeName in obj) {
-    //                     if (!Array.isArray(obj[nodeName])) {
-    //                         obj[nodeName] = [obj[nodeName]];
-    //                     }
-    //                     obj[nodeName].push(xmlToJson(childItem, elemName));
-    //                 } else {
-    //                     obj[nodeName] = xmlToJson(childItem, elemName);
-    //                 }
-    //             }
-    //         }
-    //     } catch (error) {
-    //         vc2_util.logError(logTitle, error);
-    //     }
-
-    //     return obj;
-    // }
-
-    // function dumpJson(jsonObj, prefx) {
-    //     var logTitle = [LogTitle, 'dumpJson'].join('::');
-
-    //     for (var fld in jsonObj) {
-    //         if (typeof jsonObj[fld] == 'object') {
-    //             dumpJson(jsonObj[fld], (prefx || '') + '___');
-    //         } else if (util.isArray(jsonObj[fld])) {
-    //             jsonObj[fld].forEach(function (value) {
-    //                 dumpJson(value, prefx + '--');
-    //                 return true;
-    //             });
-    //         } else {
-    //             vc2_util.log(logTitle, fld + ': ', jsonObj[fld]);
-    //         }
-    //     }
-    //     return true;
-    // }
-
-    // function process(options) {
-    //     log.audit({
-    //         title: 'options',
-    //         details: options
-    //     });
-    //     var outputArray = null;
-
-    //     var responseBody = processRequest({
-    //         poNum: options.poNum,
-    //         vendorConfig: options.vendorConfig,
-    //         poId: options.poId
-    //     });
-
-    //     if (responseBody) {
-    //         outputArray = processResponse({
-    //             vendorConfig: options.vendorConfig,
-    //             responseBody: responseBody
-    //         });
-    //     }
-    //     log.audit({
-    //         title: 'outputArray',
-    //         details: outputArray
-    //     });
-    //     return outputArray;
-    // }
-
-    // return {
-    //     process: process,
-    //     processRequest: processRequest
-    // };
 });

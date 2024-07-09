@@ -29,7 +29,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      */
     WEFI.init = function () {
         var logTitle = 'WeFi.init';
-        var config = CURRENT.vendorConfig;
+        var config = CURRENT.orderConfig;
 
         WEFI.credential = {
             TENANT_ID: config.customerNo,
@@ -54,7 +54,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      * @param option.recordId - {String|Int} NS Transaction Internal Id
      * @param option.poNum - {String} NS TranId
      * @param option.transactionNum - {String} NS TranId
-     * @param option.vendorConfig - {Object} NS Vendor Config Record
+     * @param  option.orderConfig - {Object} NS Vendor Config Record
      *
      * @returns {Array} WeFi PO lines
      */
@@ -66,12 +66,12 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         try {
             CURRENT.recordId = option.poId || option.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum;
-            CURRENT.vendorConfig = option.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig;
 
             log.debug(logTitle, 'option=' + JSON.stringify(option));
 
             // Required param: vendor config
-            if (!CURRENT.vendorConfig) {
+            if (!CURRENT.orderConfig) {
                 throw error.create({
                     name: 'MISSING_REQUIRED',
                     message: 'vendor config'
@@ -95,10 +95,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             }
 
             if (!objWefiPO.invoices || !objWefiPO.invoices.length) {
-                log.debug(
-                    logTitle,
-                    'No invoice found for PO (' + objWefiPO.header.purchaseOrderNumber + ')'
-                );
+                log.debug(logTitle, 'No invoice found for PO (' + objWefiPO.header.purchaseOrderNumber + ')');
             }
 
             var wfOrder = objWefiPO.header;
@@ -127,10 +124,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
 
                     log.debug(
                         logTitle,
-                        '[invoice=' +
-                            wfInvoice.invoiceId +
-                            '] wfInvoiceLine=' +
-                            JSON.stringify(wfInvoiceLine)
+                        '[invoice=' + wfInvoice.invoiceId + '] wfInvoiceLine=' + JSON.stringify(wfInvoiceLine)
                     );
 
                     // Group items by `invoiceDetailId`
@@ -216,7 +210,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      * @param option.poNum - {String} NS TranId
      * @param option.transactionNum - {String} NS TranId
      * @param option.recordNum - {String} NS TranId
-     * @param option.vendorConfig - {Object} NS Vendor Config Record
+     * @param  option.orderConfig - {Object} NS Vendor Config Record
      *
      * @returns {Object} WeFi Response
      */
@@ -228,12 +222,12 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
         try {
             CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
             CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-            CURRENT.vendorConfig = option.vendorConfig || CURRENT.vendorConfig;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
             log.debug(logTitle, 'option=' + JSON.stringify(option));
 
             // Empty vendor config
-            if (!CURRENT.vendorConfig) {
+            if (!CURRENT.orderConfig) {
                 throw error.create({
                     name: 'MISSING_REQUIRED',
                     message: 'vendor config'
@@ -394,10 +388,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
 
             // The .value from the wefi response is an array type
             // If there is no data, an empty array is returned
-            wefiPO.header =
-                parsedResponse.value && parsedResponse.value.length
-                    ? parsedResponse.value[0]
-                    : null;
+            wefiPO.header = parsedResponse.value && parsedResponse.value.length ? parsedResponse.value[0] : null;
             log.debug(logTitle, 'wefiPO.header=' + JSON.stringify(wefiPO.header));
 
             // --------------------------

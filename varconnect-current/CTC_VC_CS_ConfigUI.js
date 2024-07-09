@@ -27,10 +27,7 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
         console.log(context);
 
         if (context.fieldId == 'subsidiaryfield') {
-            console.log(
-                'opening credentials for subsidiary: ' +
-                    context.currentRecord.getValue('subsidiaryfield')
-            );
+            console.log('opening credentials for subsidiary: ' + context.currentRecord.getValue('subsidiaryfield'));
             // console.log('ischanged: '+ context.currentRecord.getValue('ischangedflag'))
 
             // var isChanged = context.currentRecord.getValue({
@@ -86,9 +83,7 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
                 creds.ingramUser = credsObj.getValue('custrecord_vc_ingrammicro_user');
                 creds.ingramPass = credsObj.getValue('custrecord_vc_ingrammicro_pass');
             } else {
-                alert(
-                    'No existing credentials found for that subsidiary. You may enter a new set of credentials'
-                );
+                alert('No existing credentials found for that subsidiary. You may enter a new set of credentials');
             }
 
             context.currentRecord.setValue({

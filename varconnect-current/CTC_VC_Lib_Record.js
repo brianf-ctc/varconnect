@@ -35,8 +35,9 @@ define([
     'N/format',
     './CTC_VC2_Lib_Record',
     './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants.js'
-], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant) {
+    './CTC_VC2_Constants.js',
+    './Services/ctc_svclib_configlib.js'
+], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant, vcs_configLib) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -46,7 +47,7 @@ define([
         VendorLines: [],
         OrderLines: [],
         MainCFG: null,
-        VendorCFG: null
+        OrderCFG: null
     };
 
     var MAXLEN = {
@@ -75,18 +76,15 @@ define([
 
             //40-MW400-11,SHIPPED,#001-ITEMNAME,Qty:1Shipped
 
-            if (vendorLine.order_num && vendorLine.order_num != 'NA')
-                vendorStatus.push(vendorLine.order_num);
+            if (vendorLine.order_num && vendorLine.order_num != 'NA') vendorStatus.push(vendorLine.order_num);
 
-            if (vendorLine.order_status && vendorLine.order_status != 'NA')
-                vendorStatus.push(vendorLine.order_status);
+            if (vendorLine.order_status && vendorLine.order_status != 'NA') vendorStatus.push(vendorLine.order_status);
 
             if (vendorLine.line_num) vendorStatus.push('#' + vendorLine.line_num);
             if (vendorLine.item_num) vendorStatus.push(vendorLine.item_num);
             if (vendorLine.ship_qty) vendorStatus.push('Qty:' + vendorLine.ship_qty);
 
-            if (vendorLine.line_status && vendorLine.line_status != 'NA')
-                vendorStatus.push(vendorLine.line_status);
+            if (vendorLine.line_status && vendorLine.line_status != 'NA') vendorStatus.push(vendorLine.line_status);
 
             return vendorStatus.length ? vendorStatus.join(',') : '';
         },
@@ -110,6 +108,7 @@ define([
                     'ship_date',
                     'order_date',
                     'order_eta',
+                    'order_delivery_eta',
                     'eta_ship_desc',
                     'eta_ship_source',
                     'eta_delivery_date',
@@ -144,9 +143,7 @@ define([
                         : JSON.stringify(value); // If it's neither string nor array, convert to JSON string.
 
                     // Check if length of the output string exceeds max limit, then return a substring containing first 199 characters.
-                    return strValue.length > MAXLEN.TEXTAREA
-                        ? strValue.substr(0, MAXLEN.TEXTAREA - 1)
-                        : strValue; // If not, return the whole string.
+                    return strValue.length > MAXLEN.TEXTAREA ? strValue.substr(0, MAXLEN.TEXTAREA - 1) : strValue; // If not, return the whole string.
                 },
                 // This function takes 'value' as input argument and returns a truncated string version of the value based on its type:
                 TEXT: function (value) {
@@ -158,9 +155,7 @@ define([
                         : JSON.stringify(value); // If it's neither string nor array, convert to JSON string.
 
                     // Check if length of the output string exceeds max limit, then return a substring containing first 199 characters.
-                    return strValue.length > MAXLEN.TEXT
-                        ? strValue.substr(0, MAXLEN.TEXT - 1)
-                        : strValue; // If not, return the whole string.
+                    return strValue.length > MAXLEN.TEXT ? strValue.substr(0, MAXLEN.TEXT - 1) : strValue; // If not, return the whole string.
                 }
             };
 
@@ -187,10 +182,7 @@ define([
                     }
 
                     if (!vc2_util.isEmpty(updateLineValues)) {
-                        vc2_util.log(logTitle, '// cleanup needed line data: ', [
-                            orderLineData,
-                            updateLineValues
-                        ]);
+                        vc2_util.log(logTitle, '// cleanup needed line data: ', [orderLineData, updateLineValues]);
 
                         updateLineValues.line = line;
                         vc2_record.updateLine({
@@ -219,6 +211,7 @@ define([
             custcol_ctc_vc_order_placed_date: 'order_date', //date
             custcol_ctc_vc_shipped_date: 'ship_date', //date
             custcol_ctc_vc_eta_date: 'order_eta', //date
+            custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
             custcol_ctc_xml_ship_date: 'ship_date', //text
             custcol_ctc_xml_carrier: 'carrier', // text
             custcol_ctc_xml_eta: 'order_eta', //textarea
@@ -236,6 +229,7 @@ define([
             'order_status',
             'order_date',
             'order_eta',
+            'order_delivery_eta',
             'ship_date',
             'tracking_num',
             'carrier',
@@ -247,6 +241,7 @@ define([
             DATE: [
                 'custcol_ctc_vc_order_placed_date',
                 'custcol_ctc_vc_eta_date',
+                'custcol_ctc_vc_delivery_eta_date',
                 'custcol_ctc_vc_prom_deliv_date',
                 'custcol_ctc_vc_shipped_date'
             ],
@@ -281,11 +276,12 @@ define([
 
         Current.PO_NUM = option.poNum;
         Current.VendorLines = option.lineData; //vc2_util.copyValues();
-        Current.MainCFG = option.mainConfig;
-        Current.VendorCFG = option.vendorConfig;
         Current.PO_REC = option.po_record;
         Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
+
+        Current.MainCFG = option.mainConfig || vcs_configLib.mainConfig();
+        Current.OrderCFG = option.orderConfig || vcs_configLib.orderVendorConfig({ poId: Current.PO_REC.id });
 
         LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
         vc2_util.LogPrefix = LogPrefix;
@@ -312,8 +308,8 @@ define([
             Helper.getDateFormat();
 
             // extract lines from the PO
-            var itemAltNameColId =
-                    Current.VendorCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+            var itemAltNameColId = Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                itemAltMPNColId = Current.OrderCFG.itemMPNColumnIdToMatch || Current.MainCFG.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -328,13 +324,21 @@ define([
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
             }
+            if (itemAltMPNColId) {
+                poColumns.push(itemAltMPNColId);
+            }
+
+            vc2_util.log(logTitle, '... po columns:', poColumns);
+
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
                 findAll: true,
+                columns: poColumns,
                 mainConfig: Current.MainCFG,
-                vendorConfig: Current.VendorCFG,
-                columns: poColumns
+                orderConfig: Current.OrderCFG
             });
+
+            vc2_util.log(logTitle, '... PO lines data:', Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
@@ -349,10 +353,10 @@ define([
                     /// look for a matching line from the
                     var orderLineMatch = vc2_record.findMatchingOrderLine({
                         record: Current.PO_REC,
-                        mainConfig: Current.MainCFG,
-                        vendorConfig: Current.VendorCFG,
                         orderLines: Current.OrderLines,
-                        lineData: vendorLine
+                        lineData: vendorLine,
+                        mainConfig: Current.MainCFG,
+                        orderConfig: Current.OrderCFG
                     });
 
                     if (!orderLineMatch) {
@@ -389,18 +393,14 @@ define([
 
                         if (vc2_util.inArray(vendorCol, SHIP_FIELDS)) {
                             // If DropShip and fulfillment is not enabled
-                            if (
-                                Current.isDropPO &&
-                                (!Current.MainCFG.createIF || !Current.VendorCFG.processDropships)
-                            ) {
+                            if (Current.isDropPO && (!Current.MainCFG.createIF || !Current.OrderCFG.processDropships)) {
                                 vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
                             }
 
                             if (
                                 !Current.isDropPO &&
-                                (!Current.MainCFG.createIR ||
-                                    !Current.VendorCFG.processSpecialOrders)
+                                (!Current.MainCFG.createIR || !Current.OrderCFG.processSpecialOrders)
                             ) {
                                 vc2_util.log(logTitle, '..  skipping ship fields', vendorCol);
                                 continue;
@@ -439,9 +439,7 @@ define([
                                 //      split it by new lines to create an array
                                 //      otherwise, set an empty array to currListValue
                                 currListValue =
-                                    currLineVal &&
-                                    currLineVal !== 'NA' &&
-                                    currLineVal !== 'Duplicate Item'
+                                    currLineVal && currLineVal !== 'NA' && currLineVal !== 'Duplicate Item'
                                         ? currLineVal.split(/\n/)
                                         : [];
 
@@ -473,16 +471,10 @@ define([
                             //   -  currentValues can be multiple entries
                             else if (vc2_util.inArray(currLineCol, MAPPING.columnType.BIGLIST)) {
                                 // create list for current value
-                                currListValue =
-                                    currLineVal && currLineVal !== 'NA'
-                                        ? currLineVal.split(/\n/)
-                                        : [];
+                                currListValue = currLineVal && currLineVal !== 'NA' ? currLineVal.split(/\n/) : [];
 
                                 // create list for vendor value
-                                vendorListValue =
-                                    vendorValue && vendorValue != 'NA'
-                                        ? vendorValue.split(/,/)
-                                        : [];
+                                vendorListValue = vendorValue && vendorValue != 'NA' ? vendorValue.split(/,/) : [];
 
                                 var newListValue = [],
                                     hasExceededLength = false;
@@ -490,13 +482,7 @@ define([
                                     if (hasExceededLength) return false;
 
                                     // do not include NA or Duplicate Item entrees
-                                    if (
-                                        vc2_util.inArray(entree, [
-                                            'NA',
-                                            'Duplicate Item',
-                                            MAXLEN.ERRORMSG
-                                        ])
-                                    )
+                                    if (vc2_util.inArray(entree, ['NA', 'Duplicate Item', MAXLEN.ERRORMSG]))
                                         return false;
 
                                     // do not include duplicates
@@ -525,14 +511,9 @@ define([
                             /// ORDER STATUS TYPE //////////////
                             //   -  newValues can be comma-separated values
                             //   -  currentValues can be multiple entries
-                            else if (
-                                vc2_util.inArray(currLineCol, MAPPING.columnType.ORDERSTATUS)
-                            ) {
+                            else if (vc2_util.inArray(currLineCol, MAPPING.columnType.ORDERSTATUS)) {
                                 // create list for current value
-                                currListValue =
-                                    currLineVal && currLineVal !== 'NA'
-                                        ? currLineVal.split(/\n/)
-                                        : [];
+                                currListValue = currLineVal && currLineVal !== 'NA' ? currLineVal.split(/\n/) : [];
 
                                 // create list for vendor value
                                 vendorValue = vendorValue && vendorValue != 'NA' ? vendorValue : '';
@@ -552,13 +533,7 @@ define([
                                     if (hasExceededLength) return false;
 
                                     // do not include NA or Duplicate Item entrees
-                                    if (
-                                        vc2_util.inArray(value, [
-                                            'NA',
-                                            'Duplicate Item',
-                                            MAXLEN.ERRORMSG
-                                        ])
-                                    )
+                                    if (vc2_util.inArray(value, ['NA', 'Duplicate Item', MAXLEN.ERRORMSG]))
                                         return false;
 
                                     // do not include duplicates
@@ -603,34 +578,25 @@ define([
                                     updateLineValues[currLineCol] = newValue;
                             } else {
                                 currLineVal =
-                                    currLineVal &&
-                                    currLineVal !== 'NA' &&
-                                    currLineVal !== 'Duplicate Item'
+                                    currLineVal && currLineVal !== 'NA' && currLineVal !== 'Duplicate Item'
                                         ? currLineVal
                                         : 'NA';
 
                                 newValue = vendorValue && vendorValue !== 'NA' ? vendorValue : 'NA';
 
                                 // for everything else, just overwrite if not the same value already
-                                if (orderLineData[currLineCol] != newValue)
-                                    updateLineValues[currLineCol] = newValue;
+                                if (orderLineData[currLineCol] != newValue) updateLineValues[currLineCol] = newValue;
                             }
                         }
                     }
                     vc2_util.log(logTitle, '...updateLineValues', updateLineValues);
 
-                    if (
-                        !vc2_util.isEmpty(updateLineValues) ||
-                        !orderLineData[MAPPING.colVendorInfo]
-                    ) {
+                    if (!vc2_util.isEmpty(updateLineValues) || !orderLineData[MAPPING.colVendorInfo]) {
                         // set the line to update
                         updateLineValues.line = orderLineMatch.line;
 
                         updateLineValues[MAPPING.colVendorInfo] = Helper.setContent(
-                            Helper.buildLineVendorInfo(
-                                orderLineData[MAPPING.colVendorInfo],
-                                vendorLine
-                            ),
+                            Helper.buildLineVendorInfo(orderLineData[MAPPING.colVendorInfo], vendorLine),
                             'TEXTAREA'
                         );
 
@@ -697,9 +663,8 @@ define([
 
         var lineData = option.lineData,
             orderLines = option.orderLines || Current.OrderLines,
-            hashSpace =
-                option.ingramHashSpace || Current.MainCFG ? Current.MainCFG.ingramHashSpace : null,
-            xmlVendor = option.xmlVendor || Current.VendorCFG ? Current.VendorCFG.xmlVendor : null;
+            hashSpace = option.ingramHashSpace || Current.MainCFG ? Current.MainCFG.ingramHashSpace : null,
+            xmlVendor = option.xmlVendor || Current.OrderCFG ? Current.OrderCFG.xmlVendor : null;
 
         Current.PO_REC = option.po_record || Current.PO_REC;
         lineData.vendorSKU = lineData.vendorSKU || lineData.item_num_alt;
@@ -709,8 +674,7 @@ define([
             GlobalVar = vc2_constant.GLOBAL;
 
         try {
-            if (vc2_util.isEmpty(lineData.item_num) || lineData.item_num == 'NA')
-                throw 'Item number is missing';
+            if (vc2_util.isEmpty(lineData.item_num) || lineData.item_num == 'NA') throw 'Item number is missing';
 
             var lineNotFound = false,
                 matchFound = false,
@@ -722,9 +686,7 @@ define([
 
                 lineItemValues = {
                     itemNum: orderLine[GlobalVar.ITEM_ID_LOOKUP_COL],
-                    skuName: GlobalVar.VENDOR_SKU_LOOKUP_COL
-                        ? orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL]
-                        : null,
+                    skuName: GlobalVar.VENDOR_SKU_LOOKUP_COL ? orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL] : null,
                     dnhName: orderLine[vc2_constant.FIELD.TRANSACTION.DH_MPN]
                 };
 
@@ -738,10 +700,7 @@ define([
                     (lineData.vendorSKU && lineData.vendorSKU == lineItemValues.skuName) ||
                     // check for dnh
                     (xmlVendor == VendorList.DandH &&
-                        vc2_util.inArray(lineItemValues.dnhName, [
-                            lineData.item_num,
-                            lineData.vendorSKU
-                        ]))
+                        vc2_util.inArray(lineItemValues.dnhName, [lineData.item_num, lineData.vendorSKU]))
                 ) {
                     // match found;
                     matchFound = true;
@@ -751,7 +710,7 @@ define([
                 // check for ingram match
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    vc2_util.inArray(Current.VendorCFG.xmlVendor, [
+                    vc2_util.inArray(Current.OrderCFG.xmlVendor, [
                         VendorList.INGRAM_MICRO_V_ONE,
                         VendorList.INGRAM_MICRO
                     ])
@@ -759,11 +718,7 @@ define([
                     // check for itemNum
                     if (lineItemValues.itemNum.replace('#', ' ') == lineData.item_num) break;
                     // check vendor SKUI
-                    if (
-                        lineData.vendorSKU &&
-                        tempVendorSKU &&
-                        lineData.vendorSKU.replace('#', ' ') == tempVendorSKU
-                    )
+                    if (lineData.vendorSKU && tempVendorSKU && lineData.vendorSKU.replace('#', ' ') == tempVendorSKU)
                         break;
                 }
 
@@ -806,10 +761,7 @@ define([
                     (lineData.vendorSKU && lineData.vendorSKU == lineItemValues.skuName) ||
                     // check for dnh
                     (xmlVendor == VendorList.DandH &&
-                        vc2_util.inArray(lineItemValues.dnhName, [
-                            lineData.item_num,
-                            lineData.vendorSKU
-                        ]))
+                        vc2_util.inArray(lineItemValues.dnhName, [lineData.item_num, lineData.vendorSKU]))
                 ) {
                     // match found;
                     matchFound = true;
@@ -819,7 +771,7 @@ define([
                 // check for ingram match
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    vc2_util.inArray(Current.VendorCFG.xmlVendor, [
+                    vc2_util.inArray(Current.OrderCFG.xmlVendor, [
                         VendorList.INGRAM_MICRO_V_ONE,
                         VendorList.INGRAM_MICRO
                     ])
@@ -827,11 +779,7 @@ define([
                     // check for itemNum
                     if (lineItemValues.itemNum.replace('#', ' ') == lineData.item_num) break;
                     // check vendor SKUI
-                    if (
-                        lineData.vendorSKU &&
-                        tempVendorSKU &&
-                        lineData.vendorSKU.replace('#', ' ') == tempVendorSKU
-                    )
+                    if (lineData.vendorSKU && tempVendorSKU && lineData.vendorSKU.replace('#', ' ') == tempVendorSKU)
                         break;
                 }
 
@@ -853,28 +801,23 @@ define([
                 if (tempItemNum == lineData.item_num) break;
 
                 // check for vendorSKU
-                if (lineData.vendorSKU && tempVendorSKU && tempVendorSKU == lineData.vendorSKU)
-                    break;
+                if (lineData.vendorSKU && tempVendorSKU && tempVendorSKU == lineData.vendorSKU) break;
 
                 //Ingram Hash replacement
                 if (
                     Current.MainCFG.ingramHashSpace &&
-                    (Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO_V_ONE ||
-                        Current.VendorCFG.xmlVendor == VendorList.INGRAM_MICRO)
+                    (Current.OrderCFG.xmlVendor == VendorList.INGRAM_MICRO_V_ONE ||
+                        Current.OrderCFG.xmlVendor == VendorList.INGRAM_MICRO)
                 ) {
                     // check for itemNum
                     if (lineData.item_num.replace('#', ' ') == tempItemNum) break;
 
                     // check vendor SKUI
-                    if (
-                        lineData.vendorSKU &&
-                        tempVendorSKU &&
-                        lineData.vendorSKU.replace('#', ' ') == tempVendorSKU
-                    )
+                    if (lineData.vendorSKU && tempVendorSKU && lineData.vendorSKU.replace('#', ' ') == tempVendorSKU)
                         break;
                 }
 
-                if (Current.VendorCFG.xmlVendor == VendorList.DandH) {
+                if (Current.OrderCFG.xmlVendor == VendorList.DandH) {
                     //D&H Item replacement
                     var dAndhItem = Current.PO_REC.getSublistValue({
                         sublistId: 'item',

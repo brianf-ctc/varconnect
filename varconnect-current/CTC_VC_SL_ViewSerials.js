@@ -57,16 +57,11 @@ define([
                 ]
             };
 
-            if (option.itemId)
-                searchOption.filters.push([SERIALREC.FIELD.ITEM, 'anyof', option.itemId]);
+            if (option.itemId) searchOption.filters.push([SERIALREC.FIELD.ITEM, 'anyof', option.itemId]);
 
             if (option.recordType && serialTxnMap[option.recordType] && option.recordId) {
                 searchOption.filters.push('AND');
-                searchOption.filters.push([
-                    serialTxnMap[option.recordType],
-                    'anyof',
-                    option.recordId
-                ]);
+                searchOption.filters.push([serialTxnMap[option.recordType], 'anyof', option.recordId]);
             }
 
             vc2_util.log(logTitle, '>> search option: ', searchOption);
@@ -217,9 +212,7 @@ define([
                         line: idx,
                         value:
                             '<span>' +
-                            ('<a href="' +
-                                serialLinkUrl +
-                                '" target="_blank" class="dottedlink">') +
+                            ('<a href="' + serialLinkUrl + '" target="_blank" class="dottedlink">') +
                             (serial.serialNum + '</a></span>')
                     });
                 });

@@ -21,8 +21,7 @@ define([
     'N/error',
     './../../CTC_VC2_Constants',
     './../../CTC_VC2_Lib_Utils',
-    './../../CTC_VC_Lib_MainConfiguration',
-    './../../CTC_VC_Lib_VendorConfig',
+    './../../Services/ctc_svclib_configlib',
     './moment'
 ], function (
     ns_search,
@@ -33,8 +32,7 @@ define([
     ns_error,
     vc2_constant,
     vc2_util,
-    vc_mainCfg,
-    vc_vendorcfg,
+    vcs_configLib,
     moment
 ) {
     var LogTitle = 'LIB::BillFiles',
@@ -97,68 +95,152 @@ define([
 
                 returnValue = dateValue;
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                vc2_util.logError(logTitle, error);
                 throw error;
             } finally {
-                log.audit(
-                    logTitle,
-                    LogPrefix +
-                        ('Parsed Date [' + dateString + ']: ') +
-                        JSON.stringify([dateValue, typeof dateValue])
-                );
+                vc2_util.log(logTitle, 'Parsed Date [' + dateString + ']: ', [dateValue, typeof dateValue]);
             }
             return returnValue;
         },
         extractAlternativeItemName: function (option) {
             var logTitle = [LogTitle, 'extractAlternativeItemName'].join('::'),
                 itemIds = option.item,
-                vendorCfg = option.vendorConfig,
+                OrderCFG = option.orderConfig,
                 itemField = null,
+                mpnField = null,
                 returnValue = null;
             try {
-                // vendorCfg.itemColumnIdToMatch > vendorCfg.itemFieldIdToMatch > MainConfig.itemColumnIdToMatch > MainConfig.itemFieldIdToMatch
-                if (vendorCfg && !vendorCfg.itemColumnIdToMatch) {
-                    itemField = vendorCfg.itemFieldIdToMatch;
+                // OrderCFG.itemColumnIdToMatch > OrderCFG.itemFieldIdToMatch > MainConfig.itemColumnIdToMatch > MainConfig.itemFieldIdToMatch
+                if (OrderCFG && !OrderCFG.itemColumnIdToMatch) {
+                    itemField = OrderCFG.itemFieldIdToMatch;
                 }
                 if (
                     !itemField &&
-                    (!vendorCfg || !vendorCfg.itemColumnIdToMatch) &&
+                    (!OrderCFG || !OrderCFG.itemColumnIdToMatch) &&
                     MainConfig &&
                     !MainConfig.itemColumnIdToMatch
                 ) {
                     itemField = MainConfig.itemFieldIdToMatch;
                 }
-                if (itemField && itemIds.length) {
-                    log.debug(logTitle, 'Lookup alt names for items... ' + itemIds.join(', '));
+                // OrderCFG.itemMPNColumnIdToMatch > OrderCFG.itemMPNFieldIdToMatch > MainCFG.itemMPNColumnIdToMatch > MainCFG.itemMPNFieldIdToMatch
+                if (OrderCFG && !OrderCFG.itemMPNColumnIdToMatch) {
+                    mpnField = OrderCFG.itemMPNFieldIdToMatch;
+                }
+                if (
+                    !mpnField &&
+                    (!OrderCFG || !OrderCFG.itemMPNColumnIdToMatch) &&
+                    MainConfig &&
+                    !MainConfig.itemMPNColumnIdToMatch
+                ) {
+                    mpnField = MainConfig.itemMPNFieldIdToMatch;
+                }
+                if (itemIds.length && (itemField || mpnField)) {
+                    var itemColumns = [];
+                    if (itemField) {
+                        itemColumns.push(itemField);
+                    }
+                    if (mpnField) {
+                        itemColumns.push(mpnField);
+                    }
+                    vc2_util.log(logTitle, 'Lookup alt names for items... ' + itemIds.join(', '));
                     var searchOption = {
                         type: ns_search.Type.ITEM,
-                        filterExpression: [
-                            ['internalid', 'anyof', itemIds],
-                            'and',
-                            ['isinactive', 'is', 'F']
-                        ],
-                        columns: [itemField]
+                        filterExpression: [['internalid', 'anyof', itemIds], 'and', ['isinactive', 'is', 'F']],
+                        columns: itemColumns
                     };
                     var searchResults = vc2_util.searchAllPaged(searchOption);
                     if (searchResults && searchResults.length) {
-                        var altItemNames = {};
+                        var altItemNames = {
+                            _sku: false,
+                            _mpn: false
+                        };
                         searchResults.forEach(function (result) {
-                            var altItemName = result.getValue({ name: itemField }),
-                                itemId = result.id;
-                            altItemNames[itemId] = altItemName;
+                            var altItemName = null,
+                                mpnValue = null;
+                            if (itemField) {
+                                altItemName = result.getValue({ name: itemField });
+                                altItemNames._sku = true;
+                            }
+                            if (mpnField) {
+                                mpnValue = result.getValue({ name: mpnField });
+                                altItemNames._mpn = true;
+                            }
+                            var itemId = result.id;
+                            altItemNames[itemId] = {
+                                partNumber: altItemName,
+                                mpn: mpnValue
+                            };
                             return true;
                         });
                         returnValue = altItemNames;
                     }
-                    log.debug(logTitle, 'Alt item names=' + JSON.stringify(returnValue));
+                    vc2_util.log(logTitle, 'Alt item names=', returnValue);
                 }
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                vc2_util.logError(logTitle, error);
 
                 throw ns_error.create({
                     name: 'Unable to extract alternative item names',
                     message: vc2_util.extractError(error)
                 });
+            }
+            return returnValue;
+        },
+        getAltPartNumValues: function (option) {
+            var logTitle = [LogTitle, 'getAltPartNumValues'].join('::'),
+                source = option.source,
+                skuColumn = null,
+                mpnColumn = null,
+                sku = option.sku,
+                mpn = option.mpn,
+                isItemOnlyMatchedWithVendorSKU = null,
+                isMPNMatchedWithName = null,
+                returnValue = option.target;
+            if (option.orderConfig) {
+                skuColumn = option.orderConfig.itemColumnIdToMatch;
+                mpnColumn = option.orderConfig.itemMPNColumnIdToMatch;
+                isItemOnlyMatchedWithVendorSKU = option.orderConfig.matchItemToPartNumber;
+                isMPNMatchedWithName = option.orderConfig.matchMPNWithPartNumber;
+            }
+            if (option.mainConfig) {
+                skuColumn = skuColumn || option.mainConfig.itemColumnIdToMatch;
+                mpnColumn = mpnColumn || option.mainConfig.itemMPNColumnIdToMatch;
+                isItemOnlyMatchedWithVendorSKU = vc2_util.isEmpty(isItemOnlyMatchedWithVendorSKU)
+                    ? option.mainConfig.matchItemToPartNumber
+                    : null;
+                isMPNMatchedWithName = vc2_util.isEmpty(isMPNMatchedWithName)
+                    ? option.mainConfig.matchMPNWithPartNumber
+                    : null;
+            }
+            if (source && source[returnValue.item]) {
+                if (source._sku) {
+                    if (isItemOnlyMatchedWithVendorSKU) {
+                        returnValue.alternativeSKU = source[returnValue.item].partNumber;
+                    } else {
+                        returnValue.alternativeItemName = source[returnValue.item].partNumber;
+                    }
+                }
+                if (source._mpn) {
+                    if (isMPNMatchedWithName) {
+                        returnValue.alternativeItemName2 = source[returnValue.item].mpn;
+                    } else {
+                        returnValue.alternativeMPN = source[returnValue.item].mpn;
+                    }
+                }
+            }
+            if ((!source || !source._sku) && (sku || skuColumn)) {
+                if (isItemOnlyMatchedWithVendorSKU) {
+                    returnValue.alternativeSKU = sku || returnValue[skuColumn];
+                } else {
+                    returnValue.alternativeItemName = sku || returnValue[skuColumn];
+                }
+            }
+            if ((!source || !source._mpn) && (mpn || mpnColumn)) {
+                if (isMPNMatchedWithName) {
+                    returnValue.alternativeItemName2 = mpn || returnValue[mpnColumn];
+                } else {
+                    returnValue.alternativeMPN = mpn || returnValue[mpnColumn];
+                }
             }
             return returnValue;
         },
@@ -177,10 +259,7 @@ define([
                             uniqueItemIds.push(lineData.item);
                         }
                     }
-                    log.debug(
-                        logTitle,
-                        'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', ')
-                    );
+                    vc2_util.log(logTitle, 'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', '));
                     if (uniqueItemIds.length) {
                         var searchOption = {
                             type: ItemMapRecordVar.ID,
@@ -207,15 +286,14 @@ define([
                                 var lineData = returnValue[i],
                                     vendorItemNames = vendorItemMap[lineData.item];
                                 if (vendorItemNames && vendorItemNames.length) {
-                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
-                                        vendorItemNames.join('\n');
+                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = vendorItemNames.join('\n');
                                 }
                             }
                         }
                     }
                 }
             } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                vc2_util.logError(logTitle, error);
 
                 throw ns_error.create({
                     name: 'Unable to extract vendor item names',
@@ -238,7 +316,7 @@ define([
                 ],
                 returnValue;
 
-            log.audit(logTitle, LogPrefix + '// search for existing PO: ' + poName);
+            vc2_util.log(logTitle, '// search for existing PO: ', poName);
 
             if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
                 poColumns.push('subsidiary');
@@ -247,11 +325,7 @@ define([
                 type: 'purchaseorder',
                 filters: [
                     MainConfig.overridePONum
-                        ? [
-                              ['numbertext', 'is', poName],
-                              'OR',
-                              ['custbody_ctc_vc_override_ponum', 'is', poName]
-                          ]
+                        ? [['numbertext', 'is', poName], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poName]]
                         : ['numbertext', 'is', poName],
                     'AND',
                     ['mainline', 'is', 'T'],
@@ -278,7 +352,7 @@ define([
                 }
             }
             returnValue = poData;
-            log.audit(logTitle, LogPrefix + '... PO Data : ' + JSON.stringify(poData));
+            vc2_util.log(logTitle, '... PO Data : ', poData);
 
             return returnValue;
         },
@@ -286,19 +360,21 @@ define([
             var logTitle = [LogTitle, 'searchBillFile'].join('::'),
                 returnValue;
 
-            var parsedDate = parseDate({ dateString: option.date });
-            var searchObj = ns_search.create({
-                type: 'customrecord_ctc_vc_bills',
-                filters: [
-                    ['custrecord_ctc_vc_bill_number', 'is', option.invoice],
-                    'AND',
-                    ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
-                    'AND',
-                    ['isinactive', 'is', 'F']
-                ],
-                columns: ['id']
-            });
-            returnValue = searchObj.runPaged().count;
+            if (option && option.date && option.invoice) {
+                var parsedDate = parseDate({ dateString: option.date });
+                var searchObj = ns_search.create({
+                    type: 'customrecord_ctc_vc_bills',
+                    filters: [
+                        ['custrecord_ctc_vc_bill_number', 'is', option.invoice],
+                        'AND',
+                        ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
+                        'AND',
+                        ['isinactive', 'is', 'F']
+                    ],
+                    columns: ['id']
+                });
+                returnValue = searchObj.runPaged().count;
+            }
 
             return !!returnValue;
         },
@@ -313,20 +389,53 @@ define([
                 returnValue = [];
 
             if (!option.poId) return false;
-            var itemAltNameColId = null;
-            if (option.vendorConfig) {
-                itemAltNameColId = option.vendorConfig.itemColumnIdToMatch;
+            var itemAltSKUColId = null;
+            if (option.orderConfig) {
+                itemAltSKUColId = option.orderConfig.itemColumnIdToMatch;
             }
-            if (!itemAltNameColId && MainConfig) {
-                itemAltNameColId = MainConfig.itemColumnIdToMatch;
+            if (!itemAltSKUColId && MainConfig) {
+                itemAltSKUColId = MainConfig.itemColumnIdToMatch;
             }
-            if (itemAltNameColId) {
-                poColumns.push(
-                    ns_search.createColumn({
-                        name: itemAltNameColId,
+            var itemAltMPNColId = null;
+            if (option.orderConfig) {
+                itemAltMPNColId = option.orderConfig.itemMPNColumnIdToMatch;
+            }
+            if (!itemAltMPNColId && MainConfig) {
+                itemAltMPNColId = MainConfig.itemMPNColumnIdToMatch;
+            }
+            if (itemAltSKUColId) {
+                itemAltSKUColId =
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] || itemAltSKUColId;
+                if (util.isObject(itemAltSKUColId)) {
+                    util.extend(itemAltSKUColId, {
                         summary: 'GROUP'
-                    })
-                );
+                    });
+                    poColumns.push(ns_search.createColumn(itemAltSKUColId));
+                } else {
+                    poColumns.push(
+                        ns_search.createColumn({
+                            name: itemAltSKUColId,
+                            summary: 'GROUP'
+                        })
+                    );
+                }
+            }
+            if (itemAltMPNColId) {
+                itemAltMPNColId =
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] || itemAltMPNColId;
+                if (util.isObject(itemAltMPNColId)) {
+                    util.extend(itemAltMPNColId, {
+                        summary: 'GROUP'
+                    });
+                    poColumns.push(ns_search.createColumn(itemAltMPNColId));
+                } else {
+                    poColumns.push(
+                        ns_search.createColumn({
+                            name: itemAltMPNColId,
+                            summary: 'GROUP'
+                        })
+                    );
+                }
             }
             var itemSearch = ns_search.create({
                 type: 'transaction',
@@ -348,15 +457,28 @@ define([
                     value: result.getValue({
                         name: 'item',
                         summary: 'GROUP'
+                    }),
+                    item: result.getValue({
+                        name: 'item',
+                        summary: 'GROUP'
                     })
                 };
-                if (itemAltNameColId) {
-                    poLine.alternativeItemName = result.getValue({
-                        name: itemAltNameColId,
+                if (itemAltSKUColId) {
+                    poLine[itemAltSKUColId] = result.getValue({
+                        name: itemAltSKUColId,
                         summary: 'GROUP'
                     });
-                    if (poLine.alternativeItemName == '- None -') {
-                        poLine.alternativeItemName = null;
+                    if (poLine[itemAltSKUColId] == '- None -') {
+                        poLine[itemAltSKUColId] = null;
+                    }
+                }
+                if (itemAltMPNColId) {
+                    poLine[itemAltMPNColId] = result.getValue({
+                        name: itemAltMPNColId,
+                        summary: 'GROUP'
+                    });
+                    if (poLine[itemAltMPNColId] == '- None -') {
+                        poLine[itemAltMPNColId] = null;
                     }
                 }
                 arrSKUs.push(poLine);
@@ -376,15 +498,17 @@ define([
             var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
             var altItemNames = Helper.extractAlternativeItemName({
                 item: uniqueItemIds,
-                vendorConfig: option.vendorConfig
+                orderConfig: option.orderConfig
             });
 
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
-                arrSKUs[i].vendorItemName =
-                    arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
-                if (altItemNames) {
-                    arrSKUs[i].alternativeItemName = altItemNames[arrSKUs[i].value];
-                }
+                arrSKUs[i].vendorItemName = arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+                arrSKUs[i] = Helper.getAltPartNumValues({
+                    source: altItemNames,
+                    target: arrSKUs[i],
+                    orderConfig: option.orderConfig,
+                    mainConfig: MainConfig
+                });
             }
             vc2_util.log(logTitle, '// arrSKUs: ', arrSKUs);
 
@@ -426,9 +550,9 @@ define([
                     return true;
                 });
 
-                log.audit(logTitle, LogPrefix + '// config: ' + JSON.stringify(returnValue));
+                vc2_util.log(logTitle, '// config: ', returnValue);
             } catch (error) {
-                log.audit(logTitle, LogPrefix + '## ERROR ## ' + JSON.stringify(error));
+                vc2_util.logError(logTitle, error);
                 returnValue = false;
             }
 
@@ -451,43 +575,23 @@ define([
                     })
                 });
                 var results = JSON.parse(fuzzyResp.body);
-                log.audit(logTitle, LogPrefix + '/// Fuse match: ' + JSON.stringify(results));
+                vc2_util.log(logTitle, '/// Fuse match: ', results);
 
                 if (results.match) {
                     returnValue = true;
                 }
             } catch (match_error) {
-                log.audit(logTitle, LogPrefix + '// Match error: ' + JSON.stringify(match_error));
+                vc2_util.logError(logTitle, match_error);
             }
 
             return returnValue;
-        },
-        loadOrderStatusVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
-
-            var vendor = option.vendor,
-                vendorName = option.vendorName,
-                subsidiary = option.subsidiary,
-                vendorConfig = vc_vendorcfg.getVendorConfiguration({
-                    vendor: vendor,
-                    subsidiary: subsidiary
-                });
-
-            if (!vendorConfig) {
-                vc2_util.log(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
-            }
-
-            return vendorConfig;
         }
     };
 
     var dateFormat;
     function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
-        log.audit(logTitle, '>> options: ' + JSON.stringify(option));
+        vc2_util.log(logTitle, '>> options: ', option);
 
         var dateString = option.dateString || option,
             dateValue = '';
@@ -496,13 +600,10 @@ define([
             try {
                 dateValue = moment(dateString).toDate();
             } catch (e) {
-                log.error(logTitle, '>> !! ERROR !! ' + util.extractError(e));
+                vc2_util.logError(logTitle, e);
             }
         }
-        log.audit(
-            logTitle,
-            'Parsed Date :' + dateString + ' : ' + JSON.stringify([dateValue, typeof dateValue])
-        );
+        vc2_util.log(logTitle, 'Parsed Date :' + dateString + ' : ', [dateValue, typeof dateValue]);
         // return date;
         //Convert to string
         if (dateValue) {
@@ -512,7 +613,7 @@ define([
             });
         }
 
-        log.audit(logTitle, 'return value :' + JSON.stringify([dateValue, typeof dateValue]));
+        vc2_util.log(logTitle, 'return value :', [dateValue, typeof dateValue]);
 
         return dateValue;
     }
@@ -525,12 +626,7 @@ define([
         vc2_util.log(logTitle, '>> myArr: ', myArr);
         vc2_util.log(logTitle, '>> name: ', name);
 
-        if (!MainConfig) {
-            MainConfig = vc_mainCfg.getMainConfiguration();
-            if (!MainConfig) {
-                log.error(logTitle, 'No Configuration available');
-            }
-        }
+        MainConfig = vcs_configLib.mainConfig();
 
         // //4.01
         if (!dateFormat) {
@@ -538,7 +634,7 @@ define([
                 type: ns_config.Type.COMPANY_PREFERENCES
             });
             dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-            log.audit(logTitle, '>> dateFormat: ' + JSON.stringify(dateFormat));
+            vc2_util.log(logTitle, '>> dateFormat: ', dateFormat);
         }
 
         try {
@@ -550,15 +646,15 @@ define([
                 vc2_util.LogPrefix = '[bill:' + currentOrder.invoice + '] ';
 
                 vc2_util.log(logTitle, '###### PROCESSING [' + currentOrder.invoice + '] ######');
-                log.audit(logTitle, { idx: i, data: myArr[i] });
+                vc2_util.log(logTitle, { idx: i, data: myArr[i] });
 
-                log.audit(logTitle, LogPrefix + '// Look for existing bills...');
+                vc2_util.log(logTitle, '// Look for existing bills...');
                 if (Helper.billFileExists(currentOrder)) {
-                    log.audit(logTitle, LogPrefix + '...already exists, skipping');
+                    vc2_util.log(logTitle, '...already exists, skipping');
                     continue;
                 }
 
-                log.audit(logTitle, LogPrefix + ' /// Initiate bill file record.');
+                vc2_util.log(logTitle, ' /// Initiate bill file record.');
                 var billFileNotes = [];
                 var billFileValues = {
                     name: name,
@@ -579,19 +675,13 @@ define([
                     manualDueDate = true;
                 }
 
-                var poData = Helper.searchPO(currentOrder.po.trim());
+                var poData = Helper.searchPO(currentOrder.po.toString().trim());
                 if (!poData) {
                     billFileNotes.push('PO Link is not found : [' + currentOrder.po + ']');
                 } else {
                     // load the vendor config
-                    var vendorCfg = Helper.loadVendorConfig({
-                        entity: poData.entityId
-                    });
-                    var ordStatVendorCfg = Helper.loadOrderStatusVendorConfig({
-                        vendor: poData.entityId,
-                        vendorName: poData.entityName,
-                        subsidiary: poData.subsidiary
-                    });
+                    var billVendorCFG = vcs_configLib.billVendorConfig({ poId: poData.id });
+                    var orderVendorCFG = vcs_configLib.orderVendorConfig({ poId: poData.id });
 
                     billFileValues.custrecord_ctc_vc_bill_linked_po = poData.id;
                     billFileNotes.push('Linked to PO: ' + poData.tranId + ' (' + poData.id + ') ');
@@ -602,8 +692,7 @@ define([
                     //     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
                     // }
 
-                    if (vendorCfg.ENABLE_FULFILLLMENT)
-                        billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
+                    if (billVendorCFG.enableFulfillment) billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
 
                     var vendorTerms = 0;
                     var searchTerms = ns_search.lookupFields({
@@ -622,9 +711,7 @@ define([
                                 columns: ['daysuntilnetdue']
                             }).daysuntilnetdue;
 
-                            dueDate = moment(currentOrder.date)
-                                .add(parseInt(daysToPay), 'days')
-                                .format('MM/DD/YYYY');
+                            dueDate = moment(currentOrder.date).add(parseInt(daysToPay), 'days').format('MM/DD/YYYY');
                         }
                     }
                 }
@@ -641,31 +728,34 @@ define([
                     // match payload items to transaction items
                     var availableSkus = Helper.collectItemsFromPO({
                         poId: poData.id,
-                        vendorConfig: ordStatVendorCfg
+                        orderConfig: orderVendorCFG
                     });
                     var arrMatchedSKU = [];
 
                     for (ii = 0; ii < currentOrder.lines.length; ii++) {
                         var itemNo = currentOrder.lines[ii].ITEMNO;
+                        var vendorSKU = currentOrder.lines[ii].SKU;
 
-                        var logPrefix = LogPrefix + '// search for matching item [' + itemNo + '] ';
+                        var logPrefix = '// search for matching item [' + itemNo + '] ';
 
                         var matchedSku = false;
 
                         for (var iii = 0; iii < availableSkus.length; iii++) {
                             if (
-                                availableSkus[iii].alternativeItemName == itemNo ||
-                                availableSkus[iii].text == itemNo ||
-                                availableSkus[iii].vendorItemName == itemNo
+                                (availableSkus[iii].alternativeItemName &&
+                                    availableSkus[iii].alternativeItemName == itemNo) ||
+                                (availableSkus[iii].alternativeItemName2 &&
+                                    availableSkus[iii].alternativeItemName2 == itemNo) ||
+                                (availableSkus[iii].alternativeSKU && availableSkus[iii].alternativeSKU == vendorSKU) ||
+                                (availableSkus[iii].alternativeMPN && availableSkus[iii].alternativeMPN == itemNo) ||
+                                (availableSkus[iii].text && availableSkus[iii].text == itemNo) ||
+                                (availableSkus[iii].vendorItemName && availableSkus[iii].vendorItemName == itemNo)
                             ) {
                                 matchedSku = availableSkus[iii].value;
                                 break;
                             }
                         }
-                        log.audit(
-                            logTitle,
-                            logPrefix + '.. exact match ? ' + JSON.stringify(matchedSku)
-                        );
+                        vc2_util.log(logTitle, logPrefix + '.. exact match ? ', matchedSku);
 
                         if (!matchedSku) {
                             matchedSku = Helper.isItemMatchRL({
@@ -674,25 +764,19 @@ define([
                                 value: itemNo
                             });
 
-                            log.audit(
-                                logTitle,
-                                logPrefix + '.. fuzzy match ? ' + JSON.stringify(matchedSku)
-                            );
+                            vc2_util.log(logTitle, logPrefix + '.. fuzzy match ? ', matchedSku);
                         }
 
                         if (!matchedSku) {
                             billFileNotes.push('Not matched SKU: ' + itemNo);
-                            log.audit(logTitle, logPrefix + '.. match not found. ');
+                            vc2_util.log(logTitle, logPrefix + '.. match not found. ');
                         } else {
                             currentOrder.lines[ii].NSITEM = matchedSku;
                             arrMatchedSKU.push(matchedSku);
                         }
                     }
 
-                    log.audit(
-                        logTitle,
-                        LogPrefix + '... matched items: ' + JSON.stringify(arrMatchedSKU)
-                    );
+                    vc2_util.log(logTitle, '... matched items: ', arrMatchedSKU);
 
                     if (arrMatchedSKU.length) {
                         billFileNotes.push('Matched SKU: ' + arrMatchedSKU.length);
@@ -728,14 +812,14 @@ define([
                     status: LOG_STATUS.SUCCESS
                 });
 
-                log.audit(logTitle, '>> Bill File created: ' + record_id);
+                vc2_util.log(logTitle, '>> Bill File created: ' + record_id);
             }
         } catch (error) {
             vc2_util.logError(logTitle, error);
             throw error;
         }
 
-        log.audit(logTitle, '**** END process ****  ');
+        vc2_util.log(logTitle, '**** END process ****  ');
 
         return null;
     }
@@ -743,7 +827,7 @@ define([
     function addNote(option) {
         var logTitle = [LogTitle, 'addNote'].join('::');
 
-        log.audit(logTitle, option);
+        vc2_util.log(logTitle, option);
 
         var billFileId = option.billFileId || option.billId || option.id,
             notes = option.note || option.notes || option.content,

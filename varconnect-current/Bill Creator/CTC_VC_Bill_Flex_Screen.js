@@ -24,10 +24,10 @@ define([
     'N/task',
     'N/format',
     './Libraries/CTC_VC_Lib_BillProcess',
-    './../CTC_VC_Lib_MainConfiguration',
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
-    './../CTC_VC2_Lib_Record'
+    './../CTC_VC2_Lib_Record',
+    './../Services/ctc_svclib_configlib'
 ], function (
     ns_ui,
     ns_msg,
@@ -39,10 +39,10 @@ define([
     ns_task,
     ns_format,
     vc_billprocess,
-    vc_mainConfig,
     vc2_constant,
     vc2_util,
-    vc2_recordlib
+    vc2_recordlib,
+    vcs_configLib
 ) {
     var LogTitle = 'FlexScreen',
         BILL_CREATOR = vc2_constant.Bill_Creator;
@@ -53,7 +53,9 @@ define([
         Method: null,
         PO_ID: null,
 
-        VendorCFG: {},
+        MainCFG: {},
+        BillCFG: {},
+        OrderCFG: {},
 
         PO_REC: null,
         BILLFILE_REC: null,
@@ -173,44 +175,42 @@ define([
             Current.Script = ns_runtime.getCurrentScript();
 
             FormHelper.Form = ns_ui.createForm({ title: 'Flex Screen' });
-            FormHelper.Form.clientScriptModulePath =
-                './Libraries/CTC_VC_Lib_Suitelet_Client_Script';
+            FormHelper.Form.clientScriptModulePath = './Libraries/CTC_VC_Lib_Suitelet_Client_Script';
 
-            Current.Config = Helper.loadBillingConfig();
-            vc2_util.log(logTitle, '>> Current.Config : ', Current.Config);
+            Current.MainCFG = vcs_configLib.mainConfig();
 
             VARIANCE_DEF = {
                 tax: {
                     name: 'Tax',
                     description: 'VC | Tax Charges',
-                    item: Current.Config.taxItem,
-                    applied: Current.Config.applyTax ? 'T' : 'F',
-                    enabled: Current.Config.applyTax,
-                    autoproc: Current.Config.autoprocTaxVar
+                    item: Current.MainCFG.defaultTaxItem,
+                    applied: Current.MainCFG.isVarianceOnTax ? 'T' : 'F',
+                    enabled: Current.MainCFG.isVarianceOnTax,
+                    autoproc: Current.MainCFG.autoprocTaxVar
                 },
                 shipping: {
                     name: 'Shipping',
                     description: 'VC | Shipping Charges',
-                    item: Current.Config.shipItem,
-                    applied: Current.Config.applyShip ? 'T' : 'F',
-                    enabled: Current.Config.applyShip,
-                    autoproc: Current.Config.autoprocShipVar
+                    item: Current.MainCFG.defaultShipItem,
+                    applied: Current.MainCFG.isVarianceOnShipping ? 'T' : 'F',
+                    enabled: Current.MainCFG.isVarianceOnShipping,
+                    autoproc: Current.MainCFG.autoprocShipVar
                 },
                 other: {
                     name: 'Other Charges',
                     description: 'VC | Other Charges',
-                    item: Current.Config.otherItem,
-                    applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther,
-                    autoproc: Current.Config.autoprocOtherVar
+                    item: Current.MainCFG.defaultOtherItem,
+                    applied: Current.MainCFG.isVarianceOnOther ? 'T' : 'F',
+                    enabled: Current.MainCFG.isVarianceOnOther,
+                    autoproc: Current.MainCFG.autoprocOtherVar
                 },
                 miscCharges: {
                     name: 'Misc Charges',
                     description: 'VC | Misc Charges',
-                    item: Current.Config.otherItem,
-                    applied: Current.Config.applyOther ? 'T' : 'F',
-                    enabled: Current.Config.applyOther,
-                    autoproc: Current.Config.autoprocOtherVar
+                    item: Current.MainCFG.defaultOtherItem,
+                    applied: Current.MainCFG.isVarianceOnOther ? 'T' : 'F',
+                    enabled: Current.MainCFG.isVarianceOnOther,
+                    autoproc: Current.MainCFG.autoprocOtherVar
                 }
             };
 
@@ -229,10 +229,10 @@ define([
 
             Current.JSON_DATA = vc2_util.safeParse(Current.BILLFILE_DATA.JSON);
 
+            if (!Current.JSON_DATA.charges) Current.JSON_DATA.charges = {};
+
             ['shipping', 'other', 'tax'].forEach(function (chargeType) {
-                Current.JSON_DATA.charges[chargeType] = vc2_util.parseFloat(
-                    Current.JSON_DATA.charges[chargeType]
-                );
+                Current.JSON_DATA.charges[chargeType] = vc2_util.parseFloat(Current.JSON_DATA.charges[chargeType]);
                 return true;
             });
             vc2_util.log(logTitle, '>> JSON_DATA: ', Current.JSON_DATA);
@@ -260,26 +260,19 @@ define([
                     isDynamic: false
                 });
 
+                var poColumns = ['id', 'status', 'statusRef', 'location', 'taxtotal', 'tax2total', 'entity', 'total'];
+                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
+                    poColumns.push('subsidiary');
+                }
                 Current.PO_DATA = vc2_recordlib.extractValues({
                     record: Current.PO_REC,
-                    fields: [
-                        'id',
-                        'status',
-                        'statusRef',
-                        'location',
-                        'taxtotal',
-                        'tax2total',
-                        'entity',
-                        'total'
-                    ]
+                    fields: poColumns
                 });
 
                 vc2_util.log(logTitle, '>> PO Info: ', Current.PO_DATA);
 
-                Current.VendorCFG = Helper.loadVendorConfig({
-                    entity: Current.PO_DATA.entity
-                });
-                vc2_util.log(logTitle, '>> Vendor Config: ', Current.VendorCFG);
+                Current.BillCFG = vcs_configLib.billVendorConfig({ poId: Current.PO_ID });
+                Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.PO_ID });
             }
             /////////////////////////////////////////////////
 
@@ -362,7 +355,6 @@ define([
 
             /// initiate form fields
             FormHelper.initializeFields();
-            FormHelper.initializeSublistFields();
 
             /// RENDER the fields
             if (Current.IS_BILLABLE || Current.IS_FULFILLABLE) {
@@ -384,15 +376,9 @@ define([
             FormHelper.Form.addTab({ id: 'tab_logs', label: 'Processing Logs' });
             FormHelper.Form.addTab({ id: 'tab_payload', label: 'Payload Data' });
 
-            FormHelper.renderField(
-                vc2_util.extend(FormHelper.Fields.PROCESS_LOGS, { container: 'tab_logs' })
-            );
-            FormHelper.renderField(
-                vc2_util.extend(FormHelper.Fields.BILLFILE_SOURCE, { container: 'tab_payload' })
-            );
-            FormHelper.renderField(
-                vc2_util.extend(FormHelper.Fields.BILLFILE_JSON, { container: 'tab_payload' })
-            );
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.PROCESS_LOGS, { container: 'tab_logs' }));
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.BILLFILE_SOURCE, { container: 'tab_payload' }));
+            FormHelper.renderField(vc2_util.extend(FormHelper.Fields.BILLFILE_JSON, { container: 'tab_payload' }));
 
             /// SUBLIST: Items ///
             /// PRE PROCESS BILLDATA LINES
@@ -402,16 +388,69 @@ define([
             var BillData = vc_billprocess.preprocessBill({
                 recOrder: Current.PO_REC,
                 recBillFile: Current.BILLFILE_REC,
-                vendorConfig: Current.VendorCFG
+                billConfig: Current.BillCFG,
+                orderConfig: Current.OrderCFG
             });
 
-            // items sublist
-            var itemSublist = FormHelper.renderSublist(
-                vc2_util.extend({ tab: 'tab_lines' }, FormHelper.Sublists.ITEM)
-            );
-            vc2_util.log(logTitle, '**** WRITE BILL LINES *****');
+            // var LINE_ERROR_MSG = {
+            //     UNMATCHED_ITEMS: ['I', 'Item not found'],
+            //     INSUFFICIENT_QUANTITY: ['Q', 'Insufficient quantity to bill'],
+            //     Price: ['P', 'Mismatched Rates']
+            // };
 
-            (BillData.BillLines || []).forEach(function (billLine, i) {
+            var LINE_ERROR_MSG = {
+                UNMATCHED_ITEMS: {
+                    col: 'erroritem',
+                    msg: 'Unmatched Item'
+                },
+                ITEMS_ALREADY_BILLED: {
+                    col: 'errorbilled',
+                    msg: 'Already billed'
+                },
+                NOT_BILLABLE: {
+                    col: 'errorbillable',
+                    msg: 'Not billable'
+                },
+                INSUFFICIENT_QUANTITY: {
+                    col: 'errorqty',
+                    msg: 'Insufficient quantity'
+                },
+                Price: {
+                    col: 'errorprice',
+                    msg: 'Mismatched rates'
+                }
+            };
+
+            var hasLineErrors = false,
+                arrLineErrors = [];
+
+            vc2_util.log(logTitle, '// total bill lines : ', BillData.BillLines);
+
+            (BillData.BillLines || []).forEach(function (billLine) {
+                vc2_util.log(logTitle, '// --- errors: ', billLine.Errors);
+                vc2_util.log(logTitle, '// --- variance: ', billLine.Variance);
+
+                if (!vc2_util.isEmpty(billLine.Errors)) arrLineErrors = arrLineErrors.concat(billLine.Errors);
+
+                if (!vc2_util.isEmpty(billLine.Variance)) arrLineErrors = arrLineErrors.concat(billLine.Variance);
+
+                return true;
+            });
+            arrLineErrors = vc2_util.uniqueArray(arrLineErrors);
+            hasLineErrors = !!arrLineErrors.length;
+
+            vc2_util.log(logTitle, '// bill line errors: ', [hasLineErrors, arrLineErrors]);
+
+            // items sublist
+            FormHelper.initializeSublistFields({ lineErrors: arrLineErrors });
+
+            var itemSublist = FormHelper.renderSublist(vc2_util.extend({ tab: 'tab_lines' }, FormHelper.Sublists.ITEM));
+
+            var arrBillLines = BillData.BillLines || [];
+
+            vc2_util.log(logTitle, '**** WRITE BILL LINES ***** ', arrBillLines.length);
+
+            arrBillLines.forEach(function (billLine, i) {
                 var lineData = {
                     item: billLine.itemName,
                     nsitem: billLine.itemId,
@@ -426,37 +465,28 @@ define([
                     nsrate: billLine.OrderLine.rate,
                     calcamount: billLine.amount,
                     nstaxamt: billLine.taxAmount,
-                    description: billLine.description
+                    description: billLine.description,
+                    line_idx: billLine.lineIdx
                 };
 
                 vc2_util.log(logTitle, '... billLIne: ', billLine);
                 vc2_util.log(logTitle, '>> lineData: ', lineData);
 
                 if (Current.IS_ACTIVE_EDIT) {
-                    var htmlError = '';
-                    var ERROR_MSG = {
-                        UNMATCHED_ITEMS: ['I', 'Item not found'],
-                        INSUFFICIENT_QUANTITY: ['Q', 'Insufficient quantity to bill'],
-                        Price: ['P', 'Mismatched Rates']
-                    };
+                    var htmlError = '',
+                        lineErrors = [];
 
-                    var arrLineErrors = (function () {
-                        return (
-                            billLine.Errors && billLine.Errors.length ? billLine.Errors : []
-                        ).concat(
-                            billLine.Variance && billLine.Variance.length ? billLine.Variance : null
-                        );
-                    })();
+                    if (!vc2_util.isEmpty(billLine.Errors)) lineErrors = lineErrors.concat(billLine.Errors);
 
-                    log.audit(logTitle, '** LINE ERRORS: ' + JSON.stringify(arrLineErrors));
+                    if (!vc2_util.isEmpty(billLine.Variance)) lineErrors = lineErrors.concat(billLine.Variance);
 
-                    arrLineErrors.forEach(function (errorCode) {
-                        var errMsg = ERROR_MSG[errorCode];
-                        if (!errMsg) return true;
-                        htmlError += errMsg[1] + '. ';
-                        return true;
-                    });
-                    if (htmlError) {
+                    log.audit(logTitle, '** LINE ERRORS: ' + JSON.stringify(lineErrors));
+
+                    lineErrors.forEach(function (errorCode) {
+                        if (!LINE_ERROR_MSG[errorCode]) return;
+
+                        var lineError = LINE_ERROR_MSG[errorCode];
+
                         var css = [
                             'text-decoration:none;',
                             'color:red;',
@@ -465,22 +495,54 @@ define([
                             // 'margin:2px 2px 0 0;'
                         ].join('');
 
-                        lineData.lineerror =
+                        lineData[lineError.col] =
                             '<div style="font-weight:bold; color: red;font-size:1.2em;text-align:center;margin: auto;width:50%;"> ' +
-                            '<a href="javascript:void(0);" style="' +
-                            css +
-                            '" title="' +
-                            htmlError +
-                            '">&nbsp;!&nbsp;</a></div>';
-                    }
+                            ('<a href="javascript:void(0);" style="' +
+                                css +
+                                '" title="' +
+                                lineError.msg +
+                                '">&nbsp;!&nbsp;</a></div>');
 
+                        return true;
+                    });
+
+                    // =================
+                    //  ERROR v3
+                    // =================
+                    // arrLineErrors.forEach(function (errorCode) {
+                    //     var errMsg = ERROR_MSG[errorCode];
+                    //     if (!errMsg) return true;
+                    //     htmlError += errMsg[1] + '. ';
+                    //     return true;
+                    // });
+                    // if (htmlError) {
+                    //     var css = [
+                    //         'text-decoration:none;',
+                    //         'color:red;',
+                    //         'background-color:#faf1f1;',
+                    //         'padding:0 2px;'
+                    //         // 'margin:2px 2px 0 0;'
+                    //     ].join('');
+
+                    //     lineData.lineerror =
+                    //         '<div style="font-weight:bold; color: red;font-size:1.2em;text-align:center;margin: auto;width:50%;"> ' +
+                    //         ('<a href="javascript:void(0);" style="' +
+                    //             css +
+                    //             '" title="' +
+                    //             htmlError +
+                    //             '">&nbsp;!&nbsp;</a></div>');
+                    // }
+                    // =================
+
+                    // =================
                     //  ERROR v2
+                    // =================
                     // arrLineErrors.forEach(function (errorCode) {
                     //     var errMsg = ERROR_MSG[errorCode];
                     //     if (!errMsg) return true;
                     //     var css = [
                     //         'text-decoration:none;',
-                    //         'color:red;',
+                    //         'color:red;'
                     //         // 'background-color:#f8e4e4;',
                     //         // 'padding:0 5px;',
                     //         // 'margin:2px 2px 0 0;'
@@ -500,7 +562,7 @@ define([
                     //         '<span style="font-weight:bold; color: red;font-size:1em;"> ' +
                     //         htmlError +
                     //         ' </span> ';
-                    //
+                    // =================
 
                     // ERROR v1:
                     // if (lineData.nsrate != lineData.rate)
@@ -529,9 +591,7 @@ define([
                 if (!vc2_util.isEmpty(BillData.Error)) {
                     var arrErrorMsg = [];
                     for (var errorCode in BillData.Error) {
-                        var errorMsg = BILL_CREATOR.Code[errorCode]
-                            ? BILL_CREATOR.Code[errorCode].msg
-                            : errorCode;
+                        var errorMsg = BILL_CREATOR.Code[errorCode] ? BILL_CREATOR.Code[errorCode].msg : errorCode;
                         if (!vc2_util.isEmpty(BillData.Error[errorCode]))
                             errorMsg +=
                                 ' -- ' +
@@ -544,7 +604,6 @@ define([
                     Current.ErrorMessage = arrErrorMsg.join('<br/>');
                     AllowToBill = false;
                 }
-
                 // report VARIANCE
                 if (
                     !vc2_util.isEmpty(BillData.VarianceList) &&
@@ -560,14 +619,10 @@ define([
                     });
                     Current.WarnMessage.push(
                         'Variance Detected' +
-                            (varianceList && varianceList.length
-                                ? ' - ' + varianceList.join(', ')
-                                : '')
+                            (varianceList && varianceList.length ? ' - ' + varianceList.join(', ') : '')
                     );
                     var totalVariance =
-                        BillData.Total.Variance ||
-                        BillData.Total.LineVariance ||
-                        BillData.Total.Charges;
+                        BillData.Total.Variance || BillData.Total.LineVariance || BillData.Total.Charges;
                     if (exceedThreshold || withinThreshold) {
                         var errMsg = exceedThreshold
                             ? BILL_CREATOR.Code.EXCEED_THRESHOLD.msg
@@ -578,9 +633,9 @@ define([
                                 errMsg,
                                 ' -- ',
                                 ns_format.format({
-                                    value: BillData.MainCFG.allowedThreshold,
+                                    value: BillData.MainCFG.allowedVarianceAmountThreshold,
                                     type: ns_format.Type.CURRENCY
-                                }),
+                                })
                                 // ', variance: ' +
                                 //     ns_format.format({
                                 //         value: totalVariance,
@@ -651,6 +706,13 @@ define([
             FormHelper.initializeFields();
             FormHelper.initializeSublistFields();
 
+            var BillData = vc_billprocess.preprocessBill({
+                recOrder: Current.PO_REC,
+                recBillFile: Current.BILLFILE_REC,
+                billConfig: Current.BillCFG,
+                orderConfig: Current.OrderCFG
+            });
+
             var JSON_DATA = Current.JSON_DATA,
                 FormField = FormHelper.Fields;
 
@@ -675,10 +737,14 @@ define([
                 lineData = FormHelper.extractLineValues({
                     record: requestObj,
                     groupId: sublistItemOption.group,
-                    columns: ['nsitem', 'quantity', 'rate', 'nsqty', 'nsrate'],
+                    columns: ['nsitem', 'quantity', 'rate', 'nsqty', 'nsrate', 'line_idx'],
                     line: line
                 });
-                JSON_DATA.lines[line].NSITEM = lineData.nsitem;
+                lineData.lineIdx = vc2_util.parseFloat(lineData.line_idx);
+
+                vc2_util.log(logTitle, '>> lines to save: ', [line, lineData, JSON_DATA.lines[line]]);
+
+                JSON_DATA.lines[lineData.lineIdx].NSITEM = lineData.nsitem;
                 util.extend(JSON_DATA.lines[line], {
                     PRICE: param.ignoreVariance ? lineData.nsrate : lineData.rate,
                     BILLRATE: param.ignoreVariance ? lineData.nsrate : lineData.rate,
@@ -700,16 +766,7 @@ define([
                 lineData = FormHelper.extractLineValues({
                     record: requestObj,
                     groupId: sublistItemOption.group,
-                    columns: [
-                        'applied',
-                        'type',
-                        'name',
-                        'nsitem',
-                        'description',
-                        'quantity',
-                        'rate',
-                        'amount'
-                    ],
+                    columns: ['applied', 'type', 'name', 'nsitem', 'description', 'quantity', 'rate', 'amount'],
                     line: line
                 });
 
@@ -737,11 +794,11 @@ define([
 
             if (param.holdReason && Current.BILLFILE_DATA.STATUS != BILL_CREATOR.Status.REPROCESS) {
                 param.action = FLEXFORM_ACTION.HOLD.value;
-            } else if (
-                !param.holdReason &&
-                Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.REPROCESS
-            ) {
-                param.action = FLEXFORM_ACTION.RENEW.value;
+                // } else if (
+                //     !param.holdReason &&
+                //     Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.REPROCESS
+                // ) {
+                //     param.action = FLEXFORM_ACTION.RENEW.value;
             }
 
             vc2_util.log(logTitle, '>>> params: ', param);
@@ -896,7 +953,7 @@ define([
                     vc2_util.log(logTitle, '## ERROR ##', err);
                 }
 
-                vc2_util.log(logTitle, '>> ITEM ID: ', [itemId, Helper.CACHE[cacheKey]]);
+                // vc2_util.log(logTitle, '>> ITEM ID: ', [itemId, Helper.CACHE[cacheKey]]);
             }
 
             return Helper.CACHE[cacheKey];
@@ -930,18 +987,13 @@ define([
             }
 
             /// if PO needs to be received (Pending Receipt, Partially Received)
-            else if (
-                vc2_util.inArray(Current.PO_DATA.statusRef, ['pendingReceipt', 'partiallyReceived'])
-            ) {
+            else if (vc2_util.inArray(Current.PO_DATA.statusRef, ['pendingReceipt', 'partiallyReceived'])) {
                 // var arrMsg = ['Purchase Order is not ready for billing.'];
-                Current.IS_FULFILLABLE =
-                    Current.BILLFILE_DATA.IS_RCVBLE && Current.VendorCFG.ENABLE_FULFILLLMENT;
+                Current.IS_FULFILLABLE = Current.BILLFILE_DATA.IS_RCVBLE && Current.BillCFG.enableFulfillment;
 
-                if (Current.VendorCFG.ENABLE_FULFILLLMENT) {
+                if (Current.BillCFG.enableFulfillment) {
                     if (Current.BILLFILE_DATA.IS_RCVBLE) {
-                        Current.InfoMessage.push(
-                            'Purchase Order is ready for fulfillment, then it will be billed'
-                        );
+                        Current.InfoMessage.push('Purchase Order is ready for fulfillment, then it will be billed');
                     } else {
                         Current.WarnMessage.push('Bill file is not receivable.');
                     }
@@ -950,7 +1002,7 @@ define([
                 }
 
                 ///     if BillFile is Receivable, and Fulfillment is ENABLED
-                // if (!Current.VendorCFG.ENABLE_FULFILLLMENT) arrMsg.push('Fulfillment on Bill File is not enabled');
+                // if (!Current.BillCFG. enableFulfillment) arrMsg.push('Fulfillment on Bill File is not enabled');
                 // if (!Current.BILLFILE_DATA.IS_RCVBLE) arrMsg.push('Bill File is not receivable.');
 
                 // Current.WarnMessage.push(arrMsg.join(' '));
@@ -973,8 +1025,7 @@ define([
                         vc2_util.logError('isBillable', bill_err);
 
                         Current.ErrorMessage =
-                            'Unable to create Vendor Bill due to - ' +
-                            vc2_util.extractError(bill_err);
+                            'Unable to create Vendor Bill due to - ' + vc2_util.extractError(bill_err);
                     }
                 }
             }
@@ -985,6 +1036,14 @@ define([
             var returnValue = false;
 
             if (!Current.BILLFILE_DATA) return false; // no bill file, return false;
+
+            var license = vcs_configLib.validateLicense();
+
+            if (license.hasError) {
+                Current.ErrorMessage = vc2_constant.ERRORMSG.INVALID_LICENSE.message;
+                Current.IS_ACTIVE_EDIT = false;
+                return false;
+            }
 
             if (
                 vc2_util.inArray(Current.BILLFILE_DATA.STATUS, [
@@ -1002,8 +1061,7 @@ define([
                     // if the PO is already fully billed
                     Current.IS_FULLYBILLED ||
                     // bill file is already closed, but
-                    (!Current.BILLFILE_DATA.BILL_LINK &&
-                        Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
+                    (!Current.BILLFILE_DATA.BILL_LINK && Current.BILLFILE_DATA.status == BILL_CREATOR.Status.CLOSED)
                 ) {
                     returnValue = false;
                 }
@@ -1074,8 +1132,7 @@ define([
                                 line: line
                             });
 
-                        if (vc2_util.inArray(field, DEF_LINEFIELDS.number))
-                            fieldValue = vc2_util.forceInt(fieldValue);
+                        if (vc2_util.inArray(field, DEF_LINEFIELDS.number)) fieldValue = vc2_util.forceInt(fieldValue);
                         if (vc2_util.inArray(field, DEF_LINEFIELDS.currency))
                             fieldValue = vc2_util.parseFloat(fieldValue);
                         lineData[field] = fieldValue;
@@ -1109,15 +1166,10 @@ define([
                 }
 
                 for (var lineItem in objLineItems) {
-                    objLineItems[lineItem].amount =
-                        objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
+                    objLineItems[lineItem].amount = objLineItems[lineItem].quantity * objLineItems[lineItem].rate;
 
-                    objLineItems[lineItem].amount = vc2_util.roundOff(
-                        objLineItems[lineItem].amount
-                    );
-                    objLineItems[lineItem].taxAmount = Helper.calculateLineTax(
-                        objLineItems[lineItem]
-                    );
+                    objLineItems[lineItem].amount = vc2_util.roundOff(objLineItems[lineItem].amount);
+                    objLineItems[lineItem].taxAmount = Helper.calculateLineTax(objLineItems[lineItem]);
                 }
 
                 Helper.CACHE[cacheKey] = objLineItems;
@@ -1134,28 +1186,6 @@ define([
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return vc2_util.roundOff(taxAmount) || 0;
-        },
-        loadBillingConfig: function () {
-            var mainConfig = vc_mainConfig.getMainConfiguration();
-            if (!mainConfig) {
-                log.error('No Configuration available');
-                throw new Error('No Configuration available');
-            }
-            return {
-                applyTax: mainConfig.isVarianceOnTax,
-                taxItem: mainConfig.defaultTaxItem,
-                taxItem2: mainConfig.defaultTaxItem2,
-                applyShip: mainConfig.isVarianceOnShipping,
-                shipItem: mainConfig.defaultShipItem,
-                applyOther: mainConfig.isVarianceOnOther,
-                otherItem: mainConfig.defaultOtherItem,
-                allowedThreshold: mainConfig.allowedVarianceAmountThreshold,
-                allowAdjustLine: mainConfig.allowAdjustLine,
-                autoprocPriceVar: mainConfig.autoprocPriceVar,
-                autoprocTaxVar: mainConfig.autoprocTaxVar,
-                autoprocShipVar: mainConfig.autoprocShipVar,
-                autoprocOtherVar: mainConfig.autoprocOtherVar
-            };
         },
         loadVendorConfig: function (option) {
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
@@ -1226,7 +1256,16 @@ define([
 
             FormHelper.updateFieldValue({
                 name: 'CALC_VARIANCETOTAL',
-                value: Current.TOTALS_DATA.VARIANCE_AMT + Current.TOTALS_DATA.CHARGE_AMT
+                value: Current.TOTALS_DATA.VARIANCE_AMT
+            });
+        },
+
+        extractBillLineErrors: function (option) {
+            var billLines = option.billLines || [];
+
+            var arrLineErrors = [];
+            billLines.forEach(function (billLine) {
+                return true;
             });
         }
     };
@@ -1355,7 +1394,7 @@ define([
                     id: 'custpage_chk_isreceivable',
                     type: ns_ui.FieldType.CHECKBOX,
                     label: 'Is Receivable',
-                    displayType: Current.VendorCFG.ENABLE_FULFILLLMENT
+                    displayType: Current.BillCFG.enableFulfillment
                         ? ns_ui.FieldDisplayType.INLINE
                         : ns_ui.FieldDisplayType.HIDDEN,
                     defaultValue: Current.BILLFILE_DATA.IS_RCVBLE ? 'T' : 'F'
@@ -1366,9 +1405,7 @@ define([
                     type: ns_ui.FieldType.SELECT,
                     source: 'customlist_ctc_vc_bill_hold_rsns',
                     label: 'Hold Reason',
-                    displayType: Current.IS_ACTIVE_EDIT
-                        ? ns_ui.FieldDisplayType.NORMAL
-                        : ns_ui.FieldDisplayType.INLINE,
+                    displayType: Current.IS_ACTIVE_EDIT ? ns_ui.FieldDisplayType.NORMAL : ns_ui.FieldDisplayType.INLINE,
                     defaultValue: Current.BILLFILE_DATA.HOLD_REASON
                 },
                 NOTES: {
@@ -1672,19 +1709,21 @@ define([
             return FormField;
         },
         initializeSublistFields: function (option) {
-            var Sublists = {};
+            var Sublists = {},
+                option = option || {};
+
+            var lineErrors = option.lineErrors || [];
 
             Sublists.ITEM = {
                 id: 'item',
                 label: 'Invoice Lines',
                 type: ns_ui.SublistType.LIST,
                 fields: {
-                    lineerror: {
-                        type: ns_ui.FieldType.TEXT,
-                        size: { w: 3, h: 100 },
-                        label: ' '
-                    },
-
+                    // lineerror: {
+                    //     type: ns_ui.FieldType.TEXT,
+                    //     size: { w: 3, h: 100 },
+                    //     label: ' '
+                    // },
                     // BILL FILE:item value
                     item: { type: ns_ui.FieldType.TEXT, label: 'Item' },
                     // BILL FILE: nsitem value
@@ -1713,6 +1752,14 @@ define([
                             return arrOptions;
                         })(Current.PO_REC)
                     },
+
+                    erroritem: vc2_util.inArray('UNMATCHED_ITEMS', lineErrors)
+                        ? {
+                              type: ns_ui.FieldType.TEXT,
+                              size: { w: 3, h: 100 },
+                              label: ' '
+                          }
+                        : null,
 
                     // BILL FILE: line quantity
                     quantity: {
@@ -1744,12 +1791,28 @@ define([
                         type: ns_ui.FieldType.CURRENCY
                     },
 
+                    errorbillable: vc2_util.inArray('NOT_BILLABLE', lineErrors)
+                        ? {
+                              type: ns_ui.FieldType.TEXT,
+                              size: { w: 3, h: 100 },
+                              label: ' '
+                          }
+                        : null,
+
                     // PO: quantitybilled (all matching lines)
                     billqty: {
                         label: 'Billed',
                         // displayType: ns_ui.FieldDisplayType.HIDDEN,
                         type: ns_ui.FieldType.CURRENCY
                     },
+
+                    errorbilled: vc2_util.inArray('ITEMS_ALREADY_BILLED', lineErrors)
+                        ? {
+                              type: ns_ui.FieldType.TEXT,
+                              size: { w: 3, h: 100 },
+                              label: ' '
+                          }
+                        : null,
 
                     // PO: quantityreceived (all matching lines)
                     remainingqty: {
@@ -1760,6 +1823,13 @@ define([
                         type: ns_ui.FieldType.CURRENCY
                     },
 
+                    errorqty: vc2_util.inArray('INSUFFICIENT_QUANTITY', lineErrors)
+                        ? {
+                              type: ns_ui.FieldType.TEXT,
+                              size: { w: 3, h: 100 },
+                              label: ' '
+                          }
+                        : null,
                     // // variance indicator
                     // varianceqty: {
                     //     type: ns_ui.FieldType.TEXT,
@@ -1781,6 +1851,14 @@ define([
                         label: 'NS Rate',
                         type: ns_ui.FieldType.CURRENCY
                     },
+
+                    errorprice: vc2_util.inArray('Price', lineErrors)
+                        ? {
+                              type: ns_ui.FieldType.TEXT,
+                              size: { w: 3, h: 100 },
+                              label: ' '
+                          }
+                        : null,
 
                     // variance indicator
                     // variancerate: {
@@ -1814,12 +1892,16 @@ define([
                         type: ns_ui.FieldType.TEXT
                     },
 
+                    line_idx: {
+                        label: 'LineIdx',
+                        type: ns_ui.FieldType.TEXT,
+                        displayType: DEBUG_MODE ? ns_ui.FieldDisplayType.NORMAL : ns_ui.FieldDisplayType.HIDDEN
+                    },
+
                     matchedlines: {
                         label: 'Bill Lines',
                         type: ns_ui.FieldType.TEXT,
-                        displayType: DEBUG_MODE
-                            ? ns_ui.FieldDisplayType.NORMAL
-                            : ns_ui.FieldDisplayType.HIDDEN
+                        displayType: DEBUG_MODE ? ns_ui.FieldDisplayType.NORMAL : ns_ui.FieldDisplayType.HIDDEN
                     }
                 }
             };
@@ -1842,8 +1924,7 @@ define([
                         label: 'Apply',
                         type: ns_ui.FieldType.CHECKBOX,
                         displayType:
-                            Current.IS_ACTIVE_EDIT ||
-                            Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT || Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                     },
@@ -1868,8 +1949,7 @@ define([
                         label: 'PO Item',
                         type: ns_ui.FieldType.SELECT,
                         displayType:
-                            Current.IS_ACTIVE_EDIT ||
-                            Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT || Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE,
                         selectOptions: (function (record) {
@@ -1911,8 +1991,7 @@ define([
                         type: ns_ui.FieldType.CURRENCY,
                         totallingField: true,
                         displayType:
-                            Current.IS_ACTIVE_EDIT ||
-                            Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
+                            Current.IS_ACTIVE_EDIT || Current.BILLFILE_DATA.STATUS == BILL_CREATOR.Status.VARIANCE
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                     },
@@ -1943,8 +2022,7 @@ define([
 
                 if (cmd[0] == 'H1') {
                     util.extend(fieldOption, FormHelper.Fields.HEADER);
-                    fieldOption.defaultValue =
-                        '<div class="fgroup_title">' + cmd[1].toUpperCase() + '</div>';
+                    fieldOption.defaultValue = '<div class="fgroup_title">' + cmd[1].toUpperCase() + '</div>';
                 } else if (cmd[0] == 'SPACER') {
                     util.extend(fieldOption, FormHelper.Fields.SPACER);
                     fieldOption.defaultValue = '&nbsp;';
@@ -1954,9 +2032,7 @@ define([
                 fieldOption.id = ['custpage_fld', this.fieldCounter].join('_');
             } else {
                 util.extend(fieldOption, fieldInfo);
-                fieldOption.id =
-                    fieldInfo.id ||
-                    ['custpage_fld', new Date().getTime(), this.fieldCounter].join('_');
+                fieldOption.id = fieldInfo.id || ['custpage_fld', new Date().getTime(), this.fieldCounter].join('_');
             }
 
             if (vc2_util.isEmpty(fieldOption)) return;
@@ -1976,8 +2052,7 @@ define([
 
             // set the breaktype
             if (fieldOption.breakType) fld.updateBreakType({ breakType: fieldOption.breakType });
-            if (fieldOption.layoutType)
-                fld.updateLayoutType({ layoutType: fieldOption.layoutType });
+            if (fieldOption.layoutType) fld.updateLayoutType({ layoutType: fieldOption.layoutType });
 
             // set the selections
             if (fieldInfo.type == ns_ui.FieldType.SELECT) {
@@ -2004,10 +2079,7 @@ define([
                 // vc2_util.log(logTitle, '>> field: ', [fieldName, fieldInfo]);
 
                 if (fieldInfo) {
-                    FormHelper.Fields[fieldName].fldObj = FormHelper.renderField(
-                        fieldInfo,
-                        containerId
-                    );
+                    FormHelper.Fields[fieldName].fldObj = FormHelper.renderField(fieldInfo, containerId);
                 } else {
                     FormHelper.renderField(fieldName, containerId);
                 }
@@ -2030,9 +2102,7 @@ define([
             if (groupInfo.isCollapsible) fgObj.isCollapsible = true;
             if (groupInfo.isCollapsed) fgObj.isCollapsed = true;
 
-            var arrGroupFields = util.isArray(groupInfo.fields)
-                ? groupInfo.fields
-                : [groupInfo.fields];
+            var arrGroupFields = util.isArray(groupInfo.fields) ? groupInfo.fields : [groupInfo.fields];
 
             this.renderFieldList(groupInfo.fields, groupInfo.id);
 
@@ -2063,6 +2133,9 @@ define([
 
             for (var fieldId in sublistInfo.fields) {
                 var fieldInfo = sublistInfo.fields[fieldId];
+
+                if (!fieldInfo) continue;
+
                 fieldInfo.id = fieldId;
 
                 //// ADD FIELD ///////////
@@ -2116,9 +2189,7 @@ define([
         },
         updateFieldValue: function (option) {
             var fieldName = option.name;
-            var fieldObj = FormHelper.Fields[fieldName]
-                ? FormHelper.Fields[fieldName].fldObj
-                : false;
+            var fieldObj = FormHelper.Fields[fieldName] ? FormHelper.Fields[fieldName].fldObj : false;
 
             if (!fieldObj)
                 fieldObj = FormHelper.Form.getField({

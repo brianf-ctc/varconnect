@@ -17,8 +17,7 @@ define(function (require) {
 
     var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('./../CTC_VC2_Constants.js'),
-        vc_mainCfg = require('./../CTC_VC_Lib_MainConfiguration'),
-        vcs_records = require('./ctc_svclib_records.js');
+        vcs_configLib = require('./ctc_svclib_configlib.js');
 
     var ns_search = require('N/search'),
         ns_record = require('N/record'),
@@ -28,24 +27,14 @@ define(function (require) {
 
     const BILLFILE = vc2_constant.RECORD.BILLFILE;
 
-    var MainConfig,
+    var MainCFG,
+        OrderVendorCFG,
         Helper = {
-            loadMainConfig: function () {
-                var logTitle = [LogTitle, 'loadMainConfig'].join('::');
-
-                if (!MainConfig) {
-                    MainConfig = vc_mainCfg.getMainConfiguration();
-                    if (!MainConfig) {
-                        log.error(logTitle, 'No Configuration available');
-                    }
-                }
-                return MainConfig;
-            },
             searchPO: function (option) {
                 var logTitle = [LogTitle, 'searchPO'].join('::'),
                     returnValue;
 
-                Helper.loadMainConfig();
+                MainCFG = vcs_configLib.mainConfig();
 
                 var poId = option.poId || option.po,
                     poNum = option.poNum || option.ponum;
@@ -57,12 +46,8 @@ define(function (require) {
                     filters: [
                         poId
                             ? ['internalid', 'anyof', poId]
-                            : MainConfig.overridePONum
-                            ? [
-                                  ['numbertext', 'is', poNum],
-                                  'OR',
-                                  ['custbody_ctc_vc_override_ponum', 'is', poNum]
-                              ]
+                            : MainCFG.overridePONum
+                            ? [['numbertext', 'is', poNum], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poNum]]
                             : ['numbertext', 'is', poNum],
                         'AND',
                         ['mainline', 'is', 'T'],
@@ -73,7 +58,7 @@ define(function (require) {
                         'trandate',
                         'postingperiod',
                         'type',
-                        MainConfig.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
+                        MainCFG.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
                         'tranid',
                         'entity',
                         'amount',
@@ -91,26 +76,66 @@ define(function (require) {
                         tranId: searchResult.getValue({ name: 'tranid' }),
                         date: searchResult.getValue({ name: 'trandate' })
                     };
+                    OrderVendorCFG = vcs_configLib.orderVendorConfig({ poId: poData.id });
                 }
                 returnValue = poData;
 
                 return returnValue;
             },
+            createGroupColumn: function (option) {
+                var returnValue = null;
+                if (util.isObject(option)) {
+                    util.extend(option, {
+                        summary: 'GROUP'
+                    });
+                    returnValue = ns_search.createColumn(option);
+                } else {
+                    returnValue = ns_search.createColumn({
+                        name: option,
+                        summary: 'GROUP'
+                    });
+                }
+                return returnValue;
+            },
             collectItemsFromPO: function (option) {
                 var logTitle = [LogTitle, 'collectItemsFromPO'],
-                    returnValue = [];
-
-                if (!option.poId) return false;
-
-                var itemSearch = ns_search.create({
-                    type: 'transaction',
-                    filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
-                    columns: [
+                    poColumns = [
                         ns_search.createColumn({
                             name: 'item',
                             summary: 'GROUP'
                         })
-                    ]
+                    ],
+                    returnValue = [];
+
+                if (!option.poId) return false;
+                var itemAltSKUColId = null,
+                    itemAltMPNColId = null;
+                if (OrderVendorCFG) {
+                    itemAltSKUColId = OrderVendorCFG.itemColumnIdToMatch;
+                    itemAltMPNColId = OrderVendorCFG.itemMPNColumnIdToMatch;
+                }
+                if (MainCFG) {
+                    if (!itemAltSKUColId) {
+                        itemAltSKUColId = MainCFG.itemColumnIdToMatch;
+                    }
+                    if (!itemAltMPNColId) {
+                        itemAltMPNColId = MainCFG.itemMPNColumnIdToMatch;
+                    }
+                }
+                if (itemAltSKUColId) {
+                    itemAltSKUColId =
+                        vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] || itemAltSKUColId;
+                    poColumns.push(Helper.createGroupColumn(itemAltSKUColId));
+                }
+                if (itemAltMPNColId) {
+                    itemAltMPNColId =
+                        vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] || itemAltMPNColId;
+                    poColumns.push(poColumns.push(Helper.createGroupColumn(itemAltMPNColId)));
+                }
+                var itemSearch = ns_search.create({
+                    type: 'transaction',
+                    filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
+                    columns: poColumns
                 });
 
                 var arrSKUs = [],
@@ -128,12 +153,15 @@ define(function (require) {
                         value: result.getValue({
                             name: 'item',
                             summary: 'GROUP'
+                        }),
+                        item: result.getValue({
+                            name: 'item',
+                            summary: 'GROUP'
                         })
                     };
                     arrSKUs.push(skuData);
 
-                    if (!vc2_util.inArray(skuData.value, arrPOItems))
-                        arrPOItems.push(skuData.value);
+                    if (!vc2_util.inArray(skuData.value, arrPOItems)) arrPOItems.push(skuData.value);
 
                     return true;
                 });
@@ -144,10 +172,7 @@ define(function (require) {
                 if (arrSKUVendorNames && !vc2_util.isEmpty(arrSKUVendorNames)) {
                     var skuMapKey = vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY;
                     arrSKUs.forEach(function (skuData) {
-                        if (
-                            arrSKUVendorNames[skuData.value] &&
-                            !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])
-                        ) {
+                        if (arrSKUVendorNames[skuData.value] && !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])) {
                             skuData[skuMapKey] = arrSKUVendorNames[skuData.value];
                         }
 
@@ -172,11 +197,7 @@ define(function (require) {
                     var uniqueItemIds = vc2_util.uniqueArray(arrItemList);
                     if (!uniqueItemIds.length) throw 'Missing line item lists';
 
-                    vc2_util.log(
-                        logTitle,
-                        'Lookup items for assigned vendor names... ',
-                        uniqueItemIds
-                    );
+                    vc2_util.log(logTitle, 'Lookup items for assigned vendor names... ', uniqueItemIds);
 
                     /// SEARCH for Mapped Vendor Items
                     var searchResults = vc2_util.searchAllPaged({
@@ -188,8 +209,7 @@ define(function (require) {
                         ],
                         columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
                     });
-                    if (!searchResults || !searchResults.length)
-                        throw 'No vendor item mapped for items';
+                    if (!searchResults || !searchResults.length) throw 'No vendor item mapped for items';
 
                     var vendorItemMap = {};
                     searchResults.forEach(function (result) {
@@ -283,8 +303,7 @@ define(function (require) {
                         var value = row.getValue({ name: fldname }),
                             text = row.getText({ name: fldname });
 
-                        billFileValues[fld] =
-                            value && text && value !== text ? { text: text, value: value } : value;
+                        billFileValues[fld] = value && text && value !== text ? { text: text, value: value } : value;
                     }
                     return true;
                 });
@@ -416,8 +435,7 @@ define(function (require) {
 
                 var billFileDataJSON = JSON.stringify(billFileValues.DATA);
 
-                if (billFileDataJSON != billFileValues.JSON)
-                    updateValues[BILLFILE.FIELD.JSON] = billFileDataJSON;
+                if (billFileDataJSON != billFileValues.JSON) updateValues[BILLFILE.FIELD.JSON] = billFileDataJSON;
 
                 // updateValues[BILLFILE.FIELD.JSON] = ;
 

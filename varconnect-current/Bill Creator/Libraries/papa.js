@@ -49,9 +49,7 @@ License: MIT
         var code = moduleFactory.toString();
         return (
             Papa.BLOB_URL ||
-            (Papa.BLOB_URL = URL.createObjectURL(
-                new Blob(['(', code, ')();'], { type: 'text/javascript' })
-            ))
+            (Papa.BLOB_URL = URL.createObjectURL(new Blob(['(', code, ')();'], { type: 'text/javascript' })))
         );
     }
 
@@ -143,8 +141,7 @@ License: MIT
                 // Wrap up the user's complete callback, if any, so that ours also gets executed
                 var userCompleteFunc = f.instanceConfig.complete;
                 f.instanceConfig.complete = function (results) {
-                    if (isFunction(userCompleteFunc))
-                        userCompleteFunc(results, f.file, f.inputElem);
+                    if (isFunction(userCompleteFunc)) userCompleteFunc(results, f.file, f.inputElem);
                     fileComplete();
                 };
 
@@ -256,8 +253,7 @@ License: MIT
         if (typeof _input === 'string') _input = JSON.parse(_input);
 
         if (Array.isArray(_input)) {
-            if (!_input.length || Array.isArray(_input[0]))
-                return serialize(null, _input, _skipEmptyLines);
+            if (!_input.length || Array.isArray(_input[0])) return serialize(null, _input, _skipEmptyLines);
             else if (typeof _input[0] === 'object')
                 return serialize(_columns || objectKeys(_input[0]), _input, _skipEmptyLines);
         } else if (typeof _input === 'object') {
@@ -267,12 +263,9 @@ License: MIT
                 if (!_input.fields) _input.fields = _input.meta && _input.meta.fields;
 
                 if (!_input.fields)
-                    _input.fields = Array.isArray(_input.data[0])
-                        ? _input.fields
-                        : objectKeys(_input.data[0]);
+                    _input.fields = Array.isArray(_input.data[0]) ? _input.fields : objectKeys(_input.data[0]);
 
-                if (!Array.isArray(_input.data[0]) && typeof _input.data[0] !== 'object')
-                    _input.data = [_input.data]; // handles input like [1,2,3] or ['asdf']
+                if (!Array.isArray(_input.data[0]) && typeof _input.data[0] !== 'object') _input.data = [_input.data]; // handles input like [1,2,3] or ['asdf']
             }
 
             return serialize(_input.fields || [], _input.data || [], _skipEmptyLines);
@@ -300,10 +293,7 @@ License: MIT
             )
                 _quotes = _config.quotes;
 
-            if (
-                typeof _config.skipEmptyLines === 'boolean' ||
-                typeof _config.skipEmptyLines === 'string'
-            )
+            if (typeof _config.skipEmptyLines === 'boolean' || typeof _config.skipEmptyLines === 'string')
                 _skipEmptyLines = _config.skipEmptyLines;
 
             if (typeof _config.newline === 'string') _newline = _config.newline;
@@ -322,8 +312,7 @@ License: MIT
                 _escapedQuote = _config.escapeChar + _quoteChar;
             }
 
-            if (typeof _config.escapeFormulae === 'boolean')
-                _escapeFormulae = _config.escapeFormulae;
+            if (typeof _config.escapeFormulae === 'boolean') _escapeFormulae = _config.escapeFormulae;
         }
 
         /** Turns an object's keys into an array */
@@ -358,9 +347,7 @@ License: MIT
                 var maxCol = hasHeader ? fields.length : data[row].length;
 
                 var emptyLine = false;
-                var nullLine = hasHeader
-                    ? Object.keys(data[row]).length === 0
-                    : data[row].length === 0;
+                var nullLine = hasHeader ? Object.keys(data[row]).length === 0 : data[row].length === 0;
                 if (skipEmptyLines && !hasHeader) {
                     emptyLine =
                         skipEmptyLines === 'greedy'
@@ -395,11 +382,7 @@ License: MIT
 
             if (str.constructor === Date) return JSON.stringify(str).slice(1, 25);
 
-            if (
-                _escapeFormulae === true &&
-                typeof str === 'string' &&
-                str.match(/^[=+\-@].*$/) !== null
-            ) {
+            if (_escapeFormulae === true && typeof str === 'string' && str.match(/^[=+\-@].*$/) !== null) {
                 str = "'" + str;
             }
 
@@ -418,8 +401,7 @@ License: MIT
         }
 
         function hasAny(str, substrings) {
-            for (var i = 0; i < substrings.length; i++)
-                if (str.indexOf(substrings[i]) > -1) return true;
+            for (var i = 0; i < substrings.length; i++) if (str.indexOf(substrings[i]) > -1) return true;
             return false;
         }
     }
@@ -608,9 +590,7 @@ License: MIT
             }
 
             // Use chunckSize as it may be a diference on reponse lentgh due to characters with more than 1 byte
-            this._start += this._config.chunkSize
-                ? this._config.chunkSize
-                : xhr.responseText.length;
+            this._start += this._config.chunkSize ? this._config.chunkSize : xhr.responseText.length;
             this._finished = !this._config.chunkSize || this._start >= getFileSize(xhr);
             this.parseChunk(xhr.responseText);
         };
@@ -657,8 +637,7 @@ License: MIT
         };
 
         this._nextChunk = function () {
-            if (!this._finished && (!this._config.preview || this._rowCount < this._config.preview))
-                this._readChunk();
+            if (!this._finished && (!this._config.preview || this._rowCount < this._config.preview)) this._readChunk();
         };
 
         this._readChunk = function () {
@@ -756,9 +735,7 @@ License: MIT
 
         this._streamData = bindFunction(function (chunk) {
             try {
-                queue.push(
-                    typeof chunk === 'string' ? chunk : chunk.toString(this._config.encoding)
-                );
+                queue.push(typeof chunk === 'string' ? chunk : chunk.toString(this._config.encoding));
 
                 if (parseOnData) {
                     parseOnData = false;
@@ -837,9 +814,7 @@ License: MIT
             // callback being invoked
             parseCallbackQueue.push(
                 bindFunction(function () {
-                    this.parseChunk(
-                        typeof chunk === 'string' ? chunk : chunk.toString(config.encoding)
-                    );
+                    this.parseChunk(typeof chunk === 'string' ? chunk : chunk.toString(config.encoding));
                     if (isFunction(callback)) {
                         return callback();
                     }
@@ -1009,9 +984,7 @@ License: MIT
         };
 
         function testEmptyLine(s) {
-            return _config.skipEmptyLines === 'greedy'
-                ? s.join('').trim() === ''
-                : s.length === 1 && s[0].length === 0;
+            return _config.skipEmptyLines === 'greedy' ? s.join('').trim() === '' : s.length === 1 && s[0].length === 0;
         }
 
         function testFloat(s) {
@@ -1029,9 +1002,7 @@ License: MIT
                 addError(
                     'Delimiter',
                     'UndetectableDelimiter',
-                    "Unable to auto-detect delimiting character; defaulted to '" +
-                        Papa.DefaultDelimiter +
-                        "'"
+                    "Unable to auto-detect delimiting character; defaulted to '" + Papa.DefaultDelimiter + "'"
                 );
                 _delimiterError = false;
             }
@@ -1054,15 +1025,13 @@ License: MIT
             if (!_results) return;
 
             function addHeader(header, i) {
-                if (isFunction(_config.transformHeader))
-                    header = _config.transformHeader(header, i);
+                if (isFunction(_config.transformHeader)) header = _config.transformHeader(header, i);
 
                 _fields.push(header);
             }
 
             if (Array.isArray(_results.data[0])) {
-                for (var i = 0; needsHeaderRow() && i < _results.data.length; i++)
-                    _results.data[i].forEach(addHeader);
+                for (var i = 0; needsHeaderRow() && i < _results.data.length; i++) _results.data[i].forEach(addHeader);
 
                 _results.data.splice(0, 1);
             }
@@ -1090,8 +1059,7 @@ License: MIT
         }
 
         function applyHeaderAndDynamicTypingAndTransformation() {
-            if (!_results || (!_config.header && !_config.dynamicTyping && !_config.transform))
-                return _results;
+            if (!_results || (!_config.header && !_config.dynamicTyping && !_config.transform)) return _results;
 
             function processRow(rowSource, i) {
                 var row = _config.header ? {} : [];
@@ -1118,20 +1086,14 @@ License: MIT
                         addError(
                             'FieldMismatch',
                             'TooManyFields',
-                            'Too many fields: expected ' +
-                                _fields.length +
-                                ' fields but parsed ' +
-                                j,
+                            'Too many fields: expected ' + _fields.length + ' fields but parsed ' + j,
                             _rowCounter + i
                         );
                     else if (j < _fields.length)
                         addError(
                             'FieldMismatch',
                             'TooFewFields',
-                            'Too few fields: expected ' +
-                                _fields.length +
-                                ' fields but parsed ' +
-                                j,
+                            'Too few fields: expected ' + _fields.length + ' fields but parsed ' + j,
                             _rowCounter + i
                         );
                 }
@@ -1154,14 +1116,7 @@ License: MIT
         function guessDelimiter(input, newline, skipEmptyLines, comments, delimitersToGuess) {
             var bestDelim, bestDelta, fieldCountPrevRow, maxFieldCount;
 
-            delimitersToGuess = delimitersToGuess || [
-                ',',
-                '\t',
-                '|',
-                ';',
-                Papa.RECORD_SEP,
-                Papa.UNIT_SEP
-            ];
+            delimitersToGuess = delimitersToGuess || [',', '\t', '|', ';', Papa.RECORD_SEP, Papa.UNIT_SEP];
 
             for (var i = 0; i < delimitersToGuess.length; i++) {
                 var delim = delimitersToGuess[i];
@@ -1218,10 +1173,7 @@ License: MIT
         function guessLineEndings(input, quoteChar) {
             input = input.substring(0, 1024 * 1024); // max length 1 MB
             // Replace all the text inside quotes
-            var re = new RegExp(
-                escapeRegExp(quoteChar) + '([^]*?)' + escapeRegExp(quoteChar),
-                'gm'
-            );
+            var re = new RegExp(escapeRegExp(quoteChar) + '([^]*?)' + escapeRegExp(quoteChar), 'gm');
             input = input.replace(re, '');
 
             var r = input.split('\r');
@@ -1286,8 +1238,7 @@ License: MIT
         // Comment character must be valid
         if (comments === delim) throw new Error('Comment character same as delimiter');
         else if (comments === true) comments = '#';
-        else if (typeof comments !== 'string' || Papa.BAD_DELIMITERS.indexOf(comments) > -1)
-            comments = false;
+        else if (typeof comments !== 'string' || Papa.BAD_DELIMITERS.indexOf(comments) > -1) comments = false;
 
         // Newline must be valid: \r, \n, or \r\n
         if (newline !== '\n' && newline !== '\r' && newline !== '\r\n') newline = '\n';
@@ -1341,10 +1292,7 @@ License: MIT
 
             var nextDelim = input.indexOf(delim, cursor);
             var nextNewline = input.indexOf(newline, cursor);
-            var quoteCharRegex = new RegExp(
-                escapeRegExp(escapeChar) + escapeRegExp(quoteChar),
-                'g'
-            );
+            var quoteCharRegex = new RegExp(escapeRegExp(escapeChar) + escapeRegExp(quoteChar), 'g');
             var quoteSearch = input.indexOf(quoteChar, cursor);
 
             // Parser loop
@@ -1378,9 +1326,7 @@ License: MIT
 
                         // Closing quote at EOF
                         if (quoteSearch === inputLen - 1) {
-                            var value = input
-                                .substring(cursor, quoteSearch)
-                                .replace(quoteCharRegex, quoteChar);
+                            var value = input.substring(cursor, quoteSearch).replace(quoteCharRegex, quoteChar);
                             return finish(value);
                         }
 
@@ -1392,11 +1338,7 @@ License: MIT
                         }
 
                         // If the quote character is not the escape character, then check if the previous character was the escape character
-                        if (
-                            quoteChar !== escapeChar &&
-                            quoteSearch !== 0 &&
-                            input[quoteSearch - 1] === escapeChar
-                        ) {
+                        if (quoteChar !== escapeChar && quoteSearch !== 0 && input[quoteSearch - 1] === escapeChar) {
                             continue;
                         }
 
@@ -1407,25 +1349,16 @@ License: MIT
                             nextNewline = input.indexOf(newline, quoteSearch + 1);
                         }
                         // Check up to nextDelim or nextNewline, whichever is closest
-                        var checkUpTo =
-                            nextNewline === -1 ? nextDelim : Math.min(nextDelim, nextNewline);
+                        var checkUpTo = nextNewline === -1 ? nextDelim : Math.min(nextDelim, nextNewline);
                         var spacesBetweenQuoteAndDelimiter = extraSpaces(checkUpTo);
 
                         // Closing quote followed by delimiter or 'unnecessary spaces + delimiter'
                         if (input[quoteSearch + 1 + spacesBetweenQuoteAndDelimiter] === delim) {
-                            row.push(
-                                input
-                                    .substring(cursor, quoteSearch)
-                                    .replace(quoteCharRegex, quoteChar)
-                            );
+                            row.push(input.substring(cursor, quoteSearch).replace(quoteCharRegex, quoteChar));
                             cursor = quoteSearch + 1 + spacesBetweenQuoteAndDelimiter + delimLen;
 
                             // If char after following delimiter is not quoteChar, we find next quote char position
-                            if (
-                                input[
-                                    quoteSearch + 1 + spacesBetweenQuoteAndDelimiter + delimLen
-                                ] !== quoteChar
-                            ) {
+                            if (input[quoteSearch + 1 + spacesBetweenQuoteAndDelimiter + delimLen] !== quoteChar) {
                                 quoteSearch = input.indexOf(quoteChar, cursor);
                             }
                             nextDelim = input.indexOf(delim, cursor);
@@ -1442,11 +1375,7 @@ License: MIT
                                 quoteSearch + 1 + spacesBetweenQuoteAndNewLine + newlineLen
                             ) === newline
                         ) {
-                            row.push(
-                                input
-                                    .substring(cursor, quoteSearch)
-                                    .replace(quoteCharRegex, quoteChar)
-                            );
+                            row.push(input.substring(cursor, quoteSearch).replace(quoteCharRegex, quoteChar));
                             saveRow(quoteSearch + 1 + spacesBetweenQuoteAndNewLine + newlineLen);
                             nextDelim = input.indexOf(delim, cursor); // because we may have skipped the nextDelim in the quoted field
                             quoteSearch = input.indexOf(quoteChar, cursor); // we search for first quote in next line
@@ -1478,11 +1407,7 @@ License: MIT
                 }
 
                 // Comment found at start of new line
-                if (
-                    comments &&
-                    row.length === 0 &&
-                    input.substring(cursor, cursor + commentsLen) === comments
-                ) {
+                if (comments && row.length === 0 && input.substring(cursor, cursor + commentsLen) === comments) {
                     if (nextNewline === -1)
                         // Comment ends at EOF
                         return returnable();
@@ -1497,11 +1422,7 @@ License: MIT
                     // we check, if we have quotes, because delimiter char may be part of field enclosed in quotes
                     if (quoteSearch > nextDelim) {
                         // we have quotes, so we try to find the next delimiter not enclosed in quotes and also next starting quote char
-                        var nextDelimObj = getNextUnquotedDelimiter(
-                            nextDelim,
-                            quoteSearch,
-                            nextNewline
-                        );
+                        var nextDelimObj = getNextUnquotedDelimiter(nextDelim, quoteSearch, nextNewline);
 
                         // if we have next delimiter char which is not enclosed in quotes
                         if (nextDelimObj && typeof nextDelimObj.nextDelim !== 'undefined') {
@@ -1554,10 +1475,7 @@ License: MIT
                 var spaceLength = 0;
                 if (index !== -1) {
                     var textBetweenClosingQuoteAndIndex = input.substring(quoteSearch + 1, index);
-                    if (
-                        textBetweenClosingQuoteAndIndex &&
-                        textBetweenClosingQuoteAndIndex.trim() === ''
-                    ) {
+                    if (textBetweenClosingQuoteAndIndex && textBetweenClosingQuoteAndIndex.trim() === '') {
                         spaceLength = textBetweenClosingQuoteAndIndex.length;
                     }
                 }

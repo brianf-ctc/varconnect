@@ -28,7 +28,7 @@ define([
     'N/url',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
-    './CTC_VC_Lib_MainConfiguration.js'
+    './Services/ctc_svclib_configlib.js'
 ], function (
     ns_ui,
     ns_search,
@@ -40,7 +40,7 @@ define([
     ns_url,
     vc2_util,
     vc2_constant,
-    lib_maincfg
+    vcs_configLib
 ) {
     var LogTitle = 'SL:BulkSerials';
 
@@ -231,9 +231,7 @@ define([
                     itemObj.itemId = itemsField[i].id;
 
                     // get new sn's and strip out any carriage return/new lines
-                    var newSNStr = getNewSNStr(params, itemsField[i].id)
-                        .replace(/\\n/g, ',')
-                        .replace(/\\r/g, ',');
+                    var newSNStr = getNewSNStr(params, itemsField[i].id).replace(/\\n/g, ',').replace(/\\r/g, ',');
 
                     vc2_util.log(logTitle, 'Item ', newSNStr);
                     if (!isEmpty(newSNStr)) {
@@ -283,28 +281,18 @@ define([
         }
     }
 
-    function _loadMainConfig() {
-        var logTitle = [LogTitle, '_loadMainConfig'].join('::');
-
-        var mainConfig = lib_maincfg.getMainConfiguration();
-
-        if (!mainConfig) {
-            log.error('No Coniguration available');
-            //    			throw new Error('No Coniguration available');
-        } else return mainConfig;
-    }
-
     function createAndSaveFile(outputObj, poField) {
         var logTitle = [LogTitle, 'createAndSaveFile'].join('::');
 
-        var mainConfig = _loadMainConfig(),
-            fileObj = ns_file.create({
-                name: poField + 'Serials.txt',
-                fileType: ns_file.Type.PLAINTEXT,
-                contents: JSON.stringify(outputObj)
-            });
+        var MainCFG = vcs_configLib.mainConfig();
+
+        var fileObj = ns_file.create({
+            name: poField + 'Serials.txt',
+            fileType: ns_file.Type.PLAINTEXT,
+            contents: JSON.stringify(outputObj)
+        });
         //            fileObj.folder = PO_SERIAL_NUMBER_FOLDER;
-        fileObj.folder = mainConfig.serialNoFolder;
+        fileObj.folder = MainCFG.serialNoFolder;
 
         var id = fileObj.save();
 

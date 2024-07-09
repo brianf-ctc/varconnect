@@ -13,15 +13,15 @@
  * @NScriptType Suitelet
  */
 
-define([
-    'N/ui/serverWidget',
-    'N/email',
-    'N/runtime',
-    'N/log',
-    'N/search',
-    'N/record',
-    'N/http'
-], function (ui, email, runtime, log, search, rec, http) {
+define(['N/ui/serverWidget', 'N/email', 'N/runtime', 'N/log', 'N/search', 'N/record', 'N/http'], function (
+    ui,
+    email,
+    runtime,
+    log,
+    search,
+    rec,
+    http
+) {
     const SUBLIST_ID = 'custpage_items';
 
     const PO_TRANSACTION_ID = 15;
@@ -69,10 +69,7 @@ define([
 
         if (isEmpty(searchType)) return;
 
-        log.debug(
-            'in doGet ',
-            'filterType = ' + filterType + ' scriptOrderNum = ' + scriptOrderNum
-        );
+        log.debug('in doGet ', 'filterType = ' + filterType + ' scriptOrderNum = ' + scriptOrderNum);
 
         // Get the current transaction's ID and created from ID
         var itemfulfillmentSearchObj = search.create({
@@ -330,11 +327,7 @@ define([
             filterList = [
                 ['custrecordserialitem', 'anyof', itemID],
                 'AND',
-                [
-                    ['custrecordserialinvoice', 'anyof', parentID],
-                    'OR',
-                    ['custrecordserialsales', 'anyof', parentID]
-                ],
+                [['custrecordserialinvoice', 'anyof', parentID], 'OR', ['custrecordserialsales', 'anyof', parentID]],
                 'AND',
                 ['custrecordrmanumber', 'anyof', '@NONE@']
             ];
@@ -348,7 +341,10 @@ define([
             ];
         }
 
-        var customrecordserialnumSearchObj = search.create({
+        // only show active serials
+        filterList.push('AND', ['isinactive', 'is', 'F']);
+
+        var customSerialSearchObj = search.create({
             type: 'customrecordserialnum',
             filters: filterList,
             columns: [
@@ -362,9 +358,10 @@ define([
             ]
         });
 
-        var searchResultCount = customrecordserialnumSearchObj.runPaged().count;
-        log.debug('customrecordserialnumSearchObj result count', searchResultCount);
-        customrecordserialnumSearchObj.run().each(function (result) {
+        var searchResultCount = customSerialSearchObj.runPaged().count;
+        log.debug('customSerialSearchObj result count', searchResultCount);
+
+        customSerialSearchObj.run().each(function (result) {
             // .run().each has a limit of 4,000 results
             var serialsObj = {
                 sn_id: result.id,

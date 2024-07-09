@@ -87,10 +87,7 @@ require([
                 });
 
                 if (BillData.VendorData && BillData.VendorData.hasOwnProperty('ignoreVariance')) {
-                    Current.ignoreVariance = !!vc2_util.inArray(
-                        BillData.VendorData.ignoreVariance,
-                        ['T', 't', true]
-                    );
+                    Current.ignoreVariance = !!vc2_util.inArray(BillData.VendorData.ignoreVariance, ['T', 't', true]);
                 }
 
                 /// =====================================
@@ -115,8 +112,7 @@ require([
 
                     returnObj = JSON.parse(JSON.stringify(billRec));
                     returnObj.existingBills = JSON.stringify(arrExistingBills);
-                    returnObj.details =
-                        'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
+                    returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
                     util.extend(returnObj, BILL_CREATOR.Code.EXISTING_BILLS);
 
                     return returnObj;
@@ -171,10 +167,7 @@ require([
                     if (BillData.HasErrors) {
                         /// just get the first error
                         var errorCode = BillData.ErrorList.shift();
-                        return util.extend(
-                            returnObj,
-                            BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' }
-                        );
+                        return util.extend(returnObj, BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' });
                     }
                 }
                 /// =====================================
@@ -339,10 +332,7 @@ require([
                 returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
                 returnObj.isError = true;
                 if (error.logstatus) returnObj.logstatus = error.logstatus;
-                returnObj.msg = [
-                    returnObj.msg,
-                    returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' ');
+                returnObj.msg = [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join(' ');
 
                 vc2_util.log(logTitle, '## ERROR ## ', returnObj);
             } finally {

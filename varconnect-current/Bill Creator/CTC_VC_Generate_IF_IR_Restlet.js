@@ -21,9 +21,8 @@ define([
     './../CTC_VC2_Constants',
     './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Lib_Record',
-    './../CTC_VC_Lib_MainConfiguration',
     './../CTC_VC_Lib_Record.js',
-    './../CTC_VC_Lib_VendorConfig',
+    './../Services/ctc_svclib_configlib',
     './Libraries/moment'
 ], function (
     ns_record,
@@ -33,9 +32,8 @@ define([
     vc2_constant,
     vc2_util,
     vc_recordlib,
-    vc_maincfg,
     vc_nslib,
-    vc_vendorcfg,
+    vcs_configLib,
     moment
 ) {
     var LogTitle = 'VC|Generate IF/IR',
@@ -93,8 +91,7 @@ define([
                     recordId: Current.poId
                 });
 
-                if (!Current.isRecievable)
-                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!Current.isRecievable) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 Current.PO_REC = ns_record.load({
                     type: 'purchaseorder',
@@ -130,19 +127,13 @@ define([
 
                 if (Current.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
 
-                var mainConfig = vc_maincfg.getMainConfiguration(),
-                    vendorConfig = Helper.loadVendorConfig({
-                        vendor: Current.PO_DATA.entity,
-                        subsidiary: Current.PO_DATA.subsidiary,
-                        vendorName: Current.PO_DATA.entity_text
-                    }),
-                    vendorCfg = Helper.loadBillVendorConfig({
-                        entity: Current.PO_DATA.entity.value || Current.PO_DATA.entity
-                    });
+                var MainCFG = vcs_configLib.mainConfig();
+                var BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId });
+                var OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
 
                 // vc_billprocess.preprocessBill({
                 //     recOrder: Current.PO_REC,
-                //     vendorConfig: vendorCfg,
+                //     orderConfig: BillCFG,
                 //     billFileId: Current.billFileId
                 // });
 
@@ -155,8 +146,7 @@ define([
                 //         );
                 // }
 
-                if (!vendorCfg.ENABLE_FULFILLLMENT)
-                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!BillCFG.enableFulfillment) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 // check if IF/IR already exists and if so link it back to the file
                 if (Helper.isTransactionExists({ invoice: Current.billPayload.invoice }))
@@ -233,8 +223,8 @@ define([
 
                 var arrLines = Helper.preprocessFulfillLine({
                     record: recItemFF,
-                    mainConfig: mainConfig,
-                    vendorConfig: vendorConfig
+                    mainConfig: MainCFG,
+                    orderConfig: OrderCFG
                 });
 
                 vc2_util.log(logTitle, '// Payload lines: ', Current.billPayload.lines);
@@ -251,12 +241,9 @@ define([
                     if (billLine.AVAILQTY > 0) arrUnprocessedLines.push(billLine.ITEMNO);
                     return true;
                 });
-                if (arrMissingSKUs.length)
-                    throw 'Does not have SKU assigned -- ' + arrMissingSKUs.join(', ');
+                if (arrMissingSKUs.length) throw 'Does not have SKU assigned -- ' + arrMissingSKUs.join(', ');
                 if (arrUnprocessedLines.length)
-                    throw (
-                        'Could not fully process Fulfillment -- ' + arrUnprocessedLines.join(', ')
-                    );
+                    throw 'Could not fully process Fulfillment -- ' + arrUnprocessedLines.join(', ');
 
                 var lineCount = recItemFF.getLineCount({ sublistId: 'item' });
 
@@ -271,11 +258,7 @@ define([
                             filter: { line: line }
                         });
 
-                        if (
-                            !lineData ||
-                            !lineData.matchingLines ||
-                            vc2_util.isEmpty(lineData.matchingLines)
-                        ) {
+                        if (!lineData || !lineData.matchingLines || vc2_util.isEmpty(lineData.matchingLines)) {
                             // unselect the item receive
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'item',
@@ -333,21 +316,16 @@ define([
                         //     value: totalAppliedQty
                         // });
 
-                        if (
-                            !vc2_util.isEmpty(poLineData) &&
-                            totalAppliedQty == poLineData.quantity
-                        ) {
+                        if (!vc2_util.isEmpty(poLineData) && totalAppliedQty == poLineData.quantity) {
                             var poTrackingNum =
                                     poLineData.custcol_ctc_xml_tracking_num ||
                                     poLineData.custcol_ctc_xml_inb_tracking_num,
                                 poSerialNum = poLineData.custcol_ctc_xml_serial_num;
 
                             // update the itemff lines
-                            if (poTrackingNum && poTrackingNum != 'NA')
-                                arrLineTracking = poTrackingNum.split(/\n/g);
+                            if (poTrackingNum && poTrackingNum != 'NA') arrLineTracking = poTrackingNum.split(/\n/g);
 
-                            if (poSerialNum && poSerialNum != 'NA')
-                                arrLineSerials = poSerialNum.split(/\n/g);
+                            if (poSerialNum && poSerialNum != 'NA') arrLineSerials = poSerialNum.split(/\n/g);
 
                             orderLineFields.forEach(function (poLineFld) {
                                 var poLineValue = poLineData[poLineFld];
@@ -368,8 +346,7 @@ define([
                                     return true;
 
                                 // skip empty values
-                                if (vc2_util.isEmpty(poLineValue) || poLineValue == 'NA')
-                                    return true;
+                                if (vc2_util.isEmpty(poLineValue) || poLineValue == 'NA') return true;
 
                                 updateItemFFline[poLineFld] = poLineValue;
                                 return true;
@@ -379,19 +356,15 @@ define([
                         var formattedTracking = '';
                         arrLineTracking.forEach(function (tracking) {
                             formattedTracking += tracking + '\r\n';
-                            if (!vc2_util.inArray(tracking, arrTrackingNums))
-                                arrTrackingNums.push(tracking);
+                            if (!vc2_util.inArray(tracking, arrTrackingNums)) arrTrackingNums.push(tracking);
                         });
 
-                        if (formattedTracking)
-                            updateItemFFline['custcol_ctc_xml_tracking_num'] = formattedTracking;
+                        if (formattedTracking) updateItemFFline['custcol_ctc_xml_tracking_num'] = formattedTracking;
 
                         if (Current.billPayload.carrier) {
-                            updateItemFFline['custcol_ctc_xml_ship_method'] =
-                                Current.billPayload.carrier;
+                            updateItemFFline['custcol_ctc_xml_ship_method'] = Current.billPayload.carrier;
 
-                            updateItemFFline['custcol_ctc_xml_carrier'] =
-                                Current.billPayload.carrier;
+                            updateItemFFline['custcol_ctc_xml_carrier'] = Current.billPayload.carrier;
                         }
 
                         vc2_util.log(logTitle, '/// item ff line:  ', updateItemFFline);
@@ -413,11 +386,7 @@ define([
                                 if (totalAppliedQty <= 0) return;
                                 if (vc2_util.inArray(serial, arrAppliedSerials)) return;
 
-                                vc2_util.log(logTitle, '...serial:', [
-                                    serial,
-                                    totalAppliedQty,
-                                    arrAppliedSerials
-                                ]);
+                                vc2_util.log(logTitle, '...serial:', [serial, totalAppliedQty, arrAppliedSerials]);
 
                                 subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
                                     sublistId: 'item',
@@ -487,8 +456,8 @@ define([
 
                 // update the PO
                 Helper.updatePOLines({
-                    mainConfig: mainConfig,
-                    vendorConfig: vendorConfig
+                    mainConfig: MainCFG,
+                    orderConfig: OrderCFG
                 });
 
                 var newRecordId;
@@ -499,10 +468,7 @@ define([
                 }
                 if (!newRecordId) throw 'Unable to create item fulfillment';
 
-                vc2_util.log(
-                    logTitle,
-                    '/// Item Fulfillment created... [itemfulfillment:' + newRecordId + ']'
-                );
+                vc2_util.log(logTitle, '/// Item Fulfillment created... [itemfulfillment:' + newRecordId + ']');
 
                 util.extend(returnObj, {
                     id: newRecordId,
@@ -587,70 +553,7 @@ define([
 
             return returnValue;
         },
-        loadBillVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadBillVendorConfig'].join('::'),
-                returnValue;
-            var entityId = option.entity;
-            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
 
-            try {
-                var searchOption = {
-                    type: 'vendor',
-                    filters: [['internalid', 'anyof', entityId]],
-                    columns: []
-                };
-
-                for (var field in BILLCREATE_CFG.FIELD) {
-                    searchOption.columns.push(
-                        ns_search.createColumn({
-                            name: BILLCREATE_CFG.FIELD[field],
-                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                        })
-                    );
-                }
-
-                var searchObj = ns_search.create(searchOption);
-                if (!searchObj.runPaged().count) throw 'No config available';
-
-                returnValue = {};
-                searchObj.run().each(function (row) {
-                    for (var field in BILLCREATE_CFG.FIELD) {
-                        returnValue[field] = row.getValue({
-                            name: BILLCREATE_CFG.FIELD[field],
-                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                        });
-                    }
-                    return true;
-                });
-
-                vc2_util.log(logTitle, '// config: ', returnValue);
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
-            }
-
-            return returnValue;
-        },
-        loadVendorConfig: function (option) {
-            var logTitle = [LogTitle, 'loadVendorConfig'].join('::');
-
-            var vendor = option.vendor,
-                vendorName = option.vendorName,
-                subsidiary = option.subsidiary,
-                vendorConfig = vc_vendorcfg.getVendorConfiguration({
-                    vendor: vendor,
-                    subsidiary: subsidiary
-                });
-
-            if (!vendorConfig) {
-                vc2_util.log(
-                    logTitle,
-                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-                );
-            }
-
-            return vendorConfig;
-        },
         addNativePackages: function (data) {
             var logTitle = [LogTitle, 'addNativePackages'].join('::');
 
@@ -701,9 +604,8 @@ define([
                 logPrefix = '';
 
             // CURRENT.billPayload.lines
-            var itemAltNameColId =
-                    option.vendorConfig.itemColumnIdToMatch ||
-                    option.mainConfig.itemColumnIdToMatch,
+            var itemAltNameColId = option.orderConfig.itemColumnIdToMatch || option.mainConfig.itemColumnIdToMatch,
+                itemMPNColId = option.orderConfig.itemMPNColumnIdToMatch || option.mainConfig.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -716,10 +618,15 @@ define([
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
             }
+            if (itemMPNColId) {
+                poColumns.push(itemMPNColId);
+            }
             var arrFulfillLines = vc_recordlib.extractRecordLines({
                 record: option.record,
                 findAll: true,
-                columns: poColumns
+                columns: poColumns,
+                orderConfig: option.orderConfig,
+                mainConfig: option.mainConfig
             });
             // sort by quantity
             arrFulfillLines = arrFulfillLines.sort(function (a, b) {
@@ -743,9 +650,7 @@ define([
                     return value > 0;
                 }
             };
-            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (
-                value
-            ) {
+            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (value) {
                 return value && vc2_util.inArray(itemffLine.item, value.split('\n'));
             };
             arrFulfillLines.forEach(function (itemffLine) {
@@ -772,6 +677,28 @@ define([
                             dataSet: Current.billPayload.lines,
                             findAll: true,
                             filter: {
+                                nsitem: itemffLine.alternativeItemName2,
+                                quantity: itemffLine.quantity,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeSKU,
+                                quantity: itemffLine.quantity,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
                                 nsitem: itemffLine.item,
                                 quantity: itemffLine.quantity,
                                 AVAILQTY: function (value) {
@@ -786,6 +713,26 @@ define([
                             findAll: true,
                             filter: {
                                 nsitem: itemffLine.alternativeItemName,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeItemName2,
+                                AVAILQTY: function (value) {
+                                    return value > 0;
+                                }
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            dataSet: Current.billPayload.lines,
+                            findAll: true,
+                            filter: {
+                                nsitem: itemffLine.alternativeSKU,
                                 AVAILQTY: function (value) {
                                     return value > 0;
                                 }
@@ -827,9 +774,7 @@ define([
                     if (itemffLine.AVAILQTY <= 0) return;
 
                     var qtyToApply =
-                        matchedLine.AVAILQTY >= itemffLine.AVAILQTY
-                            ? itemffLine.AVAILQTY
-                            : matchedLine.AVAILQTY;
+                        matchedLine.AVAILQTY >= itemffLine.AVAILQTY ? itemffLine.AVAILQTY : matchedLine.AVAILQTY;
 
                     vc2_util.log(logTitle, logPrefix + '..... applied qty: ', qtyToApply);
 
@@ -924,9 +869,7 @@ define([
                     if (billLine.AVAILQTY <= 0) return;
 
                     var qtyToApply =
-                        matchedLine.AVAILQTY >= billLine.AVAILQTY
-                            ? billLine.AVAILQTY
-                            : matchedLine.AVAILQTY;
+                        matchedLine.AVAILQTY >= billLine.AVAILQTY ? billLine.AVAILQTY : matchedLine.AVAILQTY;
 
                     billLine.AVAILQTY -= qtyToApply;
                     matchedLine.AVAILQTY -= qtyToApply;
@@ -956,8 +899,8 @@ define([
             var logTitle = [LogTitle, 'updatePOLines'].join('::');
 
             // get the vendor config
-            var mainConfig = option.mainConfig,
-                vendorConfig = option.vendorConfig;
+            var MainCFG = option.mainConfig,
+                OrderCFG = option.orderConfig;
             var billLines = [];
 
             Current.billPayload.lines.forEach(function (billLine) {
@@ -977,8 +920,8 @@ define([
                     isDynamic: true
                 }),
                 poNum: Current.poId,
-                mainConfig: mainConfig,
-                vendorConfig: vendorConfig,
+                mainConfig: MainCFG,
+                orderConfig: OrderCFG,
                 isDropPO:
                     Current.PO_DATA.dropshipso ||
                     Current.PO_DATA.custbody_ctc_po_link_type == 'Drop Shipment' ||

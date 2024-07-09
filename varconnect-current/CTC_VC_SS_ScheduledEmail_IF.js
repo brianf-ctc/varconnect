@@ -21,21 +21,11 @@ define([
     'N/search',
     'N/email',
     'N/record',
-    'N/runtime',
     'N/render',
-    './CTC_VC_Lib_MainConfiguration.js',
     './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js'
-], function (
-    ns_search,
-    ns_email,
-    ns_record,
-    ns_runtime,
-    ns_render,
-    lib_mainconfig,
-    vc2_util,
-    vc2_constant
-) {
+    './CTC_VC2_Constants.js',
+    './Services/ctc_svclib_configlib.js'
+], function (ns_search, ns_email, ns_record, ns_render, vc2_util, vc2_constant, vcs_configLib) {
     var CURRENT = {},
         LogTitle = 'Email-IF';
     var testEmail; // send to this email for testing
@@ -46,10 +36,10 @@ define([
         var startTime = new Date();
 
         try {
-            CURRENT.mainConfig = lib_mainconfig.getMainConfiguration();
-            CURRENT.senderId = CURRENT.mainConfig.emailSender;
-            CURRENT.emailTemplate = CURRENT.mainConfig.emailTemplate;
-            CURRENT.searchId = CURRENT.mainConfig.fulfillmentSearch;
+            CURRENT.MainCFG = vcs_configLib.mainConfig();
+            CURRENT.senderId = CURRENT.MainCFG.emailSender;
+            CURRENT.emailTemplate = CURRENT.MainCFG.emailTemplate;
+            CURRENT.searchId = CURRENT.MainCFG.fulfillmentSearch;
 
             log.debug(logTitle, '*********** Script Execution Start: ' + JSON.stringify(context));
             log.debug(logTitle, '... config settings: ' + JSON.stringify(CURRENT));
@@ -127,8 +117,7 @@ define([
         } finally {
             log.debug(
                 logTitle,
-                '******* Script Execution End: ' +
-                    JSON.stringify({ durationms: new Date() - startTime })
+                '******* Script Execution End: ' + JSON.stringify({ durationms: new Date() - startTime })
             );
         }
 

@@ -33,19 +33,8 @@ define([
     'N/runtime',
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils',
-    '../CTC_VC_Lib_MainConfiguration.js',
-    '../CTC_VC_Lib_LicenseValidator',
     '../Services/ctc_svclib_configlib.js'
-], function (
-    ns_record,
-    ns_search,
-    ns_runtime,
-    vc2_constant,
-    vc2_util,
-    vc_maincfg,
-    vc_license,
-    vcs_configLib
-) {
+], function (ns_record, ns_search, ns_runtime, vc2_constant, vc2_util, vcs_configLib) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
         PARAM = {};
@@ -53,7 +42,7 @@ define([
     var COLUMN = vc2_constant.FIELD.TRANSACTION;
 
     var ERROR_MSG = vc2_constant.ERRORMSG,
-    LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     var MAP_REDUCE = {
         getInputData: function () {
@@ -71,13 +60,13 @@ define([
 
                 if (!PARAM.recordType || !PARAM.recordId) throw 'Missing record details';
 
-                var mainConfig = vcs_configLib.mainConfig();
-                vc2_util.log(logTitle, '>> mainConfig: ', mainConfig);
+                var MainCFG = vcs_configLib.mainConfig();
+                vc2_util.log(logTitle, '>> mainConfig: ', MainCFG);
 
                 var license = vcs_configLib.validateLicense();
                 if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
-                if (!mainConfig || !mainConfig.copySerialsInv) {
+                if (!MainCFG || !MainCFG.copySerialsInv) {
                     //Terminate if Copy Serials functionality is not set
                     throw 'Copy serials functionality is not set';
                 }
@@ -186,11 +175,7 @@ define([
                             }
                         }
                     } catch (subrec_error) {
-                        vc2_util.log(
-                            logTitle,
-                            '## SUBREC ERROR ##',
-                            vc2_util.extractError(subrec_error)
-                        );
+                        vc2_util.log(logTitle, '## SUBREC ERROR ##', vc2_util.extractError(subrec_error));
                     }
                     vc2_util.log(logTitle, '....// lineData: ', lineData);
 
@@ -232,20 +217,15 @@ define([
                 };
 
                 if (PARAM.recordType == ns_record.Type.ITEM_FULFILLMENT) {
-                    searchOption.filters.push('AND', [
-                        SERIAL_FLD.ITEM_FULFILLMENT,
-                        'anyof',
-                        '@NONE@'
-                    ]);
+                    searchOption.filters.push('AND', [SERIAL_FLD.ITEM_FULFILLMENT, 'anyof', '@NONE@']);
                 } else if (PARAM.recordType == ns_record.Type.INVOICE) {
                     // just include serials that has not yet invoice-tagged, but itemff-tagged
 
-                    searchOption.filters.push(
-                        'AND',
-                        [SERIAL_FLD.ITEM_FULFILLMENT, 'noneof', '@NONE@'],
-                        'AND',
-                        [SERIAL_FLD.INVOICE, 'anyof', '@NONE@']
-                    );
+                    searchOption.filters.push('AND', [SERIAL_FLD.ITEM_FULFILLMENT, 'noneof', '@NONE@'], 'AND', [
+                        SERIAL_FLD.INVOICE,
+                        'anyof',
+                        '@NONE@'
+                    ]);
                 }
 
                 vc2_util.log(logTitle, '// Search Option: ', searchOption);
@@ -325,6 +305,8 @@ define([
                     updateValue[SERIAL_FLD.INVOICE] = PARAM.recordId;
                 }
 
+                vc2_util.log(logTitle, '>> update Value: ', updateValue);
+
                 if (!Helper.isEmpty(updateValue))
                     serialNumID = ns_record.submitFields({
                         type: vc2_constant.RECORD.SERIALS.ID,
@@ -359,10 +341,7 @@ define([
                 return true;
             });
             // if (reduceKeys && reduceKeys.length > 0) Helper.updateTransaction();
-            log.audit(
-                logTitle,
-                LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys)
-            );
+            log.audit(logTitle, LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys));
 
             // update the sync
             ns_record.submitFields({
@@ -372,37 +351,14 @@ define([
                     custbody_ctc_vc_serialsync_done: true
                 }
             });
+
+            Helper.cleanUpDeployment({
+                scriptId: vc2_constant.SCRIPT.SERIAL_UPDATE_ALL_MR
+            });
         }
     };
 
     var Helper = {
-        validateLicense: function (options) {
-            var mainConfig = options.mainConfig,
-                license = mainConfig.license,
-                response = vc_license.callValidationSuitelet({
-                    license: license,
-                    external: true
-                }),
-                result = true;
-
-            if (response == 'invalid') {
-                log.error(
-                    'License expired',
-                    'License is no longer valid or have expired. Please contact damon@nscatalyst.com to get a new license. Your product has been disabled.'
-                );
-                result = false;
-            }
-
-            return result;
-        },
-
-        loadMainConfig: function () {
-            var mainConfig = vc_maincfg.getMainConfiguration();
-
-            if (!mainConfig) {
-                log.error('No VAR Connect Main Coniguration available');
-            } else return mainConfig;
-        },
         isEmpty: function (stValue) {
             return (
                 stValue === '' ||
@@ -434,9 +390,7 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
                 }
             }
             return arrData;
@@ -492,9 +446,7 @@ define([
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize
-                            ? pagedResults.data
-                            : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results
@@ -519,6 +471,47 @@ define([
             //     });
             //     rec.save();
             // }
+        },
+
+        cleanUpDeployment: function (option) {
+            var logTitle = [LogTitle, 'cleanUpDeployment'].join('::');
+
+            var searchDeploy = ns_search.create({
+                type: ns_search.Type.SCRIPT_DEPLOYMENT,
+                filters: [
+                    ['script.scriptid', 'is', option.scriptId],
+                    'AND',
+                    ['status', 'is', 'NOTSCHEDULED'],
+                    'AND',
+                    ['isdeployed', 'is', 'T']
+                ],
+                columns: ['scriptid']
+            });
+
+            var maxAllowed = option.max || 100; // only allow 100
+            var arrResults = vc2_util.searchGetAllResult(searchDeploy);
+
+            vc2_util.log(logTitle, '>> cleanup : ', {
+                maxAllowed: maxAllowed,
+                totalResults: arrResults.length
+            });
+            if (maxAllowed > arrResults.length) return;
+
+            var currentScript = ns_runtime.getCurrentScript();
+            var countDelete = arrResults.length - maxAllowed;
+            var idx = 0;
+
+            while (countDelete-- && currentScript.getRemainingUsage() > 100) {
+                try {
+                    ns_record.delete({
+                        type: ns_record.Type.SCRIPT_DEPLOYMENT,
+                        id: arrResults[idx++].id
+                    });
+                } catch (del_err) {}
+            }
+            vc2_util.log(logTitle, '// Total deleted: ', idx);
+
+            return true;
         }
     };
 

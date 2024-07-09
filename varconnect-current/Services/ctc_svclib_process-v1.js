@@ -8,94 +8,112 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.1
+ * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(function (require) {
-    const LogTitle = 'SVC:VCProcess',
+define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants.js'], function (
+    ns_search,
+    ns_record,
+    vc2_util,
+    vc2_constant
+) {
+    var LogTitle = 'SVC:VCProcess',
         LOG_APP = 'VCProcess';
-
-    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('../CTC_VC2_Constants.js'),
-        vcs_websvclib = require('./ctc_svclib_webservice-v1.js'),
-        vcs_recordsLib = require('./ctc_svclib_records.js'),
-        vcs_configLib = require('./ctc_svclib_configlib.js'),
-        vc2_record = require('./../CTC_VC2_Lib_Record.js');
-
-    var ns_search = require('N/search'),
-        ns_record = require('N/record'),
-        ns_error = require('N/error');
 
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     return {
-        OrderStatus: function (option) {
-            var logTitle = [LogTitle, 'OrderStatus'].join(':'),
-                returnValue;
+        processSerials: function (option) {
+            var logTitle = [LogTitle, 'processSerials'].join(':'),
+                returnValue,
+                SERIAL_REC = vc2_constant.RECORD.SERIALS;
 
-            var poNum = option.poNum || option.tranid,
-                poId = option.poId || option.id;
+            var recordValues = {},
+                arrSearchCols = ['internalid', 'name'],
+                arrSerialFilters = [],
+                arrSerials = option.serials;
 
-            var poData = vcs_recordsLib.searchPO({ name: poNum, id: poId });
-            if (vc2_util.isEmpty(poData)) throw 'Unable to find Purchase Order';
+            if (vc2_util.isEmpty(arrSerials)) return false;
 
-            // load the PO Record
-            var PO_REC = vc2_record.load({
-                type: 'purchaseorder',
-                id: poData.id,
-                isDynamic: true
+            // make the list unique
+            arrSerials = vc2_util.uniqueArray(arrSerials);
+
+            vc2_util.log(logTitle, '// Total serials: ', arrSerials.length);
+
+            for (var fld in SERIAL_REC.FIELD) {
+                if (option[fld] == null) continue;
+                recordValues[SERIAL_REC.FIELD[fld]] = option[fld];
+                arrSearchCols.push(SERIAL_REC.FIELD[fld]);
+            }
+            vc2_util.log(logTitle, '>> record data: ', recordValues);
+
+            // search if serials are already existing
+            var searchOption = {
+                type: SERIAL_REC.ID,
+                filters: [['isinactive', 'is', 'F']],
+                columns: arrSearchCols
+            };
+
+            arrSerials.forEach(function (serial) {
+                if (arrSerialFilters.length) arrSerialFilters.push('OR');
+                arrSerialFilters.push(['name', 'is', serial]);
+                return true;
             });
 
-            poData.isDropPO =
-                PO_REC.getValue({ fieldId: 'dropshipso' }) ||
-                poData.custbody_ctc_po_link_type == 'Drop Shipment' ||
-                poData.custbody_isdropshippo;
+            searchOption.filters.push('AND', arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift());
 
-            vc2_util.log(logTitle, '>> PO Data: ', poData);
+            // vc2_util.log(logTitle, '>> searchOption: ', searchOption);
+            var serialSarchObj = ns_search.create(searchOption);
+            vc2_util.log(logTitle, '>> Total existing serials: ', serialSarchObj.runPaged().count);
 
-            // FILTER
-            if (!option.forceOrderStatus) {
-                if (poData.custbody_ctc_bypass_vc) throw ERROR_MSG.BYPASS_VARCONNECT;
-                if (vc2_util.isEmpty(poData.createdfrom)) throw 'Missing Sales Order';
-            }
+            // prepare serials creation/update
+            var arrUpdatedSerial = [],
+                arrAddedSerial = [],
+                arrProcessedSerial = [];
 
-            var vendor = poData.vendor
-                    ? poData.vendor.value || poData.vendor
-                    : poData.entityId
-                    ? poData.entityId.value || poData.entityId
-                    : null,
-                subsidiary = poData.subsidiary || null,
-                mainConfig = vcs_configLib.mainConfig(),
-                vendorConfig = vcs_configLib.vendorConfig({
-                    vendor: vendor,
-                    subsidiary: subsidiary
+            // First update the existing ones
+            serialSarchObj.run().each(function (searchRow) {
+                var serialNum = searchRow.getValue({ name: 'name' });
+                ns_record.submitFields({
+                    type: SERIAL_REC.ID,
+                    id: searchRow.id,
+                    values: recordValues,
+                    options: { enablesourcing: true }
                 });
+                arrUpdatedSerial.push(serialNum);
+                arrProcessedSerial.push(serialNum);
 
-            // get the output lines
-            var outputObj = vcs_websvclib.OrderStatus({
-                poNum: poNum,
-                poId: poId,
-                po_record: PO_REC,
-                configId: vendorConfig
+                vc2_util.log(logTitle, '>> Updated Serial: ', [serialNum, searchRow.id]);
+                return true;
             });
 
-            // if there are no lines.. just exit the script
-            if (
-                !outputObj.itemArray ||
-                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-            ) {
-                throw outputObj.isError && outputObj.errorMessage
-                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
-                    : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
-                          details: outputObj
-                      });
-            }
+            // then create the remainin
+            arrSerials.forEach(function (serial) {
+                if (vc2_util.inArray(serial, arrUpdatedSerial)) return;
 
-            // try to update the PO Lines
+                var recSerial = ns_record.create({ type: SERIAL_REC.ID });
+                recSerial.setValue({ fieldId: 'name', value: serial });
 
-            returnValue = outputObj;
-            return returnValue;
+                for (var fld in recordValues) {
+                    recSerial.setValue({ fieldId: fld, value: recordValues[fld] });
+                }
+                var serialId = recSerial.save();
+
+                vc2_util.log(logTitle, '>> New Serial ID: ', [serial, recordValues, serialId]);
+
+                arrAddedSerial.push(serial);
+                arrProcessedSerial.push(serial);
+            });
+
+            vc2_util.log(logTitle, '...total processed serials: ', {
+                recordValues: recordValues,
+                processed: arrProcessedSerial.length,
+                added: arrAddedSerial.length,
+                updated: arrUpdatedSerial.length
+            });
+
+            return true;
         }
     };
 });

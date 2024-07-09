@@ -61,10 +61,7 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
                 myObj.charges.other = 0;
                 myObj.total = 0;
             } else if (xmlObj[i][0] == '|D|') {
-                log.audit(
-                    'D&H Process XML',
-                    '>> Detail line: ' + JSON.stringify({ line: xmlObj[i] })
-                );
+                log.audit('D&H Process XML', '>> Detail line: ' + JSON.stringify({ line: xmlObj[i] }));
 
                 var lineObj = {};
 
@@ -77,10 +74,7 @@ define(['N/sftp', '../Libraries/papa'], function (ns_sftp, papa) {
 
                 myObj.lines.push(lineObj);
             } else if (xmlObj[i][0] == '|T|') {
-                log.audit(
-                    'D&H Process XML',
-                    '>> summary line: ' + JSON.stringify({ line: xmlObj[i] })
-                );
+                log.audit('D&H Process XML', '>> summary line: ' + JSON.stringify({ line: xmlObj[i] }));
 
                 // total charges
                 // vdeChargeAmount = TaxAmount + EHFTotal + (Tax1 + Tax2 + Tax3)

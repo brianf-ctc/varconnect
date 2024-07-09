@@ -19,11 +19,7 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Main Configuration record
  *
  */
-define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
-    ns_search,
-    vc2_constant,
-    vc2_util
-) {
+define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (ns_search, vc2_constant, vc2_util) {
     var MainCFG = vc2_constant.RECORD.MAIN_CONFIG;
     var mainConfigMap = {
         id: MainCFG.FIELD.ID,
@@ -65,7 +61,11 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
         autoprocShipVar: MainCFG.FIELD.AUTOPROC_SHIPVAR,
         autoprocOtherVar: MainCFG.FIELD.AUTOPROC_OTHERVAR,
         itemColumnIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
-        itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH
+        itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+        matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+        itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+        itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+        matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
     };
 
     function getMainConfiguration() {
@@ -83,16 +83,16 @@ define(['N/search', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils'], function (
             columns: fldsMainConfig
         });
 
-        var mainConfig = {};
+        var MainCFG = {};
 
         mainConfigSearch.run().each(function (row) {
             for (var fld in mainConfigMap) {
                 var rowValue = row.getValue({ name: mainConfigMap[fld] });
-                mainConfig[fld] = rowValue ? rowValue.value || rowValue : null;
+                MainCFG[fld] = rowValue ? rowValue.value || rowValue : null;
             }
             return true;
         });
-        return mainConfig;
+        return MainCFG;
     }
 
     return {

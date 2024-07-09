@@ -36,6 +36,7 @@ define(function (require) {
                 custcol_ctc_vc_order_placed_date: 'order_date', //date
                 custcol_ctc_vc_shipped_date: 'ship_date', //date
                 custcol_ctc_vc_eta_date: 'order_eta', //date
+                custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
                 custcol_ctc_xml_ship_date: 'ship_date', //text
                 custcol_ctc_xml_carrier: 'carrier', // text
                 custcol_ctc_xml_eta: 'order_eta', //textarea
@@ -53,6 +54,7 @@ define(function (require) {
                 'order_status',
                 'order_date',
                 'order_eta',
+                'order_delivery_eta',
                 'ship_date',
                 'tracking_num',
                 'carrier',
@@ -64,6 +66,7 @@ define(function (require) {
                 DATE: [
                     'custcol_ctc_vc_order_placed_date',
                     'custcol_ctc_vc_eta_date',
+                    'custcol_ctc_vc_delivery_eta_date',
                     'custcol_ctc_vc_prom_deliv_date',
                     'custcol_ctc_vc_shipped_date'
                 ],
@@ -111,10 +114,7 @@ define(function (require) {
                     }
 
                     if (!vc2_util.isEmpty(updateLineValues)) {
-                        vc2_util.log(logTitle, '// cleanup needed line data: ', [
-                            orderLineData,
-                            updateLineValues
-                        ]);
+                        vc2_util.log(logTitle, '// cleanup needed line data: ', [orderLineData, updateLineValues]);
 
                         updateLineValues.line = line;
                         vc2_record.updateLine({
@@ -215,7 +215,7 @@ define(function (require) {
             returnValue = cachedData;
 
             if (!cachedData || option.forced) {
-                var MainConfig = vcs_configLib.mainConfig();
+                var MainCFG = vcs_configLib.mainConfig();
                 var searchOption = {
                         type: 'purchaseorder',
                         filters: [['mainline', 'is', 'T'], 'AND', ['type', 'anyof', 'PurchOrd']],
@@ -243,7 +243,7 @@ define(function (require) {
                     searchOption.filters.push(['internalid', 'anyof', poId]);
                 } else if (poNum) {
                     searchOption.filters.push('AND');
-                    if (MainConfig.overridePONum) {
+                    if (MainCFG.overridePONum) {
                         searchOption.filters.push(['custbody_ctc_vc_override_ponum', 'is', poNum]);
                     } else {
                         searchOption.filters.push(['numbertext', 'is', poNum]);
@@ -258,8 +258,9 @@ define(function (require) {
                     };
 
                     for (var i = 0, j = searchOption.columns.length; i < j; i++) {
-                        PO_Data[searchOption.columns[i].name || searchOption.columns[i]] =
-                            searchResult.getValue({ name: searchOption.columns[i] });
+                        PO_Data[searchOption.columns[i].name || searchOption.columns[i]] = searchResult.getValue({
+                            name: searchOption.columns[i]
+                        });
                     }
                 }
                 returnValue = PO_Data || false;
@@ -282,7 +283,7 @@ define(function (require) {
             CURRENT.PO_RECORD = option.po_record || option.record;
             CURRENT.VendorLines = option.vendorLines;
             CURRENT.MainCFG = option.mainConfig;
-            CURRENT.VendorCFG = option.vendorConfig;
+            CURRENT.OrderCFG = option.orderConfig;
 
             if (!CURRENT.VendorLines) throw 'Missing vendor lines';
             if (!CURRENT.PO_RECORD) {
@@ -309,15 +310,14 @@ define(function (require) {
                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
             ];
 
-            var itemAltNameColId =
-                CURRENT.VendorCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
+            var itemAltNameColId = CURRENT.OrderCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
             if (itemAltNameColId) arrPOCols.push(itemAltNameColId);
 
             CURRENT.OrderLines = vc2_record.extractRecordLines({
                 record: CURRENT.PO_REC,
                 findAll: true,
                 mainConfig: CURRENT.MainCFG,
-                vendorConfig: CURRENT.VendorCFG,
+                orderConfig: CURRENT.OrderCFG,
                 columns: arrPOCols
             });
 

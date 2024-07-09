@@ -64,7 +64,11 @@ define(function (require) {
                 AUTOPROC_SHIPVAR: 'custrecord_ctc_vcbc_autopr_shipvar',
                 AUTOPROC_OTHERVAR: 'custrecord_ctc_vcbc_autopr_othervar',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_col_id',
-                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id'
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_cust_item_match_fld_id',
+                MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_cust_item_match_strict',
+                CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_col_id',
+                CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_fld_id',
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax'
             }
         },
         VENDOR_CONFIG: {
@@ -89,7 +93,11 @@ define(function (require) {
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
                 USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
-                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld'
+                CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld',
+                MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_item_match_strict',
+                CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_mpn_match_col_id',
+                CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_mpn_match_fld_id',
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_mpn_match_is_lax'
             }
         },
         VC_LOG: {
@@ -135,6 +143,7 @@ define(function (require) {
         BILLCREATE_CONFIG: {
             ID: 'customrecord_vc_bill_vendor_config',
             FIELD: {
+                ID: 'internalid',
                 ENTRY_FUNC: 'custrecord_vc_bc_entry',
                 ACK_FUNC: 'custrecord_vc_bc_ack',
                 USER: 'custrecord_vc_bc_user',
@@ -143,9 +152,13 @@ define(function (require) {
                 CONNECTION_TYPE: 'custrecord_vc_bc_connect_type',
                 SFTP_HOSTKEY: 'custrecord_vc_bc_host_key',
                 URL: 'custrecord_vc_bc_url',
+                SUBSIDIARY: 'custrecord_vc_bc_subsidiary',
                 SFTP_RESOURCE_PATH: 'custrecord_vc_bc_res_path',
                 SFTP_ACK_PATH: 'custrecord_vc_bc_ack_path',
-                ENABLE_FULFILLLMENT: 'custrecord_vc_bc_enable_fulfillment'
+                ENABLE_FULFILLLMENT: 'custrecord_vc_bc_enable_fulfillment',
+                SCOPE: 'custrecord_vc_bc_scope',
+                SUBSCRIPTION_KEY: 'custrecord_vc_bc_subs_key',
+                TOKEN_URL: 'custrecord_vc_bc_token_url'
             }
         },
         BILLFILE: {
@@ -172,12 +185,160 @@ define(function (require) {
                 FILEPOS: 'custrecord_ctc_vc_bill_file_position'
             }
         },
+        SENDPO_CONFIG: { ID: 'customrecord_ctc_vcsp_vendor_config' },
+        SENDPOVENDOR_CONFIG: {
+            ID: 'customrecord_ctc_vcsp_vendor_config',
+            FIELD: {
+                ID: 'internalid',
+                SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
+                XML_VENDOR: 'custrecord_ctc_vcsp_api_vendor',
+                VENDOR: 'custrecord_ctc_vcsp_vendor'
+            }
+        },
         VENDOR_ITEM_MAPPING: {
             ID: 'customrecord_ctc_vc_item_mapping',
             FIELD: {
                 NAME: 'name',
                 ITEM: 'custrecord_ctc_vc_itemmap_item'
             }
+        },
+        VAR_CONNECT_PO_LINE: {
+            ID: '',
+            FIELD: {
+                PURCHASE_ORDER: 'custrecord_ctc_vc_poline_po',
+                LINE_UNIQUE_KEY: 'custrecord_ctc_vc_poline_lineuniquekey',
+                LINE: 'custrecord_ctc_vc_poline_line',
+                VENDOR_LINE: 'custrecord_ctc_vc_poline_vendorline',
+                STATUS: 'custrecord_ctc_vc_poline_status',
+                TYPE: 'custrecord_ctc_vc_poline_type',
+                VENDOR_ORDER_NUMBER: 'custrecord_ctc_vc_poline_vendorordernum',
+                CUSTOMER_ORDER_NUMBER: 'custrecord_ctc_vc_poline_customerordnum',
+                ORDER_DATE: 'custrecord_ctc_vc_poline_orderdate',
+                SKU: 'custrecord_ctc_vc_poline_itemname',
+                MPN: 'custrecord_ctc_vc_poline_mpn',
+                NOTE: 'custrecord_ctc_vc_poline_note',
+                QUANTITY: 'custrecord_ctc_vc_poline_quantity',
+                RATE: 'custrecord_ctc_vc_poline_rate',
+                SHIP_DATE: 'custrecord_ctc_vc_poline_shipdate',
+                QTY_SHIPPED: 'custrecord_ctc_vc_poline_qtyshipped',
+                SHIP_FROM: 'custrecord_ctc_vc_poline_shipfrom',
+                SHIP_METHOD: 'custrecord_ctc_vc_poline_shipmethod',
+                CARRIER: 'custrecord_ctc_vc_poline_carrier',
+                ETA_DATE: 'custrecord_ctc_vc_poline_etadate',
+                SERIAL_NUMBERS: 'custrecord_ctc_vc_poline_serialnumbers',
+                TRACKING_NUMBERS: 'custrecord_ctc_vc_poline_trackingnumber',
+                INTERNAL_REFERENCE: 'custrecord_ctc_vc_poline_internalref',
+                JSON_DATA: 'custrecord_ctc_vc_poline_full_response',
+                CREATE_LOG: 'custrecord_ctc_vc_poline_vccreatelog',
+                UPDATE_LOG: 'custrecord_ctc_vc_poline_vcupdatelog'
+            }
+        }
+    };
+
+    var BillCFG = VC2_CONSTANT.RECORD.BILLCREATE_CONFIG,
+        VendorCFG = VC2_CONSTANT.RECORD.VENDOR_CONFIG,
+        MainCFG = VC2_CONSTANT.RECORD.MAIN_CONFIG,
+        SendPOVndCFG = VC2_CONSTANT.RECORD.SENDPOVENDOR_CONFIG;
+
+    VC2_CONSTANT.MAPPING = {
+        MAIN_CONFIG: {
+            id: MainCFG.FIELD.ID,
+            emailTemplate: MainCFG.FIELD.SCHEDULED_FULFILLMENT_TEMPLATE,
+            emailSender: MainCFG.FIELD.SCHEDULED_FULFILLMENT_SENDER,
+            serialNoFolder: MainCFG.FIELD.SERIAL_NO_FOLDER_ID,
+            processDropships: MainCFG.FIELD.PROCESS_DROPSHIPS,
+            processSpecialOrders: MainCFG.FIELD.PROCESS_SPECIAL_ORDERS,
+            createIF: MainCFG.FIELD.CREATE_ITEM_FULFILLMENTS,
+            createIR: MainCFG.FIELD.CREATE_ITEM_RECEIPTS,
+            ignoreDirectShipDropship: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS,
+            ignoreDirectShipSpecialOrder: MainCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS,
+            createSerialDropship: MainCFG.FIELD.CREATE_SERIAL_DROPSHIPS,
+            createSerialSpecialOrder: MainCFG.FIELD.CREATE_SERIAL_SPECIAL_ORDERS,
+            useInboundTrackingNumbers: MainCFG.FIELD.USE_INB_TRACKING_SPECIAL_ORDERS,
+            license: MainCFG.FIELD.LICENSE,
+            copySerialsInv: MainCFG.FIELD.COPY_SERIALS_INV,
+            serialScanUpdate: MainCFG.FIELD.SERIAL_SCAN_UPDATE,
+            invPrintSerials: MainCFG.FIELD.INV_PRINT_SERIALS,
+            printSerialsTemplate: MainCFG.FIELD.PRINT_SERIALS_TEMPLATE,
+            multipleIngram: MainCFG.FIELD.MULTIPLE_INGRAM,
+            ingramHashSpace: MainCFG.FIELD.INGRAM_HASH_TO_SPACE,
+            fulfillmentSearch: MainCFG.FIELD.FULFILMENT_SEARCH,
+            defaultBillForm: MainCFG.FIELD.DEFAULT_BILL_FORM,
+            defaultVendorBillStatus: MainCFG.FIELD.DEFAULT_VENDOR_BILL_STATUS,
+            allowedVarianceAmountThreshold: MainCFG.FIELD.ALLOWED_VARIANCE_AMOUNT_THRESHOLD,
+            isVarianceOnTax: MainCFG.FIELD.VARIANCE_ON_TAX,
+            allowAdjustLine: MainCFG.FIELD.ALLOW_ADJUSTLINE,
+            defaultTaxItem: MainCFG.FIELD.DEFAULT_TAX_ITEM,
+            defaultTaxItem2: MainCFG.FIELD.DEFAULT_TAX_ITEM2,
+            isVarianceOnShipping: MainCFG.FIELD.VARIANCE_ON_SHIPPING,
+            defaultShipItem: MainCFG.FIELD.DEFAULT_SHIPPING_ITEM,
+            isVarianceOnOther: MainCFG.FIELD.VARIANCE_ON_OTHER,
+            defaultOtherItem: MainCFG.FIELD.DEFAULT_OTHER_ITEM,
+            isBillCreationDisabled: MainCFG.FIELD.DISABLE_VENDOR_BILL_CREATION,
+            overridePONum: MainCFG.FIELD.OVERRIDE_PO_NUM,
+            autoprocPriceVar: MainCFG.FIELD.AUTOPROC_PRICEVAR,
+            autoprocTaxVar: MainCFG.FIELD.AUTOPROC_TAXVAR,
+            autoprocShipVar: MainCFG.FIELD.AUTOPROC_SHIPVAR,
+            autoprocOtherVar: MainCFG.FIELD.AUTOPROC_OTHERVAR,
+            itemColumnIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
+            itemFieldIdToMatch: MainCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+            matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+            itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+            itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
+        },
+        BILLCREATE_CONFIG: {
+            id: BillCFG.FIELD.ID,
+            entry_function: BillCFG.FIELD.ENTRY_FUNC,
+            ack_path: BillCFG.FIELD.ACK_FUNC,
+            user_id: BillCFG.FIELD.USER,
+            user_pass: BillCFG.FIELD.PASSWORD,
+            partner_id: BillCFG.FIELD.PARTNERID,
+            connectionType: BillCFG.FIELD.CONNECTION_TYPE,
+            host_key: BillCFG.FIELD.SFTP_HOSTKEY,
+            url: BillCFG.FIELD.URL,
+            res_path: BillCFG.FIELD.SFTP_RESOURCE_PATH,
+            ack_path: BillCFG.FIELD.SFTP_ACK_PATH,
+            enableFulfillment: BillCFG.FIELD.ENABLE_FULFILLLMENT,
+            subsidiary: BillCFG.FIELD.SUBSIDIARY,
+            scope: BillCFG.FIELD.SCOPE,
+            subscription_key: BillCFG.FIELD.SUBSCRIPTION_KEY,
+            token_url: BillCFG.FIELD.TOKEN_URL
+        },
+        VENDOR_CONFIG: {
+            id: VendorCFG.FIELD.ID,
+            subsidiary: VendorCFG.FIELD.SUBSIDIARY,
+            xmlVendor: VendorCFG.FIELD.XML_VENDOR,
+            // xmlVendorText: row.getText({ name: VendorCFG.FIELD.XML_VENDOR }),
+            vendor: VendorCFG.FIELD.VENDOR,
+            endPoint: VendorCFG.FIELD.WEBSERVICE_ENDPOINT,
+            startDate: VendorCFG.FIELD.START_DATE,
+            user: VendorCFG.FIELD.USERNAME,
+            password: VendorCFG.FIELD.PASSWORD,
+            customerNo: VendorCFG.FIELD.CUSTOMER_NO,
+            processDropships: VendorCFG.FIELD.PROCESS_DROPSHIPS,
+            processSpecialOrders: VendorCFG.FIELD.PROCESS_SPECIAL_ORDERS,
+            fulfillmentPrefix: VendorCFG.FIELD.FULFILLMENT_PREFIX,
+            accessEndPoint: VendorCFG.FIELD.ACCESS_ENDPOINT,
+            apiKey: VendorCFG.FIELD.API_KEY,
+            apiSecret: VendorCFG.FIELD.API_SECRET,
+            oauthScope: VendorCFG.FIELD.OATH_SCOPE,
+            useShipDate: VendorCFG.FIELD.USE_SHIPDATE,
+            // country: row.getValue({
+            //     name: 'country',
+            //     join: VendorCFG.FIELD.SUBSIDIARY
+            // }),
+            itemColumnIdToMatch: VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
+            itemFieldIdToMatch: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
+            matchItemToPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
+            itemMPNColumnIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
+            itemMPNFieldIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
+            matchMPNWithPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
+        },
+        SENDPOVND_CONFIG: {
+            id: SendPOVndCFG.FIELD.ID,
+            vendor: SendPOVndCFG.FIELD.VENDOR,
+            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY
         }
     };
 
@@ -217,7 +378,7 @@ define(function (require) {
             SCANSOURCE: '14',
             WEFI: '16',
             DandH_API: '17',
-            CARAHSOFT: '18'
+            CARAHSOFT: '19'
         },
         VC_LOG_STATUS: {
             SUCCESS: '1',
@@ -243,7 +404,8 @@ define(function (require) {
         SERIAL_UPDATE_MR: 'customscript_ctc_vc_mr_serial_manip',
         SERIAL_UPDATE_ALL_MR: 'customscript_ctc_vc_mr_serial_manip_so',
         ITEM_MATCH_RL: 'customscript_ctc_vc_fuse_itemmatch',
-        SERVICES_RL: 'customscript_ctc_vc_rl_services'
+        SERVICES_RL: 'customscript_ctc_vc_rl_services',
+        GETBILLS_API: 'customscript_ctc_vc_retrieve_api_file'
     };
     VC2_CONSTANT.DEPLOYMENT = {
         ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
@@ -303,6 +465,11 @@ define(function (require) {
         },
 
         /// FULFILLMENT ///
+        MISSING_SALESORDER: {
+            message: 'Created from Sales Order record is missing',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
+        },
+
         FULFILLMENT_NOT_ENABLED: {
             message: 'Item Fulfillment creation is not enabled',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
@@ -421,12 +588,19 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        MISSING_ITEMNO: {
+            code: 'MISSING_ITEMNO',
+            msg: 'Missing Item on Bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         UNMATCHED_ITEMS: {
             code: 'UNMATCHED_ITEMS',
             msg: 'Unmatched items on the bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -486,6 +660,12 @@ define(function (require) {
             msg: 'Unable to add variance item',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        MISSING_VARIANCE_ITEM: {
+            code: 'MISSING_VARIANCE_ITEM',
+            msg: 'Variance Item missing from configuration',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         }
     };
 
@@ -511,12 +691,13 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240124.03';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240626.01';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
+        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 
@@ -524,9 +705,18 @@ define(function (require) {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
         PRODUCT_CODE: 2,
         MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY.20240124',
-        CACHE_NAME: 'VC_LICENSE',
+        KEY: 'LICENSE_KEY.20240626',
+        CACHE_NAME: VC2_CONSTANT.CACHE_NAME, //'VC_LICENSE',
         CACHE_TTL: 86400 // 24 hrs
+    };
+
+    VC2_CONSTANT.FIELD_TO_SEARCH_COLUMN_MAP = {
+        TRANSACTION: {
+            vendorname: {
+                name: 'vendorcode',
+                join: 'item'
+            }
+        }
     };
 
     return VC2_CONSTANT;

@@ -20,9 +20,9 @@ define([
     './Libraries/moment',
     '../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Constants',
-    './../CTC_VC_Lib_MainConfiguration',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
-    './Libraries/CTC_VC_Lib_Vendor_Map'
+    './Libraries/CTC_VC_Lib_Vendor_Map',
+    './../Services/ctc_svclib_configlib'
 ], function (
     ns_search,
     ns_runtime,
@@ -30,13 +30,16 @@ define([
     moment,
     vc2_util,
     vc2_constant,
-    vc_mainCfg,
     VCLib_BillFile,
-    VCLib_VendorMap
+    VCLib_VendorMap,
+    vcs_configLib
 ) {
     var LogTitle = 'MR_BillFiles-API',
         VCLOG_APPNAME = 'VAR Connect|Retrieve Bill (API)',
         LogPrefix = '';
+
+    var ERROR_MSG = vc2_constant.ERRORMSG,
+        LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     var MAP_REDUCE = {};
 
@@ -56,6 +59,9 @@ define([
         var paramOrderId = ns_runtime.getCurrentScript().getParameter({
             name: 'custscript_ctc_vc_bc_po_id'
         });
+
+        var license = vcs_configLib.validateLicense();
+        if (license.hasError) throw ERROR_MSG.INVALID_LICENSE;
 
         if (paramOrderId) paramConfigID = null; // if purchase is specified, include all configurations
 
@@ -84,9 +90,7 @@ define([
 
         log.debug(
             logTitle,
-            LogPrefix +
-                '>> Valid API Configs : ' +
-                JSON.stringify([validVendorCfgName, validVendorCfg])
+            LogPrefix + '>> Valid API Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
         );
 
         // G = Fully Billed
@@ -129,12 +133,17 @@ define([
         if (vc2_util.isOneWorld()) {
             searchOption.columns.push(
                 ns_search.createColumn({
+                    name: 'subsidiary'
+                })
+            );
+            searchOption.columns.push(
+                ns_search.createColumn({
                     name: 'country',
                     join: 'subsidiary'
                 })
             );
         }
-        log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption));
+        log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption.filters));
 
         var searchObj = ns_search.create(searchOption);
         var totalPending = searchObj.runPaged().count;
@@ -147,106 +156,72 @@ define([
         var logTitle = [LogTitle, 'reduce', context.key].join(':');
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
-        var searchValues = vc2_util.safeParse(context.values.shift());
+        var searchValue = vc2_util.safeParse(context.values.shift()),
+            currentValue = searchValue.values;
 
-        log.audit(logTitle, LogPrefix + '>> context: ' + JSON.stringify(context));
-        log.audit(
-            logTitle,
-            LogPrefix + '>> total to process: ' + JSON.stringify(context.values.length)
-        );
-        LogPrefix = ['[', searchValues.recordType, ':', searchValues.id, '] '].join('');
-        //var record_id = searchValues.id;
-        log.audit(logTitle, LogPrefix + '>> searchValues: ' + JSON.stringify(searchValues));
+        vc2_util.LogPrefix = ['[', searchValue.recordType, ':', searchValue.id, '] '].join('');
 
-        var vendorConfig = ns_search.lookupFields({
-            type: 'customrecord_vc_bill_vendor_config',
-            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            columns: [
-                'custrecord_vc_bc_ack',
-                'custrecord_vc_bc_entry',
-                'custrecord_vc_bc_user',
-                'custrecord_vc_bc_pass',
-                'custrecord_vc_bc_partner',
-                'custrecord_vc_bc_connect_type',
-                'custrecord_vc_bc_host_key',
-                'custrecord_vc_bc_url',
-                'custrecord_vc_bc_res_path',
-                'custrecord_vc_bc_ack_path',
-                'custrecord_vc_bc_token_url',
-                'custrecord_vc_bc_scope',
-                'custrecord_vc_bc_subs_key'
-            ]
-        });
+        vc2_util.log(logTitle, '>> Values: ', searchValue);
 
-        var mainConfig = vc_mainCfg.getMainConfiguration();
+        /// load the mainConfig
+        var MainCFG = vcs_configLib.mainConfig();
 
-        var configObj = {
-            id: searchValues.values['custentity_vc_bill_config.vendor'].value,
-            poNum: mainConfig.overridePONum
-                ? searchValues.values['custbody_ctc_vc_override_ponum'] ||
-                  searchValues.values['tranid']
-                : searchValues.values['tranid'],
-            ack_function: vendorConfig.custrecord_vc_bc_ack,
-            entry_function: vendorConfig.custrecord_vc_bc_entry,
-            user_id: vendorConfig.custrecord_vc_bc_user,
-            user_pass: vendorConfig.custrecord_vc_bc_pass,
-            partner_id: vendorConfig.custrecord_vc_bc_partner,
-            host_key: vendorConfig.custrecord_vc_bc_host_key,
-            url: vendorConfig.custrecord_vc_bc_url,
-            res_path: vendorConfig.custrecord_vc_bc_res_path,
-            ack_path: vendorConfig.custrecord_vc_bc_ack_path,
-            token_url: vendorConfig.custrecord_vc_bc_token_url,
-            scope: vendorConfig.custrecord_vc_bc_scope,
-            subscription_key: vendorConfig.custrecord_vc_bc_subs_key
-        };
-
-        vc2_util.log(logTitle, '// tranid: ', searchValues.values['tranid']);
+        // load the billConfig
+        var BillCFG = vcs_configLib.billVendorConfig({ poId: searchValue.id });
+        BillCFG.poNum = MainCFG.overridePONum
+            ? currentValue.custbody_ctc_vc_override_ponum || currentValue.tranid
+            : currentValue.tranid;
 
         if (vc2_util.isOneWorld()) {
-            configObj.country = searchValues.values['country.subsidiary'].value;
-        } else {
-            // get it from ns runtime
-            configObj.country = ns_runtime.country;
-        }
-        log.audit(logTitle, LogPrefix + '>> ## configObj: ' + JSON.stringify(configObj));
-        try {
-            var entryFunction = configObj.entry_function;
+            BillCFG.subsidiary = currentValue.subsidiary.value || currentValue.subsidiary;
+            BillCFG.country = currentValue['country.subsidiary'].value || currentValue['country.subsidiary'];
 
+            ['subsidiary'].value;
+        } else BillCFG.country = ns_runtime.country;
+
+        try {
+            var entryFunction = BillCFG.entry_function;
             var myArr = [];
+            vc2_util.log(logTitle, '## Config Obj:entryFunction: ', entryFunction);
+
             switch (entryFunction) {
                 case 'arrow_api':
-                    myArr = VCLib_VendorMap.arrow_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.arrow_api(context.key, BillCFG);
                     break;
                 case 'ingram_api':
-                    myArr = VCLib_VendorMap.ingram_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.ingram_api(context.key, BillCFG);
                     break;
                 case 'techdata_api':
-                    myArr = VCLib_VendorMap.techdata_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.techdata_api(context.key, BillCFG);
                     break;
                 case 'wefi_api':
-                    myArr = VCLib_VendorMap.wefi(context.key, configObj);
+                    myArr = VCLib_VendorMap.wefi(context.key, BillCFG);
                     break;
                 case 'jenne_api':
-                    myArr = VCLib_VendorMap.jenne_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.jenne_api(context.key, BillCFG);
                     break;
                 case 'scansource_api':
-                    myArr = VCLib_VendorMap.scansource_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.scansource_api(context.key, BillCFG);
                     break;
                 case 'synnex_api':
-                    myArr = VCLib_VendorMap.synnex_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.synnex_api(context.key, BillCFG);
                     break;
                 case 'carahsoft_api':
-                    myArr = VCLib_VendorMap.carahsoft_api(context.key, configObj);
+                    myArr = VCLib_VendorMap.carahsoft_api(context.key, BillCFG);
                     break;
             }
 
-            //log.debug(context.key, myArr);
+            vc2_util.log(logTitle, '## output: ', myArr);
+            VCLib_BillFile.process(BillCFG, myArr, moment().unix());
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
 
-            log.audit(logTitle, LogPrefix + '>> ## myArr: ' + JSON.stringify(myArr));
-
-            VCLib_BillFile.process(configObj, myArr, moment().unix());
-        } catch (e) {
-            log.error(logTitle, LogPrefix + '## Error  ## ' + JSON.stringify(e));
+            vc2_util.vcLog({
+                title: 'MR Bills Retrieve API | Error',
+                error: error,
+                recordId: searchValue.id,
+                status: LOG_STATUS.API_ERROR
+            });
         }
     };
 

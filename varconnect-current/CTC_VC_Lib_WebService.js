@@ -52,14 +52,13 @@ define([
         var logTitle = [LogTitle, '_validateVendorConfig'].join('::');
 
         var poNum = option.poNum,
-            vendorConfig = option.vendorConfig,
-            endpoint = vendorConfig.endPoint,
-            user = vendorConfig.user,
-            password = vendorConfig.password,
-            customerNo = vendorConfig.customerNo;
+            OrderCFG = option.orderConfig,
+            endpoint = OrderCFG.endPoint,
+            user = OrderCFG.user,
+            password = OrderCFG.password,
+            customerNo = OrderCFG.customerNo;
 
-        if (!endpoint || !user || !password)
-            throw Error('Incomplete webservice information for ' + vendorConfig.vendor);
+        if (!endpoint || !user || !password) throw Error('Incomplete webservice information for ' + OrderCFG.vendor);
     }
 
     /**
@@ -70,27 +69,27 @@ define([
 
         var poNum = option.poNum,
             poId = option.poId,
-            vendorConfig = option.vendorConfig,
+            OrderCFG = option.orderConfig,
             country = option.country,
             countryCode = option.countryCode,
             responseXML;
 
         LogPrefix = '[purchaseorder:' + poId + '] ';
 
-        if (vendorConfig) {
+        if (OrderCFG) {
             var libVendor = _getVendorLibrary({
-                vendorConfig: vendorConfig
+                orderConfig: OrderCFG
             });
 
             if (libVendor) {
                 _validateVendorConfig({
                     poNum: poNum,
-                    vendorConfig: vendorConfig
+                    orderConfig: OrderCFG
                 });
                 responseXML = libVendor.processRequest({
                     poNum: poNum,
                     poId: poId,
-                    vendorConfig: vendorConfig,
+                    orderConfig: OrderCFG,
                     countryCode: countryCode,
                     fromDebug: true,
                     country: country
@@ -106,12 +105,12 @@ define([
 
         var outputArray = null,
             responseXML = option.responseXML,
-            vendorConfig = option.vendorConfig,
-            xmlVendor = vendorConfig.xmlVendor,
+            OrderCFG = option.orderConfig,
+            xmlVendor = OrderCFG.xmlVendor,
             libVendor = option.libVendor;
 
         outputArray = libVendor.processResponse({
-            vendorConfig: vendorConfig,
+            orderConfig: OrderCFG,
             responseXML: responseXML
         });
 
@@ -121,13 +120,13 @@ define([
     function _getVendorLibrary(option) {
         var logTitle = [LogTitle, '_getVendorLibrary'].join('::');
 
-        var vendorConfig = option.vendorConfig,
-            xmlVendor = vendorConfig.xmlVendor,
+        var OrderCFG = option.orderConfig,
+            xmlVendor = OrderCFG.xmlVendor,
             vendorList = vc2_constant.LIST.XML_VENDOR,
-            xmlVendorText = vendorConfig.xmlVendorText,
+            xmlVendorText = OrderCFG.xmlVendorText,
             libVendor;
 
-        vc2_util.log(logTitle, '>> XML Vendor:', xmlVendorText);
+        vc2_util.log(logTitle, '>> XML Vendor:', xmlVendor);
 
         switch (xmlVendor) {
             case vendorList.TECH_DATA:
@@ -175,6 +174,7 @@ define([
 
     function parseDate(option) {
         var logTitle = [LogTitle, 'parseDate'].join('::');
+        option = option || {};
 
         var dateString = option.dateString || option,
             date = null;
@@ -245,6 +245,8 @@ define([
     function _checkDates(option) {
         var logTitle = [LogTitle, '_checkDates'].join('::');
 
+        vc2_util.log(logTitle, '.. check dates: ', option);
+
         var poNum = option.poNum,
             startDate = option.startDate,
             tranDate = option.tranDate,
@@ -253,11 +255,7 @@ define([
         var dtStartDate = parseDate(startDate),
             dtTranDate = parseDate(tranDate);
 
-        vc2_util.log(logTitle, '>> check dates: ', [
-            dtStartDate,
-            dtTranDate,
-            dtStartDate <= dtTranDate
-        ]);
+        vc2_util.log(logTitle, '>> check dates: ', [dtStartDate, dtTranDate, dtStartDate <= dtTranDate]);
 
         return dtStartDate <= dtTranDate;
     }
@@ -265,17 +263,17 @@ define([
     function _handleSingleVendor(option) {
         var logTitle = [LogTitle, '_handleSingleVendor'].join('::');
 
-        var vendorConfig = option.vendorConfig,
+        var OrderCFG = option.orderConfig,
             poNum = option.poNum,
             poId = option.poId,
             tranDate = option.tranDate,
-            startDate = vendorConfig.startDate,
-            xmlVendorText = vendorConfig.xmlVendorText,
+            startDate = OrderCFG.startDate,
+            xmlVendorText = OrderCFG.xmlVendorText,
             outputArray;
 
         LogPrefix = '[purchaseorder:' + poId + '] ';
 
-        _validateVendorConfig({ poNum: poNum, vendorConfig: vendorConfig });
+        _validateVendorConfig({ poNum: poNum, orderConfig: OrderCFG });
 
         vc2_util.log(logTitle, '/// Current ', {
             poNum: poNum,
@@ -303,7 +301,7 @@ define([
             return false;
         }
 
-        var libVendor = _getVendorLibrary({ vendorConfig: vendorConfig });
+        var libVendor = _getVendorLibrary({ orderConfig: OrderCFG });
         if (!libVendor) return false;
 
         // try {
@@ -311,15 +309,13 @@ define([
             poNum: poNum,
             poId: poId,
             countryCode: option.countryCode,
-            vendorConfig: vendorConfig
+            orderConfig: OrderCFG
         });
 
         vc2_util.vcLog({
             recordId: poId,
             title: 'WebService | Output Lines',
-            body: !vc2_util.isEmpty(outputArray)
-                ? JSON.stringify(outputArray)
-                : '-no lines to process-',
+            body: !vc2_util.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
             status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
 
@@ -381,7 +377,7 @@ define([
 
             itemArray = itemArray.concat(
                 _handleSingleVendor({
-                    vendorConfig: config,
+                    orderConfig: config,
                     poNum: poNum,
                     poId: poId,
                     tranDate: tranDate
@@ -396,46 +392,46 @@ define([
         var logTitle = [LogTitle, 'process'].join('::'),
             returnValue = {};
 
-        var mainConfig = option.mainConfig,
-            vendorConfig = option.vendorConfig,
+        var MainCFG = option.mainConfig,
+            OrderCFG = option.orderConfig,
             vendor = option.vendor,
             poNum = option.poNum,
             poId = option.poId,
             tranDate = option.tranDate,
             subsidiary = option.subsidiary,
             vendorList = vc2_constant.LIST.XML_VENDOR,
-            xmlVendor = vendorConfig.xmlVendor,
+            xmlVendor = OrderCFG.xmlVendor,
             countryCode = option.countryCode,
             outputArray = null;
 
         LogPrefix = '[purchaseorder:' + poId + '] ';
 
         try {
-            if (!vendorConfig) throw 'No Vendor Config available for ' + vendor;
+            if (!OrderCFG) throw 'No Vendor Config available for ' + vendor;
 
-            returnValue.prefix = vendorConfig.fulfillmentPrefix;
+            returnValue.prefix = OrderCFG.fulfillmentPrefix;
 
-            if (
-                mainConfig.multipleIngram &&
-                (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
-            ) {
-                outputArray = _handleMultipleVendor({
-                    vendor: vendor,
-                    subsidiary: subsidiary,
-                    poNum: poNum,
-                    poId: poId,
-                    countryCode: countryCode,
-                    tranDate: tranDate
-                });
-            } else {
-                outputArray = _handleSingleVendor({
-                    vendorConfig: vendorConfig,
-                    poNum: poNum,
-                    poId: poId,
-                    countryCode: countryCode,
-                    tranDate: tranDate
-                });
-            }
+            // if (
+            //     MainCFG.multipleIngram &&
+            //     (xmlVendor == vendorList.INGRAM_MICRO_V_ONE || xmlVendor == vendorList.INGRAM_MICRO)
+            // ) {
+            //     outputArray = _handleMultipleVendor({
+            //         vendor: vendor,
+            //         subsidiary: subsidiary,
+            //         poNum: poNum,
+            //         poId: poId,
+            //         countryCode: countryCode,
+            //         tranDate: tranDate
+            //     });
+            // } else {
+            outputArray = _handleSingleVendor({
+                orderConfig: OrderCFG,
+                poNum: poNum,
+                poId: poId,
+                countryCode: countryCode,
+                tranDate: tranDate
+            });
+            // }
 
             returnValue.itemArray = outputArray;
         } catch (error) {

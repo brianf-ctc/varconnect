@@ -44,6 +44,8 @@ define([
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
+    var LogTitle = 'LIB:VendorMap';
+
     function dh_sftp(input, config) {
         var returnValue;
 
@@ -145,6 +147,7 @@ define([
     }
 
     function ingram_api(input, config) {
+        var logTitle = [LogTitle, 'ingram_api'].join(':');
         var returnValue;
 
         try {
