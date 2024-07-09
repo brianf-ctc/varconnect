@@ -44,10 +44,7 @@ define([
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
     function _searchSerials(recType, recId) {
-        var name =
-                recType == ns_record.Type.INVOICE
-                    ? 'custrecordserialinvoice'
-                    : 'custrecorditemfulfillment',
+        var name = recType == ns_record.Type.INVOICE ? 'custrecordserialinvoice' : 'custrecorditemfulfillment',
             filters = [
                 {
                     name: name,
@@ -138,10 +135,7 @@ define([
                         type: recType,
                         id: recId
                     }),
-                    scriptId =
-                        recType == ns_record.Type.INVOICE
-                            ? MainCFG.printSerialsTemplate
-                            : TEMPLATES.PACKING,
+                    scriptId = recType == ns_record.Type.INVOICE ? MainCFG.printSerialsTemplate : TEMPLATES.PACKING,
                     sublistId =
                         recType == ns_record.Type.INVOICE
                             ? 'recmachcustrecordserialinvoice'
@@ -162,10 +156,7 @@ define([
                     sublistId = sublistId,
                     serialsLen = rec.getLineCount({ sublistId: sublistId });
                 log.debug('sublists', rec.getSublists());
-                log.debug(
-                    'sublist',
-                    JSON.stringify(rec.getSublistFields({ sublistId: sublistId }))
-                );
+                log.debug('sublist', JSON.stringify(rec.getSublistFields({ sublistId: sublistId })));
 
                 for (var i = 0; i < serialsLen; i++) {
                     serials.list.push({

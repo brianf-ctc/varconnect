@@ -61,8 +61,7 @@ define([
 
                 try {
                     var fldOrig = form.getField({ id: fieldId });
-                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200)
-                        return true;
+                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200) return true;
 
                     var fldNew = form.addField({
                         id: ['custpage', fieldId].join('_'),
@@ -276,9 +275,7 @@ define([
                     ('jq("#' + Helper.VCBarId + ' #vcBarNote").attr({') +
                     ('style:"' + vcBarCSS + '",') +
                     (' class: "' + vcBarClass + '"});'),
-                'jq("<span>").attr(' +
-                    ('{style:"' + vcNoteCSS + '"})') +
-                    ('.html("' + note + '").appendTo(vcBarEl);'),
+                'jq("<span>").attr(' + ('{style:"' + vcNoteCSS + '"})') + ('.html("' + note + '").appendTo(vcBarEl);'),
                 '});',
                 '</script>'
             ];
@@ -498,12 +495,7 @@ define([
                 vc2_util.log(logTitle, '// params', option);
 
                 returnValue =
-                    FN.deploy(
-                        option.scriptId,
-                        option.deployId,
-                        option.scriptParams,
-                        option.taskType
-                    ) ||
+                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
@@ -590,10 +582,7 @@ define([
                 scriptContext.form.addButton({
                     id: 'custpage_flexscreen',
                     label: 'Open Flex Screen',
-                    functionName:
-                        '(function(url){return window.open(url, "_blank");})("' +
-                        flexScreenUrl +
-                        '")'
+                    functionName: '(function(url){return window.open(url, "_blank");})("' + flexScreenUrl + '")'
                 });
                 // add button to the flex screen
                 // scriptContext.form.addButton({
@@ -761,9 +750,7 @@ define([
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
-                Helper.displayAsInlineTextarea(scriptContext.form, [
-                    'custrecord_ctc_vcsp_log_body'
-                ]);
+                Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_ctc_vcsp_log_body']);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -829,9 +816,7 @@ define([
                         });
                         if (!vendorInfoJSON) continue;
                         hasVendorInfo = true;
-                        scriptVendorInfo.push(
-                            'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
-                        );
+                        scriptVendorInfo.push('try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}');
                     }
                     scriptVendorInfo.push('});</script>');
                     fldVendorScr.defaultValue = scriptVendorInfo.join('');
@@ -960,8 +945,7 @@ define([
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
             try {
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
+                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
                 Helper.addSerialSync(scriptContext.form);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -977,8 +961,7 @@ define([
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
             try {
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
+                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
                 Helper.addSerialSync(scriptContext.form);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -994,8 +977,7 @@ define([
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
             try {
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
+                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
                 Helper.addSerialSync(scriptContext.form);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -1023,8 +1005,7 @@ define([
                 scriptId: vc2_constant.SCRIPT.ORDERSTATUS_MR,
                 scriptParams: {}
             };
-            taskOption.scriptParams['custscript_orderstatus_searchid'] =
-                'customsearch_ctc_open_po_search';
+            taskOption.scriptParams['custscript_orderstatus_searchid'] = 'customsearch_ctc_open_po_search';
             taskOption.scriptParams['custscript_orderstatus_orderid'] = Current.recordId;
             taskOption.deployId = Helper.forceDeploy(taskOption);
 

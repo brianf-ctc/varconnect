@@ -8,48 +8,45 @@
  ||  1.1     Oct 11 2016  Adolfo Garza  Casting Port and Timeout  ||
  ||                                     to Number                 ||
   \= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
- 
+
 var HTTPSMODULE, SFTPMODULE, SERVERWIDGETMODULE, FILEMODULE;
 var HOST_KEY_TOOL_URL = 'https://ursuscode.com/tools/sshkeyscan.php?url=';
- 
+
 /**
  *@NApiVersion 2.x
  *@NScriptType Suitelet
  *@NModuleScope Public
  */
-define(["N/https", "N/sftp", "N/ui/serverWidget", "N/file"], runSuitelet);
- 
+define(['N/https', 'N/sftp', 'N/ui/serverWidget', 'N/file'], runSuitelet);
+
 //********************** MAIN FUNCTION **********************
-function runSuitelet(https, sftp, serverwidget, file){
-    HTTPSMODULE= https;
-    SERVERWIDGETMODULE= serverwidget;
-    SFTPMODULE= sftp;
-	FILEMODULE= file;
-    
-	var returnObj = {};
-	returnObj.onRequest = execute;
-	return returnObj;
+function runSuitelet(https, sftp, serverwidget, file) {
+    HTTPSMODULE = https;
+    SERVERWIDGETMODULE = serverwidget;
+    SFTPMODULE = sftp;
+    FILEMODULE = file;
+
+    var returnObj = {};
+    returnObj.onRequest = execute;
+    return returnObj;
 }
- 
-function execute(context){
+
+function execute(context) {
     var method = context.request.method;
-    
-  	var form = getFormTemplate(method);
-    
+
+    var form = getFormTemplate(method);
+
     if (method == 'GET') {
         form = addSelectorFields(form);
     }
-    
+
     if (method == 'POST') {
         var selectaction = context.request.parameters.selectaction;
-        if(selectaction == 'getpasswordguid'){
+        if (selectaction == 'getpasswordguid') {
             form = addPasswordGUID1Fields(form);
-            
-        }
-        else if(selectaction == 'gethostkey'){
+        } else if (selectaction == 'gethostkey') {
             form = addHostKeyFields(form);
-        }
-        else if(selectaction == 'downloadfile'){
+        } else if (selectaction == 'downloadfile') {
             form = addDownloadFileFields(form);
         } else {
             var password = context.request.parameters.password;
@@ -64,61 +61,72 @@ function execute(context){
             var filename = context.request.parameters.filename;
             var restricttoscriptids = context.request.parameters.restricttoscriptids;
             var restricttodomains = context.request.parameters.restricttodomains;
-            
-            if(restricttoscriptids && restricttodomains){
+
+            if (restricttoscriptids && restricttodomains) {
                 form = addPasswordGUID2Fields(form, restricttoscriptids, restricttodomains);
             }
-                        
-            if(password){
+
+            if (password) {
                 form.addField({
-                    id : 'passwordguidresponse',
-                    type : SERVERWIDGETMODULE.FieldType.LONGTEXT,
-                    label : 'PasswordGUID Response',
+                    id: 'passwordguidresponse',
+                    type: SERVERWIDGETMODULE.FieldType.LONGTEXT,
+                    label: 'PasswordGUID Response',
                     displayType: SERVERWIDGETMODULE.FieldDisplayType.INLINE
                 }).defaultValue = password;
             }
- 
-            if(url && passwordGuid && hostKey && filename){
-                var sftpConnection = getSFTPConnection(username, passwordGuid, url, hostKey, hostKeyType, port, directory, timeout);
-                var downloadedFile = sftpConnection.download({
-                    filename: filename
-                }).getContents();
-				/*var movedFile = sftpConnection.download({
+
+            if (url && passwordGuid && hostKey && filename) {
+                var sftpConnection = getSFTPConnection(
+                    username,
+                    passwordGuid,
+                    url,
+                    hostKey,
+                    hostKeyType,
+                    port,
+                    directory,
+                    timeout
+                );
+                var downloadedFile = sftpConnection
+                    .download({
+                        filename: filename
+                    })
+                    .getContents();
+                /*var movedFile = sftpConnection.download({
                     filename: filename
                 });*/
-				
-				var fileObj = FILEMODULE.create({
-					name    : 'SFTP_Sample.csv',
-					fileType: FILEMODULE.Type.CSV,
-					contents: downloadedFile
-				});
-				
-				fileObj.folder = 7;
-				fileObj.save();
- 
+
+                var fileObj = FILEMODULE.create({
+                    name: 'SFTP_Sample.csv',
+                    fileType: FILEMODULE.Type.CSV,
+                    contents: downloadedFile
+                });
+
+                fileObj.folder = 7;
+                fileObj.save();
+
                 form.addField({
-                    id : 'filecontents',
-                    type : SERVERWIDGETMODULE.FieldType.LONGTEXT,
-                    label : 'File Contents',
+                    id: 'filecontents',
+                    type: SERVERWIDGETMODULE.FieldType.LONGTEXT,
+                    label: 'File Contents',
                     displayType: SERVERWIDGETMODULE.FieldDisplayType.INLINE
                 }).defaultValue = downloadedFile;
             } else if (url) {
-                var theResponse = HTTPSMODULE.get({url: HOST_KEY_TOOL_URL + url}).body;
+                var theResponse = HTTPSMODULE.get({ url: HOST_KEY_TOOL_URL + url }).body;
                 form.addField({
-                    id : 'hostkeyresponse',
-                    type : SERVERWIDGETMODULE.FieldType.LONGTEXT,
-                    label : 'Host Key Response',
+                    id: 'hostkeyresponse',
+                    type: SERVERWIDGETMODULE.FieldType.LONGTEXT,
+                    label: 'Host Key Response',
                     displayType: SERVERWIDGETMODULE.FieldDisplayType.INLINE
-                }).defaultValue = theResponse;        
+                }).defaultValue = theResponse;
             }
         }
     }
-    
-  	context.response.writePage(form);
-  	return;
+
+    context.response.writePage(form);
+    return;
 }
- 
-function addSelectorFields(form){
+
+function addSelectorFields(form) {
     var select = form.addField({
         id: 'selectaction',
         type: SERVERWIDGETMODULE.FieldType.SELECT,
@@ -126,124 +134,134 @@ function addSelectorFields(form){
     });
     select.addSelectOption({
         value: 'getpasswordguid',
-        text: 'Get Password GUID',
-    });  
+        text: 'Get Password GUID'
+    });
     select.addSelectOption({
         value: 'gethostkey',
         text: 'Get Host Key'
-    });  
+    });
     select.addSelectOption({
         value: 'downloadfile',
         text: 'Download File'
     });
     return form;
 }
- 
-function addPasswordGUID1Fields(form){
+
+function addPasswordGUID1Fields(form) {
     form.addField({
-        id : 'restricttoscriptids',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'Restrict To Script Ids',
+        id: 'restricttoscriptids',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'Restrict To Script Ids'
     }).isMandatory = true;
     form.addField({
-        id : 'restricttodomains',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'Restrict To Domains',
+        id: 'restricttodomains',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'Restrict To Domains'
     }).isMandatory = true;
-    
+
     return form;
 }
- 
-function addPasswordGUID2Fields(form, restrictToScriptIds, restrictToDomains){
+
+function addPasswordGUID2Fields(form, restrictToScriptIds, restrictToDomains) {
     form.addCredentialField({
-        id : 'password',
-        label : 'Password',
+        id: 'password',
+        label: 'Password',
         restrictToScriptIds: restrictToScriptIds.replace(' ', '').split(','),
-        restrictToDomains: restrictToDomains.replace(' ', '').split(','),
+        restrictToDomains: restrictToDomains.replace(' ', '').split(',')
     });
     return form;
 }
- 
-function addHostKeyFields(form){
+
+function addHostKeyFields(form) {
     form.addField({
-        id : 'url',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'URL (Required)',
+        id: 'url',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'URL (Required)'
     });
     return form;
 }
- 
-function addDownloadFileFields(form){
+
+function addDownloadFileFields(form) {
     form.addField({
-        id : 'url',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'URL (Required)',
+        id: 'url',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'URL (Required)'
     });
     form.addField({
-        id : 'username',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'Username',
+        id: 'username',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'Username'
     });
     form.addField({
-        id : 'passwordguid',
-        type : SERVERWIDGETMODULE.FieldType.LONGTEXT,
-        label : 'PasswordGuid (Required)',
+        id: 'passwordguid',
+        type: SERVERWIDGETMODULE.FieldType.LONGTEXT,
+        label: 'PasswordGuid (Required)'
     });
     form.addField({
-        id : 'hostkey',
-        type : SERVERWIDGETMODULE.FieldType.LONGTEXT,
-        label : 'Host Key (Required)',
+        id: 'hostkey',
+        type: SERVERWIDGETMODULE.FieldType.LONGTEXT,
+        label: 'Host Key (Required)'
     });
     form.addField({
-        id : 'hostkeytype',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'Host Key Type',
+        id: 'hostkeytype',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'Host Key Type'
     });
     form.addField({
-        id : 'filename',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'File Name',
+        id: 'filename',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'File Name'
     });
     form.addField({
-        id : 'port',
-        type : SERVERWIDGETMODULE.FieldType.INTEGER,
-        label : 'Port',
+        id: 'port',
+        type: SERVERWIDGETMODULE.FieldType.INTEGER,
+        label: 'Port'
     });
     form.addField({
-        id : 'directory',
-        type : SERVERWIDGETMODULE.FieldType.TEXT,
-        label : 'Directory',
+        id: 'directory',
+        type: SERVERWIDGETMODULE.FieldType.TEXT,
+        label: 'Directory'
     });
     form.addField({
-        id : 'timeout',
-        type : SERVERWIDGETMODULE.FieldType.INTEGER,
-        label : 'Timeout',
+        id: 'timeout',
+        type: SERVERWIDGETMODULE.FieldType.INTEGER,
+        label: 'Timeout'
     });
     return form;
 }
- 
-function getFormTemplate(){
+
+function getFormTemplate() {
     var form = SERVERWIDGETMODULE.createForm({
-        title : 'SFTP Helper Tool'
+        title: 'SFTP Helper Tool'
     });
     form.addSubmitButton({
-        label : 'Submit'
+        label: 'Submit'
     });
-    
+
     return form;
 }
- 
-function getSFTPConnection(username, passwordGuid, url, hostKey, hostKeyType, port, directory, timeout){
+
+function getSFTPConnection(username, passwordGuid, url, hostKey, hostKeyType, port, directory, timeout) {
     var preConnectionObj = {};
     preConnectionObj.passwordGuid = passwordGuid;
     preConnectionObj.url = url;
     preConnectionObj.hostKey = hostKey;
-    if(username){ preConnectionObj.username = username; }
-    if(hostKeyType){ preConnectionObj.hostKeyType = hostKeyType; }
-    if(port){ preConnectionObj.port = Number(port); }
-    if(directory){ preConnectionObj.directory = directory; }
-    if(timeout){ preConnectionObj.timeout = Number(timeout); }
-    
+    if (username) {
+        preConnectionObj.username = username;
+    }
+    if (hostKeyType) {
+        preConnectionObj.hostKeyType = hostKeyType;
+    }
+    if (port) {
+        preConnectionObj.port = Number(port);
+    }
+    if (directory) {
+        preConnectionObj.directory = directory;
+    }
+    if (timeout) {
+        preConnectionObj.timeout = Number(timeout);
+    }
+
     var connectionObj = SFTPMODULE.createConnection(preConnectionObj);
     return connectionObj;
 }

@@ -128,8 +128,7 @@ define([
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
@@ -160,8 +159,7 @@ define([
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = tranNum =
-                    option.poNum || option.transactionNum || CURRENT.recordNum;
+                CURRENT.recordNum = tranNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
                 LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
@@ -238,11 +236,7 @@ define([
                     if (!vc2_util.isEmpty(orderItem.line_num)) {
                         orderItem.line_no = vc2_util.parseFloat(orderItem.line_num);
 
-                        if (
-                            !vc2_util.isEmpty(orderItem.line_no) &&
-                            orderItem.line_no &&
-                            orderItem.line_no % 100 == 0
-                        )
+                        if (!vc2_util.isEmpty(orderItem.line_no) && orderItem.line_no && orderItem.line_no % 100 == 0)
                             orderItem.line_no = orderItem.line_no / 100;
                     }
 

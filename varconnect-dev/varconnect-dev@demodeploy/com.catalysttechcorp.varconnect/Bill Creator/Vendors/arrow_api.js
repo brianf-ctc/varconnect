@@ -12,11 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash'], function (
-    vc2_util,
-    moment,
-    lodash
-) {
+define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash'], function (vc2_util, moment, lodash) {
     var LogTitle = 'WS:ArrowAPI',
         LogPrefix,
         CURRENT = {};
@@ -132,8 +128,7 @@ define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash']
             if (!parsedResponse) throw 'Unable to read the response';
             var respHeader = parsedResponse.ResponseHeader;
 
-            if (!respHeader || vc2_util.isEmpty(respHeader))
-                throw 'Missing or Invalid ResponseHeader';
+            if (!respHeader || vc2_util.isEmpty(respHeader)) throw 'Missing or Invalid ResponseHeader';
             var hasErrors,
                 errorMsgs = [];
 
@@ -174,11 +169,7 @@ define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash']
                 var respHeader = response.ResponseHeader,
                     invoiceList = response.InvoiceResponse;
 
-                if (
-                    vc2_util.isEmpty(invoiceList) ||
-                    !util.isArray(invoiceList) ||
-                    !invoiceList.length
-                )
+                if (vc2_util.isEmpty(invoiceList) || !util.isArray(invoiceList) || !invoiceList.length)
                     throw 'Empty Invoice List';
 
                 var myArr = [];
@@ -189,9 +180,7 @@ define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash']
 
                         var myObj = {
                             po: CURRENT.poNum,
-                            date: moment(invoiceDetail.InvoiceDate, 'DD-MMM-YY').format(
-                                'MM/DD/YYYY'
-                            ),
+                            date: moment(invoiceDetail.InvoiceDate, 'DD-MMM-YY').format('MM/DD/YYYY'),
                             invoice: invoiceDetail.InvoiceNumber,
                             total: invoiceDetail.TotalInvAmount * 1,
                             charges: {
@@ -207,11 +196,7 @@ define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash']
 
                         myObj.lines = [];
 
-                        for (
-                            var iii = 0;
-                            iii < invoiceDetail.LineDetails.DetailRecord.length;
-                            iii++
-                        ) {
+                        for (var iii = 0; iii < invoiceDetail.LineDetails.DetailRecord.length; iii++) {
                             //xmlObj.LineDetails.DetailRecord[i]
                             var itemDetail = invoiceDetail.LineDetails.DetailRecord[iii],
                                 itemPartNum = itemDetail.CustPartNumber;

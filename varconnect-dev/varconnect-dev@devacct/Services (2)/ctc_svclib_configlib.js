@@ -194,8 +194,7 @@ define(function (require) {
                 }
             }
 
-            if (!cacheParams || !cacheParams.length)
-                throw 'Missing vendor configuration parameters!';
+            if (!cacheParams || !cacheParams.length) throw 'Missing vendor configuration parameters!';
             cacheKey = vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__' + cacheParams.join('&');
 
             log.audit(logTitle, searchOption);

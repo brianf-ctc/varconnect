@@ -11,12 +11,7 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
-    ns_record,
-    ns_runtime,
-    ns_url,
-    ns_redir
-) {
+define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (ns_record, ns_runtime, ns_url, ns_redir) {
     // --------- Helper Functions --------- //
     var Helper = {
         isEmpty: function (stValue) {
@@ -94,8 +89,7 @@ define(['N/record', 'N/runtime', 'N/url', 'N/redirect'], function (
                 // check if there is
                 if (!this.Action[eventType]) return;
                 if (!Helper.inArray(Current.execType, [ContextType.USER_INTERFACE])) return;
-                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT]))
-                    return;
+                if (!Helper.inArray(Current.eventType, [UserEventType.VIEW, UserEventType.EDIT])) return;
 
                 var paramAction = scriptContext.request.parameters[this.ParamStr];
                 RouterEventFn = this.Action[eventType][paramAction];

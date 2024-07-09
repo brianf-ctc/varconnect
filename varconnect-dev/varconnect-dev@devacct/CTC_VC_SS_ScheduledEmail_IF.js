@@ -117,8 +117,7 @@ define([
         } finally {
             log.debug(
                 logTitle,
-                '******* Script Execution End: ' +
-                    JSON.stringify({ durationms: new Date() - startTime })
+                '******* Script Execution End: ' + JSON.stringify({ durationms: new Date() - startTime })
             );
         }
 

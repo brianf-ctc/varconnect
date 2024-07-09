@@ -159,11 +159,7 @@ define(function (require) {
                 });
                 cacheObj.remove({ key: cacheKey });
 
-                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
-                    cacheName,
-                    cacheKey,
-                    cacheTTL
-                ]);
+                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [cacheName, cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('removeNSCache', error);
             }
@@ -202,9 +198,7 @@ define(function (require) {
         parseFloat: function (stValue) {
             var returnValue = 0;
             try {
-                returnValue = stValue
-                    ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0')
-                    : 0;
+                returnValue = stValue ? parseFloat(stValue.toString().replace(/[^0-9.-]+/g, '') || '0') : 0;
             } catch (e) {}
 
             return returnValue;
@@ -289,9 +283,7 @@ define(function (require) {
         formatToNSDate: function (option) {
             var logTitle = [LogTitle, 'formatToNSDate'].join('::');
 
-            var dateObj = util.isObject(option)
-                    ? option.date || option.value || option.dateObj
-                    : option,
+            var dateObj = util.isObject(option) ? option.date || option.value || option.dateObj : option,
                 dateStr;
 
             vc2_util.log(logTitle, 'FORMAT DATE', {
@@ -310,9 +302,7 @@ define(function (require) {
         parseNSDate: function (option) {
             var logTitle = [LogTitle, 'parseNSDate'].join('::');
 
-            var dateString = util.isString(option)
-                    ? option
-                    : option.dateString || option.value || option.dateStr,
+            var dateString = util.isString(option) ? option : option.dateString || option.value || option.dateStr,
                 dateObj;
             try {
                 dateObj = ns_format.parse({ value: dateString, type: ns_format.Type.DATE });
@@ -349,10 +339,7 @@ define(function (require) {
 
             if (dateString && dateString.length > 0 && dateString != 'NA') {
                 try {
-                    var stringToProcess = dateString
-                        .replace(/-/g, '/')
-                        .replace(/\n/g, ' ')
-                        .split(' ');
+                    var stringToProcess = dateString.replace(/-/g, '/').replace(/\n/g, ' ').split(' ');
 
                     for (var i = 0; i < stringToProcess.length; i++) {
                         var singleString = stringToProcess[i];
@@ -405,9 +392,7 @@ define(function (require) {
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
                 }
             }
             return arrData;
@@ -511,21 +496,15 @@ define(function (require) {
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
                     retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
-                    responseType: option.hasOwnProperty('responseType')
-                        ? option.responseType
-                        : 'JSON',
-                    maxRetry: option.hasOwnProperty('maxRetry')
-                        ? option.maxRetry
-                        : _DEFAULT.maxRetries || 0,
+                    responseType: option.hasOwnProperty('responseType') ? option.responseType : 'JSON',
+                    maxRetry: option.hasOwnProperty('maxRetry') ? option.maxRetry : _DEFAULT.maxRetries || 0,
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
                     isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
                     isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods)
-                        ? option.method
-                        : 'get'
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
                 };
             if (option.isXML) param.isJSON = false;
             queryOption.method = param.method.toUpperCase();
@@ -589,11 +568,7 @@ define(function (require) {
 
                 vc2_util.logError(logTitle, errorMsg);
 
-                if (param.doRetry)
-                    vc2_util.log(
-                        logTitle,
-                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
-                    );
+                if (param.doRetry) vc2_util.log(logTitle, '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry);
 
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
@@ -669,21 +644,15 @@ define(function (require) {
                     noLogs: option.hasOwnProperty('noLogs') ? option.noLogs : false,
                     doRetry: option.hasOwnProperty('doRetry') ? option.doRetry : false,
                     retryCount: option.hasOwnProperty('retryCount') ? option.retryCount : 1,
-                    responseType: option.hasOwnProperty('responseType')
-                        ? option.responseType
-                        : 'JSON',
-                    maxRetry: option.hasOwnProperty('maxRetry')
-                        ? option.maxRetry
-                        : _DEFAULT.maxRetries || 0,
+                    responseType: option.hasOwnProperty('responseType') ? option.responseType : 'JSON',
+                    maxRetry: option.hasOwnProperty('maxRetry') ? option.maxRetry : _DEFAULT.maxRetries || 0,
 
                     logHeader: option.header || logTitle,
                     logTranId: option.internalId || option.transactionId || option.recordId,
                     isXML: option.hasOwnProperty('isXML') ? !!option.isXML : false, // default json
                     isJSON: option.hasOwnProperty('isJSON') ? !!option.isJSON : true, // default json
                     waitMs: option.waitMs || _DEFAULT.maxWaitMs,
-                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods)
-                        ? option.method
-                        : 'get'
+                    method: vc2_util.inArray(option.method, _DEFAULT.validMethods) ? option.method : 'get'
                 };
             if (option.isXML) param.isJSON = false;
             queryOption.method = param.method.toUpperCase();
@@ -746,11 +715,7 @@ define(function (require) {
 
                 vc2_util.logError(logTitle, errorMsg);
 
-                if (param.doRetry)
-                    vc2_util.log(
-                        logTitle,
-                        '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry
-                    );
+                if (param.doRetry) vc2_util.log(logTitle, '## RETRY ##  -- ' + param.retryCount + '/' + param.maxRetry);
 
                 if (param.doRetry && param.maxRetry > param.retryCount) {
                     log.audit(logTitle, '... retrying in ' + param.waitMs);
@@ -817,9 +782,7 @@ define(function (require) {
         },
 
         handleResponse: function (request, responseType) {
-            return responseType == 'JSON'
-                ? this.handleJSONResponse(request)
-                : this.handleXMLResponse(request);
+            return responseType == 'JSON' ? this.handleJSONResponse(request) : this.handleXMLResponse(request);
         },
 
         // handleResponse
@@ -832,15 +795,10 @@ define(function (require) {
             if (!parsedResp) throw 'Unable to parse response';
 
             // check for faultstring
-            if (parsedResp.fault && parsedResp.fault.faultstring)
-                throw parsedResp.fault.faultstring;
+            if (parsedResp.fault && parsedResp.fault.faultstring) throw parsedResp.fault.faultstring;
 
             // check response.errors
-            if (
-                parsedResp.errors &&
-                util.isArray(parsedResp.errors) &&
-                !vc2_util.isEmpty(parsedResp.errors)
-            ) {
+            if (parsedResp.errors && util.isArray(parsedResp.errors) && !vc2_util.isEmpty(parsedResp.errors)) {
                 var respErrors = parsedResp.errors
                     .map(function (err) {
                         return [err.id, err.message].join(': ');
@@ -850,8 +808,7 @@ define(function (require) {
             }
 
             // chek for error_description
-            if (parsedResp.error && parsedResp.error_description)
-                throw parsedResp.error_description;
+            if (parsedResp.error && parsedResp.error_description) throw parsedResp.error_description;
 
             // ARROW: ResponseHeader
 
@@ -868,8 +825,7 @@ define(function (require) {
 
             if (request.isError && request.errorMsg) throw request.errorMsg;
 
-            if (!request.RESPONSE || !request.RESPONSE.body)
-                throw 'Invalid or missing XML response';
+            if (!request.RESPONSE || !request.RESPONSE.body) throw 'Invalid or missing XML response';
 
             ns_xml = ns_xml || vc2_util.loadModule('N/xml') || vc2_util.loadModuleNS('N/xml');
 
@@ -878,9 +834,7 @@ define(function (require) {
             if (!xmlDoc) throw 'Unable to parse XML response';
 
             // Failure-Message ( D&H )
-            var respStatus = vc2_util.getNodeContent(
-                ns_xml.XPath.select({ node: xmlDoc, xpath: '//STATUS' })
-            );
+            var respStatus = vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//STATUS' }));
 
             if (respStatus && vc2_util.inArray(respStatus.toUpperCase(), ['FAILURE'])) {
                 var respStatusMessage = vc2_util.getNodeContent(
@@ -898,9 +852,7 @@ define(function (require) {
 
             //OrderInfo/ErrorMsg - TechData
             var respErrorInfo =
-                vc2_util.getNodeContent(
-                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderInfo/ErrorMsg' })
-                ) ||
+                vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//OrderInfo/ErrorMsg' })) ||
                 vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorMsg' }));
             if (respErrorInfo) throw respErrorInfo;
 
@@ -922,8 +874,7 @@ define(function (require) {
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },
@@ -944,12 +895,9 @@ define(function (require) {
                 logOption.HEADER = option.title || logOption.APPLICATION;
                 logOption.BODY = option.body || option.content || option.message || option.details;
                 logOption.STATUS =
-                    option.logStatus ||
-                    option.status ||
-                    (option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO);
+                    option.logStatus || option.status || (option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO);
 
-                logOption.TRANSACTION =
-                    option.recordId || option.transaction || option.id || option.internalid || '';
+                logOption.TRANSACTION = option.recordId || option.transaction || option.id || option.internalid || '';
 
                 if (option.error) {
                     var errorMsg = vc2_util.extractError(option.error);
@@ -960,9 +908,7 @@ define(function (require) {
                 }
 
                 if (option.details) {
-                    logOption.HEADER = option.title
-                        ? [option.title, logOption.BODY].join(' - ')
-                        : logOption.BODY;
+                    logOption.HEADER = option.title ? [option.title, logOption.BODY].join(' - ') : logOption.BODY;
                     logOption.BODY = option.details;
                 }
 
@@ -973,9 +919,7 @@ define(function (require) {
                 //     logOption.BODY
                 // );
 
-                logOption.BODY = util.isString(logOption.BODY)
-                    ? logOption.BODY
-                    : JSON.stringify(logOption.BODY);
+                logOption.BODY = util.isString(logOption.BODY) ? logOption.BODY : JSON.stringify(logOption.BODY);
 
                 if (logOption.HEADER && logOption.HEADER.length > 300) {
                     logOption.HEADER = logOption.HEADER.substr(0, 300);
@@ -987,9 +931,7 @@ define(function (require) {
                         TRANSACTION: batchTransaction
                     };
                     // create the log as an inline item
-                    var recBatch =
-                        this._batchedVCLogs[batchTransaction] ||
-                        ns_record.create({ type: VC_LOG_BATCH.ID });
+                    var recBatch = this._batchedVCLogs[batchTransaction] || ns_record.create({ type: VC_LOG_BATCH.ID });
                     for (var field in VC_LOG_BATCH.FIELD) {
                         var fieldName = VC_LOG_BATCH.FIELD[field];
                         recBatch.setValue({
@@ -1157,9 +1099,7 @@ define(function (require) {
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize
-                            ? pagedResults.data
-                            : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results
@@ -1260,12 +1200,7 @@ define(function (require) {
             }
 
             //If array of results is not empty, set valueOfReturn to its first element or array itself depending on findAll flag. Otherwise, set it to false
-            returnValue =
-                arrResults && arrResults.length
-                    ? findAll
-                        ? arrResults
-                        : arrResults.shift()
-                    : false;
+            returnValue = arrResults && arrResults.length ? (findAll ? arrResults : arrResults.shift()) : false;
 
             // Return value stored in returnValue variable
             return returnValue;
@@ -1320,10 +1255,7 @@ define(function (require) {
 
             returnValue = [];
             for (var fld in sourceObj) {
-                if (
-                    vc2_util.inArray(sourceObj[fld], values) &&
-                    !vc2_util.inArray(fld, returnValue)
-                ) {
+                if (vc2_util.inArray(sourceObj[fld], values) && !vc2_util.inArray(fld, returnValue)) {
                     returnValue.push(fld);
                 }
             }
@@ -1349,10 +1281,7 @@ define(function (require) {
 
             returnValue = [];
             for (var fld in sourceObj) {
-                if (
-                    vc2_util.inArray(fld, params) &&
-                    !vc2_util.inArray(sourceObj[fld], returnValue)
-                ) {
+                if (vc2_util.inArray(fld, params) && !vc2_util.inArray(sourceObj[fld], returnValue)) {
                     returnValue.push(sourceObj[fld]);
                 }
             }
@@ -1429,15 +1358,7 @@ define(function (require) {
             var fileName = option.filename || option.name;
             if (!fileName) return false;
 
-            var arrCols = [
-                'name',
-                'folder',
-                'documentsize',
-                'url',
-                'created',
-                'modified',
-                'filetype'
-            ];
+            var arrCols = ['name', 'folder', 'documentsize', 'url', 'created', 'modified', 'filetype'];
             var searchOption = {
                 type: 'file',
                 columns: arrCols,
@@ -1477,8 +1398,7 @@ define(function (require) {
                 this.CACHE[cacheKey] = fileInfo;
             }
 
-            returnValue =
-                option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
+            returnValue = option.doReturnArray && option.doReturnArray === true ? fileInfo : fileInfo.shift();
 
             return returnValue;
         },

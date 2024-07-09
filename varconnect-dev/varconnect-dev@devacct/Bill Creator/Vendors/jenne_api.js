@@ -93,24 +93,12 @@ define(function (require) {
 
                 //set values
                 objData.po = Helper.getTagContent(invoiceChildNode, 'PONumber');
-                objData.date = Helper.getTagContent(
-                    invoiceChildNode,
-                    'OrderDate'
-                );
-                objData.invoice = Helper.getTagContent(
-                    invoiceChildNode,
-                    'InvoiceNumber'
-                );
-                objData.total = vc2_util.parseFloat(
-                    Helper.getTagContent(invoiceChildNode, 'InvoiceAmount')
-                );
+                objData.date = Helper.getTagContent(invoiceChildNode, 'OrderDate');
+                objData.invoice = Helper.getTagContent(invoiceChildNode, 'InvoiceNumber');
+                objData.total = vc2_util.parseFloat(Helper.getTagContent(invoiceChildNode, 'InvoiceAmount'));
                 objData.charges = {
-                    tax: vc2_util.parseFloat(
-                        Helper.getTagContent(invoiceChildNode, 'TaxAmount')
-                    ),
-                    shipping: vc2_util.parseFloat(
-                        Helper.getTagContent(invoiceChildNode, 'FreightAmount')
-                    ),
+                    tax: vc2_util.parseFloat(Helper.getTagContent(invoiceChildNode, 'TaxAmount')),
+                    shipping: vc2_util.parseFloat(Helper.getTagContent(invoiceChildNode, 'FreightAmount')),
                     other: ''
                 };
 
@@ -129,21 +117,12 @@ define(function (require) {
                     //store data
                     objData.lines.push({
                         ITEMNO: Helper.getTagContent(itemNode, 'PartNumber'),
-                        PRICE: vc2_util.parseFloat(
-                            Helper.getTagContent(itemNode, 'UnitPrice')
-                        ),
-                        QUANTITY: vc2_util.parseFloat(
-                            Helper.getTagContent(itemNode, 'QuantityOrdered')
-                        ),
-                        DESCRIPTION: Helper.getTagContent(
-                            itemNode,
-                            'PartDescription'
-                        ),
+                        PRICE: vc2_util.parseFloat(Helper.getTagContent(itemNode, 'UnitPrice')),
+                        QUANTITY: vc2_util.parseFloat(Helper.getTagContent(itemNode, 'QuantityOrdered')),
+                        DESCRIPTION: Helper.getTagContent(itemNode, 'PartDescription'),
                         //if serial has a value, split using ',' and then remove empty array value
                         SERIAL: Helper.getTagContent(itemNode, 'SerialNumbers')
-                            ? Helper.getTagContent(itemNode, 'SerialNumbers')
-                                  .split(',')
-                                  .filter(Boolean)
+                            ? Helper.getTagContent(itemNode, 'SerialNumbers').split(',').filter(Boolean)
                             : ''
                     });
                 } //for each invoice line

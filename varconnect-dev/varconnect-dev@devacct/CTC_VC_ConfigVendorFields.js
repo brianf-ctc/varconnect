@@ -41,10 +41,8 @@ define(function (require) {
                     custrecord_ctc_vc_vendor: '',
                     custrecord_ctc_vc_xml_vendor: '',
                     custrecord_ctc_vc_vendor_subsidiary: '',
-                    custrecord_ctc_vc_endpoint:
-                        'https://api.ingrammicro.com:443/resellers/v6.1/orders',
-                    custrecord_ctc_vc_access_endpoint:
-                        'https://api.ingrammicro.com:443/oauth/oauth30/token',
+                    custrecord_ctc_vc_endpoint: 'https://api.ingrammicro.com:443/resellers/v6.1/orders',
+                    custrecord_ctc_vc_access_endpoint: 'https://api.ingrammicro.com:443/oauth/oauth30/token',
                     custrecord_ctc_vc_api_key: '',
                     custrecord_ctc_vc_api_secret: '',
                     custrecord_ctc_vc_customer_number: ''

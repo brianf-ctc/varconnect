@@ -90,12 +90,8 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
     function afterSubmit(context) {
         var logTitle = [LogTitle, 'afterSubmit'].join('::');
 
-        PARAM.RESTRICT_INVOICE = ns_runtime
-            .getCurrentScript()
-            .getParameter(PARAM_FLD.RESTRICT_INVOICE);
-        PARAM.RESTRICT_SALESORD = ns_runtime
-            .getCurrentScript()
-            .getParameter(PARAM_FLD.RESTRICT_SALESORD);
+        PARAM.RESTRICT_INVOICE = ns_runtime.getCurrentScript().getParameter(PARAM_FLD.RESTRICT_INVOICE);
+        PARAM.RESTRICT_SALESORD = ns_runtime.getCurrentScript().getParameter(PARAM_FLD.RESTRICT_SALESORD);
 
         log.debug(
             logTitle,
@@ -106,10 +102,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
             })
         );
 
-        if (
-            context.type == context.UserEventType.CREATE ||
-            context.type == context.UserEventType.EDIT
-        ) {
+        if (context.type == context.UserEventType.CREATE || context.type == context.UserEventType.EDIT) {
             var current_rec = context.newRecord;
             var currentID = current_rec.id;
             var createdFromSO = current_rec.getValue({ fieldId: 'createdfrom' });
@@ -204,8 +197,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                 var soLineNum = getLineNum(soRec, soLineKey);
                 log.debug({
                     title: 'Update SO V2',
-                    details:
-                        'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
+                    details: 'soLineNum =  ' + soLineNum + '  PO Line sequence num = ' + transLineNum
                 });
 
                 if (!isEmpty(transLineNum)) {
@@ -657,8 +649,7 @@ define(['N/record', 'N/runtime', 'N/search', 'N/config', 'N/format'], function (
                     currentNumbersList = newCurrent.split('\n');
 
                     /** check to see if the field already exceeds the max length **/
-                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg)
-                        errorFound = true;
+                    if (currentNumbersList[currentNumbersList.length - 1] === errorMsg) errorFound = true;
 
                     if (!errorFound) {
                         for (var j = 0; j < scannedNums.length; j++) {

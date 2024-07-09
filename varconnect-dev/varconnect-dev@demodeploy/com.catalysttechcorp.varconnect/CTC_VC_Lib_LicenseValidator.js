@@ -79,16 +79,12 @@ define([
                         ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
                         ('&nsaccountid=' + ns_runtime.accountId)
                 };
-                log.audit(
-                    logTitle,
-                    logPrefix + 'Send Request query: ' + JSON.stringify(queryOption)
-                );
+                log.audit(logTitle, logPrefix + 'Send Request query: ' + JSON.stringify(queryOption));
                 response = ns_https.request(queryOption);
                 log.audit(logTitle, logPrefix + 'Response: ' + JSON.stringify(response));
 
                 if (!response || !response.body) throw 'Unable to get response';
-                if (!response.code || response.code !== 200)
-                    throw 'Received invalid response code - ' + response.code;
+                if (!response.code || response.code !== 200) throw 'Received invalid response code - ' + response.code;
 
                 // turn off retry from this point, since we can confirm that we are able to connect
                 doRetry = false;
@@ -150,8 +146,7 @@ define([
                     log.audit(logTitle, logPrefix + '// CACHE RETRIEVED: key: ' + VC_LICENSE.KEY);
                 }
 
-                if (vcLicenseResp.error || vcLicenseResp.hasError)
-                    throw vcLicenseResp.error || vcLicenseResp.errorMsg;
+                if (vcLicenseResp.error || vcLicenseResp.hasError) throw vcLicenseResp.error || vcLicenseResp.errorMsg;
 
                 if (!vcLicenseResp.status) throw 'Unable to fetch license status';
                 if (vcLicenseResp.status != 'active') throw 'License is not active';
@@ -200,8 +195,7 @@ define([
                 ? option
                 : option.message || option.error || JSON.stringify(option);
 
-            if (!errorMessage || !util.isString(errorMessage))
-                errorMessage = 'Unexpected Error occurred';
+            if (!errorMessage || !util.isString(errorMessage)) errorMessage = 'Unexpected Error occurred';
 
             return errorMessage;
         },

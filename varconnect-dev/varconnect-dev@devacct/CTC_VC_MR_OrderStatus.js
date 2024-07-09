@@ -113,9 +113,7 @@ define([
             if (ScriptParam.internalid) {
                 searchNew = ns_search.create({
                     type: searchRec.searchType,
-                    filters: [
-                        ns_search.createFilter({ name: 'mainline', operator: 'is', values: 'T' })
-                    ],
+                    filters: [ns_search.createFilter({ name: 'mainline', operator: 'is', values: 'T' })],
                     columns: searchCols
                 });
 
@@ -137,10 +135,7 @@ define([
 
                 var vendorFilterFormula = [];
                 for (var i = 0, j = activeVendors.length; i < j; i++) {
-                    if (
-                        ScriptParam.vendorId &&
-                        !vc2_util.inArray(ScriptParam.vendorId, activeVendors[i].vendor)
-                    )
+                    if (ScriptParam.vendorId && !vc2_util.inArray(ScriptParam.vendorId, activeVendors[i].vendor))
                         continue;
 
                     vc2_util.log(logTitle, '>> vendor Ids: ', activeVendors[i].vendor);
@@ -158,8 +153,7 @@ define([
                             (" AND {trandate}>='" + activeVendors[i].startDate + "')")
                     );
                 }
-                var vendorFormula =
-                    'CASE WHEN ' + vendorFilterFormula.join(' OR ') + ' THEN 1 ELSE 0 END';
+                var vendorFormula = 'CASE WHEN ' + vendorFilterFormula.join(' OR ') + ' THEN 1 ELSE 0 END';
 
                 vc2_util.log(logTitle, '... active vendor: ', {
                     activeVendors: activeVendors,
@@ -186,11 +180,7 @@ define([
 
         var totalResults = returnValue.runPaged().count;
 
-        vc2_util.log(
-            logTitle,
-            { type: 'debug', msg: '>> Total Orders to Process: ' },
-            totalResults
-        );
+        vc2_util.log(logTitle, { type: 'debug', msg: '>> Total Orders to Process: ' }, totalResults);
 
         vc2_util.vcLog({
             title: 'VAR Connect START',
@@ -222,8 +212,7 @@ define([
             }
             vc2_util.log(logTitle, '..current: ', Current);
 
-            if (Current.isBypassVC == 'T' || Current.isBypassVC === true)
-                throw ERROR_MSG.BYPASS_VARCONNECT;
+            if (Current.isBypassVC == 'T' || Current.isBypassVC === true) throw ERROR_MSG.BYPASS_VARCONNECT;
 
             Current.MainCFG = vcs_configLib.mainConfig();
             Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
@@ -274,10 +263,7 @@ define([
 
             ////////////////////////////////////////////////
             // if there are no lines.. just exit the script
-            if (
-                !outputObj.itemArray ||
-                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-            ) {
+            if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info)) {
                 throw outputObj.isError && outputObj.errorMessage
                     ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
                     : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
@@ -385,11 +371,8 @@ define([
                 });
 
                 vc2_util.log(logTitle, '>> serial nums: ', orderNumSerials);
-                var itemAltNameColId =
-                        Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
-                    itemAltMPNColId =
-                        Current.OrderCFG.itemMPNColumnIdToMatch ||
-                        Current.MainCFG.itemMPNColumnIdToMatch,
+                var itemAltNameColId = Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                    itemAltMPNColId = Current.OrderCFG.itemMPNColumnIdToMatch || Current.MainCFG.itemMPNColumnIdToMatch,
                     poColumns = [
                         'item',
                         'quantity',
@@ -439,12 +422,8 @@ define([
                         CUSTOMER: SO_DATA.entity,
                         PURCHASE_ORDER: Current.poId,
                         SALES_ORDER: Current.createdFrom.value,
-                        ITEM_FULFILLMENT:
-                            fulfillData && fulfillData.type == 'fulfillment'
-                                ? fulfillData.id
-                                : null,
-                        ITEM_RECEIPT:
-                            fulfillData && fulfillData.type == 'itemreceipt' ? fulfillData.id : null
+                        ITEM_FULFILLMENT: fulfillData && fulfillData.type == 'fulfillment' ? fulfillData.id : null,
+                        ITEM_RECEIPT: fulfillData && fulfillData.type == 'itemreceipt' ? fulfillData.id : null
                     });
 
                     return true;
@@ -487,9 +466,7 @@ define([
         vc2_util.vcLog({
             title: 'VAR Connect END',
             message:
-                'VAR Connect END' +
-                ('\n\nTotal Usage: ' + summary.usage) +
-                ('\nTotal Time (sec): ' + summary.seconds)
+                'VAR Connect END' + ('\n\nTotal Usage: ' + summary.usage) + ('\nTotal Time (sec): ' + summary.seconds)
         });
 
         vc2_util.logDebug(logTitle, '###### END OF SCRIPT ###### ');
@@ -525,11 +502,7 @@ define([
             var objVendorSearch = ns_search.create({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filters: [['isinactive', 'is', 'F']],
-                columns: [
-                    'custrecord_ctc_vc_vendor',
-                    'custrecord_ctc_vc_vendor_start',
-                    'custrecord_ctc_vc_xml_vendor'
-                ]
+                columns: ['custrecord_ctc_vc_vendor', 'custrecord_ctc_vc_vendor_start', 'custrecord_ctc_vc_xml_vendor']
             });
 
             var arrVendors = [];
@@ -666,11 +639,7 @@ define([
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
                     if (orderNumFilter.length) orderNumFilter.push('OR');
-                    orderNumFilter.push([
-                        'custbody_ctc_if_vendor_order_match',
-                        ns_search.Operator.IS,
-                        orderNum
-                    ]);
+                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
                     return true;
                 });
                 searchOption.filters.push(orderNumFilter);
@@ -720,10 +689,7 @@ define([
                     i,
                     ii;
                 for (i = 0; i < OrderLines.length; i++) {
-                    vc2_util.log(
-                        logTitle,
-                        '... processing ' + '[' + OrderLines[i].order_num + '] .....'
-                    );
+                    vc2_util.log(logTitle, '... processing ' + '[' + OrderLines[i].order_num + '] .....');
 
                     if (vc2_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
                         continue;
@@ -734,10 +700,7 @@ define([
                         continue;
                     }
 
-                    if (
-                        OrderLines[i].hasOwnProperty('is_shipped') &&
-                        OrderLines[i].is_shipped === false
-                    ) {
+                    if (OrderLines[i].hasOwnProperty('is_shipped') && OrderLines[i].is_shipped === false) {
                         vc2_util.log(logTitle, '......skipped: not yet shipped');
                         continue;
                     }
@@ -811,9 +774,7 @@ define([
                                     message:
                                         noteId +
                                         ' - ' +
-                                        (util.isArray(respdata.msg)
-                                            ? respdata.msg.join('\r\n')
-                                            : respdata.msg),
+                                        (util.isArray(respdata.msg) ? respdata.msg.join('\r\n') : respdata.msg),
                                     recordId: Current.poId
                                 });
                             }
@@ -862,9 +823,7 @@ define([
 
             try {
                 Current.allowItemFF =
-                    Current.MainCFG.processDropships &&
-                    Current.OrderCFG.processDropships &&
-                    Current.MainCFG.createIF;
+                    Current.MainCFG.processDropships && Current.OrderCFG.processDropships && Current.MainCFG.createIF;
 
                 if (!Current.allowItemFF) throw ERROR_MSG.FULFILLMENT_NOT_ENABLED;
 
@@ -1080,8 +1039,7 @@ define([
                     var vendorOrderMatch = Current.NumPrefix + vendorLine.order_num;
 
                     if (arrFulfillments[vendorOrderMatch]) {
-                        if (!orderNumSerials[vendorOrderMatch])
-                            orderNumSerials[vendorOrderMatch] = [];
+                        if (!orderNumSerials[vendorOrderMatch]) orderNumSerials[vendorOrderMatch] = [];
 
                         orderNumSerials[vendorOrderMatch].push(
                             util.extend(arrFulfillments[vendorOrderMatch], { serials: serialArray })
@@ -1089,8 +1047,7 @@ define([
                     }
 
                     if (arrReceipts[vendorOrderMatch]) {
-                        if (!orderNumSerials[vendorOrderMatch])
-                            orderNumSerials[vendorOrderMatch] = [];
+                        if (!orderNumSerials[vendorOrderMatch]) orderNumSerials[vendorOrderMatch] = [];
 
                         orderNumSerials[vendorOrderMatch].push(
                             util.extend(arrReceipts[vendorOrderMatch], { serials: serialArray })

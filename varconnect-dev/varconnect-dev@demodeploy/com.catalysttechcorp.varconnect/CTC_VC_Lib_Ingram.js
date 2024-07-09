@@ -103,8 +103,7 @@ define([
         } catch (err) {
             log.debug({
                 title: 'Ingram Micro Scheduled',
-                details:
-                    'requestIngramMicro could not retrieve branchOrderNumber error = ' + err.message
+                details: 'requestIngramMicro could not retrieve branchOrderNumber error = ' + err.message
             });
             branchOrderNumber = null;
         }
@@ -367,17 +366,11 @@ define([
                                 if (xml_items.tracking_num === 'NA')
                                     xml_items.tracking_num = trackingLineData[y].tracking_num;
                                 else {
-                                    if (
-                                        xml_items.tracking_num.indexOf(
-                                            trackingLineData[y].tracking_num
-                                        ) < 0
-                                    ) {
-                                        xml_items.tracking_num +=
-                                            ',' + trackingLineData[y].tracking_num;
+                                    if (xml_items.tracking_num.indexOf(trackingLineData[y].tracking_num) < 0) {
+                                        xml_items.tracking_num += ',' + trackingLineData[y].tracking_num;
                                         log.debug({
                                             title: 'Ingram Micro Scheduled',
-                                            details:
-                                                'xml_items.tracking_num = ' + xml_items.tracking_num
+                                            details: 'xml_items.tracking_num = ' + xml_items.tracking_num
                                         });
                                     }
                                 }

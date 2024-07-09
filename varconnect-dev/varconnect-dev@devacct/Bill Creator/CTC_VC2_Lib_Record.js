@@ -127,8 +127,7 @@ define(function (require) {
                     var value = record.getSublistValue(lineOption),
                         textValue = record.getSublistText(lineOption);
                     lineData[columns[i]] = value;
-                    if (textValue !== null && value != textValue)
-                        lineData[columns[i] + '_text'] = textValue;
+                    if (textValue !== null && value != textValue) lineData[columns[i] + '_text'] = textValue;
 
                     // vc2_util.log(logTitle, '>> text/value', [lineOption, value, textValue]);
                 }
@@ -249,9 +248,7 @@ define(function (require) {
                         newValue;
 
                     // store the old value
-                    var currValue = record.getCurrentSublistValue(
-                        vc2_util.extend(lineOption, { fieldId: fieldId })
-                    );
+                    var currValue = record.getCurrentSublistValue(vc2_util.extend(lineOption, { fieldId: fieldId }));
 
                     try {
                         // set the new value
@@ -261,17 +258,11 @@ define(function (require) {
                                 value: lineData[fieldId]
                             })
                         );
-                        newValue = record.getCurrentSublistValue(
-                            vc2_util.extend(lineOption, { fieldId: fieldId })
-                        );
+                        newValue = record.getCurrentSublistValue(vc2_util.extend(lineOption, { fieldId: fieldId }));
 
                         // if (newValue != lineData[fieldId]) throw 'New value not set properly';
                     } catch (set_error) {
-                        vc2_util.log(logTitle, '## SET ERROR ##', [
-                            fieldId,
-                            lineData[fieldId],
-                            set_error
-                        ]);
+                        vc2_util.log(logTitle, '## SET ERROR ##', [fieldId, lineData[fieldId], set_error]);
                         hasError = true;
                     }
 
@@ -406,9 +397,7 @@ define(function (require) {
                                     return value !== true;
                                 },
                                 quantity: vc2_util.parseFloat(vendorLine.ship_qty),
-                                line: !vc2_util.isEmpty(vendorLine.line_no)
-                                    ? vendorLine.line_no - 1
-                                    : -1
+                                line: !vc2_util.isEmpty(vendorLine.line_no) ? vendorLine.line_no - 1 : -1
                             }
                         }),
                         line: vc2_util.findMatching({
@@ -418,9 +407,7 @@ define(function (require) {
                                 MATCHED: function (value) {
                                     return value !== true;
                                 },
-                                line: !vc2_util.isEmpty(vendorLine.line_no)
-                                    ? vendorLine.line_no - 1
-                                    : -1
+                                line: !vc2_util.isEmpty(vendorLine.line_no) ? vendorLine.line_no - 1 : -1
                             }
                         }),
                         qty: vc2_util.findMatching({
@@ -437,8 +424,7 @@ define(function (require) {
 
                     vc2_util.log(logTitle, '///...matching: ', matching);
 
-                    orderLineMatch =
-                        matching.qtyLine || matching.line || matching.qty || matchedLines[0];
+                    orderLineMatch = matching.qtyLine || matching.line || matching.qty || matchedLines[0];
                 }
 
                 // if it has multiple matches, get the first one
@@ -487,9 +473,7 @@ define(function (require) {
             var item = {
                 text: option.itemText || orderLine.item_text || orderLine.itemname,
                 altValue: option.itemAlt || orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL],
-                altText:
-                    option.itemAltText ||
-                    orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'],
+                altText: option.itemAltText || orderLine[vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL + '_text'],
                 sitemname: orderLine.sitemname,
                 skuValue: option.skuValue || orderLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
                 dnhValue: option.dnhValue || orderLine[LineColField.DH_MPN],
@@ -498,8 +482,7 @@ define(function (require) {
             // vc2_util.log(logTitle, '.. item values: ', item);
 
             var settings = {
-                isDandH:
-                    option.isDandH || vendorCfg ? vendorCfg.xmlVendor == VendorList.DandH : null,
+                isDandH: option.isDandH || vendorCfg ? vendorCfg.xmlVendor == VendorList.DandH : null,
                 ingramHashSpace: option.ingramHashSpace || mainCfg ? mainCfg.ingramHashSpace : null,
                 isIngram:
                     option.ingramHashSpace || vendorCfg
@@ -514,20 +497,9 @@ define(function (require) {
 
             var matchedValue;
             try {
-                if (
-                    vc2_util.inArray(vendorLine.item_num, [
-                        item.text,
-                        item.altValue,
-                        item.altText,
-                        item.sitemname
-                    ])
-                ) {
+                if (vc2_util.inArray(vendorLine.item_num, [item.text, item.altValue, item.altText, item.sitemname])) {
                     matchedValue = 'ItemName';
-                } else if (
-                    vendorLine.vendorSKU &&
-                    item.skuValue &&
-                    vendorLine.vendorSKU == item.skuValue
-                ) {
+                } else if (vendorLine.vendorSKU && item.skuValue && vendorLine.vendorSKU == item.skuValue) {
                     matchedValue = 'VendorSKU';
                 } else if (
                     settings.isDandH &&
@@ -541,19 +513,9 @@ define(function (require) {
                         hashValue[typ] = item[typ] ? item[typ].replace('#', ' ') : '';
                     }
 
-                    if (
-                        vc2_util.inArray(vendorLine.item_num, [
-                            hashValue.text,
-                            hashValue.altValue,
-                            hashValue.altText
-                        ])
-                    )
+                    if (vc2_util.inArray(vendorLine.item_num, [hashValue.text, hashValue.altValue, hashValue.altText]))
                         matchedValue = 'Ingram-Item';
-                    else if (
-                        vendorLine.vendorSKU &&
-                        hashValue.skuValue &&
-                        vendorLine.vendorSKU == hashValue.skuValue
-                    )
+                    else if (vendorLine.vendorSKU && hashValue.skuValue && vendorLine.vendorSKU == hashValue.skuValue)
                         matchedValue = 'Ingram-SKU';
                 } else if (settings.isDell && vendorLine.vendorSKU == item.dellQuoteNo) {
                     matchedValue = 'DellQuoteNo';
@@ -628,11 +590,9 @@ define(function (require) {
                                 ? vc2_util.parseFloat(vendorLine.ship_qty)
                                 : vendorLine.ship_qty;
 
-                            if (!vendorLine.hasOwnProperty('AVAILQTY'))
-                                vendorLine.AVAILQTY = vendorLine.ship_qty;
+                            if (!vendorLine.hasOwnProperty('AVAILQTY')) vendorLine.AVAILQTY = vendorLine.ship_qty;
 
-                            if (!vendorLine.hasOwnProperty('APPLIEDLINES'))
-                                vendorLine.APPLIEDLINES = [];
+                            if (!vendorLine.hasOwnProperty('APPLIEDLINES')) vendorLine.APPLIEDLINES = [];
 
                             return !!matchedValue;
                         }
@@ -650,10 +610,7 @@ define(function (require) {
                             filter: {
                                 ship_qty: function (value) {
                                     var shipQty = vc2_util.parseFloat(value),
-                                        qty =
-                                            quantity ||
-                                            orderLine.quantity ||
-                                            orderLine.quantityremaining;
+                                        qty = quantity || orderLine.quantity || orderLine.quantityremaining;
                                     return shipQty == qty;
                                 },
                                 line_no: function (value) {
@@ -675,10 +632,7 @@ define(function (require) {
                             filter: {
                                 ship_qty: function (value) {
                                     var shipQty = vc2_util.parseFloat(value),
-                                        qty =
-                                            quantity ||
-                                            orderLine.quantity ||
-                                            orderLine.quantityremaining;
+                                        qty = quantity || orderLine.quantity || orderLine.quantityremaining;
                                     return shipQty == qty;
                                 },
                                 AVAILQTY: function (value) {
@@ -692,10 +646,7 @@ define(function (require) {
                             filter: {
                                 ship_qty: function (value) {
                                     var shipQty = vc2_util.parseFloat(value),
-                                        qty =
-                                            quantity ||
-                                            orderLine.quantity ||
-                                            orderLine.quantityremaining;
+                                        qty = quantity || orderLine.quantity || orderLine.quantityremaining;
                                     return shipQty <= qty;
                                 },
                                 AVAILQTY: function (value) {
@@ -881,8 +832,6 @@ define(function (require) {
                 returnValue = arrOutputLines;
 
                 vc2_util.log(logTitle, '>> arrOutputLines: ', arrOutputLines);
-
-                
 
                 // vc2_util.log(logTitle, '**** MATCHING ITEMS END **** ', arrOutputLines);
             } catch (error) {

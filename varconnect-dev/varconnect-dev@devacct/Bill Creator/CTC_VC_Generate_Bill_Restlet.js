@@ -66,14 +66,7 @@ define([
 
                 // Load the PO Record
                 var recPO = vc2_recordlib.load({ type: 'purchaseorder', id: Current.poId });
-                var poColumns = [
-                    'tranid',
-                    'entity',
-                    'taxtotal',
-                    'tax2total',
-                    'status',
-                    'statusRef'
-                ];
+                var poColumns = ['tranid', 'entity', 'taxtotal', 'tax2total', 'status', 'statusRef'];
                 if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
                     poColumns.push('subsidiary');
                 }
@@ -93,10 +86,7 @@ define([
                 });
 
                 if (BillData.VendorData && BillData.VendorData.hasOwnProperty('ignoreVariance')) {
-                    Current.ignoreVariance = !!vc2_util.inArray(
-                        BillData.VendorData.ignoreVariance,
-                        ['T', 't', true]
-                    );
+                    Current.ignoreVariance = !!vc2_util.inArray(BillData.VendorData.ignoreVariance, ['T', 't', true]);
                 }
                 /// =====================================
 
@@ -117,8 +107,7 @@ define([
 
                     returnObj = JSON.parse(JSON.stringify(billRec));
                     returnObj.existingBills = JSON.stringify(arrExistingBills);
-                    returnObj.details =
-                        'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
+                    returnObj.details = 'Linked to existing bill (id:' + arrExistingBills[0] + ' ). ';
                     util.extend(returnObj, BILL_CREATOR.Code.EXISTING_BILLS);
 
                     return returnObj;
@@ -182,10 +171,7 @@ define([
                     if (BillData.HasErrors) {
                         /// just get the first error
                         var errorCode = BillData.ErrorList.shift();
-                        return util.extend(
-                            returnObj,
-                            BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' }
-                        );
+                        return util.extend(returnObj, BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' });
                     }
                 }
                 /// =====================================
@@ -350,10 +336,7 @@ define([
                 returnObj.status = error.status || BILL_CREATOR.Status.ERROR;
                 returnObj.isError = true;
                 if (error.logstatus) returnObj.logstatus = error.logstatus;
-                returnObj.msg = [
-                    returnObj.msg,
-                    returnObj.details != returnObj.msg ? returnObj.details : ''
-                ].join(' ');
+                returnObj.msg = [returnObj.msg, returnObj.details != returnObj.msg ? returnObj.details : ''].join(' ');
 
                 vc2_util.log(logTitle, '## ERROR ## ', returnObj);
             } finally {

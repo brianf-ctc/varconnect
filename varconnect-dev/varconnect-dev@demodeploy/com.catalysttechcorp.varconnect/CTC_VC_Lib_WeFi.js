@@ -95,10 +95,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             }
 
             if (!objWefiPO.invoices || !objWefiPO.invoices.length) {
-                log.debug(
-                    logTitle,
-                    'No invoice found for PO (' + objWefiPO.header.purchaseOrderNumber + ')'
-                );
+                log.debug(logTitle, 'No invoice found for PO (' + objWefiPO.header.purchaseOrderNumber + ')');
             }
 
             var wfOrder = objWefiPO.header;
@@ -127,10 +124,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
 
                     log.debug(
                         logTitle,
-                        '[invoice=' +
-                            wfInvoice.invoiceId +
-                            '] wfInvoiceLine=' +
-                            JSON.stringify(wfInvoiceLine)
+                        '[invoice=' + wfInvoice.invoiceId + '] wfInvoiceLine=' + JSON.stringify(wfInvoiceLine)
                     );
 
                     // Group items by `invoiceDetailId`
@@ -394,10 +388,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
 
             // The .value from the wefi response is an array type
             // If there is no data, an empty array is returned
-            wefiPO.header =
-                parsedResponse.value && parsedResponse.value.length
-                    ? parsedResponse.value[0]
-                    : null;
+            wefiPO.header = parsedResponse.value && parsedResponse.value.length ? parsedResponse.value[0] : null;
             log.debug(logTitle, 'wefiPO.header=' + JSON.stringify(wefiPO.header));
 
             // --------------------------

@@ -20,7 +20,6 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
     var LogTitle = 'SVC:VCProcess',
         LOG_APP = 'VCProcess';
 
-
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
@@ -62,10 +61,7 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
                 return true;
             });
 
-            searchOption.filters.push(
-                'AND',
-                arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift()
-            );
+            searchOption.filters.push('AND', arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift());
 
             // vc2_util.log(logTitle, '>> searchOption: ', searchOption);
             var serialSarchObj = ns_search.create(searchOption);

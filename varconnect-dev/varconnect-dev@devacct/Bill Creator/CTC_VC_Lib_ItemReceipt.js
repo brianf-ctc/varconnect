@@ -159,8 +159,7 @@ define(function (require) {
 
                 try {
                     // skip any existing orders
-                    if (vc2_util.inArray(vendorOrderNum, arrExistingIRS))
-                        throw 'Order already exists';
+                    if (vc2_util.inArray(vendorOrderNum, arrExistingIRS)) throw 'Order already exists';
 
                     // Build an array with all XML line data with the same order num
                     for (ii = 0; ii < OrderLines.length; ii++) {
@@ -253,9 +252,7 @@ define(function (require) {
                             CURRENTPO: Current.PO_ID
                         };
                         lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
-                            arrVendorItemNames[line][
-                                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                            ];
+                            arrVendorItemNames[line][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
 
                         Helper.log(logTitle, '// receipt line', lineRRData);
 
@@ -275,10 +272,7 @@ define(function (require) {
                             hasReceivableLine = true;
                             recordIsChanged = true;
                         } catch (lineRR_err) {
-                            Helper.log(
-                                logTitle,
-                                '...removed: ' + vc2_util.extractError(lineRR_err)
-                            );
+                            Helper.log(logTitle, '...removed: ' + vc2_util.extractError(lineRR_err));
                             Helper.removeIRLine({ record: record, line: line });
                             recordIsChanged = true;
                         }
@@ -416,9 +410,7 @@ define(function (require) {
                             continue;
                         }
                         lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
-                            arrVendorItemNames[line][
-                                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                            ];
+                            arrVendorItemNames[line][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
 
                         for (ii = 0; ii < UniqueLineItems.length; ii++) {
                             var itemToShip = UniqueLineItems[ii];
@@ -426,18 +418,14 @@ define(function (require) {
 
                             var isMatchingLine =
                                 lineRRData.item == itemToShip.item_num ||
-                                (lineRRData.vendorSKU &&
-                                    lineRRData.vendorSKU == itemToShip.vendorSKU) ||
+                                (lineRRData.vendorSKU && lineRRData.vendorSKU == itemToShip.vendorSKU) ||
                                 (lineRRData.dandh &&
-                                    Current.VendorCFG.xmlVendor ==
-                                        vc2_constant.LIST.XML_VENDOR.DandH &&
+                                    Current.VendorCFG.xmlVendor == vc2_constant.LIST.XML_VENDOR.DandH &&
                                     lineRRData.dandh == itemToShip.item_num) ||
                                 (lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] &&
                                     vc2_util.inArray(
                                         itemToShip.item_num,
-                                        lineRRData[
-                                            vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                                        ].split('\n')
+                                        lineRRData[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY].split('\n')
                                     ));
 
                             if (!isMatchingLine) {
@@ -480,10 +468,7 @@ define(function (require) {
                             ////////////////////////////////////////////
                             // don't allow receipt if the available quantity is less
                             if (lineRRData.quantity < itemToShip.ship_qty) {
-                                Helper.log(
-                                    logTitle,
-                                    '... skipped: rem qty is less than required ship qty. '
-                                );
+                                Helper.log(logTitle, '... skipped: rem qty is less than required ship qty. ');
 
                                 Helper.setLineValues({
                                     record: record,
@@ -513,9 +498,7 @@ define(function (require) {
                             ///////////////////////////////////////////////
 
                             //// SERIALS DETECTION ////////////////
-                            var arrSerials = itemToShip.all_serial_nums
-                                ? itemToShip.all_serial_nums.split(/\n/)
-                                : [];
+                            var arrSerials = itemToShip.all_serial_nums ? itemToShip.all_serial_nums.split(/\n/) : [];
 
                             Helper.log(logTitle, '... serials', arrSerials);
 
@@ -625,10 +608,7 @@ define(function (require) {
                             responseData.push({ id: objId, orderNum: orderNum });
                         }
 
-                        Helper.log(
-                            logTitle,
-                            '## Created Item Receipt: [itemreceipt:' + objId + ']'
-                        );
+                        Helper.log(logTitle, '## Created Item Receipt: [itemreceipt:' + objId + ']');
 
                         Helper.logMsg({
                             title: 'Create Item Receipt',
@@ -643,10 +623,7 @@ define(function (require) {
                         throw errMsg;
                     }
                 } catch (line_err) {
-                    log.audit(
-                        logTitle,
-                        vc2_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err)
-                    );
+                    log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> skipped: ' + JSON.stringify(line_err));
                     continue;
                 }
             }
@@ -655,17 +632,12 @@ define(function (require) {
             var errorMsg = vc2_util.extractError(error);
             log.error(
                 logTitle,
-                vc2_util.getUsage() +
-                    (LogPrefix + '## ERROR:  ') +
-                    (errorMsg + '| Details: ' + JSON.stringify(error))
+                vc2_util.getUsage() + (LogPrefix + '## ERROR:  ') + (errorMsg + '| Details: ' + JSON.stringify(error))
             );
             Helper.logMsg({ title: logTitle + ':: Error', error: error });
             return false;
         } finally {
-            log.debug(
-                logTitle,
-                vc2_util.getUsage() + '############ ITEM RECEIPT CREATION: END ############'
-            );
+            log.debug(logTitle, vc2_util.getUsage() + '############ ITEM RECEIPT CREATION: END ############');
         }
     };
     ////////////////////////////////////
@@ -742,11 +714,9 @@ define(function (require) {
                         case 'DD.MM.YYYY':
                         case 'D/M/YYYY':
                         case 'D.M.YYYY':
-                            dateStr = [
-                                convertedMonth || dateComponents[1],
-                                dateComponents[0],
-                                dateComponents[2]
-                            ].join('/');
+                            dateStr = [convertedMonth || dateComponents[1], dateComponents[0], dateComponents[2]].join(
+                                '/'
+                            );
                             break;
                         default:
                             break;
@@ -765,10 +735,7 @@ define(function (require) {
         },
         printerFriendlyLines: function (option) {
             var logTitle = [LogTitle, 'printerFriendlyLines'].join('::');
-            log.audit(
-                logTitle,
-                vc2_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option)
-            );
+            log.audit(logTitle, vc2_util.getUsage() + LogPrefix + '>> option: ' + JSON.stringify(option));
 
             var recordLines = option.recordLines,
                 outputString = '',
@@ -792,8 +759,7 @@ define(function (require) {
                 outputString += '\n   Qty    : ' + line.totalShipped;
                 var serials;
                 if (typeof line.all_serial_nums == 'string') serials = line.all_serial_nums;
-                else if (typeof line.all_serial_nums == 'object')
-                    serials = line.all_serial_nums.join(',');
+                else if (typeof line.all_serial_nums == 'object') serials = line.all_serial_nums.join(',');
                 outputString += '\n   Serials: ' + serials;
             }
 
@@ -847,11 +813,7 @@ define(function (require) {
 
                 status:
                     option.status ||
-                    (option.error
-                        ? LOG_STATUS.ERROR
-                        : option.isSuccess
-                        ? LOG_STATUS.SUCCESS
-                        : LOG_STATUS.INFO)
+                    (option.error ? LOG_STATUS.ERROR : option.isSuccess ? LOG_STATUS.SUCCESS : LOG_STATUS.INFO)
             };
 
             log.audit(LogTitle, LogPrefix + '::' + JSON.stringify(logOption));
@@ -919,10 +881,7 @@ define(function (require) {
                 } catch (serial_error) {
                     log.error(
                         logTitle,
-                        vc2_util.getUsage() +
-                            LogPrefix +
-                            '## ERROR ## ' +
-                            JSON.stringify(serial_error)
+                        vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(serial_error)
                     );
                 }
             }
@@ -1002,15 +961,11 @@ define(function (require) {
                             returnValue = false;
 
                         try {
-                            if (!dataToFind[itemType] || !dataToTest[itemType])
-                                throw '[' + itemType + '] not present';
+                            if (!dataToFind[itemType] || !dataToTest[itemType]) throw '[' + itemType + '] not present';
 
                             if (
                                 !hashSpace &&
-                                !vc2_util.inArray(xmlVendor, [
-                                    vendorList.INGRAM_MICRO_V_ONE,
-                                    vendorList.INGRAM_MICRO
-                                ])
+                                !vc2_util.inArray(xmlVendor, [vendorList.INGRAM_MICRO_V_ONE, vendorList.INGRAM_MICRO])
                             )
                                 throw 'non ingram vendor';
 
@@ -1082,9 +1037,7 @@ define(function (require) {
                                 !dataToFind[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] ||
                                 !vc2_util.inArray(
                                     dataToTest[itemType],
-                                    dataToFind[
-                                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-                                    ].split('\n')
+                                    dataToFind[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY].split('\n')
                                 )
                             )
                                 throw ' not matched.';
@@ -1114,10 +1067,7 @@ define(function (require) {
 
                 returnValue = hasMatch;
             } catch (error) {
-                log.error(
-                    logTitle,
-                    vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
-                );
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
                 throw vc2_util.extractError(error);
             }
@@ -1156,10 +1106,7 @@ define(function (require) {
 
                 returnValue = matchingItem;
             } catch (error) {
-                log.error(
-                    logTitle,
-                    vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error)
-                );
+                log.error(logTitle, vc2_util.getUsage() + LogPrefix + '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
                 throw vc2_util.extractError(error);
             } finally {
@@ -1194,11 +1141,7 @@ define(function (require) {
                 searchOption.filters.push('AND');
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
-                    orderNumFilter.push([
-                        'custbody_ctc_if_vendor_order_match',
-                        ns_search.Operator.IS,
-                        orderNum
-                    ]);
+                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
                     orderNumFilter.push('OR');
                     return true;
                 });

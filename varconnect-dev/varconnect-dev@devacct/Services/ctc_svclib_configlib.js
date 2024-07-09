@@ -66,8 +66,7 @@ define(function (require) {
                 vc2_util.log(logTitle, 'Response: ', response);
 
                 if (!response || !response.body) throw 'Unable to get response';
-                if (!response.code || response.code !== 200)
-                    throw 'Received invalid response code - ' + response.code;
+                if (!response.code || response.code !== 200) throw 'Received invalid response code - ' + response.code;
 
                 // turn off retry from this point, since we can confirm that we are able to connect
                 doRetry = false;
@@ -118,12 +117,7 @@ define(function (require) {
                         });
                 }
 
-                if (
-                    !vcLicenseResp ||
-                    vcLicenseResp.error ||
-                    vcLicenseResp.isError ||
-                    vcLicenseResp.hasError
-                )
+                if (!vcLicenseResp || vcLicenseResp.error || vcLicenseResp.isError || vcLicenseResp.hasError)
                     throw vcLicenseResp.error || vcLicenseResp.errorMsg || vcLicenseResp.message;
 
                 if (!vcLicenseResp.status) throw 'Unable to fetch license status';
@@ -185,8 +179,7 @@ define(function (require) {
                     var billConfigs = result.custentity_vc_bill_config.split(/,/);
                     if (billConfigs.length > 1) result.custentity_vc_bill_config = billConfigs;
 
-                    if (vc2_util.isOneWorld())
-                        result.subsidiary = row.getValue({ name: 'subsidiary' });
+                    if (vc2_util.isOneWorld()) result.subsidiary = row.getValue({ name: 'subsidiary' });
                     return true;
                 });
 
@@ -345,11 +338,9 @@ define(function (require) {
                 isJSON: true
             });
 
-            if (!vendorCacheList)
-                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST'] };
+            if (!vendorCacheList) vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST'] };
 
-            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
-                vendorCacheList.LIST.push(cacheKey);
+            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST)) vendorCacheList.LIST.push(cacheKey);
 
             vc2_util.setNSCache({
                 name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST',
@@ -460,8 +451,7 @@ define(function (require) {
                     LIST: [vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST']
                 };
 
-            if (!vc2_util.inArray(cacheKey, configCacheList.LIST))
-                configCacheList.LIST.push(cacheKey);
+            if (!vc2_util.inArray(cacheKey, configCacheList.LIST)) configCacheList.LIST.push(cacheKey);
 
             vc2_util.setNSCache({
                 name: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST',
@@ -560,11 +550,9 @@ define(function (require) {
                 isJSON: true
             });
 
-            if (!vendorCacheList)
-                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST'] };
+            if (!vendorCacheList) vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST'] };
 
-            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
-                vendorCacheList.LIST.push(cacheKey);
+            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST)) vendorCacheList.LIST.push(cacheKey);
 
             vc2_util.setNSCache({
                 name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST',

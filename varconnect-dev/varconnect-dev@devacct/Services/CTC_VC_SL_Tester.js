@@ -94,10 +94,7 @@ define(function (require) {
 
                 returnValue = {
                     request: requestOption,
-                    response:
-                        response && response.body
-                            ? vc2_util.safeParse(response.body)
-                            : '- no body content - '
+                    response: response && response.body ? vc2_util.safeParse(response.body) : '- no body content - '
                 };
             } catch (error) {
                 vc2_util.logError(logTitle, error);

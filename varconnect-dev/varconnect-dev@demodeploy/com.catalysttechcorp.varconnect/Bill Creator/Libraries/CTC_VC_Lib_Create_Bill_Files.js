@@ -98,10 +98,7 @@ define([
                 vc2_util.logError(logTitle, error);
                 throw error;
             } finally {
-                vc2_util.log(logTitle, 'Parsed Date [' + dateString + ']: ', [
-                    dateValue,
-                    typeof dateValue
-                ]);
+                vc2_util.log(logTitle, 'Parsed Date [' + dateString + ']: ', [dateValue, typeof dateValue]);
             }
             return returnValue;
         },
@@ -148,11 +145,7 @@ define([
                     vc2_util.log(logTitle, 'Lookup alt names for items... ' + itemIds.join(', '));
                     var searchOption = {
                         type: ns_search.Type.ITEM,
-                        filterExpression: [
-                            ['internalid', 'anyof', itemIds],
-                            'and',
-                            ['isinactive', 'is', 'F']
-                        ],
+                        filterExpression: [['internalid', 'anyof', itemIds], 'and', ['isinactive', 'is', 'F']],
                         columns: itemColumns
                     };
                     var searchResults = vc2_util.searchAllPaged(searchOption);
@@ -266,10 +259,7 @@ define([
                             uniqueItemIds.push(lineData.item);
                         }
                     }
-                    vc2_util.log(
-                        logTitle,
-                        'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', ')
-                    );
+                    vc2_util.log(logTitle, 'Lookup items for assigned vendor names... ' + uniqueItemIds.join(', '));
                     if (uniqueItemIds.length) {
                         var searchOption = {
                             type: ItemMapRecordVar.ID,
@@ -296,8 +286,7 @@ define([
                                 var lineData = returnValue[i],
                                     vendorItemNames = vendorItemMap[lineData.item];
                                 if (vendorItemNames && vendorItemNames.length) {
-                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] =
-                                        vendorItemNames.join('\n');
+                                    lineData[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = vendorItemNames.join('\n');
                                 }
                             }
                         }
@@ -336,11 +325,7 @@ define([
                 type: 'purchaseorder',
                 filters: [
                     MainConfig.overridePONum
-                        ? [
-                              ['numbertext', 'is', poName],
-                              'OR',
-                              ['custbody_ctc_vc_override_ponum', 'is', poName]
-                          ]
+                        ? [['numbertext', 'is', poName], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poName]]
                         : ['numbertext', 'is', poName],
                     'AND',
                     ['mainline', 'is', 'T'],
@@ -420,8 +405,7 @@ define([
             }
             if (itemAltSKUColId) {
                 itemAltSKUColId =
-                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] ||
-                    itemAltSKUColId;
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] || itemAltSKUColId;
                 if (util.isObject(itemAltSKUColId)) {
                     util.extend(itemAltSKUColId, {
                         summary: 'GROUP'
@@ -438,8 +422,7 @@ define([
             }
             if (itemAltMPNColId) {
                 itemAltMPNColId =
-                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] ||
-                    itemAltMPNColId;
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] || itemAltMPNColId;
                 if (util.isObject(itemAltMPNColId)) {
                     util.extend(itemAltMPNColId, {
                         summary: 'GROUP'
@@ -519,8 +502,7 @@ define([
             });
 
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
-                arrSKUs[i].vendorItemName =
-                    arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+                arrSKUs[i].vendorItemName = arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
                 arrSKUs[i] = Helper.getAltPartNumValues({
                     source: altItemNames,
                     target: arrSKUs[i],
@@ -710,8 +692,7 @@ define([
                     //     billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
                     // }
 
-                    if (billVendorCFG.enableFulfillment)
-                        billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
+                    if (billVendorCFG.enableFulfillment) billFileValues.custrecord_ctc_vc_bill_is_recievable = true;
 
                     var vendorTerms = 0;
                     var searchTerms = ns_search.lookupFields({
@@ -730,9 +711,7 @@ define([
                                 columns: ['daysuntilnetdue']
                             }).daysuntilnetdue;
 
-                            dueDate = moment(currentOrder.date)
-                                .add(parseInt(daysToPay), 'days')
-                                .format('MM/DD/YYYY');
+                            dueDate = moment(currentOrder.date).add(parseInt(daysToPay), 'days').format('MM/DD/YYYY');
                         }
                     }
                 }
@@ -767,13 +746,10 @@ define([
                                     availableSkus[iii].alternativeItemName == itemNo) ||
                                 (availableSkus[iii].alternativeItemName2 &&
                                     availableSkus[iii].alternativeItemName2 == itemNo) ||
-                                (availableSkus[iii].alternativeSKU &&
-                                    availableSkus[iii].alternativeSKU == vendorSKU) ||
-                                (availableSkus[iii].alternativeMPN &&
-                                    availableSkus[iii].alternativeMPN == itemNo) ||
+                                (availableSkus[iii].alternativeSKU && availableSkus[iii].alternativeSKU == vendorSKU) ||
+                                (availableSkus[iii].alternativeMPN && availableSkus[iii].alternativeMPN == itemNo) ||
                                 (availableSkus[iii].text && availableSkus[iii].text == itemNo) ||
-                                (availableSkus[iii].vendorItemName &&
-                                    availableSkus[iii].vendorItemName == itemNo)
+                                (availableSkus[iii].vendorItemName && availableSkus[iii].vendorItemName == itemNo)
                             ) {
                                 matchedSku = availableSkus[iii].value;
                                 break;

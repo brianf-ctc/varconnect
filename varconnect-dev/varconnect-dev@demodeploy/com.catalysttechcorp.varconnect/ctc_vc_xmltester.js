@@ -13,12 +13,7 @@
  * @NScriptType Suitelet
  */
 
-define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
-    serverWidget,
-    ns_xml,
-    ns_record,
-    ns_search
-) {
+define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (serverWidget, ns_xml, ns_record, ns_search) {
     var LogTitle = 'XML Tester';
 
     var NodeType = {
@@ -38,9 +33,7 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                         if (xml.attributes.length)
                             // element with attributes  ..
                             for (var i = 0; i < xml.attributes.length; i++)
-                                o['@' + xml.attributes[i].nodeName] = (
-                                    xml.attributes[i].nodeValue || ''
-                                ).toString();
+                                o['@' + xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue || '').toString();
                         if (xml.firstChild) {
                             // element has child nodes ..
                             var textChild = 0,
@@ -48,10 +41,7 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                                 hasElementChild = false;
                             for (var n = xml.firstChild; n; n = n.nextSibling) {
                                 if (n.nodeType == NodeType.ELEMENT) hasElementChild = true;
-                                else if (
-                                    n.nodeType == NodeType.TEXT &&
-                                    n.nodeValue.match(/[^ \f\n\r\t\v]/)
-                                )
+                                else if (n.nodeType == NodeType.TEXT && n.nodeValue.match(/[^ \f\n\r\t\v]/))
                                     textChild++;
                                 // non-whitespace text
                                 else if (n.nodeType == NodeType.CDATA) cdataChild++; // cdata section node
@@ -102,13 +92,10 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                 toJson: function (o, name, ind) {
                     var json = name ? '"' + name + '"' : '';
                     if (o instanceof Array) {
-                        for (var i = 0, n = o.length; i < n; i++)
-                            o[i] = X.toJson(o[i], '', ind + '');
+                        for (var i = 0, n = o.length; i < n; i++) o[i] = X.toJson(o[i], '', ind + '');
                         json +=
                             (name ? ':[' : '[') +
-                            (o.length > 1
-                                ? '' + ind + '' + o.join(',' + ind + '') + '' + ind
-                                : o.join('')) +
+                            (o.length > 1 ? '' + ind + '' + o.join(',' + ind + '') + '' + ind : o.join('')) +
                             ']';
                     } else if (o == null) json += (name && ':') + 'null';
                     else if (typeof o == 'object') {
@@ -116,12 +103,9 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                         for (var m in o) arr[arr.length] = X.toJson(o[m], m, ind + '');
                         json +=
                             (name ? ':{' : '{') +
-                            (arr.length > 1
-                                ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind
-                                : arr.join('')) +
+                            (arr.length > 1 ? '' + ind + '' + arr.join(',' + ind + '') + '' + ind : arr.join('')) +
                             '}';
-                    } else if (typeof o == 'string')
-                        json += (name && ':') + '"' + o.toString() + '"';
+                    } else if (typeof o == 'string') json += (name && ':') + '"' + o.toString() + '"';
                     else json += (name && ':') + o.toString();
                     return json;
                 },
@@ -146,8 +130,7 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                                     s += '</' + n.nodeName + '>';
                                 } else s += '/>';
                             } else if (n.nodeType == NodeType.TEXT) s += n.nodeValue;
-                            else if (n.nodeType == NodeType.CDATA)
-                                s += '<![CDATA[' + n.nodeValue + ']]>';
+                            else if (n.nodeType == NodeType.CDATA) s += '<![CDATA[' + n.nodeValue + ']]>';
                             return s;
                         };
                         for (var c = node.firstChild; c; c = c.nextSibling) s += asXml(c);
@@ -259,20 +242,14 @@ define(['N/ui/serverWidget', 'N/xml', 'N/record', 'N/search'], function (
                 output: JSON.stringify(recData.custrecord_ctc_vc_bill_log)
             });
             var dataStr = recData.custrecord_ctc_vc_bill_log;
-            dataStr =
-                '4/29/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' +
-                dataStr;
-            dataStr =
-                '4/30/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' +
-                dataStr;
+            dataStr = '4/29/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' + dataStr;
+            dataStr = '4/30/2022 - You can not initialize vendorbill: invalid reference 501644.\r\n' + dataStr;
 
             var noteHelper = {
                 splitByDate: function (allNotesStr) {
-                    var arr = allNotesStr
-                        .split(/(\d{1,2}\/\d{1,2}\/\d{4})\s-\s/gm)
-                        .filter(function (str) {
-                            return !!str;
-                        });
+                    var arr = allNotesStr.split(/(\d{1,2}\/\d{1,2}\/\d{4})\s-\s/gm).filter(function (str) {
+                        return !!str;
+                    });
                     var arrNotes = [];
                     while (arr.length) {
                         var dateStr = arr.shift();

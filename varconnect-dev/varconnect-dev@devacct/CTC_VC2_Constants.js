@@ -237,7 +237,7 @@ define(function (require) {
 
     var BillCFG = VC2_CONSTANT.RECORD.BILLCREATE_CONFIG,
         VendorCFG = VC2_CONSTANT.RECORD.VENDOR_CONFIG,
-        MainCFG = VC2_CONSTANT.RECORD.MAIN_CONFIG, 
+        MainCFG = VC2_CONSTANT.RECORD.MAIN_CONFIG,
         SendPOVndCFG = VC2_CONSTANT.RECORD.SENDPOVENDOR_CONFIG;
 
     VC2_CONSTANT.MAPPING = {
@@ -334,11 +334,11 @@ define(function (require) {
             itemMPNColumnIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
             itemMPNFieldIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
             matchMPNWithPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
-        }, 
+        },
         SENDPOVND_CONFIG: {
             id: SendPOVndCFG.FIELD.ID,
             vendor: SendPOVndCFG.FIELD.VENDOR,
-            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY,
+            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY
         }
     };
 

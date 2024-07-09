@@ -1,0 +1,8 @@
+{
+    "name": "synnex-sendpo",
+    "version": "0.0.1",
+    "dependencies": {
+        "axios": "^0.19.2",
+        "xml2js": ""
+    }
+}

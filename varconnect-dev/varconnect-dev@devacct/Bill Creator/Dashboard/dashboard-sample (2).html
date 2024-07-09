@@ -15,11 +15,7 @@
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
         />
-        <link
-            rel="stylesheet"
-            type="text/css"
-            href="https://cdn.datatables.net/v/dt/dt-1.10.24/datatables.min.css"
-        />
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.24/datatables.min.css" />
         <link rel="shortcut icon" href="#" />
         <script
             type="text/javascript"
@@ -47,9 +43,7 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-hourglass-end"></i>Due Soon
-                                        <span class="badge badge-due pull-right"
-                                            >{{alert_due}}</span
-                                        >
+                                        <span class="badge badge-due pull-right">{{alert_due}}</span>
                                     </a>
                                 </li>
                                 <li id="pending_receipt">
@@ -58,9 +52,7 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-receipt"></i>To Receive
-                                        <span class="badge badge-primary pull-right"
-                                            >{{pend_rcpt_cnt}}</span
-                                        >
+                                        <span class="badge badge-primary pull-right">{{pend_rcpt_cnt}}</span>
                                     </a>
                                 </li>
                                 <li id="no_po">
@@ -69,9 +61,7 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-exclamation-triangle"></i>No PO Link
-                                        <span
-                                            class="badge pull-right"
-                                            style="background-color: orange"
+                                        <span class="badge pull-right" style="background-color: orange"
                                             >{{no_po_cnt}}</span
                                         >
                                     </a>
@@ -82,9 +72,7 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-pause"></i>On Hold
-                                        <span class="badge badge-orange pull-right"
-                                            >{{on_hold_cnt}}</span
-                                        >
+                                        <span class="badge badge-orange pull-right">{{on_hold_cnt}}</span>
                                     </a>
                                 </li>
                                 <li id="to_be_processed" class="has_submenu">
@@ -111,9 +99,7 @@
                                             >
                                                 <i class="fa fa-clock"></i>
                                                 Pending
-                                                <span
-                                                    class="badge pull-right"
-                                                    style="background-color: darkcyan"
+                                                <span class="badge pull-right" style="background-color: darkcyan"
                                                     >{{pending_cnt}}</span
                                                 ></a
                                             >
@@ -125,9 +111,7 @@
                                             >
                                                 <i class="fa fa-rotate"></i>
                                                 Reprocess
-                                                <span
-                                                    class="badge pull-right"
-                                                    style="background-color: darkcyan"
+                                                <span class="badge pull-right" style="background-color: darkcyan"
                                                     >{{reprocess_cnt}}</span
                                                 ></a
                                             >
@@ -139,9 +123,7 @@
                                             >
                                                 <i class="fa fa-not-equal"></i>
                                                 Variance
-                                                <span class="badge badge-black pull-right"
-                                                    >{{variance_cnt}}</span
-                                                ></a
+                                                <span class="badge badge-black pull-right">{{variance_cnt}}</span></a
                                             >
                                         </li>
                                         <li>
@@ -151,9 +133,7 @@
                                             >
                                                 <i class="fa fa-circle-xmark"></i>
                                                 Errors
-                                                <span class="badge badge-error pull-right"
-                                                    >{{alert_error}}</span
-                                                ></a
+                                                <span class="badge badge-error pull-right">{{alert_error}}</span></a
                                             >
                                         </li>
                                     </ul>
@@ -179,9 +159,7 @@
                             <div class="col-md-12">
                                 <div class="widget">
                                     <div class="widget-head br-blue">
-                                        <h3 class="pull-left">
-                                            VAR Connect - Bill Creator Dashboard
-                                        </h3>
+                                        <h3 class="pull-left">VAR Connect - Bill Creator Dashboard</h3>
                                         <div class="pull-right">
                                             <!-- <a href="https://www.nscatalyst.com/"><img
                                                 src="https://tstdrv1716438.app.netsuite.com/core/media/media.nl?id=73&amp;c=TSTDRV1716438&amp;h=0SWiBnADOHDG9AtbUuNG48Q4IIJs5TUQCo6eQBHZfaM-QrF5"
@@ -190,10 +168,7 @@
                                         </div>
                                         <div class="clearfix"></div>
                                     </div>
-                                    <table
-                                        id="billcreatordata"
-                                        class="compact hover order-column row-border"
-                                    >
+                                    <table id="billcreatordata" class="compact hover order-column row-border">
                                         <thead>
                                             <tr>
                                                 <th>Flex</th>
@@ -262,11 +237,7 @@
                                                     },
                                                     {
                                                         data: 'billAmount',
-                                                        render: $.fn.dataTable.render.number(
-                                                            ',',
-                                                            '.',
-                                                            2
-                                                        )
+                                                        render: $.fn.dataTable.render.number(',', '.', 2)
                                                     },
                                                     {
                                                         data: 'billDate',
@@ -284,13 +255,7 @@
                                                     },
                                                     {
                                                         data: 'po',
-                                                        fnCreatedCell: function (
-                                                            nTd,
-                                                            sData,
-                                                            oData,
-                                                            iRow,
-                                                            iCol
-                                                        ) {
+                                                        fnCreatedCell: function (nTd, sData, oData, iRow, iCol) {
                                                             if (oData.poId) {
                                                                 $(nTd).html(
                                                                     '<a href="/app/accounting/transactions/transaction.nl?id=' +

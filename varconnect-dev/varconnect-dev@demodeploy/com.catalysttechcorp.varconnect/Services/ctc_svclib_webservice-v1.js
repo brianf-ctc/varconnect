@@ -50,10 +50,7 @@ define(function (require) {
                 orderConfig: OrderCFG,
                 poNum: poNum,
                 poId: poData.id,
-                country:
-                    OrderCFG.country == 'CA'
-                        ? vc2_constant.LIST.COUNTRY.CA
-                        : vc2_constant.LIST.COUNTRY.US,
+                country: OrderCFG.country == 'CA' ? vc2_constant.LIST.COUNTRY.CA : vc2_constant.LIST.COUNTRY.US,
                 countryCode: OrderCFG.country
             });
 

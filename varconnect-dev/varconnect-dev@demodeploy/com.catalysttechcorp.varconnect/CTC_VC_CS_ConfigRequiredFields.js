@@ -45,10 +45,7 @@ define(function (require) {
             if (!Helper.isEmpty(objFields)) {
                 for (var fieldId in objFields) {
                     var fieldVal = objRec.getValue(fieldId);
-                    if (
-                        Helper.isEmpty(fieldVal) ||
-                        (Array.isArray(fieldVal) && Helper.isEmpty(fieldVal[0]))
-                    ) {
+                    if (Helper.isEmpty(fieldVal) || (Array.isArray(fieldVal) && Helper.isEmpty(fieldVal[0]))) {
                         highlightField(fieldId, '#ffeaa7');
                         isError = true;
                     } else {

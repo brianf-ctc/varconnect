@@ -12,12 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', 'N/https', '../Libraries/moment', '../Libraries/lodash'], function (
-    ns_xml,
-    ns_https,
-    moment,
-    lodash
-) {
+define(['N/xml', 'N/https', '../Libraries/moment', '../Libraries/lodash'], function (ns_xml, ns_https, moment, lodash) {
     function processXml(input, config) {
         var tranNsid = input;
 

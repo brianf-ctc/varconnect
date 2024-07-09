@@ -175,11 +175,7 @@ define([
                             }
                         }
                     } catch (subrec_error) {
-                        vc2_util.log(
-                            logTitle,
-                            '## SUBREC ERROR ##',
-                            vc2_util.extractError(subrec_error)
-                        );
+                        vc2_util.log(logTitle, '## SUBREC ERROR ##', vc2_util.extractError(subrec_error));
                     }
                     vc2_util.log(logTitle, '....// lineData: ', lineData);
 
@@ -221,20 +217,15 @@ define([
                 };
 
                 if (PARAM.recordType == ns_record.Type.ITEM_FULFILLMENT) {
-                    searchOption.filters.push('AND', [
-                        SERIAL_FLD.ITEM_FULFILLMENT,
-                        'anyof',
-                        '@NONE@'
-                    ]);
+                    searchOption.filters.push('AND', [SERIAL_FLD.ITEM_FULFILLMENT, 'anyof', '@NONE@']);
                 } else if (PARAM.recordType == ns_record.Type.INVOICE) {
                     // just include serials that has not yet invoice-tagged, but itemff-tagged
 
-                    searchOption.filters.push(
-                        'AND',
-                        [SERIAL_FLD.ITEM_FULFILLMENT, 'noneof', '@NONE@'],
-                        'AND',
-                        [SERIAL_FLD.INVOICE, 'anyof', '@NONE@']
-                    );
+                    searchOption.filters.push('AND', [SERIAL_FLD.ITEM_FULFILLMENT, 'noneof', '@NONE@'], 'AND', [
+                        SERIAL_FLD.INVOICE,
+                        'anyof',
+                        '@NONE@'
+                    ]);
                 }
 
                 vc2_util.log(logTitle, '// Search Option: ', searchOption);
@@ -350,10 +341,7 @@ define([
                 return true;
             });
             // if (reduceKeys && reduceKeys.length > 0) Helper.updateTransaction();
-            log.audit(
-                logTitle,
-                LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys)
-            );
+            log.audit(logTitle, LogPrefix + '// REDUCE keys processed' + JSON.stringify(reduceKeys));
 
             // update the sync
             ns_record.submitFields({
@@ -402,9 +390,7 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld])
-                        ? arrResults[fld][0]
-                        : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
                 }
             }
             return arrData;
@@ -460,9 +446,7 @@ define([
                     // test if we need to get all the paged results,
                     // .. or just a slice, of maxResults is less than the pageSize
                     arrResults = arrResults.concat(
-                        maxResults > pageSize
-                            ? pagedResults.data
-                            : pagedResults.data.slice(0, maxResults)
+                        maxResults > pageSize ? pagedResults.data : pagedResults.data.slice(0, maxResults)
                     );
 
                     // reduce the max results

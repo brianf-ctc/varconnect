@@ -58,11 +58,7 @@ define(function (require) {
                         poId
                             ? ['internalid', 'anyof', poId]
                             : MainConfig.overridePONum
-                            ? [
-                                  ['numbertext', 'is', poNum],
-                                  'OR',
-                                  ['custbody_ctc_vc_override_ponum', 'is', poNum]
-                              ]
+                            ? [['numbertext', 'is', poNum], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poNum]]
                             : ['numbertext', 'is', poNum],
                         'AND',
                         ['mainline', 'is', 'T'],
@@ -132,8 +128,7 @@ define(function (require) {
                     };
                     arrSKUs.push(skuData);
 
-                    if (!vc2_util.inArray(skuData.value, arrPOItems))
-                        arrPOItems.push(skuData.value);
+                    if (!vc2_util.inArray(skuData.value, arrPOItems)) arrPOItems.push(skuData.value);
 
                     return true;
                 });
@@ -144,10 +139,7 @@ define(function (require) {
                 if (arrSKUVendorNames && !vc2_util.isEmpty(arrSKUVendorNames)) {
                     var skuMapKey = vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY;
                     arrSKUs.forEach(function (skuData) {
-                        if (
-                            arrSKUVendorNames[skuData.value] &&
-                            !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])
-                        ) {
+                        if (arrSKUVendorNames[skuData.value] && !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])) {
                             skuData[skuMapKey] = arrSKUVendorNames[skuData.value];
                         }
 
@@ -172,11 +164,7 @@ define(function (require) {
                     var uniqueItemIds = vc2_util.uniqueArray(arrItemList);
                     if (!uniqueItemIds.length) throw 'Missing line item lists';
 
-                    vc2_util.log(
-                        logTitle,
-                        'Lookup items for assigned vendor names... ',
-                        uniqueItemIds
-                    );
+                    vc2_util.log(logTitle, 'Lookup items for assigned vendor names... ', uniqueItemIds);
 
                     /// SEARCH for Mapped Vendor Items
                     var searchResults = vc2_util.searchAllPaged({
@@ -188,8 +176,7 @@ define(function (require) {
                         ],
                         columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
                     });
-                    if (!searchResults || !searchResults.length)
-                        throw 'No vendor item mapped for items';
+                    if (!searchResults || !searchResults.length) throw 'No vendor item mapped for items';
 
                     var vendorItemMap = {};
                     searchResults.forEach(function (result) {
@@ -283,8 +270,7 @@ define(function (require) {
                         var value = row.getValue({ name: fldname }),
                             text = row.getText({ name: fldname });
 
-                        billFileValues[fld] =
-                            value && text && value !== text ? { text: text, value: value } : value;
+                        billFileValues[fld] = value && text && value !== text ? { text: text, value: value } : value;
                     }
                     return true;
                 });
@@ -416,8 +402,7 @@ define(function (require) {
 
                 var billFileDataJSON = JSON.stringify(billFileValues.DATA);
 
-                if (billFileDataJSON != billFileValues.JSON)
-                    updateValues[BILLFILE.FIELD.JSON] = billFileDataJSON;
+                if (billFileDataJSON != billFileValues.JSON) updateValues[BILLFILE.FIELD.JSON] = billFileDataJSON;
 
                 // updateValues[BILLFILE.FIELD.JSON] = ;
 

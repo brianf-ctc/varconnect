@@ -90,9 +90,7 @@ define([
 
         log.debug(
             logTitle,
-            LogPrefix +
-                '>> Valid API Configs : ' +
-                JSON.stringify([validVendorCfgName, validVendorCfg])
+            LogPrefix + '>> Valid API Configs : ' + JSON.stringify([validVendorCfgName, validVendorCfg])
         );
 
         // G = Fully Billed
@@ -145,10 +143,7 @@ define([
                 })
             );
         }
-        log.debug(
-            logTitle,
-            LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption.filters)
-        );
+        log.debug(logTitle, LogPrefix + '>> searchOption : ' + JSON.stringify(searchOption.filters));
 
         var searchObj = ns_search.create(searchOption);
         var totalPending = searchObj.runPaged().count;
@@ -179,8 +174,7 @@ define([
 
         if (vc2_util.isOneWorld()) {
             BillCFG.subsidiary = currentValue.subsidiary.value || currentValue.subsidiary;
-            BillCFG.country =
-                currentValue['country.subsidiary'].value || currentValue['country.subsidiary'];
+            BillCFG.country = currentValue['country.subsidiary'].value || currentValue['country.subsidiary'];
 
             ['subsidiary'].value;
         } else BillCFG.country = ns_runtime.country;

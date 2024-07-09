@@ -35,16 +35,7 @@ define([
     '../CTC_VC2_Constants.js',
     '../CTC_VC2_Lib_Utils',
     '../Services/ctc_svclib_configlib.js'
-], function (
-    ns_task,
-    ns_ui,
-    ns_runtime,
-    ns_record,
-    ns_search,
-    vc2_constant,
-    vc2_util,
-    vcs_configLib
-) {
+], function (ns_task, ns_ui, ns_runtime, ns_record, ns_search, vc2_constant, vc2_util, vcs_configLib) {
     var LogTitle = 'UE|Serials',
         LogPrefix;
 
@@ -83,14 +74,8 @@ define([
                     sublist = form.getSublist({ id: 'item' });
 
                 var fieldObj = {
-                    serialUpdate: Helper.getSublistField(
-                        sublist,
-                        vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_UPDATE
-                    ),
-                    serialScan: Helper.getSublistField(
-                        sublist,
-                        vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN
-                    ),
+                    serialUpdate: Helper.getSublistField(sublist, vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_UPDATE),
+                    serialScan: Helper.getSublistField(sublist, vc2_constant.FIELD.TRANSACTION.SERIAL_NUMBER_SCAN),
                     serialSync: Helper.getField(form, 'custbody_ctc_vc_serialsync_done')
                 };
                 vc2_util.log(logTitle, '// fieldObj: ', fieldObj);
@@ -188,14 +173,10 @@ define([
                         line: line
                     });
 
-                    if (
-                        (serialString && serialString.trim()) ||
-                        (serialStringUpdate && serialStringUpdate.trim())
-                    ) {
+                    if ((serialString && serialString.trim()) || (serialStringUpdate && serialStringUpdate.trim())) {
                         hasSerials = true;
                     } else if (
-                        (record.type == ns_record.Type.ITEM_FULFILLMENT ||
-                            record.type == ns_record.Type.INVOICE) &&
+                        (record.type == ns_record.Type.ITEM_FULFILLMENT || record.type == ns_record.Type.INVOICE) &&
                         scriptContext.type == scriptContext.UserEventType.CREATE &&
                         (!serialStringUpdate || serialStringUpdate.trim().length == 0)
                     ) {
@@ -221,11 +202,7 @@ define([
 
                 //Also check if the corresponding features have been enabled before processing
                 var OrderCFG;
-                if (
-                    record.type == ns_record.Type.INVOICE &&
-                    MainCFG.copySerialsInv &&
-                    hasSerialListChanged
-                ) {
+                if (record.type == ns_record.Type.INVOICE && MainCFG.copySerialsInv && hasSerialListChanged) {
                     OrderCFG = Helper.searchVendorConfig({
                         salesOrder: record.getValue({ fieldId: 'createdfrom' })
                     });
@@ -254,8 +231,7 @@ define([
                     };
                     taskOption.scriptParams['custscript_vc_type'] = record.type;
                     taskOption.scriptParams['custscript_vc_id'] = record.id;
-                    taskOption.scriptParams['custscript_vc_sender'] =
-                        ns_runtime.getCurrentUser().id;
+                    taskOption.scriptParams['custscript_vc_sender'] = ns_runtime.getCurrentUser().id;
                     taskOption.deployId = Helper.forceDeploy(taskOption);
                 }
 
@@ -507,12 +483,7 @@ define([
                 vc2_util.log(logTitle, '// params', option);
 
                 returnValue =
-                    FN.deploy(
-                        option.scriptId,
-                        option.deployId,
-                        option.scriptParams,
-                        option.taskType
-                    ) ||
+                    FN.deploy(option.scriptId, option.deployId, option.scriptParams, option.taskType) ||
                     FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
                     FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
 
@@ -583,11 +554,7 @@ define([
             }
             try {
                 if (!returnField || !returnField.id) {
-                    vc2_util.log(
-                        logTitle,
-                        '## ERROR ## ',
-                        'Field (id=' + fieldId + ') is not exposed'
-                    );
+                    vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                     returnField = null;
                 }
             } catch (invocationErr) {
@@ -611,11 +578,7 @@ define([
             }
             try {
                 if (!returnField || !returnField.id) {
-                    vc2_util.log(
-                        logTitle,
-                        '## ERROR ## ',
-                        'Field (id=' + fieldId + ') is not exposed'
-                    );
+                    vc2_util.log(logTitle, '## ERROR ## ', 'Field (id=' + fieldId + ') is not exposed');
                     returnField = null;
                 }
             } catch (invocationErr) {
@@ -628,9 +591,7 @@ define([
         split: function (inputString) {
             var result = [];
             if (inputString) {
-                inputString = inputString
-                    .replace(/[,\s]+/g, ',')
-                    .replace(/(^[,\s]+)|([,\s]+$)/g, '');
+                inputString = inputString.replace(/[,\s]+/g, ',').replace(/(^[,\s]+)|([,\s]+$)/g, '');
                 result = inputString.split(',');
             }
             return result;
@@ -731,8 +692,7 @@ define([
                     } else if (hasLineSerials && hasExistingSerials) {
                         hasSerialsChanged =
                             Helper.matchArrayContents(oldSerialString, serialString) !== 0 ||
-                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !==
-                                0;
+                            Helper.matchArrayContents(oldSerialStringUpdate, serialStringUpdate) !== 0;
                     } else {
                         hasSerialsChanged = false;
                     }
