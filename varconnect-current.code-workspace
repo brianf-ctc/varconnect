@@ -1,13 +1,41 @@
 {
-	"folders": [
-		{
-			"path": "varconnect-current"
-		},
-		{
-			"path": "varconnect-dev"
-		},
-		{
-			"path": "varconnect-bundle"
-		}
-	]
+    "folders": [
+        {
+            "name": "current",
+            "path": "varconnect-current"
+        },
+        {
+            "path": "varconnect-dev"
+        }
+    ],
+    "settings": {
+        "gotoSymbolStack.currentStackPosition": 3,
+        "gotoSymbolStack.maxStackPosition": 3,
+        "gotoSymbolStack.filePositionInfo": [
+            {
+                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
+                "viewColumn": 1,
+                "textPosition": {
+                    "line": 335,
+                    "character": 53
+                }
+            },
+            {
+                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
+                "viewColumn": 1,
+                "textPosition": {
+                    "line": 335,
+                    "character": 53
+                }
+            },
+            {
+                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
+                "viewColumn": 1,
+                "textPosition": {
+                    "line": 335,
+                    "character": 53
+                }
+            }
+        ]
+    }
 }

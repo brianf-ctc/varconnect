@@ -45,7 +45,14 @@ define([
         return result;
     }
 
-    var VC_LICENSE = vc2_constant.LICENSE;
+    var VC_LICENSE = {
+        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
+        PRODUCT_CODE: 2,
+        MAX_RETRY: 3,
+        KEY: 'LICENSE_KEY.20240418',
+        CACHE_NAME: 'VC_LICENSE',
+        CACHE_TTL: 86400 // 24 hrs
+    };
 
     // {
     //     URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',

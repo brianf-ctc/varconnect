@@ -17,6 +17,8 @@ define([
     'N/record',
     'N/task',
     'N/redirect',
+    'N/https',
+    'N/url',
     './CTC_VC2_Lib_EventRouter',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants',
@@ -26,6 +28,8 @@ define([
     ns_record,
     ns_task,
     ns_redirect,
+    ns_https,
+    ns_url,
     EventRouter,
     vc2_util,
     vc2_constant,
@@ -372,6 +376,155 @@ define([
         // }
     };
 
+    /// SEND CONFIG ///
+    var LibSendConfig = {
+        PRODUCT_CODE: 2,
+        sendData: function (option) {
+            var logTitle = 'VC_LICENSE::sendConfig',
+                logPrefix = '[SEND-CONFIG] ',
+                response,
+                returnValue = {};
+
+            vc2_util.LogPrefix = logPrefix;
+            var startTime = new Date();
+
+            try {
+                var configDef = option.config,
+                    configId = option.id,
+                    configName = option.configName,
+                    SkippedFields = option.skippedFields;
+
+                if (vc2_util.isEmpty(configDef) || vc2_util.isEmpty(configId))
+                    throw 'Missing record config';
+
+                // try to do look up of the search
+                var configFields = ['name', 'isinactive', 'internalid'],
+                    payloadData = [];
+
+                configDef.FIELD['NAME'] = 'name';
+                configDef.FIELD['INACTIVE'] = 'isinactive';
+                configDef.FIELD['MODIFIED'] = 'lastmodified';
+                configDef.FIELD['MODIFIED_BY'] = 'lastmodifiedby';
+
+                for (var fieldName in configDef.FIELD) {
+                    if (vc2_util.inArray(configDef.FIELD[fieldName], SkippedFields)) continue;
+                    configFields.push(configDef.FIELD[fieldName]);
+                }
+                if (option.nameField) configFields.push(option.nameField);
+                vc2_util.log(logTitle, '// configFields ', configFields);
+
+                // Do the record lookup
+                var results = vc2_util.flatLookup({
+                    type: configDef.ID,
+                    id: configId,
+                    columns: configFields
+                });
+                vc2_util.log(logTitle, '// results ', results);
+
+                if (results.name == results.internalid.value) {
+                    if (option.nameValue) {
+                        results.name = option.nameValue;
+
+                        ns_record.submitFields({
+                            type: configDef.ID,
+                            id: configId,
+                            values: { name: results.name }
+                        });
+                    } else if (option.nameField && results[option.nameField]) {
+                        results.name = results[option.nameField].text || results[option.nameField];
+
+                        ns_record.submitFields({
+                            type: configDef.ID,
+                            id: configId,
+                            values: { name: results.name }
+                        });
+                    }
+                    // update this record?
+                }
+                vc2_util.log(logTitle, '// results ', results);
+
+                payloadData.push({
+                    settingFieldId: '_config_name',
+                    settingFieldName: 'CONFIG_NAME',
+                    settingValue: configName
+                });
+
+                // build the paylod
+                for (var fieldName in configDef.FIELD) {
+                    var fieldId = configDef.FIELD[fieldName],
+                        fieldValue =
+                            results[fieldId] == null
+                                ? 'null'
+                                : results[fieldId] === true
+                                ? 'T'
+                                : results[fieldId] === false
+                                ? 'F'
+                                : results[fieldId];
+
+                    var data = {
+                        settingFieldId: fieldId,
+                        settingFieldName: fieldName,
+                        settingValue: fieldValue.value || fieldValue
+                    };
+                    if (
+                        results.hasOwnProperty(fieldId) &&
+                        fieldValue.text &&
+                        fieldValue.text !== data.settingValue
+                    ) {
+                        data['settingFieldText'] = fieldValue.text;
+                    }
+                    payloadData.push(data);
+                }
+                // vc2_util.log(logTitle, '// Config Data: ', payloadData);
+
+                var configURL =
+                    'https://' +
+                    ns_url.resolveDomain({
+                        hostType: ns_url.HostType.APPLICATION,
+                        accountId: ns_runtime.accountId
+                    }) +
+                    ns_url.resolveRecord({ recordType: configDef.ID, recordId: configId });
+
+                vc2_util.log(logTitle, '// configURL: ', configURL);
+
+                // prepare the payload
+                var queryOption = {
+                    method: ns_https.Method.POST,
+                    url:
+                        'https://nscatalystserver.azurewebsites.net/logconfig.php' +
+                        '?' +
+                        ('producttypeid=' + LibSendConfig.PRODUCT_CODE) +
+                        ('&nsaccountid=' + ns_runtime.accountId) +
+                        ('&settingsid=' + configId) +
+                        ('&rectype=' + configDef.ID) +
+                        ('&settingsurl=' + encodeURIComponent(configURL)),
+                    body: JSON.stringify(payloadData)
+                };
+                //// SEND THE REQUEST ////
+                vc2_util.log(logTitle, 'Send Request query: ', queryOption);
+                response = ns_https.request(queryOption);
+                vc2_util.log(logTitle, 'Response: ', response);
+
+                if (!response || !response.body) throw 'Unable to get response';
+                if (!response.code || response.code !== 200)
+                    throw 'Received invalid response code - ' + response.code;
+
+                returnValue = response.body;
+            } catch (error) {
+                returnValue.hasError = true;
+                returnValue.errorMsg = vc2_util.extractError(error);
+            } finally {
+                var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
+                vc2_util.log(logTitle, '# response time: ' + durationSec + 's');
+
+                vc2_util.log(logTitle, '// returnValue ', returnValue);
+            }
+
+            returnValue;
+        }
+    };
+    ///
+
     EventRouter.Action[vc2_constant.RECORD.BILLFILE.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
@@ -456,6 +609,13 @@ define([
                     (vendorCacheList.LIST || []).forEach(function (cacheKey) {
                         vc2_util.removeCache({ name: cacheKey });
                     });
+
+                LibSendConfig.sendData({
+                    config: vc2_constant.RECORD.BILLCREATE_CONFIG,
+                    id: Current.recordId,
+                    configName: 'BILLCREATE_CONFIG',
+                    skippedFields: []
+                });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -514,6 +674,14 @@ define([
                     (vendorCacheList.LIST || []).forEach(function (cacheKey) {
                         vc2_util.removeCache({ name: cacheKey });
                     });
+
+                LibSendConfig.sendData({
+                    config: vc2_constant.RECORD.VENDOR_CONFIG,
+                    id: Current.recordId,
+                    configName: 'VENDOR_CONFIG',
+                    nameField: 'custrecord_ctc_vc_xml_vendor',
+                    skippedFields: ['custrecord_ctc_vc_xml_req']
+                });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -530,7 +698,6 @@ define([
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
                 var MainCFG = vcs_configLib.mainConfig();
-                vc2_util.log(logTitle, 'MainCFG>> ', MainCFG);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -548,7 +715,16 @@ define([
                 });
 
                 var MainCFG = vcs_configLib.mainConfig({ forced: true });
-                vc2_util.log(logTitle, 'mainConfig>> ', MainCFG);
+
+                LibSendConfig.sendData({
+                    config: vc2_constant.RECORD.MAIN_CONFIG,
+                    id: Current.recordId,
+                    configName: 'MAIN_CONFIG',
+                    nameValue: 'MAIN_CONFIG',
+                    skippedFields: ['custrecord_ctc_vc_license_text']
+                });
+
+
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
