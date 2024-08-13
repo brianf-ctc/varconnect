@@ -12,7 +12,11 @@
  * @NModuleScope Public
  */
 
-define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (ns_url, vc2_util, moment) {
+define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
+    ns_url,
+    vc2_util,
+    moment
+) {
     var Helper = {};
     var EntryPoint = {};
 
@@ -166,7 +170,9 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             for (var s = 0; s < arrShipments.length; s++) {
                 //set values to order item for shipping details
                 orderItem.branch = arrShipments[s].branch ? arrShipments[s].branch : 'NA';
-                orderItem.ship_method = arrShipments[s].serviceType ? arrShipments[s].serviceType : 'NA';
+                orderItem.ship_method = arrShipments[s].serviceType
+                    ? arrShipments[s].serviceType
+                    : 'NA';
                 orderItem.carrier = arrShipments[s].carrier ? arrShipments[s].carrier : 'NA';
 
                 //==== get manifest ====
@@ -174,7 +180,9 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                 for (var m = 0; m < arrManifest.length; m++) {
                     var objPackaging = arrManifest[m].packaging;
 
-                    var shipmentDate = arrManifest[m].shipmentDate ? arrManifest[m].shipmentDate : 'NA';
+                    var shipmentDate = arrManifest[m].shipmentDate
+                        ? arrManifest[m].shipmentDate
+                        : 'NA';
                     var trackingNum = arrManifest[m].trackingNumber;
                     var carrier = arrManifest[m].carrier;
                     var etaDate = arrManifest[m].etaDate;
@@ -258,7 +266,12 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
 
         var returnValue = false;
 
-        if (orderItem.ship_date && orderItem.ship_date != 'NA' && orderItem.ship_qty && orderItem.ship_qty != 0) {
+        if (
+            orderItem.ship_date &&
+            orderItem.ship_date != 'NA' &&
+            orderItem.ship_qty &&
+            orderItem.ship_qty != 0
+        ) {
             var shippedDate = moment(orderItem.ship_date, 'MM/DD/YY').toDate();
             vc2_util.log(LogTitle, '**** shipped date: ****', [
                 shippedDate,

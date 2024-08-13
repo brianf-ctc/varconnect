@@ -18,11 +18,7 @@
  * 1.00		Jan 9, 2020		paolodl		Library for Vendor Configuration
  *
  */
-define(['N/search',
-    'N/record',
-    './CTC_VCSP_Lib_Preferences',
-    './CTC_VCSP_Constants'],
-function (
+define(['N/search', 'N/record', './CTC_VCSP_Lib_Preferences', './CTC_VCSP_Constants'], function (
     NS_Search,
     NS_Record,
     VCSP_Pref,
@@ -43,7 +39,7 @@ function (
         { name: VendorConfig.API_KEY },
         { name: VendorConfig.API_SECRET },
         { name: VendorConfig.ACCESS_ENDPOINT },
-        { name: VendorConfig.OAUTH_SCOPE},
+        { name: VendorConfig.OAUTH_SCOPE },
         { name: VendorConfig.SUBSCRIPTION_KEY },
         { name: VendorConfig.Bill.ID },
         { name: VendorConfig.Bill.ADDRESSEE },
@@ -76,9 +72,9 @@ function (
         { name: VendorConfig.FIELD_MAP },
         { name: VendorConfig.EVENT_TYPE },
         { name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS },
-        { name: VendorConfig.ADDITIONAL_PO_FIELDS},
-        { name: VendorConfig.PO_LINE_COLUMNS},
-        { name: VendorConfig.BUSINESS_UNIT},
+        { name: VendorConfig.ADDITIONAL_PO_FIELDS },
+        { name: VendorConfig.PO_LINE_COLUMNS },
+        { name: VendorConfig.BUSINESS_UNIT }
     ];
 
     function _generateVendorConfig(result) {
@@ -136,10 +132,12 @@ function (
             paymentOther: result.getText({ name: VendorConfig.PAYMENT.OTHER }),
             paymentTerm: result.getText({ name: VendorConfig.PAYMENT.TERM }),
             fieldMap: vendorConfigRecord.getValue(VendorConfig.FIELD_MAP),
-            addVendorDetailsEnabled: result.getValue({ name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS }),
+            addVendorDetailsEnabled: result.getValue({
+                name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS
+            }),
             additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
             poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS),
-            businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT),
+            businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT)
         };
     }
 
@@ -232,9 +230,7 @@ function (
             );
         }
 
-        let columns = [
-            { name: VendorConfig.VENDOR }
-        ];
+        let columns = [{ name: VendorConfig.VENDOR }];
 
         let vendorSearch = NS_Search.create({
             type: VCSP_Global.Records.VENDOR_CONFIG,
@@ -250,7 +246,7 @@ function (
         let vendorAdded = {};
         if (results && results.length) {
             vendorList = [];
-            results.forEach(result => {
+            results.forEach((result) => {
                 let vendorId = result.getValue(columns[0]);
                 if (vendorId && !vendorAdded[vendorId]) {
                     vendorList.push({
@@ -273,31 +269,32 @@ function (
             vendorId = option.vendor,
             returnValue = null;
         // init search details
-        let searchColumns = [
-                { name: VendorConfig.ADDITIONAL_PO_FIELDS },
-            ],
+        let searchColumns = [{ name: VendorConfig.ADDITIONAL_PO_FIELDS }],
             searchDetails;
         if (vendorConfigId) {
             returnValue = getVendorConfiguration({
-                vendorConfigId: vendorConfigId,
+                vendorConfigId: vendorConfigId
             });
         } else if (vendorId) {
             returnValue = getVendorConfiguration({
                 vendor: vendorId,
-                subsidiary: subsidiaryId,
+                subsidiary: subsidiaryId
             });
         }
         if (returnValue) {
             searchDetails = {
                 type: VCSP_Global.Records.VENDOR_CONFIG,
                 filters: [
-                    [ VendorConfig.ID, NS_Search.Operator.ANYOF, returnValue.id ],
+                    [VendorConfig.ID, NS_Search.Operator.ANYOF, returnValue.id],
                     'AND',
-                    [ 'isinactive', NS_Search.Operator.IS, 'F' ]
+                    ['isinactive', NS_Search.Operator.IS, 'F']
                 ],
-                columns: searchColumns,
-            }
-            log.debug(logTitle, 'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails));
+                columns: searchColumns
+            };
+            log.debug(
+                logTitle,
+                'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails)
+            );
             let vendorSearch = NS_Search.create(searchDetails);
             let results = vendorSearch.run().getRange({
                 start: 0,
@@ -313,6 +310,6 @@ function (
     return {
         getVendorConfiguration: getVendorConfiguration,
         getAvailableVendorList: getAvailableVendorList,
-        getVendorAdditionalPOFields: getVendorAdditionalPOFields,
+        getVendorAdditionalPOFields: getVendorAdditionalPOFields
     };
 });

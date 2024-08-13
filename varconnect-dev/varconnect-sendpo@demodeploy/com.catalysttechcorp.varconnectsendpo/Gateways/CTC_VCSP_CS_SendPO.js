@@ -12,17 +12,17 @@
  * @NModuleScope Public
  * @NScriptType ClientScript
  */
-define(['N/currentRecord', 'N/url', 'N/https', 'N/ui/message', '../Library/CTC_VCSP_Constants.js'], function (
-    currentRecord,
-    url,
-    https,
-    message,
-    constants
-) {
+define([
+    'N/currentRecord',
+    'N/url',
+    'N/https',
+    'N/ui/message',
+    '../Library/CTC_VCSP_Constants.js'
+], function (currentRecord, url, https, message, constants) {
     var msgObj;
 
-    function _callSendPOSuitelet(options) {
-        var recId = options.recId,
+    function _callSendPOSuitelet(option) {
+        var recId = option.recId,
             params = { custparam_recId: recId },
             protocol = 'https://',
             domain = url.resolveDomain({
@@ -46,9 +46,9 @@ define(['N/currentRecord', 'N/url', 'N/https', 'N/ui/message', '../Library/CTC_V
         return result;
     }
 
-    function _displayMessage(options) {
-        var code = options.code,
-            msg = options.message;
+    function _displayMessage(option) {
+        var code = option.code,
+            msg = option.message;
 
         if (msgObj) msgObj.hide();
 

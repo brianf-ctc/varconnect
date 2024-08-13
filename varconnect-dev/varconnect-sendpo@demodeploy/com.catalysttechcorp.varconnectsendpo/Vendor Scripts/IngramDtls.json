@@ -176,7 +176,7 @@
         "fieldGroup": "Additional Line Level Details",
         "fields": [
             {
-                "label": "- Unit price pertains to reseller-requested unit price and is not guaranteed.",
+                "label": "- requested unit price and ship dates cannot be guaranteed",
                 "type": "LABEL"
             },
             {

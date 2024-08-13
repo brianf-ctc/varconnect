@@ -112,7 +112,11 @@ define(function (require) {
                     type: 'purchaseorder',
                     filters: [
                         MainConfig.overridePONum
-                            ? [['numbertext', 'is', poNum], 'OR', ['custbody_ctc_vc_override_ponum', 'is', poNum]]
+                            ? [
+                                  ['numbertext', 'is', poNum],
+                                  'OR',
+                                  ['custbody_ctc_vc_override_ponum', 'is', poNum]
+                              ]
                             : ['numbertext', 'is', poNum],
                         'AND',
                         ['mainline', 'is', 'T'],

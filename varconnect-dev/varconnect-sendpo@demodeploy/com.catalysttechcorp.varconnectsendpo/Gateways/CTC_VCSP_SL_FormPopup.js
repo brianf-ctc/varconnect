@@ -37,12 +37,12 @@ define([
 ) {
     let LogTitle = 'VCSP:FormPopup';
     let Helper = {};
-    Helper.parseVendorValue = function (options) {
+    Helper.parseVendorValue = function (option) {
         let logTitle = [LogTitle, 'parseVendorValue'].join(':'),
-            returnValue = options.value, // return the NetSuite-equivalent value
-            apiVendor = options.apiVendor,
-            type = options.type;
-        log.debug(logTitle, JSON.stringify(options));
+            returnValue = option.value, // return the NetSuite-equivalent value
+            apiVendor = option.apiVendor,
+            type = option.type;
+        log.debug(logTitle, JSON.stringify(option));
         if (!CTC_Util.isEmpty(returnValue)) {
             let dateFormat = null;
             switch (type) {
@@ -80,10 +80,10 @@ define([
         }
         return returnValue;
     };
-    Helper.formatToVendorValue = function (options) {
-        let returnValue = options.value, // return the vendor-equivalent value
-            apiVendor = options.apiVendor,
-            type = options.type;
+    Helper.formatToVendorValue = function (option) {
+        let returnValue = option.value, // return the vendor-equivalent value
+            apiVendor = option.apiVendor,
+            type = option.type;
         if (!CTC_Util.isEmpty(returnValue)) {
             switch (type) {
                 case 'DATE':
@@ -114,19 +114,19 @@ define([
         }
         return returnValue;
     };
-    Helper.addFields = function (options) {
+    Helper.addFields = function (option) {
         let logTitle = [LogTitle, 'addFields'].join(':'),
-            form = options.form,
-            fields = options.fields,
-            defaultValues = options.defaultValues || {},
-            filterValues = options.filterValues || {},
-            containerName = options.containerName,
-            fieldIdMapping = options.fieldIdMapping || {
+            form = option.form,
+            fields = option.fields,
+            defaultValues = option.defaultValues || {},
+            filterValues = option.filterValues || {},
+            containerName = option.containerName,
+            fieldIdMapping = option.fieldIdMapping || {
                 _containers: []
             },
-            record = options.record,
-            sublist = options.sublist,
-            lineCount = options.lineCount;
+            record = option.record,
+            sublist = option.sublist,
+            lineCount = option.lineCount;
         CTC_Util.log('DEBUG', logTitle, fieldIdMapping);
         let containerId = null;
         for (let x = 0, fieldCount = fields.length; x < fieldCount; x += 1) {
@@ -169,7 +169,9 @@ define([
                     if (containerName && !poField.sublist) {
                         containerIndex = fieldIdMapping._containers.indexOf(containerName);
                         if (containerIndex == -1) {
-                            containerId = 'custpage_vcsp_ctc_fldgrp' + (fieldIdMapping._containers.length + 1);
+                            containerId =
+                                'custpage_vcsp_ctc_fldgrp' +
+                                (fieldIdMapping._containers.length + 1);
                             let fldGroupObj = form.addFieldGroup({
                                 id: containerId,
                                 label: containerName
@@ -180,7 +182,9 @@ define([
                             fieldDetails.container = containerId;
                         }
                     }
-                    fieldDetails.id = ['custpage_vcsp_ctc_fld', containerIndex + 1, x + 1].join('_');
+                    fieldDetails.id = ['custpage_vcsp_ctc_fld', containerIndex + 1, x + 1].join(
+                        '_'
+                    );
                     poField.fieldGroup = containerName;
                     if (poField.name) {
                         fieldIdMapping[fieldDetails.id] = poField;
@@ -213,7 +217,6 @@ define([
                                 itemColumn.updateDisplayType({
                                     displayType: columnDisplayType
                                 });
-                                itemColumn.maxLength = 20;
                                 descriptionColumn.updateDisplayType({
                                     displayType: columnDisplayType
                                 });
@@ -222,7 +225,11 @@ define([
                                 displayType: NS_ServerWidget.FieldDisplayType.ENTRY
                             });
                             if (record) {
-                                for (let i = 0, len = record.getLineCount('item'); i < len; i += 1) {
+                                for (
+                                    let i = 0, len = record.getLineCount('item');
+                                    i < len;
+                                    i += 1
+                                ) {
                                     let item = record.getSublistText({
                                             sublistId: 'item',
                                             fieldId: 'item',
@@ -239,10 +246,14 @@ define([
                                             line: i
                                         });
                                     if (item) {
+                                        let itemDisplayName = item;
+                                        if (item.length > 23) {
+                                            itemDisplayName = item.slice(0, 20) + '...';
+                                        }
                                         sublist.setSublistValue({
                                             id: 'custpage_vcsp_ctc_item_item',
                                             line: i,
-                                            value: item
+                                            value: itemDisplayName
                                         });
                                         if (rate) {
                                             sublist.setSublistValue({
@@ -273,7 +284,10 @@ define([
                         }
                         parent = sublist;
                     }
-                    log.debug(logTitle, ['Adding', poField.name, 'field ~', JSON.stringify(fieldDetails)].join(' '));
+                    log.debug(
+                        logTitle,
+                        ['Adding', poField.name, 'field ~', JSON.stringify(fieldDetails)].join(' ')
+                    );
                     let fieldObj = parent.addField(fieldDetails);
                     if (sublist) {
                         fieldObj.updateDisplayType({
@@ -300,64 +314,64 @@ define([
                     }
                     if (poField.isResetButton) {
                         fieldObj.defaultValue = `<span class="smallgraytext uir-label">
-                                <span class="labelSpanEdit smallgraytextnolink">${poField.label}</span>&nbsp;&nbsp;
-                                <span class='uir-field inputreadonly'>
-                                    <a class='smalltext' href='#' title='Reset' onclick='require(["N/currentRecord"], function(ns_currentRecord) {
-                                        let record = ns_currentRecord.get();
-                                        let fieldsListStr = record.getValue("custpage_vcsp_ctc_fieldslist");
-                                        let fieldMapping = null;
-                                        if (fieldsListStr) {
-                                            fieldMapping = JSON.parse(fieldsListStr);
-                                        }
-                                        for (let suiteletFieldId in fieldMapping) {
-                                            let fieldGroup = fieldMapping[suiteletFieldId].fieldGroup;
-                                            if (fieldGroup == "${containerName}") {
-                                                let sublist = fieldMapping[suiteletFieldId].sublist;
-                                                if (sublist) {
-                                                    for (let i = 0, len = record.getLineCount("custpage_vscp_ctc_sublist"); i < len; i += 1) {
-                                                        let newValue = null;
-                                                        switch (record.getSublistField({
-                                                            sublistId: "custpage_vscp_ctc_sublist",
-                                                            fieldId: suiteletFieldId,
-                                                            line: 0
-                                                        }).type) {
-                                                            case "${NS_Format.Type.CHECKBOX}":
-                                                                newValue = false;
-                                                                break;
-                                                            case "${NS_Format.Type.CURRENCY}":
-                                                                newValue = "";
-                                                                break;
-                                                            default:
-                                                                break;
-                                                        }
-                                                        record.setSublistValue({
-                                                            sublistId: "custpage_vscp_ctc_sublist",
-                                                            fieldId: suiteletFieldId,
-                                                            line: i,
-                                                            value: newValue
-                                                        });
-                                                    }
-                                                } else {
-                                                    let newValue = null;
-                                                    switch (record.getField({ fieldId: suiteletFieldId }).type) {
-                                                        case "${NS_Format.Type.CHECKBOX}":
-                                                            newValue = false;
-                                                            break;
-                                                        case "${NS_Format.Type.CURRENCY}":
-                                                            newValue = "";
-                                                            break;
-                                                        default:
-                                                            break;
-                                                    }
-                                                    record.setValue({
-                                                        fieldId: suiteletFieldId,
-                                                        value: newValue
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    });
-                                    return false'>Clear ${containerName} Fields</a></span></span>`;
+                                                                <span class="labelSpanEdit smallgraytextnolink">${poField.label}</span>&nbsp;&nbsp;
+                                                                <span class='uir-field inputreadonly'>
+                                                                        <a class='smalltext' href='#' title='Reset' onclick='require(["N/currentRecord"], function(ns_currentRecord) {
+                                                                                let record = ns_currentRecord.get();
+                                                                                let fieldsListStr = record.getValue("custpage_vcsp_ctc_fieldslist");
+                                                                                let fieldMapping = null;
+                                                                                if (fieldsListStr) {
+                                                                                        fieldMapping = JSON.parse(fieldsListStr);
+                                                                                }
+                                                                                for (let suiteletFieldId in fieldMapping) {
+                                                                                        let fieldGroup = fieldMapping[suiteletFieldId].fieldGroup;
+                                                                                        if (fieldGroup == "${containerName}") {
+                                                                                                let sublist = fieldMapping[suiteletFieldId].sublist;
+                                                                                                if (sublist) {
+                                                                                                        for (let i = 0, len = record.getLineCount("custpage_vscp_ctc_sublist"); i < len; i += 1) {
+                                                                                                                let newValue = null;
+                                                                                                                switch (record.getSublistField({
+                                                                                                                        sublistId: "custpage_vscp_ctc_sublist",
+                                                                                                                        fieldId: suiteletFieldId,
+                                                                                                                        line: 0
+                                                                                                                }).type) {
+                                                                                                                        case "${NS_Format.Type.CHECKBOX}":
+                                                                                                                                newValue = false;
+                                                                                                                                break;
+                                                                                                                        case "${NS_Format.Type.CURRENCY}":
+                                                                                                                                newValue = "";
+                                                                                                                                break;
+                                                                                                                        default:
+                                                                                                                                break;
+                                                                                                                }
+                                                                                                                record.setSublistValue({
+                                                                                                                        sublistId: "custpage_vscp_ctc_sublist",
+                                                                                                                        fieldId: suiteletFieldId,
+                                                                                                                        line: i,
+                                                                                                                        value: newValue
+                                                                                                                });
+                                                                                                        }
+                                                                                                } else {
+                                                                                                        let newValue = null;
+                                                                                                        switch (record.getField({ fieldId: suiteletFieldId }).type) {
+                                                                                                                case "${NS_Format.Type.CHECKBOX}":
+                                                                                                                        newValue = false;
+                                                                                                                        break;
+                                                                                                                case "${NS_Format.Type.CURRENCY}":
+                                                                                                                        newValue = "";
+                                                                                                                        break;
+                                                                                                                default:
+                                                                                                                        break;
+                                                                                                        }
+                                                                                                        record.setValue({
+                                                                                                                fieldId: suiteletFieldId,
+                                                                                                                value: newValue
+                                                                                                        });
+                                                                                                }
+                                                                                        }
+                                                                                }
+                                                                        });
+                                                                        return false'>Clear ${containerName} Fields</a></span></span>`;
                     }
                     if (poField.help) {
                         fieldObj.setHelpText({ help: poField.help });
@@ -408,9 +422,16 @@ define([
                         poField.options &&
                         poField.options.length
                     ) {
-                        for (let y = 0, dropdownCount = poField.options.length; y < dropdownCount; y += 1) {
+                        for (
+                            let y = 0, dropdownCount = poField.options.length;
+                            y < dropdownCount;
+                            y += 1
+                        ) {
                             let selectOption = poField.options[y];
-                            if (selectOption.text !== undefined && selectOption.value !== undefined) {
+                            if (
+                                selectOption.text !== undefined &&
+                                selectOption.value !== undefined
+                            ) {
                                 if (vendorDtlValue) {
                                     selectOption.isSelected = false;
                                 }
@@ -433,11 +454,20 @@ define([
                     context.request.parameters.vendorConfigId ||
                     context.request.parameters.custpage_vcsp_ctc_vendorconfigid,
                 subsidiaryId =
-                    context.request.parameters.subsidiaryId || context.request.parameters.custpage_vcsp_ctc_subsidiary,
-                vendorId = context.request.parameters.vendorId || context.request.parameters.custpage_vcsp_ctc_vendor,
-                title = context.request.parameters.title || context.request.parameters.custpage_vcsp_ctc_title,
-                poid = context.request.parameters.poid || context.request.parameters.custpage_vcsp_ctc_poid,
-                linesStr = context.request.parameters.lines || context.request.parameters.custpage_vcsp_ctc_lines,
+                    context.request.parameters.subsidiaryId ||
+                    context.request.parameters.custpage_vcsp_ctc_subsidiary,
+                vendorId =
+                    context.request.parameters.vendorId ||
+                    context.request.parameters.custpage_vcsp_ctc_vendor,
+                title =
+                    context.request.parameters.title ||
+                    context.request.parameters.custpage_vcsp_ctc_title,
+                poid =
+                    context.request.parameters.poid ||
+                    context.request.parameters.custpage_vcsp_ctc_poid,
+                linesStr =
+                    context.request.parameters.lines ||
+                    context.request.parameters.custpage_vcsp_ctc_lines,
                 arrLines = null,
                 lineCount = context.request.parameters.lineCount,
                 line = context.request.parameters.custpage_vcsp_ctc_line,
@@ -516,7 +546,12 @@ define([
                                     });
                                     log.debug(
                                         logTitle,
-                                        '@' + i + ': rate, value=' + lineRate + ', ' + JSON.stringify(value)
+                                        '@' +
+                                            i +
+                                            ': rate, value=' +
+                                            lineRate +
+                                            ', ' +
+                                            JSON.stringify(value)
                                     );
                                     record.setSublistValue({
                                         sublistId: 'item',
@@ -637,11 +672,17 @@ define([
                             });
                         }
                         if (record) {
-                            let vendorDetailValuesStr = record.getValue(VCSP_Global.Fields.Transaction.VENDOR_DETAILS);
+                            let vendorDetailValuesStr = record.getValue(
+                                VCSP_Global.Fields.Transaction.VENDOR_DETAILS
+                            );
                             vendorDetailValues = vendorDetailValuesStr
                                 ? CTC_Util.safeParse(vendorDetailValuesStr)
                                 : null;
-                            CTC_Util.log('AUDIT', logTitle, 'Field values=' + JSON.stringify(vendorDetailValues));
+                            CTC_Util.log(
+                                'AUDIT',
+                                logTitle,
+                                'Field values=' + JSON.stringify(vendorDetailValues)
+                            );
                         }
                     } else {
                         let isPopupFld = form.addField({
@@ -709,7 +750,11 @@ define([
                                 record: record,
                                 lineCount: lineCount
                             });
-                            CTC_Util.log('AUDIT', logTitle, 'Field mapping=' + JSON.stringify(fieldIdMapping));
+                            CTC_Util.log(
+                                'AUDIT',
+                                logTitle,
+                                'Field mapping=' + JSON.stringify(fieldIdMapping)
+                            );
                             let fieldsListFld = form.addField({
                                 id: 'custpage_vcsp_ctc_fieldslist',
                                 label: 'List of Field IDs',
@@ -753,21 +798,21 @@ define([
                                     functionName: 'back'
                                 });
                                 loaderFld.defaultValue = `<div id="vcsp_ctc_loader"
-                                            style="display: none; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%;
-                                            height: 100%; z-index: 900; overflow: hidden; text-align: center; background-color: rgba(255, 255, 255, 0.85);
-                                            color: #006600; border-radius: 5px;">
-                                        <div style="display: inline-flex; flex-direction: column; justify-content: center; align-items: center;">
-                                            <div style="width: 32px; height: 32px; align-self: center;">
-                                                <svg viewBox="-18 -18 36 36" role="img" aria-label="Loading"
-                                                        style="-webkit-animation: spin 2s ease infinite; -moz-animation: spin 2s ease infinite; animation: spin 2s ease infinite;">
-                                                    <circle fill="none" r="16" style="stroke: #dfe4eb; stroke-width: 3px;"></circle>
-                                                    <circle fill="none" r="16" style="stroke: #998260; stroke-width: 3px; stroke-dashoffset: 75;"
-                                                            transform="rotate(-135)" stroke-dasharray="100"></circle>
-                                                </svg>
-                                            </div>
-                                            <span id="vcsp_ctc_loader__msg" data-message="0">Loading</span>
-                                        </div>
-                                    </div>`;
+                                                                                        style="display: none; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%;
+                                                                                        height: 100%; z-index: 900; overflow: hidden; text-align: center; background-color: rgba(255, 255, 255, 0.85);
+                                                                                        color: #006600; border-radius: 5px;">
+                                                                                <div style="display: inline-flex; flex-direction: column; justify-content: center; align-items: center;">
+                                                                                        <div style="width: 32px; height: 32px; align-self: center;">
+                                                                                                <svg viewBox="-18 -18 36 36" role="img" aria-label="Loading"
+                                                                                                                style="-webkit-animation: spin 2s ease infinite; -moz-animation: spin 2s ease infinite; animation: spin 2s ease infinite;">
+                                                                                                        <circle fill="none" r="16" style="stroke: #dfe4eb; stroke-width: 3px;"></circle>
+                                                                                                        <circle fill="none" r="16" style="stroke: #998260; stroke-width: 3px; stroke-dashoffset: 75;"
+                                                                                                                        transform="rotate(-135)" stroke-dasharray="100"></circle>
+                                                                                                </svg>
+                                                                                        </div>
+                                                                                        <span id="vcsp_ctc_loader__msg" data-message="0">Loading</span>
+                                                                                </div>
+                                                                        </div>`;
                             } else {
                                 let submitOptions = {
                                     line: line
@@ -783,21 +828,21 @@ define([
                                     functionName: 'close'
                                 });
                                 loaderFld.defaultValue = `<div id="vcsp_ctc_loader"
-                                            style="display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%;
-                                            height: 100%; z-index: 900; overflow: hidden; text-align: center; background-color: rgba(255, 255, 255, 0.85);
-                                            color: #006600; border-radius: 5px;">
-                                        <div style="display: inline-flex; flex-direction: column; justify-content: center; align-items: center;">
-                                            <div style="width: 32px; height: 32px; align-self: center;">
-                                                <svg viewBox="-18 -18 36 36" role="img" aria-label="Loading"
-                                                        style="-webkit-animation: spin 2s ease infinite; -moz-animation: spin 2s ease infinite; animation: spin 2s ease infinite;">
-                                                    <circle fill="none" r="16" style="stroke: #dfe4eb; stroke-width: 3px;"></circle>
-                                                    <circle fill="none" r="16" style="stroke: #998260; stroke-width: 3px; stroke-dashoffset: 75;"
-                                                            transform="rotate(-135)" stroke-dasharray="100"></circle>
-                                                </svg>
-                                            </div>
-                                            <span id="vcsp_ctc_loader__msg" data-message="0">Loading</span>
-                                        </div>
-                                    </div>`;
+                                                                                        style="display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%;
+                                                                                        height: 100%; z-index: 900; overflow: hidden; text-align: center; background-color: rgba(255, 255, 255, 0.85);
+                                                                                        color: #006600; border-radius: 5px;">
+                                                                                <div style="display: inline-flex; flex-direction: column; justify-content: center; align-items: center;">
+                                                                                        <div style="width: 32px; height: 32px; align-self: center;">
+                                                                                                <svg viewBox="-18 -18 36 36" role="img" aria-label="Loading"
+                                                                                                                style="-webkit-animation: spin 2s ease infinite; -moz-animation: spin 2s ease infinite; animation: spin 2s ease infinite;">
+                                                                                                        <circle fill="none" r="16" style="stroke: #dfe4eb; stroke-width: 3px;"></circle>
+                                                                                                        <circle fill="none" r="16" style="stroke: #998260; stroke-width: 3px; stroke-dashoffset: 75;"
+                                                                                                                        transform="rotate(-135)" stroke-dasharray="100"></circle>
+                                                                                                </svg>
+                                                                                        </div>
+                                                                                        <span id="vcsp_ctc_loader__msg" data-message="0">Loading</span>
+                                                                                </div>
+                                                                        </div>`;
                             }
                             context.response.writePage(form);
                         }
@@ -886,18 +931,18 @@ define([
                     type: NS_ServerWidget.FieldType.INLINEHTML
                 });
                 jsTrigger.defaultValue = `<script type="text/javascript">
-                    function displayMessage(title, text) {
-                        require(['N/ui/message'], function(NS_Message) {
-                            let message = NS_Message.create({
-                                title: title,
-                                message: text,
-                                type: NS_Message.Type.INFORMATION
-                            });
-                            message.show();
-                        });
-                    }
-                    displayMessage("VAR Connect", "No additional fields to set.");
-                    </script>`;
+                                        function displayMessage(title, text) {
+                                                require(['N/ui/message'], function(NS_Message) {
+                                                        let message = NS_Message.create({
+                                                                title: title,
+                                                                message: text,
+                                                                type: NS_Message.Type.INFORMATION
+                                                        });
+                                                        message.show();
+                                                });
+                                        }
+                                        displayMessage("VAR Connect", "No additional fields to set.");
+                                        </script>`;
                 form.addButton({
                     id: 'custpage_vcsp_ctc_cancel',
                     label: poid ? 'Cancel' : 'Close',

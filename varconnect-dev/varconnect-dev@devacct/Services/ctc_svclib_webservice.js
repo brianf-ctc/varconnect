@@ -81,7 +81,10 @@ define(function (require) {
                 vendorConfig: vendorConfig,
                 poNum: poNum,
                 poId: poData.id,
-                country: vendorConfig.country == 'CA' ? vc2_constant.LIST.COUNTRY.CA : vc2_constant.LIST.COUNTRY.US,
+                country:
+                    vendorConfig.country == 'CA'
+                        ? vc2_constant.LIST.COUNTRY.CA
+                        : vc2_constant.LIST.COUNTRY.US,
                 countryCode: vendorConfig.country
             });
 

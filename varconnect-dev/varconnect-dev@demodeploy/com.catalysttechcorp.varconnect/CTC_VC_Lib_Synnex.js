@@ -20,12 +20,12 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
-    ns_xml,
-    vc2_constant,
-    vc2_util,
-    moment
-) {
+define([
+    'N/xml',
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_constant, vc2_util, moment) {
     var LogTitle = 'WS:Synnex';
 
     var LOG_LEVEL = 0;
@@ -82,7 +82,9 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                             ('<Password>' + CURRENT.orderConfig.password + '</Password>') +
                             '</Credential>' +
                             '<OrderStatusRequest>' +
-                            ('<CustomerNumber>' + CURRENT.orderConfig.customerNo + '</CustomerNumber>') +
+                            ('<CustomerNumber>' +
+                                CURRENT.orderConfig.customerNo +
+                                '</CustomerNumber>') +
                             ('<PONumber>' + CURRENT.recordNum + '</PONumber>') +
                             '</OrderStatusRequest>' +
                             '</SynnexB2B>',
@@ -112,7 +114,12 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
             var logTitle = [LogTitle, 'handleResponse'].join('::'),
                 returnValue = true;
 
-            if (request.isError || !request.RESPONSE || !request.RESPONSE.body || request.RESPONSE.code != '200')
+            if (
+                request.isError ||
+                !request.RESPONSE ||
+                !request.RESPONSE.body ||
+                request.RESPONSE.code != '200'
+            )
                 throw 'Unable to fetch server response';
 
             var xmlDoc = ns_xml.Parser.fromString({ text: request.RESPONSE.body });
@@ -191,9 +198,12 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                 if (!xmlDoc) throw 'Unable to parse XML';
 
                 // get the initial code
-                var orderCode = vc2_util.getNodeContent(ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' }));
+                var orderCode = vc2_util.getNodeContent(
+                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' })
+                );
 
-                if (vc2_util.inArray(orderCode.toUpperCase(), LibSynnexAPI.SkippedStatus)) throw 'Order is' + orderCode;
+                if (vc2_util.inArray(orderCode.toUpperCase(), LibSynnexAPI.SkippedStatus))
+                    throw 'Order is' + orderCode;
 
                 var arrItemsNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//Item' });
                 if (!arrItemsNode || !arrItemsNode.length) throw 'XML: Missing Item Details';
@@ -206,9 +216,12 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                         item_num: Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
                         vendorSKU: Helper.getNodeValue(itemNode, 'SKU') || 'NA',
                         order_num: Helper.getNodeValue(itemNode, 'OrderNumber') || 'NA',
-                        order_status: Helper.getNodeValue(itemNode.parentNode.parentNode, 'Code') || 'NA',
+                        order_status:
+                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'Code') || 'NA',
                         line_status: Helper.getNodeValue(itemNode, 'Code') || 'NA',
-                        order_date: Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') || 'NA',
+                        order_date:
+                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') ||
+                            'NA',
                         order_eta: Helper.getNodeValue(itemNode, 'EstimatedShipDate') || 'NA',
                         order_delivery_eta:
                             Helper.getNodeValue(itemNode, 'EstimatedDeliveryDate') ||
@@ -225,10 +238,17 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                     // Filter: Order Status
                     if (
                         !orderItem.order_status ||
-                        vc2_util.inArray(orderItem.order_status.toUpperCase(), LibSynnexAPI.SkippedStatus)
+                        vc2_util.inArray(
+                            orderItem.order_status.toUpperCase(),
+                            LibSynnexAPI.SkippedStatus
+                        )
                     ) {
                         // skip this order status
-                        vc2_util.log(logTitle, '** SKIPPED: OrderStatus:' + orderItem.order_status, orderItem);
+                        vc2_util.log(
+                            logTitle,
+                            '** SKIPPED: OrderStatus:' + orderItem.order_status,
+                            orderItem
+                        );
 
                         continue;
                     }
@@ -236,10 +256,17 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                     // Filter: Line Status
                     if (
                         !orderItem.line_status ||
-                        vc2_util.inArray(orderItem.line_status.toUpperCase(), LibSynnexAPI.SkippedStatus)
+                        vc2_util.inArray(
+                            orderItem.line_status.toUpperCase(),
+                            LibSynnexAPI.SkippedStatus
+                        )
                     ) {
                         // skip this order status
-                        vc2_util.log(logTitle, '** SKIPPED: LineStatus:' + orderItem.line_status, orderItem);
+                        vc2_util.log(
+                            logTitle,
+                            '** SKIPPED: LineStatus:' + orderItem.line_status,
+                            orderItem
+                        );
                         continue;
                     }
 
@@ -259,7 +286,11 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                         // serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
                         // vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
 
-                        if (trackingNo && trackingNo != 'NA' && !vc2_util.inArray(trackingNo, trackingNumList))
+                        if (
+                            trackingNo &&
+                            trackingNo != 'NA' &&
+                            !vc2_util.inArray(trackingNo, trackingNumList)
+                        )
                             trackingNumList.push(trackingNo);
 
                         var serialNodes = ns_xml.XPath.select({
@@ -282,9 +313,11 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                         //     serialNumList.push(serialNo);
                     }
 
-                    if (trackingNumList && trackingNumList.length) orderItem.tracking_num = trackingNumList.join(',');
+                    if (trackingNumList && trackingNumList.length)
+                        orderItem.tracking_num = trackingNumList.join(',');
 
-                    if (serialNumList && serialNumList.length) orderItem.serial_num = serialNumList.join(',');
+                    if (serialNumList && serialNumList.length)
+                        orderItem.serial_num = serialNumList.join(',');
 
                     if (
                         !orderItem.is_shipped &&
@@ -324,7 +357,10 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js', './Bill Cre
                         }
                     });
 
-                    vc2_util.log(logTitle, '.... has dup?: ', [dupLinData, vc2_util.isEmpty(dupLinData)]);
+                    vc2_util.log(logTitle, '.... has dup?: ', [
+                        dupLinData,
+                        vc2_util.isEmpty(dupLinData)
+                    ]);
 
                     orderItem.ship_nsdate = LibSynnexAPI.parseToNSDate(orderItem.ship_date);
                     orderItem.eta_nsdate = LibSynnexAPI.parseToNSDate(orderItem.order_eta);

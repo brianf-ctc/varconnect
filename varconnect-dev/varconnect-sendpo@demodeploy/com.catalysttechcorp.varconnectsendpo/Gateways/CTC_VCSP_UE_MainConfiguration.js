@@ -17,8 +17,8 @@ define(['../Library/CTC_VCSP_Lib_LicenseValidator', '../Library/CTC_VCSP_Constan
     VCSP_Global
 ) {
     //Validates license and displays the corresponding status
-    function _validateLicense(options) {
-        let newRecord = options.newRecord,
+    function _validateLicense(option) {
+        let newRecord = option.newRecord,
             isLicenseValid = libLicenseValidator.isLicenseValid(),
             licenseText;
         log.debug('response', isLicenseValid);

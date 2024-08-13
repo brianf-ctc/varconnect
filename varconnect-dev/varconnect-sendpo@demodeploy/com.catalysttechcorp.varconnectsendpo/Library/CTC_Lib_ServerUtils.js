@@ -13,29 +13,122 @@
  * @NModuleScope Public
  */
 
-define(['N/file', 'N/render', 'N/runtime', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'], function (
-    NS_File,
-    NS_Render,
-    NS_Runtime,
-    CTC_Util,
-    VCSP_Global
-) {
+define([
+    'N/file',
+    'N/render',
+    'N/runtime',
+    'N/cache',
+    './CTC_Lib_Utils',
+    './CTC_VCSP_Constants'
+], function (NS_File, NS_Render, NS_Runtime, NS_Cache, CTC_Util, VCSP_Global) {
     let LogTitle = 'CTC_ServerSideUtil',
         LogPrefix;
 
     let CTC_ServerSideUtil = {
+        // LOCAL CACHING
         CACHE: {},
-        getFileContent: function (options) {
+        getCache: function (cacheKey) {
+            return this.CACHE.hasOwnProperty(cacheKey) ? this.CACHE[cacheKey] : null;
+        },
+        setCache: function (cacheKey, objVar) {
+            this.CACHE[cacheKey] = objVar;
+        },
+        // N/CACHE
+        NSCACHE_NAME: 'VCSP_202406',
+        NSCACHE_KEY: 'VCSP_202406',
+        NSCACHE_TTL: 86400, // 1 whole day
+        getNSCache: function (option) {
+            var logTitle = [LogTitle, 'getNSCache'].join('::'),
+                returnValue;
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+
+                returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
+                if (option.isJSON && returnValue) returnValue = this.safeParse(returnValue);
+
+                this.log({
+                    type: 'AUDIT',
+                    title: logTitle,
+                    message: '// CACHE fetch: ' + JSON.stringify([cacheName, cacheKey, cacheTTL])
+                });
+            } catch (error) {
+                CTC_Util.logError(logTitle, error);
+                returnValue = null;
+            }
+
+            return returnValue;
+        },
+        setNSCache: function (option) {
+            var logTitle = [LogTitle, 'setNSCache'].join('::'),
+                returnValue;
+
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheValue = option.value || option.cacheValue;
+                if (this.isEmpty(cacheValue)) throw 'Missing cache value!';
+                if (!util.isString(cacheValue)) cacheValue = JSON.stringify(cacheValue);
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+                cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
+            } catch (error) {
+                CTC_Util.logError(logTitle, error);
+            }
+        },
+        removeCache: function (option) {
+            var logTitle = [LogTitle, 'removeCache'].join('::'),
+                returnValue;
+
+            try {
+                var cacheName = this.NSCACHE_NAME,
+                    cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
+
+                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                if (!cacheKey) throw 'Missing cacheKey!';
+
+                var cacheObj = NS_Cache.getCache({
+                    name: cacheName,
+                    scope: NS_Cache.Scope.PUBLIC
+                });
+                cacheObj.remove({ key: cacheKey });
+
+                this.log({
+                    type: 'AUDIT',
+                    title: logTitle,
+                    message: '// CACHE remove: ' + JSON.stringify([cacheName, cacheKey, cacheTTL])
+                });
+            } catch (error) {
+                CTC_Util.logError(logTitle, error);
+            }
+        },
+        getFileContent: function (option) {
             let returnValue = null;
             let logTitle = [LogTitle, 'getFileContent'];
 
             try {
-                let fileId = options.fileId;
+                let fileId = option.fileId;
                 if (!fileId) {
-                    let fileName = options.filename || options.name;
+                    let fileName = option.filename || option.name;
                     if (!fileName) return false;
 
-                    let folderId = options.folder || options.folderId || CTC_ServerSideUtil.getCurrentFolder();
+                    let folderId =
+                        option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
                     let fileInfo = CTC_Util.searchFile({
                         name: fileName,
                         folder: folderId
@@ -57,23 +150,26 @@ define(['N/file', 'N/render', 'N/runtime', '../Library/CTC_Lib_Utils', './CTC_VC
 
             return returnValue;
         },
-        getCurrentFolder: function (options) {
+        getCurrentFolder: function (option) {
             let returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
-            options = options || {};
+            option = option || {};
 
             try {
-                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(options)].join('::');
+                let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
                 returnValue = CTC_ServerSideUtil.CACHE[cacheKey];
 
-                if (CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) || options.noCache == true) {
-                    let scriptId = options.scriptId;
+                if (
+                    CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) ||
+                    option.noCache == true
+                ) {
+                    let scriptId = option.scriptId;
                     if (!scriptId) {
-                        if (!options.currentScript) {
-                            if (!options.runtime) options.runtime = NS_Runtime;
-                            options.currentScript = options.runtime.getCurrentScript();
+                        if (!option.currentScript) {
+                            if (!option.runtime) option.runtime = NS_Runtime;
+                            option.currentScript = option.runtime.getCurrentScript();
                         }
-                        scriptId = options.currentScript.id;
+                        scriptId = option.currentScript.id;
                     }
                     if (!scriptId) return false;
 
@@ -104,9 +200,9 @@ define(['N/file', 'N/render', 'N/runtime', '../Library/CTC_Lib_Utils', './CTC_VC
 
             return returnValue;
         },
-        renderTemplate: function (options) {
-            let templateBody = options.body,
-                poObj = options.purchaseOrder || {},
+        renderTemplate: function (option) {
+            let templateBody = option.body,
+                poObj = option.purchaseOrder || {},
                 returnValue;
             // CTC_Util.log('DEBUG', 'renderTemplate.templateBody', templateBody);
             // CTC_Util.log('DEBUG', 'renderTemplate.record', poObj);

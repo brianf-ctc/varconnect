@@ -262,7 +262,11 @@ define([
 
                     /// ITEM FULFILLMENT  ///////////
                     var respItemff = {};
-                    if (BillCFG.enableFulfillment && CurrentData.isBillReceivable && CurrentData.isOrderReceivable) {
+                    if (
+                        BillCFG.enableFulfillment &&
+                        CurrentData.isBillReceivable &&
+                        CurrentData.isOrderReceivable
+                    ) {
                         respItemff = Helper.createItemFulfillment({
                             currentData: currentValues,
                             billFileData: CurrentData.billFile
@@ -518,7 +522,9 @@ define([
                 if (itemFFResponse.itemff) {
                     vc_billfile.addNote({
                         id: recordData.id,
-                        note: 'Item Fulfillment succesfully created...  ' + ('[id:' + itemFFResponse.itemff + ']')
+                        note:
+                            'Item Fulfillment succesfully created...  ' +
+                            ('[id:' + itemFFResponse.itemff + ']')
                     });
                 }
 
@@ -552,7 +558,11 @@ define([
                         var itemFFResponse = itemFFReq.PARSED_RESPONSE;
                         if (!itemFFResponse) throw 'Unable to parse response body';
 
-                        vc2_util.log(logTitle, '... (serials) response: ', serialsAddReq.PARSED_RESPONSE);
+                        vc2_util.log(
+                            logTitle,
+                            '... (serials) response: ',
+                            serialsAddReq.PARSED_RESPONSE
+                        );
                     }
                 }
                 /// SERIALS PROCESSING ///
@@ -605,7 +615,10 @@ define([
                 return true;
             });
 
-            log.audit(logTitle, LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills));
+            log.audit(
+                logTitle,
+                LogPrefix + '>> Existing Bill: ' + JSON.stringify(arrExistingBills)
+            );
             returnValue = arrExistingBills;
 
             return returnValue;

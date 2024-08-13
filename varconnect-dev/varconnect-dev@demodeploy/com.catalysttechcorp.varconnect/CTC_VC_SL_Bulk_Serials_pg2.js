@@ -231,7 +231,9 @@ define([
                     itemObj.itemId = itemsField[i].id;
 
                     // get new sn's and strip out any carriage return/new lines
-                    var newSNStr = getNewSNStr(params, itemsField[i].id).replace(/\\n/g, ',').replace(/\\r/g, ',');
+                    var newSNStr = getNewSNStr(params, itemsField[i].id)
+                        .replace(/\\n/g, ',')
+                        .replace(/\\r/g, ',');
 
                     vc2_util.log(logTitle, 'Item ', newSNStr);
                     if (!isEmpty(newSNStr)) {

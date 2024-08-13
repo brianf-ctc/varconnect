@@ -34,14 +34,14 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                 returnValue;
             option = option || {};
 
-            let config = CURRENT.config,
-                url = config.accessEndPoint,
-                apiKey = config.apiKey,
-                apiSecret = config.apiSecret;
-            if (config.testRequest) {
-                url = config.qaAccessEndPoint;
-                apiKey = config.qaApiKey;
-                apiSecret = config.qaApiSecret;
+            let Config = CURRENT.Config,
+                url = Config.accessEndPoint,
+                apiKey = Config.apiKey,
+                apiSecret = Config.apiSecret;
+            if (Config.testRequest) {
+                url = Config.qaAccessEndPoint;
+                apiKey = Config.qaApiKey;
+                apiSecret = Config.qaApiSecret;
             }
 
             let tokenReq = CTC_Util.sendRequest({
@@ -82,14 +82,16 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
                 method: 'post',
                 recordId: CURRENT.recordId,
                 query: {
-                    url: CURRENT.config.testRequest ? CURRENT.config.qaEndPoint : CURRENT.config.endPoint,
+                    url: CURRENT.Config.testRequest
+                        ? CURRENT.Config.qaEndPoint
+                        : CURRENT.Config.endPoint,
                     body: JSON.stringify(CURRENT.payloadObj),
                     headers: {
                         Authorization: 'Bearer ' + CURRENT.accessToken,
                         Accept: 'application/json',
-                        'Ocp-Apim-Subscription-Key': CURRENT.config.testRequest
-                            ? CURRENT.config.qaSubscriptionKey
-                            : CURRENT.config.subscriptionKey,
+                        'Ocp-Apim-Subscription-Key': CURRENT.Config.testRequest
+                            ? CURRENT.Config.qaSubscriptionKey
+                            : CURRENT.Config.subscriptionKey,
                         'Content-Type': 'application/json'
                     }
                 }
@@ -111,188 +113,200 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         }
     };
 
+    var Helper = {
+        generateAddress: function (poObj, mapping) {
+            var returnValue = {};
+
+            for (var fld in mapping) {
+                returnValue[mapping[fld]] = poObj[fld] || null;
+            }
+
+            return returnValue;
+        },
+        formatToArrowDate: function (dateToFormat) {
+            let logTitle = [LogTitle, 'formatToArrowDate'].join('::'),
+                formattedDate = '';
+            if (dateToFormat && dateToFormat instanceof Date) {
+                // yyyymmdd
+                formattedDate = [
+                    Helper.padDigits(dateToFormat.getFullYear(), 2),
+                    Helper.padDigits(dateToFormat.getMonth() + 1, 2),
+                    Helper.padDigits(dateToFormat.getDate(), 2)
+                ].join('');
+            }
+            return formattedDate;
+        },
+
+        padDigits: function (number, digits) {
+            return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+        },
+
+        formatArrowPOType: function (strPoType) {
+            let logTitle = [LogTitle, 'formatArrowPOType'].join('::');
+            let option = {};
+            if (strPoType == 'Drop Shipment') {
+                option.poType = 'DS';
+                option.fobCode = 'ORIGIN';
+            } else {
+                option.poType = 'SA';
+                option.fobCode = 'DESTINATION';
+            }
+
+            return option;
+        }
+    };
+
     /**
      * @memberOf CTC_VC_Lib_Arrow
      * @param {object}
      * @description option.poObj = contains the Actual PO option from NetSuite, option.vendorConfig = VAR Connect Vendor Config Fields
      * @returns object
      **/
+
     function generateBody(option) {
         let logTitle = [LogTitle, 'generateBody'].join('::');
 
-        let reqBody = {};
-        let poDetails = {};
-        let soldTo = {};
-        let billTo = {};
-        let shipTo = {};
-        let endUser = {};
-        let poLines = []; // array of poLine objects
         let poObj = option.purchaseOrder;
-        let vendorConfig = option.vendorConfig;
 
-        // Header Rec Object
-        let headerRec = {};
-        headerRec.TransactionType = 'RESELLER_PO_CREATE'; // constant
-        headerRec.SourceTransactionKeyID = null;
-        headerRec.RequestTimestamp = null;
-        headerRec.Region = 'NORTH_AMERICAS'; // constant
-        headerRec.Country = 'US'; // constant
-        headerRec.PartnerID = vendorConfig.customerNo;
+        var requestBody = {
+            PurchaseOrder: {
+                HeaderRec: {
+                    TransactionType: 'RESELLER_PO_CREATE',
+                    SourceTransactionKeyID: null,
+                    RequestTimestamp: null, // '3/22/2023 8:18:49 PM',
+                    Region: 'NORTH_AMERICAS',
+                    Country: 'US', // TODO: get data from subsidiary
+                    PartnerID: CURRENT.Config.customerNo
+                    // PartnerName: null, // 'PartnerName7',
+                    // OrgID: 'OrgID8',
+                    // BatchID: 'BatchID9',
+                    // FlowID: 'FlowID10',
+                    // SourceSystem: 'System Name',
+                    // AFS: 'EBS'
+                },
+                poDetails: [
+                    {
+                        CustPoNumber: poObj.tranId,
+                        ArrowQuote: {
+                            ArrowQuoteNumber: (function () {
+                                var returnValue;
+                                if (!CURRENT.Config.quoteColumn) return false;
+                                if (CURRENT.Config.quoteColumn.match(/^custbody/gi)) {
+                                    // get the header content
+                                    returnValue = CURRENT.Record.getValue({
+                                        fieldId: CURRENT.Config.quoteColumn
+                                    });
+                                } else if (CURRENT.Config.quoteColumn.match(/^custcol/gi)) {
+                                    // get the value from the first line
+                                    returnValue = CURRENT.Record.getSublistValue({
+                                        sublistId: 'item',
+                                        fieldId: CURRENT.Config.quoteColumn,
+                                        line: 0
+                                    });
+                                }
+                                return returnValue;
+                            })()
+                            // ArrowQuoteVersion: 'ArrowQuoteVersion15',
+                            // ArrowQuoteLineNum: 'ArrowQuoteLineNum16'
+                        },
+                        CustPoType: 'DS',
+                        PoDate: Helper.formatToArrowDate(
+                            NS_Format.parse({
+                                value: poObj.tranDate,
+                                type: NS_Format.Type.DATE
+                            })
+                        ),
+                        Comments: poObj.memo || null,
+                        TotalPOPrice: poObj.total,
+                        PoCurrency: 'USD',
+                        FobCode: 'ORIGIN',
+                        ShipViaCode: 'ZZ',
+                        ShipViaDescription: 'ELECTRONIC DISTRIBUTION',
 
-        // PO Details Object
-        // let poTypeObj = formatArrowPOType(poObj.getValue({fieldId: 'custbody_ctc_po_link_type'}));
-        poDetails.CustPoNumber = poObj.tranId;
-        poDetails.TotalPOPrice = poObj.total;
-        poDetails.Comments = poObj.memo || null;
-        poDetails.PoDate = formatToArrowDate(
-            NS_Format.parse({
-                value: poObj.tranDate,
-                type: NS_Format.Type.DATE
-            })
-        );
-        poDetails.CustPoType = 'DS'; // Constant -- values are DS for Dropship, SA for standard
-        poDetails.FobCode = 'ORIGIN'; // constant -- values are ORIGIN for Dropship, DESTINATION for standard
-        poDetails.ShipViaCode = 'ZZ'; // constant for arrow
-        poDetails.ShipViaDescription = 'ELECTRONIC DISTRIBUTION'; // constant for arrow
-        poDetails.PoCurrency = 'USD'; // constant -- for Arrow US
-        poDetails.ArrowQuote = {};
-        poDetails.ArrowQuote.ArrowQuoteNumber = poObj.items[0].quotenumber
-            ? poObj.items[0].quotenumber.toString()
-            : null;
+                        SoldTo: Helper.generateAddress(poObj, {
+                            billAddressee: 'SoldToName',
+                            billAddr1: 'SoldToAddrLine1',
+                            billAddr2: 'SoldToAddrLine2',
+                            billCity: 'SoldToCity',
+                            billState: 'SoldToState',
+                            billZip: 'SoldToZip',
+                            billCountry: 'SoldToCountry',
+                            billContact: 'SoldToContactName',
+                            billPhone: 'SoldToContactPhone',
+                            billEmail: 'SoldToContactEmail'
+                        }),
+                        BillTo: Helper.generateAddress(poObj, {
+                            billAddressee: 'BillToName',
+                            billAddr1: 'BillToAddrLine1',
+                            billAddr2: 'BillToAddrLine2',
+                            billCity: 'BillToCity',
+                            billState: 'BillToState',
+                            billZip: 'BillToZip',
+                            billCountry: 'BillToCountry',
+                            billContact: 'BillToContactName',
+                            billPhone: 'BillToContactPhone',
+                            billEmail: 'BillToContactEmail'
+                        }),
+                        ShipTo: Helper.generateAddress(poObj, {
+                            shipAddressee: 'ShipToName',
+                            shipAddr1: 'ShipToAddrLine1',
+                            shipAddr2: 'ShipToAddrLine2',
+                            shipCity: 'ShipToCity',
+                            shipState: 'ShipToState',
+                            shipZip: 'ShipToZip',
+                            shipCountry: 'ShipToCountry',
+                            shipAddressee: 'ShipToContactName',
+                            shipPhone: 'ShipToContactPhone',
+                            shipEmail: 'ShipToContactEmail'
+                        }),
+                        EndUser: Helper.generateAddress(poObj, {
+                            shipAddressee: 'EndUserName',
+                            shipAddr1: 'EndUserAddrLine1',
+                            shipAddr2: 'EndUserAddrLine2',
+                            shipCity: 'EndUserCity',
+                            shipState: 'EndUserState',
+                            shipZip: 'EndUserZip',
+                            shipCountry: 'EndUserCountry',
+                            shipAddressee: 'EndUserContactName',
+                            shipPhone: 'EndUserContactPhone',
+                            shipEmail: 'EndUserContactEmail'
+                        }),
 
-        // soldTo Object
-        soldTo.SoldToName = poObj.billAddressee || null;
-        soldTo.SoldToAddrLine1 = poObj.billAddr1 || null;
-        soldTo.SoldToAddrLine2 = poObj.billAddr2 || null;
-        soldTo.SoldToCity = poObj.billCity || null;
-        soldTo.SoldToState = poObj.billState || null;
-        soldTo.SoldToZip = poObj.billZip || null;
-        soldTo.SoldToCountry = poObj.billCountry || 'US';
-        soldTo.SoldToContactName = poObj.billContact || null;
-        soldTo.SoldToContactPhone = poObj.billPhone || null;
-        soldTo.SoldToContactEmail = poObj.billEmail || null;
+                        poLines: (function () {
+                            var poLines = [];
+                            for (let i = 0, j = poObj.items.length; i < j; i++) {
+                                var lineData = poObj.items[i];
 
-        // billTo Object
-        billTo.BillToName = poObj.billAddressee || null;
-        billTo.BillToAddrLine1 = poObj.billAddr1 || null;
-        billTo.BillToAddrLine2 = poObj.billAddr2 || null;
-        billTo.BillToCity = poObj.billCity || null;
-        billTo.BillToState = poObj.billState || null;
-        billTo.BillToZip = poObj.billZip || null;
-        billTo.BillToCountry = poObj.billCountry || 'US';
-        billTo.BillToContactName = poObj.billContact || null;
-        billTo.BillToContactPhone = poObj.billPhone || null;
-        billTo.BillToContactEmail = poObj.billEmail || null;
+                                log.audit(logTitle, '// line data: ' + JSON.stringify(lineData));
 
-        // shipTo Object
-        shipTo.ShipToName = poObj.shipAddressee || null;
-        shipTo.ShipToAddrLine1 = poObj.shipAddr1 || null;
-        shipTo.ShipToAddrLine2 = poObj.shipAddr2 || null;
-        shipTo.ShipToCity = poObj.shipCity || null;
-        shipTo.ShipToState = poObj.shipState || null;
-        shipTo.ShipToZip = poObj.shipZip || null;
-        shipTo.ShipToCountry = poObj.shipCountry || 'US';
-        shipTo.ShipToContactName = poObj.shipAddressee || null;
-        shipTo.ShipToContactPhone = poObj.shipPhone || null;
-        shipTo.ShipToContactEmail = poObj.shipEmail || null;
+                                poLines.push({
+                                    CustPoLineItemNbr: i + 1,
+                                    VendorPartNum: lineData.item || null,
+                                    PartDescription: lineData.description || null,
+                                    QtyRequested: lineData.quantity || null,
+                                    UnitPrice: lineData.rate || 0,
+                                    TotalPoLinePrice: lineData.amount || 0,
+                                    MfgName: lineData.manufacturer || null,
+                                    UnitOfMeasure: 'EA',
+                                    EndUserPoNumber: poObj.tranId
+                                });
+                            }
 
-        // endUser Object
-        endUser.EndUserName = poObj.shipAddressee || null;
-        endUser.EndUserAddrLine1 = poObj.shipAddr1 || null;
-        endUser.EndUserAddrLine2 = poObj.shipAddr2 || null;
-        endUser.EndUserCity = poObj.shipCity || null;
-        endUser.EndUserState = poObj.shipState || null;
-        endUser.EndUserZip = poObj.shipZip || null;
-        endUser.EndUserCountry = poObj.shipCountry || 'US';
-        endUser.EndUserContactName = poObj.shipAddressee || null;
-        endUser.EndUserContactPhone = poObj.shipPhone || null;
-        endUser.EndUserContactEmail = poObj.shipEmail || null;
-
-        // poLines Object
-        let lineCount = poObj.items.length;
-        if (lineCount) {
-            for (let i = 0; i < lineCount; i++) {
-                let poLine = {};
-                poLine.CustPoLineItemNbr = i + 1;
-                poLine.VendorPartNum = poObj.items[i].item;
-                poLine.PartDescription = poObj.items[i].description || null;
-                poLine.QtyRequested = poObj.items[i].quantity || null;
-                poLine.UnitPrice = poObj.items[i].rate || 0;
-                poLine.TotalPoLinePrice = poObj.items[i].amount || 0;
-                poLine.MfgName = poObj.items[i].manufacturer || null;
-                poLine.UnitOfMeasure = 'EA';
-                poLine.EndUserPoNumber = poObj.tranId;
-                poLines.push(poLine);
-            }
-        }
-
-        // formation of Actual Req Data to be sent to Arrow
-        let purchaseOrder = {};
-        purchaseOrder.HeaderRec = headerRec;
-        purchaseOrder.poDetails = poDetails;
-        purchaseOrder.poDetails.SoldTo = soldTo;
-        purchaseOrder.poDetails.BillTo = billTo;
-        purchaseOrder.poDetails.ShipTo = shipTo;
-        purchaseOrder.poDetails.EndUser = endUser;
-        purchaseOrder.poDetails.poLines = poLines;
-
-        reqBody.PurchaseOrder = purchaseOrder;
-
-        let cleanUpJSON = function (option) {
-            let objConstructor = option.objConstructor || {}.constructor,
-                obj = option.obj;
-            for (let key in obj) {
-                if (obj[key] === null || obj[key] === '' || obj[key] === undefined) {
-                    delete obj[key];
-                } else if (obj[key].constructor === objConstructor) {
-                    cleanUpJSON({
-                        obj: obj[key],
-                        objConstructor: objConstructor
-                    });
-                }
+                            return poLines;
+                        })()
+                    }
+                ]
             }
         };
-        cleanUpJSON({ obj: reqBody });
-        log.debug(logTitle, '>> Arrow Template Object: ' + JSON.stringify(reqBody));
+
+        log.debug(logTitle, '>> Arrow Template Object: ' + JSON.stringify(requestBody));
         CTC_Util.vcLog({
             title: [LogTitle, 'Order Request Values'].join(' - '),
-            content: reqBody,
+            content: requestBody,
             transaction: poObj.id
         });
 
-        return reqBody;
-    }
-
-    function formatArrowPOType(strPoType) {
-        let logTitle = [LogTitle, 'formatArrowPOType'].join('::');
-        let option = {};
-        if (strPoType == 'Drop Shipment') {
-            option.poType = 'DS';
-            option.fobCode = 'ORIGIN';
-        } else {
-            option.poType = 'SA';
-            option.fobCode = 'DESTINATION';
-        }
-
-        return option;
-    }
-
-    function formatToArrowDate(dateToFormat) {
-        let logTitle = [LogTitle, 'formatToArrowDate'].join('::'),
-            formattedDate = '';
-        if (dateToFormat && dateToFormat instanceof Date) {
-            // yyyymmdd
-            formattedDate = [
-                padDigits(dateToFormat.getFullYear(), 2),
-                padDigits(dateToFormat.getMonth() + 1, 2),
-                padDigits(dateToFormat.getDate(), 2)
-            ].join('');
-        }
-        return formattedDate;
-    }
-
-    function padDigits(number, digits) {
-        return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+        return requestBody;
     }
 
     /**
@@ -334,15 +348,17 @@ define(['N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils']
         let logTitle = [LogTitle, 'process'].join('::'),
             poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig;
-        log.audit(logTitle, '>> record : ' + JSON.stringify(poObj));
+
         let sendPOResponse,
             returnResponse = {
                 transactionNum: poObj.tranId,
                 transactionId: poObj.id
             };
+
         try {
             CURRENT.recordId = poObj.id;
-            CURRENT.config = vendorConfig;
+            CURRENT.Config = vendorConfig;
+            CURRENT.Record = option.transaction;
 
             let requestBody = generateBody({
                 purchaseOrder: poObj,

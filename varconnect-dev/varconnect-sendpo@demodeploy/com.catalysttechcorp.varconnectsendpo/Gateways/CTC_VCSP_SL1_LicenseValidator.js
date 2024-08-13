@@ -11,8 +11,8 @@
 var PRODUCT_CODE = 4, //VAR Connect Send PO
     LICENSE_AES_SECRET = '636174616C79737434615870300B0B0B';
 
-function _decryptLicense(options) {
-    var license = options.license,
+function _decryptLicense(option) {
+    var license = option.license,
         product,
         expiryDate,
         accountId;
@@ -35,8 +35,8 @@ function _decryptLicense(options) {
     };
 }
 
-function _validateLicenseParams(options) {
-    var licenseParams = options.licenseParams,
+function _validateLicenseParams(option) {
+    var licenseParams = option.licenseParams,
         licenseProduct = licenseParams.product,
         licenseExpiryDate = licenseParams.expiryDate,
         licenseAccountId = licenseParams.accountId,
@@ -54,7 +54,11 @@ function _validateLicenseParams(options) {
                 PRODUCT_CODE
         );
         result = 'invalid';
-    } else if (licenseAccountId && accountId && licenseAccountId.toLowerCase() != accountId.toLowerCase()) {
+    } else if (
+        licenseAccountId &&
+        accountId &&
+        licenseAccountId.toLowerCase() != accountId.toLowerCase()
+    ) {
         nlapiLogExecution(
             'ERROR',
             'Invalid License Key - TERMINATING SCRIPT',

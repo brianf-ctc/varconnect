@@ -7,18 +7,13 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
- * 
+ *
  * @description Utility functions that are only supported on server side scripts.
  * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
-define([
-    'N/file',
-    'N/render', 
-    '../Library/CTC_Lib_Utils',
-    './CTC_VCSP_Constants'],
-function (
+define(['N/file', 'N/render', '../Library/CTC_Lib_Utils', './CTC_VCSP_Constants'], function (
     NS_File,
     NS_Render,
     CTC_Util,
@@ -39,7 +34,8 @@ function (
                     let fileName = option.filename || option.name;
                     if (!fileName) return false;
 
-                    let folderId = option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
+                    let folderId =
+                        option.folder || option.folderId || CTC_ServerSideUtil.getCurrentFolder();
                     let fileInfo = CTC_Util.searchFile({
                         name: fileName,
                         folder: folderId
@@ -64,13 +60,16 @@ function (
         getCurrentFolder: function (option) {
             let returnValue = null,
                 logTitle = [LogTitle, 'getCurrentFolder'].join('::');
-                option = option || {};
+            option = option || {};
 
             try {
                 let cacheKey = ['FileLib.getCurrentFolder', JSON.stringify(option)].join('::');
                 returnValue = CTC_ServerSideUtil.CACHE[cacheKey];
 
-                if (CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) || option.noCache == true) {
+                if (
+                    CTC_Util.isEmpty(CTC_ServerSideUtil.CACHE[cacheKey]) ||
+                    option.noCache == true
+                ) {
                     let scriptId = option.scriptId;
                     if (!scriptId) {
                         if (!option.currentScript) {
@@ -108,7 +107,7 @@ function (
 
             return returnValue;
         },
-        renderTemplate: function(options) {
+        renderTemplate: function (option) {
             // TODO
         }
     };

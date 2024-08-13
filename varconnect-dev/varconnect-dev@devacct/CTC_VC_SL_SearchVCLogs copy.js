@@ -153,7 +153,8 @@ define([
             util.extend(colData, ColumnsDef[searchCol.name]);
 
             if (!colData.type) colData.type = ns_ui.FieldType.TEXT;
-            if (!colData.label) colData.label = searchCol.label || searchCol.name || 'Column #' + idx;
+            if (!colData.label)
+                colData.label = searchCol.label || searchCol.name || 'Column #' + idx;
 
             var colSearch = { name: searchCol.name };
             if (searchCol.join) colSearch.join = searchCol.join;
@@ -191,9 +192,10 @@ define([
         sublistOption.tab = tabOption.id;
 
         if (!vc2_util.isEmpty(SublistInfo.selectedValues)) {
-            sublistOption.label = [sublistOption.label, ' (selected: ' + SublistInfo.selectedValues.length + ') '].join(
-                ''
-            );
+            sublistOption.label = [
+                sublistOption.label,
+                ' (selected: ' + SublistInfo.selectedValues.length + ') '
+            ].join('');
         }
 
         // log.debug(logTitle, '>> sublist : ' + JSON.stringify(sublistOption));
@@ -256,7 +258,8 @@ define([
         /// Add sublist columns ////////////////
         var showColumns = option.showColumns || option.columnsOnly || option.columns || [];
         SublistInfo.columns.forEach(function (sublistCol) {
-            if (!vc2_util.isEmpty(showColumns) && !vc2_util.inArray(sublistCol.id, showColumns)) return true;
+            if (!vc2_util.isEmpty(showColumns) && !vc2_util.inArray(sublistCol.id, showColumns))
+                return true;
 
             var sublistOption = {};
             util.extend(sublistOption, sublistCol);
@@ -420,8 +423,12 @@ define([
                     id: 'viewedit',
                     line: lineNo,
                     value: [
-                        '<a href="' + recordUrl.view + '" target="_blank" class="dottedlink viewitem">View</a>',
-                        '<a href="' + recordUrl.edit + '" target="_blank" class="dottedlink edititem">Edit</a>'
+                        '<a href="' +
+                            recordUrl.view +
+                            '" target="_blank" class="dottedlink viewitem">View</a>',
+                        '<a href="' +
+                            recordUrl.edit +
+                            '" target="_blank" class="dottedlink edititem">Edit</a>'
                     ].join(' | ')
                 });
 

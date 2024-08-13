@@ -29,15 +29,15 @@ define([], function () {
                 VENDOR_PO_NUMBER: 'custbody_ctc_vcsp_transaction_num',
                 VENDOR_RECEIPT: 'custbody_ctc_vcsp_vendor_rcpt',
                 VENDOR_DETAILS: 'custbody_ctc_vcsp_vendoord_details',
-                Item : {
+                Item: {
                     MEMO: 'custcol_ctc_vcsp_memo',
                     QUOTE_NUMBER: 'custcol_ctc_vcsp_quote_no',
                     MANUFACTURER: 'custcol_ctc_manufacturer',
                     DELL_SKU: 'custcol_ctc_vcsp_sku_dell',
                     SYNNEX_SKU: 'custcol_ctc_vcsp_sku_synnex',
                     INGRAM_PART_NUMBER: 'custcol_ctc_vc_ingram_mpn',
-                    DANDH_PART_NUMBER: 'custcol_ctc_vc_dh_mpn',
-                },
+                    DANDH_PART_NUMBER: 'custcol_ctc_vc_dh_mpn'
+                }
             },
             VendorConfig: {
                 ID: 'internalid',
@@ -77,20 +77,20 @@ define([], function () {
                     ADDRESSEE: 'custrecord_ctc_vcsp_bill_addressee',
                     ATTENTION: 'custrecord_ctc_vcsp_bill_attention',
                     EMAIL: 'custrecord_ctc_vcsp_bill_email',
-                    PHONENO: 'custrecord_ctc_vcsp_phoneno', 
+                    PHONENO: 'custrecord_ctc_vcsp_phoneno',
                     ADDRESS_1: 'custrecord_ctc_vcsp_bill_addr1',
                     ADDRESS_2: 'custrecord_ctc_vcsp_bill_addr2',
                     CITY: 'custrecord_ctc_vcsp_bill_city',
                     STATE: 'custrecord_ctc_vcsp_bill_state',
                     ZIP: 'custrecord_ctc_vcsp_bill_zip',
                     COUNTRY: 'custrecord_ctc_vcsp_bill_country'
-                }, 
+                },
                 PAYMENT: {
                     MEAN: 'custrecord_ctc_vcsp_payment_mean',
-                    OTHER: 'custrecord_ctc_vcsp_payment_mean_other', 
+                    OTHER: 'custrecord_ctc_vcsp_payment_mean_other',
                     TERM: 'custrecord_ctc_vcsp_payment_term'
                 },
-                BUSINESS_UNIT: 'custrecord_ctc_vcsp_businessunit',
+                BUSINESS_UNIT: 'custrecord_ctc_vcsp_businessunit'
             },
             MainConfig: {
                 ID: 'internalid',
@@ -133,18 +133,18 @@ define([], function () {
                 CREATE_LOG: 'custrecord_ctc_vc_poline_vccreatelog',
                 UPDATE_LOG: 'custrecord_ctc_vc_poline_vcupdatelog'
             },
-            VendorShipMethod : {
+            VendorShipMethod: {
                 VENDOR_CONFIG: 'custrecord_ctc_vcsp_ship_vendorconfg',
                 SHIP_VALUE: 'custrecord_ctc_vcsp_ship_shipmethod',
                 SHIP_METHOD_MAP: 'custrecord_ctc_vcsp_ship_shipmethodmap'
-            },
+            }
         },
         Lists: {
             PO_EVENT: {
-                ON_CREATE: 1, 
-                ON_APPROVE: 2, 
+                ON_CREATE: 1,
+                ON_APPROVE: 2,
                 MANUAL: 3
-            }, 
+            },
             API_VENDOR: {
                 DELL: '1',
                 ARROW: '2',
@@ -171,14 +171,14 @@ define([], function () {
             Script: {
                 SEND_PO_SL: 'customscript_ctc_vcsp_sl_sendpo',
                 LICENSE_VALIDATOR_SL: 'customscript_ctc_vcsp_sl_licensevalidate',
-                VENDOR_DETAILS_SL: 'customscript_ctc_vcsp_sl_form_popup',
+                VENDOR_DETAILS_SL: 'customscript_ctc_vcsp_sl_form_popup'
             },
             Deployment: {
                 SEND_PO_SL: 'customdeploy_ctc_vcsp_sl_sendpo',
                 LICENSE_VALIDATOR_SL: 'customdeploy_ctc_vcsp_sl_licensevalidate',
-                VENDOR_DETAILS_SL: 'customdeploy_ctc_vcsp_sl_form_popup',
+                VENDOR_DETAILS_SL: 'customdeploy_ctc_vcsp_sl_form_popup'
             }
         },
-        LOG_APPLICATION: 'VAR Connect Send PO',
+        LOG_APPLICATION: 'VAR Connect Send PO'
     };
 });

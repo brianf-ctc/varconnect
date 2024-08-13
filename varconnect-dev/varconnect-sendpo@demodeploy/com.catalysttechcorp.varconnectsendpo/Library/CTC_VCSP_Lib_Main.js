@@ -35,17 +35,21 @@ define([
         if (response) {
             let newHeaderValues = {};
             if (response.transactionNum) {
-                newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER] = response.transactionNum;
+                newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_PO_NUMBER] =
+                    response.transactionNum;
             }
             newHeaderValues[VCSP_Global.Fields.Transaction.VCSP_TIMESTAMP] = new Date();
-            newHeaderValues[VCSP_Global.Fields.Transaction.IS_PO_SENT] = response.isError ? false : true;
+            newHeaderValues[VCSP_Global.Fields.Transaction.IS_PO_SENT] = response.isError
+                ? false
+                : true;
             newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify({
                 code: response.responseCode,
                 message: response.message
             });
 
             if (response.isError) {
-                newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(response);
+                newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_RECEIPT] =
+                    JSON.stringify(response);
             }
 
             for (let fieldId in newHeaderValues) {
@@ -104,7 +108,8 @@ define([
                         }
                     }
                     for (let responseLineProperty in mapItemDetailsToSublistFieldIdText) {
-                        let columnFieldId = mapItemDetailsToSublistFieldIdText[responseLineProperty],
+                        let columnFieldId =
+                                mapItemDetailsToSublistFieldIdText[responseLineProperty],
                             columnValue = responseLineDetails[responseLineProperty];
                         if (columnValue != 'NA') {
                             rec.setCurrentSublistText({

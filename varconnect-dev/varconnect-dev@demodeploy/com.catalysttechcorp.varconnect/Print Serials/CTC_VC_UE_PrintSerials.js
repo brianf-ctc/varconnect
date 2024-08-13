@@ -48,7 +48,12 @@ define([
                     values: recId
                 }
             ],
-            columns = ['name', 'custrecordserialsales', 'custrecorditemfulfillment', 'custrecordserialitem'];
+            columns = [
+                'name',
+                'custrecordserialsales',
+                'custrecorditemfulfillment',
+                'custrecordserialitem'
+            ];
 
         var searchObj = search.create({
             type: 'customrecordserialnum',

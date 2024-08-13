@@ -65,6 +65,8 @@ define([], function () {
                 QA_SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_qa',
                 PONUM_FIELD: 'custrecord_ctc_vcsp_ponum_field',
                 ITEM_COLUMN: 'custrecord_ctc_vcsp_item_field',
+                SKU_COLUMN: 'custrecord_ctc_vcsp_sku_field',
+                PRIORITIZE_SKU_COLUMN: 'custrecord_ctc_vcsp_sku_is_priority',
                 QUOTE_COLUMN: 'custrecord_ctc_vcsp_quoteno_field',
                 MEMO_FIELD: 'custrecord_ctc_vcsp_memo_field',
                 SHIP_CONTACT_FIELD: 'custrecord_ctc_vcsp_shipcontact_field',
@@ -145,7 +147,8 @@ define([], function () {
             PO_EVENT: {
                 ON_CREATE: 1,
                 ON_APPROVE: 2,
-                MANUAL: 3
+                MANUAL: 3,
+                MANUALBG: 4
             },
             API_VENDOR: {
                 DELL: '1',

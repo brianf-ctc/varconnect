@@ -21,8 +21,8 @@ define([
 ], function (currentRecord, url, https, message, constants) {
     var msgObj;
 
-    function _callSendPOSuitelet(options) {
-        var recId = options.recId,
+    function _callSendPOSuitelet(option) {
+        var recId = option.purchaseOrderId,
             params = { custparam_recId: recId },
             protocol = 'https://',
             domain = url.resolveDomain({
@@ -46,9 +46,9 @@ define([
         return result;
     }
 
-    function _displayMessage(options) {
-        var code = options.code,
-            msg = options.message;
+    function _displayMessage(option) {
+        var code = option.code,
+            msg = option.message;
 
         if (msgObj) msgObj.hide();
 
@@ -87,8 +87,8 @@ define([
     function sendPO() {
         var recId = currentRecord.get().id;
 
-        //    	libMain.sendPO({recId: recId});
-        var result = _callSendPOSuitelet({ recId: recId });
+        //    	libMain.sendPO({purchaseOrderId: recId});
+        var result = _callSendPOSuitelet({ purchaseOrderId: recId });
         _displayMessage(result);
     }
 

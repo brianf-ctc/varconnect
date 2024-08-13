@@ -31,6 +31,8 @@ define([
     let vendorConfigFields = [
         { name: VendorConfig.ID },
         { name: VendorConfig.SUBSIDIARY },
+        { name: 'internalid', join: VendorConfig.SUBSIDIARY },
+        { name: 'name', join: VendorConfig.SUBSIDIARY },
         { name: 'country', join: VendorConfig.SUBSIDIARY },
         { name: VendorConfig.API_VENDOR },
         { name: VendorConfig.VENDOR },
@@ -62,6 +64,8 @@ define([
         { name: VendorConfig.QA_SUBSCRIPTION_KEY },
         { name: VendorConfig.PONUM_FIELD },
         { name: VendorConfig.ITEM_COLUMN },
+        { name: VendorConfig.SKU_COLUMN },
+        { name: VendorConfig.PRIORITIZE_SKU_COLUMN },
         { name: VendorConfig.QUOTE_COLUMN },
         { name: VendorConfig.MEMO_FIELD },
         { name: VendorConfig.SHIP_CONTACT_FIELD },
@@ -93,7 +97,7 @@ define([
         });
         let returnValue = {
             id: result.getValue({ name: VendorConfig.ID }),
-            subsidiary: result.getValue({ name: VendorConfig.SUBSIDIARY }),
+            subsidiary: result.getValue({ name: 'internalid', join: VendorConfig.SUBSIDIARY }),
             country: result.getValue({ name: 'country', join: VendorConfig.SUBSIDIARY }),
             apiVendor: result.getValue({ name: VendorConfig.API_VENDOR }),
             vendor: result.getValue({ name: VendorConfig.VENDOR }),
@@ -109,6 +113,8 @@ define([
             subscriptionKey: result.getValue({ name: VendorConfig.SUBSCRIPTION_KEY }),
             poNumField: result.getValue({ name: VendorConfig.PONUM_FIELD }),
             itemColumn: result.getValue({ name: VendorConfig.ITEM_COLUMN }),
+            vendorSKU: result.getValue({ name: VendorConfig.SKU_COLUMN }),
+            prioritizeVendorSKU: result.getValue({ name: VendorConfig.PRIORITIZE_SKU_COLUMN }),
             quoteColumn: result.getValue({ name: VendorConfig.QUOTE_COLUMN }),
             memoField: result.getValue({ name: VendorConfig.MEMO_FIELD }),
             shipContactField: result.getValue({ name: VendorConfig.SHIP_CONTACT_FIELD }),
@@ -144,7 +150,9 @@ define([
                 name: VendorConfig.ENABLE_ADD_VENDOR_DETAILS
             }),
             additionalPOFields: vendorConfigRecord.getValue(VendorConfig.ADDITIONAL_PO_FIELDS),
-            includeAdditionalDetailsOnSubmit: vendorConfigRecord.getValue(VendorConfig.ADD_DETAILS_ON_SUBMIT),
+            includeAdditionalDetailsOnSubmit: vendorConfigRecord.getValue(
+                VendorConfig.ADD_DETAILS_ON_SUBMIT
+            ),
             poLineColumns: vendorConfigRecord.getValue(VendorConfig.PO_LINE_COLUMNS),
             businessUnit: vendorConfigRecord.getText(VendorConfig.BUSINESS_UNIT)
         };
@@ -206,7 +214,8 @@ define([
             if (VCSP_Pref.isSubsidiariesEnabled()) {
                 filter.push(
                     NS_Search.createFilter({
-                        name: VendorConfig.SUBSIDIARY,
+                        name: 'internalid',
+                        join: VendorConfig.SUBSIDIARY,
                         operator: NS_Search.Operator.ANYOF,
                         values: subsidiary
                     })
@@ -256,7 +265,8 @@ define([
         if (VCSP_Pref.isSubsidiariesEnabled()) {
             filter.push(
                 NS_Search.createFilter({
-                    name: VendorConfig.SUBSIDIARY,
+                    name: 'internalid',
+                    join: VendorConfig.SUBSIDIARY,
                     operator: NS_Search.Operator.ANYOF,
                     values: subsidiary
                 })
@@ -302,7 +312,10 @@ define([
             vendorId = option.vendor,
             returnValue = null;
         // init search details
-        let searchColumns = [{ name: VendorConfig.ADDITIONAL_PO_FIELDS }, { name: VendorConfig.FIELD_MAP }],
+        let searchColumns = [
+                { name: VendorConfig.ADDITIONAL_PO_FIELDS },
+                { name: VendorConfig.FIELD_MAP }
+            ],
             searchDetails;
         if (vendorConfigId) {
             returnValue = getVendorConfiguration({
@@ -324,7 +337,10 @@ define([
                 ],
                 columns: searchColumns
             };
-            log.debug(logTitle, 'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails));
+            log.debug(
+                logTitle,
+                'Looking up additional vendor config fields: ' + JSON.stringify(searchDetails)
+            );
             let vendorSearch = NS_Search.create(searchDetails);
             let results = vendorSearch.run().getRange({
                 start: 0,

@@ -23,7 +23,7 @@ define(['N/runtime', '../Library/CTC_VCSP_Lib_Main.js'], function (runtime, libM
      */
     function onRequest(context) {
         var recId = context.request.parameters.custparam_recId,
-            resp = libMain.sendPO({ recId: recId });
+            resp = libMain.sendPO({ purchaseOrderId: recId });
 
         context.response.write({ output: JSON.stringify(resp) });
     }

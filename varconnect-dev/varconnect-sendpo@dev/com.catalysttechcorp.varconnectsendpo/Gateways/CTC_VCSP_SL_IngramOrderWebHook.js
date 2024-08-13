@@ -38,7 +38,7 @@ define([
     let LogTitle = 'VCSP:IngramOrderStatusWebHook';
     let Helper = {};
     // YYYY-MM-DD
-    Helper.formatFromIngramDate = function(dateStr) {
+    Helper.formatFromIngramDate = function (dateStr) {
         let formattedDate = null;
         if (dateStr) {
             try {
@@ -56,7 +56,7 @@ define([
         }
         return formattedDate;
     };
-    Helper.processResponse = function(options) {
+    Helper.processResponse = function (options) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
             returnValue = options.returnResponse,
             responseBody = options.responseBody || returnValue.responseBody,
@@ -70,7 +70,11 @@ define([
             orderStatus.numFailedLines = 0;
             let lineNotes = [];
             if (responseBody.orders && responseBody.orders.length) {
-                for (let orderCtr = 0, orderCount = responseBody.orders.length; orderCtr < orderCount; orderCtr += 1) {
+                for (
+                    let orderCtr = 0, orderCount = responseBody.orders.length;
+                    orderCtr < orderCount;
+                    orderCtr += 1
+                ) {
                     let orderDetails = responseBody.orders[orderCtr],
                         orderDate = Helper.formatFromIngramDate(orderDetails.ingramOrderDate);
                     if (orderDetails.notes) {
@@ -78,7 +82,11 @@ define([
                     }
                     if (orderDetails.lines && orderDetails.lines.length) {
                         // valid lines
-                        for (let line = 0, lineCount = orderDetails.lines.length; line < lineCount; line += 1) {
+                        for (
+                            let line = 0, lineCount = orderDetails.lines.length;
+                            line < lineCount;
+                            line += 1
+                        ) {
                             let lineDetails = orderDetails.lines[line],
                                 shipmentDetails = {};
                             if (lineDetails) {
@@ -95,7 +103,7 @@ define([
                                 ship_from: shipmentDetails.shipFromLocation || 'NA',
                                 carrier: shipmentDetails.carrierName || 'NA',
                                 order_status: lineDetails.lineStatus,
-                                note: lineDetails.notes,
+                                note: lineDetails.notes
                             };
                             orderStatus.items.push(itemDetails);
                             orderStatus.numSuccessfulLines += 1;
@@ -103,7 +111,11 @@ define([
                     }
                     if (orderDetails.rejectedLineItems && orderDetails.rejectedLineItems.length) {
                         // rejected lines
-                        for (let line = 0, lineCount = orderDetails.rejectedLineItems.length; line < lineCount; line += 1) {
+                        for (
+                            let line = 0, lineCount = orderDetails.rejectedLineItems.length;
+                            line < lineCount;
+                            line += 1
+                        ) {
                             let lineDetails = orderDetails.rejectedLineItems[line];
                             let itemDetails = {
                                 order_number: orderDetails.ingramOrderNumber || 'NA',
@@ -112,7 +124,7 @@ define([
                                 item_number: lineDetails.customerPartNumber || 'NA',
                                 quantity: lineDetails.quantityOrdered || 'NA',
                                 order_status: 'Rejected',
-                                note: [ lineDetails.rejectCode, lineDetails.rejectReason ].join(': '),
+                                note: [lineDetails.rejectCode, lineDetails.rejectReason].join(': ')
                             };
                             orderStatus.items.push(itemDetails);
                             orderStatus.numFailedLines += 1;
@@ -126,7 +138,11 @@ define([
             returnValue.message = 'Send PO successful';
             if (responseBody.errors && responseBody.errors.length) {
                 let errMessage = [];
-                for (let errCtr = 0, errCount = responseBody.errors.length; errCtr < errCount; errCtr += 1) {
+                for (
+                    let errCtr = 0, errCount = responseBody.errors.length;
+                    errCtr < errCount;
+                    errCtr += 1
+                ) {
                     let errorResponse = responseBody.errors[errCtr];
                     if (errorResponse && errorResponse.message) {
                         errMessage.push(errorResponse.message);
@@ -136,7 +152,8 @@ define([
                 returnValue.message = 'Send PO failed.';
                 returnValue.errorMsg = errMessage.join('; ');
             } else if (orderStatus.numFailedLines) {
-                returnValue.message = 'Send PO successful with ' +
+                returnValue.message =
+                    'Send PO successful with ' +
                     orderStatus.numSuccessfulLines +
                     ' line item(s) and ' +
                     orderStatus.numFailedLines +
@@ -151,7 +168,7 @@ define([
         return returnValue;
     };
     let SuiteletScript = {
-        onRequest: function(context) {
+        onRequest: function (context) {
             let logTitle = [LogTitle, 'onRequest'].join(':'),
                 responseBody = {};
             if (context.request.method == 'POST') {

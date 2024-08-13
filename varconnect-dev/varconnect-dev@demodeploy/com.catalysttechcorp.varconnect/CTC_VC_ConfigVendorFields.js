@@ -41,8 +41,10 @@ define(function (require) {
                     custrecord_ctc_vc_vendor: '',
                     custrecord_ctc_vc_xml_vendor: '',
                     custrecord_ctc_vc_vendor_subsidiary: '',
-                    custrecord_ctc_vc_endpoint: 'https://api.ingrammicro.com:443/resellers/v6.1/orders',
-                    custrecord_ctc_vc_access_endpoint: 'https://api.ingrammicro.com:443/oauth/oauth30/token',
+                    custrecord_ctc_vc_endpoint:
+                        'https://api.ingrammicro.com:443/resellers/v6.1/orders',
+                    custrecord_ctc_vc_access_endpoint:
+                        'https://api.ingrammicro.com:443/oauth/oauth30/token',
                     custrecord_ctc_vc_api_key: '',
                     custrecord_ctc_vc_api_secret: '',
                     custrecord_ctc_vc_customer_number: ''
@@ -128,7 +130,8 @@ define(function (require) {
                 BILL_CREATE[xmlVendorId] = {
                     custrecord_vc_bc_connect_type: '1',
                     custrecord_vc_bc_entry: 'arrow_api',
-                    custrecord_vc_bc_url: 'https://qaecsapi.arrow.com/external/ArrowLink/ArrowECS/Invoice_RS/Status',
+                    custrecord_vc_bc_url:
+                        'https://qaecsapi.arrow.com/external/ArrowLink/ArrowECS/Invoice_RS/Status',
                     custrecord_vc_bc_token_url:
                         'https://login.microsoftonline.com/0beb0c35-9cbb-4feb-99e5-589e415c7944/oauth2/v2.0/token',
 

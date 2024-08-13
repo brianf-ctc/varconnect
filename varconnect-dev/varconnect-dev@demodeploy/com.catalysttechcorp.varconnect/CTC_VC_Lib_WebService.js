@@ -58,7 +58,8 @@ define([
             password = OrderCFG.password,
             customerNo = OrderCFG.customerNo;
 
-        if (!endpoint || !user || !password) throw Error('Incomplete webservice information for ' + OrderCFG.vendor);
+        if (!endpoint || !user || !password)
+            throw Error('Incomplete webservice information for ' + OrderCFG.vendor);
     }
 
     /**
@@ -255,7 +256,11 @@ define([
         var dtStartDate = parseDate(startDate),
             dtTranDate = parseDate(tranDate);
 
-        vc2_util.log(logTitle, '>> check dates: ', [dtStartDate, dtTranDate, dtStartDate <= dtTranDate]);
+        vc2_util.log(logTitle, '>> check dates: ', [
+            dtStartDate,
+            dtTranDate,
+            dtStartDate <= dtTranDate
+        ]);
 
         return dtStartDate <= dtTranDate;
     }
@@ -315,7 +320,9 @@ define([
         vc2_util.vcLog({
             recordId: poId,
             title: 'WebService | Output Lines',
-            body: !vc2_util.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
+            body: !vc2_util.isEmpty(outputArray)
+                ? JSON.stringify(outputArray)
+                : '-no lines to process-',
             status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
 

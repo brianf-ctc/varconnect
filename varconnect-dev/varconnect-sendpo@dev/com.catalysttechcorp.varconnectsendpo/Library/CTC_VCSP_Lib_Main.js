@@ -85,10 +85,10 @@ define([
                     serial_num: vcPOLineFieldsIds.SERIAL_NUMBERS,
                     tracking_num: vcPOLineFieldsIds.TRACKING_NUMBERS,
                     internal_reference_num: vcPOLineFieldsIds.INTERNAL_REFERENCE,
-                    json_data: vcPOLineFieldsIds.JSON_DATA,
+                    json_data: vcPOLineFieldsIds.JSON_DATA
                 };
                 let mapItemDetailsToSublistFieldIdText = {
-                    order_date: vcPOLineFieldsIds.ORDER_DATE,
+                    order_date: vcPOLineFieldsIds.ORDER_DATE
                 };
                 for (let i = 0, len = orderStatus.items.length; i < len; i += 1) {
                     let responseLineDetails = orderStatus.items[i];
@@ -106,9 +106,10 @@ define([
                                 value: columnValue
                             });
                         }
-                    };
+                    }
                     for (let responseLineProperty in mapItemDetailsToSublistFieldIdText) {
-                        let columnFieldId = mapItemDetailsToSublistFieldIdText[responseLineProperty],
+                        let columnFieldId =
+                                mapItemDetailsToSublistFieldIdText[responseLineProperty],
                             columnValue = responseLineDetails[responseLineProperty];
                         if (columnValue != 'NA') {
                             rec.setCurrentSublistText({

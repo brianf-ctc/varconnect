@@ -13,13 +13,13 @@
  *
  */
 
-define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
-    NS_Search,
-    NS_Xml,
-    NS_Format,
-    VCSP_Global,
-    CTC_Util
-) {
+define([
+    'N/search',
+    'N/xml',
+    'N/format',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_Lib_Utils'
+], function (NS_Search, NS_Xml, NS_Format, VCSP_Global, CTC_Util) {
     let LogTitle = 'WS:Synnex';
 
     let Helper = {};
@@ -114,7 +114,11 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
         orderStatus.successLines = [];
         orderStatus.errorLines = [];
         orderStatus.lineNotes = [];
-        if (responseNodesArray && responseNodesArray.length && responseNodesArray[0].hasChildNodes()) {
+        if (
+            responseNodesArray &&
+            responseNodesArray.length &&
+            responseNodesArray[0].hasChildNodes()
+        ) {
             let orderResponseNodes = responseNodesArray[0].childNodes;
             for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
                 lineUniqueKeys.push(poObj.items[i].lineuniquekey);
@@ -131,7 +135,9 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                         orderStatus.note = orderResponseNodes[i].textContent;
                         break;
                     case 'ResponseDateTime':
-                        orderStatus.order_date = Helper.formatFromSynnexDate(orderResponseNodes[i].textContent);
+                        orderStatus.order_date = Helper.formatFromSynnexDate(
+                            orderResponseNodes[i].textContent
+                        );
                         break;
                     case 'ErrorMessage':
                         orderStatus.errorMessage = orderResponseNodes[i].textContent;
@@ -153,7 +159,13 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                         node: orderResponseNodes[i],
                         json: json_data
                     });
-                    log.debug(logTitle, 'Parsing ' + orderResponseNodes[i].nodeName + ': ' + JSON.stringify(json_data));
+                    log.debug(
+                        logTitle,
+                        'Parsing ' +
+                            orderResponseNodes[i].nodeName +
+                            ': ' +
+                            JSON.stringify(json_data)
+                    );
                 }
             }
             let itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
@@ -204,7 +216,8 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                                 itemDetails.order_type = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'OrderNumber':
-                                itemDetails.vendor_order_number = itemChildNodes[y].textContent || 'NA';
+                                itemDetails.vendor_order_number =
+                                    itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SKU':
                                 itemDetails.vendor_sku = itemChildNodes[y].textContent || 'NA';
@@ -219,7 +232,8 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                                 itemDetails.ship_from = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SynnexInternalReference':
-                                itemDetails.internal_reference_num = itemChildNodes[y].textContent || 'NA';
+                                itemDetails.internal_reference_num =
+                                    itemChildNodes[y].textContent || 'NA';
                                 break;
                             default:
                                 break;
@@ -250,9 +264,13 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                         orderStatus.errorLines.push(itemDetails);
                         if (itemDetails.note && itemDetails.note != 'NA') {
                             orderStatus.lineNotes.push(
-                                [itemDetails.order_status, '@', itemDetails.vendor_line, ': ', itemDetails.note].join(
-                                    ''
-                                )
+                                [
+                                    itemDetails.order_status,
+                                    '@',
+                                    itemDetails.vendor_line,
+                                    ': ',
+                                    itemDetails.note
+                                ].join('')
                             );
                         }
                     }
@@ -264,7 +282,8 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                         ' line item(s) succeeded and ' +
                         orderStatus.errorLines.length +
                         ' failed';
-                    if (orderStatus.lineNotes.length) returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
+                    if (orderStatus.lineNotes.length)
+                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
                 } else if (orderStatus.errorLines.length) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
@@ -361,12 +380,18 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                                 '/attributes': {
                                     lineNumber: record.items[i].lineuniquekey
                                 },
-                                SKU: record.items[i].synnexSKU,
+                                SKU: record.items[i].synnexSKU || record.items[i].vendorSKU,
                                 ManufacturerPartNumber: record.items[i].item,
                                 UnitPrice: record.items[i].rate,
                                 OrderQuantity: record.items[i].quantity
                             }
                         };
+                        // since SKU and MPN might conflict, prioritize one over the other
+                        if (vendorConfig.prioritizeVendorSKU && lineItem.Item.SKU) {
+                            delete lineItem.Item.ManufacturerPartNumber;
+                        } else if (lineItem.Item.ManufacturerPartNumber) {
+                            delete lineItem.Item.SKU;
+                        }
                         items.push(lineItem);
                     }
                     return items;
@@ -406,7 +431,13 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
                                 xmlBody.push('</' + property + '>');
                             }
                         } else if (object[property] !== undefined) {
-                            xmlBody.push(['<' + property + '>', object[property], '</' + property + '>'].join(''));
+                            xmlBody.push(
+                                [
+                                    '<' + property + '>',
+                                    object[property],
+                                    '</' + property + '>'
+                                ].join('')
+                            );
                         }
                     }
                 }
@@ -429,7 +460,10 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
         };
         if (poObj.additionalVendorDetails) {
             additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
-        } else if (vendorConfig.additionalPOFields && vendorConfig.includeAdditionalDetailsOnSubmit) {
+        } else if (
+            vendorConfig.additionalPOFields &&
+            vendorConfig.includeAdditionalDetailsOnSubmit
+        ) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                 fields: CTC_Util.safeParse(vendorConfig.additionalPOFields),
                 filterValues: {
@@ -447,7 +481,11 @@ define(['N/search', 'N/xml', 'N/format', '../Library/CTC_VCSP_Constants', '../Li
             for (let fieldId in additionalVendorDetails) {
                 let fieldHierarchy = fieldId.split('.');
                 let fieldContainer = requestDetails.OrderRequest;
-                for (let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1; i < len; i += 1) {
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
                         fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];

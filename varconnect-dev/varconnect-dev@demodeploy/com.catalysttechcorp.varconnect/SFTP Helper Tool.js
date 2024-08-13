@@ -241,7 +241,16 @@ function getFormTemplate() {
     return form;
 }
 
-function getSFTPConnection(username, passwordGuid, url, hostKey, hostKeyType, port, directory, timeout) {
+function getSFTPConnection(
+    username,
+    passwordGuid,
+    url,
+    hostKey,
+    hostKeyType,
+    port,
+    directory,
+    timeout
+) {
     var preConnectionObj = {};
     preConnectionObj.passwordGuid = passwordGuid;
     preConnectionObj.url = url;

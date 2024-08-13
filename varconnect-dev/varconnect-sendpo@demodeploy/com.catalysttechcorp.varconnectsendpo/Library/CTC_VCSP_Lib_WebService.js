@@ -13,7 +13,7 @@
  */
 define([
     './CTC_Lib_Utils',
-    '../Library/CTC_Lib_ServerUtils',
+    './CTC_Lib_ServerUtils',
     './CTC_VCSP_Constants',
     './CTC_VCSP_Lib_VendorConfig',
     '../Vendor Scripts/CTC_VCSP_Lib_Dell',

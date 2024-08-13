@@ -12,7 +12,11 @@
  * @NModuleScope Public
  * @NScriptType Restlet
  */
-define(['N/record', './../CTC_VC2_Constants', './../CTC_VC2_Lib_Utils'], function (ns_record, vc2_constant, vc2_util) {
+define(['N/record', './../CTC_VC2_Constants', './../CTC_VC2_Lib_Utils'], function (
+    ns_record,
+    vc2_constant,
+    vc2_util
+) {
     var LogTitle = 'VC|Generate Serials',
         VCLOG_APPNAME = 'VAR Connect | Process Bill (Serials)',
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS,

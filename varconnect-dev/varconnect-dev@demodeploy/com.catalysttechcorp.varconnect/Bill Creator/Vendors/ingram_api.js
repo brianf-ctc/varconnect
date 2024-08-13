@@ -12,13 +12,13 @@
  * @NModuleScope Public
  */
 
-define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash'], function (
-    ns_search,
-    ns_runtime,
-    vc2_util,
-    moment,
-    lodash
-) {
+define([
+    'N/search',
+    'N/runtime',
+    '../../CTC_VC2_Lib_Utils',
+    '../Libraries/moment',
+    '../Libraries/lodash'
+], function (ns_search, ns_runtime, vc2_util, moment, lodash) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix,
@@ -120,12 +120,15 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
                 });
                 vc2_util.handleJSONResponse(searchOrderReq);
 
-                var searchOrderResp = searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
+                var searchOrderResp =
+                    searchOrderReq.PARSED_RESPONSE || searchOrderReq.RESPONSE || {};
 
                 if (searchOrderReq.isError || vc2_util.isEmpty(searchOrderResp)) {
                     throw (
                         searchOrderReq.errorMsg +
-                        (searchOrderReq.details ? '\n' + JSON.stringify(searchOrderReq.details) : '')
+                        (searchOrderReq.details
+                            ? '\n' + JSON.stringify(searchOrderReq.details)
+                            : '')
                     );
                 }
 
@@ -165,12 +168,15 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
                 });
                 vc2_util.handleJSONResponse(orderDetailsReq);
 
-                var orderDetailsResp = orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
+                var orderDetailsResp =
+                    orderDetailsReq.PARSED_RESPONSE || orderDetailsReq.RESPONSE || {};
 
                 if (orderDetailsReq.isError || vc2_util.isEmpty(orderDetailsReq)) {
                     throw (
                         orderDetailsReq.errorMsg +
-                        (orderDetailsReq.details ? '\n' + JSON.stringify(orderDetailsReq.details) : '')
+                        (orderDetailsReq.details
+                            ? '\n' + JSON.stringify(orderDetailsReq.details)
+                            : '')
                     );
                 }
 
@@ -214,12 +220,15 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
                 vc2_util.handleJSONResponse(invoiceDetailsReq);
                 vc2_util.log(logTitle, '>> response 2: ', invoiceDetailsReq.PARSED_RESPONSE);
 
-                var invoiceDetailsResp = invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+                var invoiceDetailsResp =
+                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
                 if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
                     throw (
                         invoiceDetailsReq.errorMsg +
-                        (invoiceDetailsReq.details ? '\n' + JSON.stringify(invoiceDetailsReq.details) : '')
+                        (invoiceDetailsReq.details
+                            ? '\n' + JSON.stringify(invoiceDetailsReq.details)
+                            : '')
                     );
                 }
 
@@ -270,12 +279,15 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
                 });
                 vc2_util.handleJSONResponse(invoiceDetailsReq);
 
-                var invoiceDetailsResp = invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
+                var invoiceDetailsResp =
+                    invoiceDetailsReq.PARSED_RESPONSE || invoiceDetailsReq.RESPONSE || {};
 
                 if (invoiceDetailsReq.isError || vc2_util.isEmpty(invoiceDetailsResp)) {
                     throw (
                         invoiceDetailsReq.errorMsg +
-                        (invoiceDetailsReq.details ? '\n' + JSON.stringify(invoiceDetailsReq.details) : '')
+                        (invoiceDetailsReq.details
+                            ? '\n' + JSON.stringify(invoiceDetailsReq.details)
+                            : '')
                     );
                 }
 
@@ -327,7 +339,11 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
 
                         vc2_util.log(logTitle, '// processing order:', customerOrderNum);
 
-                        if (!orderInfo || !customerOrderNum || customerOrderNum != CURRENT.billConfig.poNum) {
+                        if (
+                            !orderInfo ||
+                            !customerOrderNum ||
+                            customerOrderNum != CURRENT.billConfig.poNum
+                        ) {
                             vc2_util.log(logTitle, '... skipped ');
                             continue;
                         }
@@ -340,7 +356,8 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
 
                             vc2_util.log(logTitle, '... subOrderInfo: ', subOrderInfo);
 
-                            if (!subOrderStatus || vc2_util.inArray(subOrderStatus, ['CANCELLED'])) continue;
+                            if (!subOrderStatus || vc2_util.inArray(subOrderStatus, ['CANCELLED']))
+                                continue;
 
                             // get the links
                             for (var iii = 0, jjj = orderLinksList.length; iii < jjj; iii++) {
@@ -350,9 +367,13 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
 
                                 if (!linkTopic || !linkTopic.match(/\binvoices\b/gi)) continue;
 
-                                vc2_util.log(logTitle, '.. added link: ', [subOrderLink, ingramOrderNum]);
+                                vc2_util.log(logTitle, '.. added link: ', [
+                                    subOrderLink,
+                                    ingramOrderNum
+                                ]);
 
-                                if (!vc2_util.inArray(linkURL, orderDetails.links)) orderDetails.links.push(linkURL);
+                                if (!vc2_util.inArray(linkURL, orderDetails.links))
+                                    orderDetails.links.push(linkURL);
 
                                 if (!vc2_util.inArray(ingramOrderNum, orderDetails.orderNums))
                                     orderDetails.orderNums.push(ingramOrderNum);
@@ -473,7 +494,8 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
 
                 vc2_util.log(logTitle, '.. invoice data: ', invoiceData);
 
-                if (!invoiceDetailsResp.lines || !invoiceDetailsResp.lines.length) throw 'Missing invoice lines';
+                if (!invoiceDetailsResp.lines || !invoiceDetailsResp.lines.length)
+                    throw 'Missing invoice lines';
 
                 vc2_util.log(logTitle, 'Processing lines: ', invoiceDetailsResp.lines.length);
 
@@ -597,7 +619,8 @@ define(['N/search', 'N/runtime', '../../CTC_VC2_Lib_Utils', '../Libraries/moment
 
                 vc2_util.log(logTitle, '.. invoice data: ', invoiceData);
 
-                if (!invoiceDetailsResp.Lines || !invoiceDetailsResp.Lines.length) throw 'Missing invoice lines';
+                if (!invoiceDetailsResp.Lines || !invoiceDetailsResp.Lines.length)
+                    throw 'Missing invoice lines';
 
                 vc2_util.log(logTitle, 'Processing lines: ', invoiceDetailsResp.Lines.length);
 

@@ -61,7 +61,10 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
                 return true;
             });
 
-            searchOption.filters.push('AND', arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift());
+            searchOption.filters.push(
+                'AND',
+                arrSerialFilters.length > 1 ? arrSerialFilters : arrSerialFilters.shift()
+            );
 
             // vc2_util.log(logTitle, '>> searchOption: ', searchOption);
             var serialSarchObj = ns_search.create(searchOption);

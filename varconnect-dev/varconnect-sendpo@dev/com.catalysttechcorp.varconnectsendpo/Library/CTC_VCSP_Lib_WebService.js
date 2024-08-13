@@ -11,7 +11,7 @@
  * @NApiVersion 2.1
  * @NModuleScope Public
  */
- define([
+define([
     './CTC_Lib_Utils',
     './CTC_VCSP_Constants',
     './CTC_VCSP_Lib_VendorConfig',
@@ -94,7 +94,12 @@
 
         for (let requiredParam in requiredWebserviceInfo) {
             if (!requiredWebserviceInfo[requiredParam]) {
-                throw 'Incomplete webservice information for ' + recVendorConfig.vendorName + '. Missing one of the following: ' + Object.keys(requiredWebserviceInfo).join(', ');
+                throw (
+                    'Incomplete webservice information for ' +
+                    recVendorConfig.vendorName +
+                    '. Missing one of the following: ' +
+                    Object.keys(requiredWebserviceInfo).join(', ')
+                );
             }
         }
 

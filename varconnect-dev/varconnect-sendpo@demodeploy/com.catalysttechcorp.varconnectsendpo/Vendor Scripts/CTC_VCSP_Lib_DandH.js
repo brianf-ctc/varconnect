@@ -12,15 +12,16 @@
  * @NModuleScope Public
  */
 
-define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_Lib_Utils'], function (
-    NS_Format,
-    NS_Error,
-    VCSP_Global,
-    CTC_Util
-) {
+define([
+    'N/format',
+    'N/error',
+    '../Library/CTC_VCSP_Constants',
+    '../Library/CTC_Lib_Utils'
+], function (NS_Format, NS_Error, VCSP_Global, CTC_Util) {
     const LogTitle = 'WS:DandH';
     let errorMessages = {
-        STATUS_401: 'Authorization information is invalid. Please check Send PO Vendor configuration.',
+        STATUS_401:
+            'Authorization information is invalid. Please check Send PO Vendor configuration.',
         STATUS_404: 'URL not found. Please check Send PO Vendor configuration.'
     };
 
@@ -244,7 +245,11 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
             for (let fieldId in additionalVendorDetails) {
                 let fieldHierarchy = fieldId.split('.');
                 let fieldContainer = dnhTemplate;
-                for (let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1; i < len; i += 1) {
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
                         // container is an array, distribute values across container elements
@@ -263,7 +268,8 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                                         }
                                         break;
                                     default:
-                                        lineObj[fieldIdComponent] = additionalVendorDetails[fieldId][j];
+                                        lineObj[fieldIdComponent] =
+                                            additionalVendorDetails[fieldId][j];
                                         break;
                                 }
                             }
@@ -274,7 +280,10 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                         // container is an array, reference as is
                         if (fieldIdComponent.indexOf('__') == 0) {
                             fieldIdComponent = fieldIdComponent.slice(2);
-                            if (fieldContainer[fieldIdComponent] && util.isArray(fieldContainer[fieldIdComponent])) {
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
                                 fieldContainer = fieldContainer[fieldIdComponent];
                             } else {
                                 fieldContainer[fieldIdComponent] = [];
@@ -283,7 +292,10 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                             // container is an array, reference first element
                         } else if (fieldIdComponent.indexOf('_') == 0) {
                             fieldIdComponent = fieldIdComponent.slice(1);
-                            if (fieldContainer[fieldIdComponent] && util.isArray(fieldContainer[fieldIdComponent])) {
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
                                 fieldContainer = fieldContainer[fieldIdComponent][0];
                             } else {
                                 fieldContainer[fieldIdComponent] = [{}];
@@ -347,24 +359,41 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                             itemJsonData = JSON.parse(JSON.stringify(responseBody));
                         if (shipmentDetails.lines && shipmentDetails.lines.length) {
                             // valid lines
-                            for (let line = 0, lineCount = shipmentDetails.lines.length; line < lineCount; line += 1) {
-                                log.audit(logTitle, 'shipment line=' + JSON.stringify(shipmentDetails.lines));
+                            for (
+                                let line = 0, lineCount = shipmentDetails.lines.length;
+                                line < lineCount;
+                                line += 1
+                            ) {
+                                log.audit(
+                                    logTitle,
+                                    'shipment line=' + JSON.stringify(shipmentDetails.lines)
+                                );
                                 let lineDetails = shipmentDetails.lines[line];
                                 delete itemJsonData.shipments;
-                                itemJsonData.shipments = JSON.parse(JSON.stringify(shipmentDetails));
+                                itemJsonData.shipments = JSON.parse(
+                                    JSON.stringify(shipmentDetails)
+                                );
                                 delete itemJsonData.shipments.lines;
                                 itemJsonData.shipments.line = lineDetails;
-                                let itemJsonDataStr = JSON.stringify(itemJsonData).replace(/,/g, ',<br>');
+                                let itemJsonDataStr = JSON.stringify(itemJsonData).replace(
+                                    /,/g,
+                                    ',<br>'
+                                );
                                 if (itemJsonDataStr == '{}') itemJsonDataStr = 'NA';
                                 let itemDetails = {
                                     line_unique_key: lineDetails.externalLineNumber,
-                                    line_number: lineUniqueKeys.indexOf(lineDetails.externalLineNumber) + 1,
+                                    line_number:
+                                        lineUniqueKeys.indexOf(lineDetails.externalLineNumber) + 1,
                                     vendor_line: 'NA',
                                     order_status: 'accepted',
                                     order_type: 'NA',
                                     vendor_order_number: responseBody.orderNumber || 'NA',
-                                    customer_order_number: responseBody.customerPurchaseOrder || 'NA',
-                                    order_date: Helper.formatFromISODateString(endUserDataDetails.dateOfSale) || 'NA',
+                                    customer_order_number:
+                                        responseBody.customerPurchaseOrder || 'NA',
+                                    order_date:
+                                        Helper.formatFromISODateString(
+                                            endUserDataDetails.dateOfSale
+                                        ) || 'NA',
                                     vendor_sku: lineDetails.item || 'NA',
                                     item_number: 'NA',
                                     note: responseBody.specialInstructions,
@@ -381,8 +410,12 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                                     internal_reference_num: 'NA',
                                     json_data: itemJsonDataStr
                                 };
-                                if (endUserDataDetails.serialNumbers && endUserDataDetails.serialNumbers.length) {
-                                    itemDetails.serial_num = endUserDataDetails.serialNumbers.join('\n');
+                                if (
+                                    endUserDataDetails.serialNumbers &&
+                                    endUserDataDetails.serialNumbers.length
+                                ) {
+                                    itemDetails.serial_num =
+                                        endUserDataDetails.serialNumbers.join('\n');
                                 }
                                 if (lineDetails.clientReferenceData) {
                                     itemDetails.internal_reference_num = JSON.stringify(
@@ -419,12 +452,15 @@ define(['N/format', 'N/error', '../Library/CTC_VCSP_Constants', '../Library/CTC_
                         ' line item(s) and ' +
                         orderStatus.errorLines.length +
                         ' failed line(s)';
-                    if (orderStatus.lineNotes.length) returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
+                    if (orderStatus.lineNotes.length)
+                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
                 } else if (orderStatus.errorLines.length) {
                     returnValue.message = 'Send PO failed.\n' + orderStatus.lineNotes.join('\n');
                 } else {
                     returnValue.message =
-                        'Send PO successful with ' + orderStatus.successLines.length + ' line item(s).';
+                        'Send PO successful with ' +
+                        orderStatus.successLines.length +
+                        ' line item(s).';
                 }
                 returnValue.orderStatus = orderStatus;
             }

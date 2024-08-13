@@ -19,7 +19,11 @@
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
  */
-define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (ns_xml, vc2_util, moment) {
+define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
+    ns_xml,
+    vc2_util,
+    moment
+) {
     // vcGlobals, constants, util) {
     var LogTitle = 'WS:D&H';
 
@@ -159,7 +163,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                             })[0]
                         ) || 'NA';
 
-                    if (!orderItem.order_status || orderItem.order_status.match(/CANCELLED/gi)) continue; // skip this order
+                    if (!orderItem.order_status || orderItem.order_status.match(/CANCELLED/gi))
+                        continue; // skip this order
 
                     orderItem.item_num =
                         vc2_util.getNodeTextContent(
@@ -230,7 +235,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                         xpath: 'SHIPITEMNO'
                                     });
 
-                                shipItemNo = shipItemNo && shipItemNo[0] ? shipItemNo[0].textContent : null;
+                                shipItemNo =
+                                    shipItemNo && shipItemNo[0] ? shipItemNo[0].textContent : null;
 
                                 if (!shipItemNo || shipItemNo !== orderItem.item_num) continue;
 
@@ -269,7 +275,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                                     );
                                 }
 
-                                if (!vc2_util.isEmpty(dateShipped)) dateShippedList.push(dateShipped);
+                                if (!vc2_util.isEmpty(dateShipped))
+                                    dateShippedList.push(dateShipped);
                             }
                         }
 
@@ -298,7 +305,10 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     }
 
                     // if order status message is "IN PROCESS", then package/ship info is being waited on
-                    if (orderItem.order_status && orderItem.order_status.toUpperCase() !== 'IN PROCESS') {
+                    if (
+                        orderItem.order_status &&
+                        orderItem.order_status.toUpperCase() !== 'IN PROCESS'
+                    ) {
                         orderItem.is_shipped = false;
                     }
 

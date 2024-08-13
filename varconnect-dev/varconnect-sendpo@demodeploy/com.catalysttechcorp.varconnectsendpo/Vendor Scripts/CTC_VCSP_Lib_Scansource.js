@@ -94,7 +94,8 @@ define((require) => {
         let poObj = option.purchaseOrder,
             vendorConfig = option.vendorConfig;
 
-        let objBody = {};
+        let objBody = {},
+            additionalVendorDetails = {};
         // objBody.PayerId = 'NA';
         objBody.BusinessUnit = Helper.getBusinessUnit(vendorConfig.businessUnit);
         objBody.ReferenceNumber = poObj.id + '';
@@ -139,6 +140,85 @@ define((require) => {
             });
             return arrLines;
         })();
+
+        if (poObj.additionalVendorDetails) {
+            additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
+        } else if (vendorConfig.additionalPOFields) {
+            additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
+            });
+        }
+        if (additionalVendorDetails) {
+            for (let fieldId in additionalVendorDetails) {
+                let fieldHierarchy = fieldId.split('.');
+                let fieldContainer = objBody;
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
+                    let fieldIdComponent = fieldHierarchy[i];
+                    if (i == fieldIdIndex) {
+                        // container is an array, distribute values across container elements
+                        if (
+                            fieldIdComponent.indexOf('__') == 0 &&
+                            util.isArray(additionalVendorDetails[fieldId]) &&
+                            util.isArray(fieldContainer)
+                        ) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            for (let j = 0, lines = fieldContainer.length; j < lines; j += 1) {
+                                let lineObj = fieldContainer[j];
+                                switch (fieldIdComponent) {
+                                    default:
+                                        if (
+                                            !CTC_Util.isEmpty(additionalVendorDetails[fieldId][j])
+                                        ) {
+                                            lineObj[fieldIdComponent] =
+                                                additionalVendorDetails[fieldId][j];
+                                        }
+                                        break;
+                                }
+                            }
+                        } else if (!CTC_Util.isEmpty(additionalVendorDetails[fieldId])) {
+                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        }
+                    } else {
+                        // container is an array, reference as is
+                        if (fieldIdComponent.indexOf('__') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(2);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
+                                fieldContainer = fieldContainer[fieldIdComponent];
+                            } else {
+                                fieldContainer[fieldIdComponent] = [];
+                                fieldContainer = fieldContainer[fieldIdComponent];
+                            }
+                            // container is an array, reference first element
+                        } else if (fieldIdComponent.indexOf('_') == 0) {
+                            fieldIdComponent = fieldIdComponent.slice(1);
+                            if (
+                                fieldContainer[fieldIdComponent] &&
+                                util.isArray(fieldContainer[fieldIdComponent])
+                            ) {
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            } else {
+                                fieldContainer[fieldIdComponent] = [{}];
+                                fieldContainer = fieldContainer[fieldIdComponent][0];
+                            }
+                        } else if (!fieldContainer[fieldIdComponent]) {
+                            fieldContainer[fieldIdComponent] = {};
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        } else {
+                            fieldContainer = fieldContainer[fieldIdComponent];
+                        }
+                    }
+                }
+                log.audit('generateBody', 'Order Request: ' + JSON.stringify(fieldContainer));
+            }
+        }
+
         let cleanUpJSON = function (option) {
             let objConstructor = option.objConstructor || {}.constructor,
                 obj = option.obj;
@@ -154,6 +234,13 @@ define((require) => {
             }
         };
         cleanUpJSON({ obj: objBody });
+
+        log.debug('Scansource Body', '>> Scansource Body: ' + JSON.stringify(objBody));
+        CTC_Util.vcLog({
+            title: [LogTitle, 'Scansource Body'].join(' - '),
+            content: objBody,
+            transaction: poObj.id
+        });
         return objBody;
     };
 
@@ -258,9 +345,10 @@ define((require) => {
 
             log.audit(LogTitle, '>> tokenResp: ' + JSON.stringify(tokenResponse.PARSED_RESPONSE));
 
-            bearerToken = [tokenResponse.PARSED_RESPONSE.token_type, tokenResponse.PARSED_RESPONSE.access_token].join(
-                ' '
-            );
+            bearerToken = [
+                tokenResponse.PARSED_RESPONSE.token_type,
+                tokenResponse.PARSED_RESPONSE.access_token
+            ].join(' ');
         }
         return bearerToken;
     };
@@ -325,7 +413,11 @@ define((require) => {
 
         if (responseBody && responseBody.Errors && responseBody.Errors.length) {
             let collectedErrorMessages = [];
-            for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
+            for (
+                let errCtr = 0, errCount = responseBody.Errors.length;
+                errCtr < errCount;
+                errCtr += 1
+            ) {
                 let errorResponse = responseBody.Errors[errCtr],
                     errorMessage = null,
                     errorCode = null;
@@ -399,11 +491,16 @@ define((require) => {
                 if (responseBody.OrderReceived === false) {
                     returnValue.isError = true;
                     returnValue.message = 'Send PO failed.';
-                    returnValue.errorMsg = responseBody.message || 'ScanSource failed to receive the order.';
+                    returnValue.errorMsg =
+                        responseBody.message || 'ScanSource failed to receive the order.';
                 }
                 if (responseBody.Errors && responseBody.Errors.length) {
                     let collectedErrorMessages = [];
-                    for (let errCtr = 0, errCount = responseBody.Errors.length; errCtr < errCount; errCtr += 1) {
+                    for (
+                        let errCtr = 0, errCount = responseBody.Errors.length;
+                        errCtr < errCount;
+                        errCtr += 1
+                    ) {
                         let errorResponse = responseBody.Errors[errCtr],
                             errorMessage = null,
                             errorCode = null;

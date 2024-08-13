@@ -7,7 +7,7 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
- * 
+ *
  * @NApiVersion 2.1
  * @NModuleScope Public
  */
@@ -20,15 +20,7 @@ define([
     'N/search',
     'N/xml',
     './CTC_VCSP_Constants'
-], function (
-    NS_Runtime,
-    NS_Https,
-    NS_Format,
-    NS_Record,
-    NS_Search,
-    NS_Xml,
-    VCSP_Global
-) {
+], function (NS_Runtime, NS_Https, NS_Format, NS_Record, NS_Search, NS_Xml, VCSP_Global) {
     let LogTitle = 'CTC_Util',
         LogPrefix;
 
@@ -559,7 +551,7 @@ define([
                 ? fileInfo
                 : fileInfo.shift();
         },
-        log: function(option, title, message) {
+        log: function (option, title, message) {
             let logType = option.type || option,
                 logTitle = option.title || title,
                 tempMessage = new String(option.message || message || '');
@@ -581,7 +573,7 @@ define([
                 }
             } while (tempMessage.length > 0);
         },
-        getVendorAdditionalPOFieldDefaultValues: function(options) {
+        getVendorAdditionalPOFieldDefaultValues: function (options) {
             let fields = options.fields,
                 defaultValues = options.defaultValues || {};
             if (fields && fields.length) {
@@ -590,7 +582,7 @@ define([
                     if (poField.fieldGroup) {
                         defaultValues = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                             fields: poField.fields,
-                            defaultValues: defaultValues,
+                            defaultValues: defaultValues
                         });
                     } else if (poField.defaultValue) {
                         defaultValues[poField.name] = poField.defaultValue;
@@ -599,7 +591,7 @@ define([
             }
             return defaultValues;
         },
-        leftPadString: function(str, padding, len) {
+        leftPadString: function (str, padding, len) {
             let tempStr = str + '';
             let pad = padding + '';
             for (let i = tempStr.length; i < len; i += pad.length) {
@@ -607,7 +599,7 @@ define([
             }
             return tempStr.slice(len * -1);
         },
-        formatToSynnexDate: function(option) {
+        formatToSynnexDate: function (option) {
             let dateToFormat = option.date || option,
                 formattedDate = dateToFormat;
             if (dateToFormat && dateToFormat instanceof Date) {
@@ -616,18 +608,18 @@ define([
                     [
                         dateToFormat.getFullYear(),
                         CTC_Util.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
-                        CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2),
+                        CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2)
                     ].join('-'),
                     [
                         CTC_Util.leftPadString(dateToFormat.getHours(), '0', 2),
                         CTC_Util.leftPadString(dateToFormat.getMinutes(), '0', 2),
-                        CTC_Util.leftPadString(dateToFormat.getSeconds(), '0', 2),
-                    ].join(':'),
+                        CTC_Util.leftPadString(dateToFormat.getSeconds(), '0', 2)
+                    ].join(':')
                 ].join('T');
             }
             return formattedDate;
         },
-        formatToXMLDate: function(option) {
+        formatToXMLDate: function (option) {
             let dateToFormat = option.date || option,
                 formattedDate = dateToFormat;
             if (dateToFormat && dateToFormat instanceof Date) {
@@ -635,12 +627,12 @@ define([
                 formattedDate = [
                     dateToFormat.getFullYear(),
                     CTC_Util.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
-                    CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2),
+                    CTC_Util.leftPadString(dateToFormat.getDate(), '0', 2)
                 ].join('-');
             }
             return formattedDate;
         },
-        parseFromSynnexDate: function(option) {
+        parseFromSynnexDate: function (option) {
             let dateToParse = option.date || option,
                 parsedDate = dateToParse;
             if (dateToParse) {
@@ -648,12 +640,19 @@ define([
                 let dateTimeComponents = dateToParse.split('T'),
                     dateComponents = dateTimeComponents[0].split('-'),
                     timeComponents = dateTimeComponents[1].split(':');
-                parsedDate = new Date(dateComponents[0], dateComponents[1] - 1, dateComponents[2], timeComponents[0], timeComponents[1], timeComponents[2]);
+                parsedDate = new Date(
+                    dateComponents[0],
+                    dateComponents[1] - 1,
+                    dateComponents[2],
+                    timeComponents[0],
+                    timeComponents[1],
+                    timeComponents[2]
+                );
             }
             return parsedDate;
         },
         // YYYY-MM-dd
-        parseFromXMLDate: function(option) {
+        parseFromXMLDate: function (option) {
             let dateToParse = option.date || option,
                 parsedDate = dateToParse;
             if (dateToParse) {
@@ -663,16 +662,26 @@ define([
             return parsedDate;
         },
         // YYYY-MM-ddThh:mm:ss.000Z
-        parseISODateString: function(option) {
+        parseISODateString: function (option) {
             let dateToParse = option.date || option,
                 parsedDate = dateToParse;
             if (dateToParse) {
                 let dateComponents = dateToParse.split(/\D+/);
-                parsedDate = new Date(Date.UTC(dateComponents[0], --dateComponents[1], dateComponents[2], dateComponents[3], dateComponents[4], dateComponents[5], dateComponents[6]));
+                parsedDate = new Date(
+                    Date.UTC(
+                        dateComponents[0],
+                        --dateComponents[1],
+                        dateComponents[2],
+                        dateComponents[3],
+                        dateComponents[4],
+                        dateComponents[5],
+                        dateComponents[6]
+                    )
+                );
             }
             return parsedDate;
         },
-        xmlNodeToJson: function(option) {
+        xmlNodeToJson: function (option) {
             let xmlNode = option.node || option,
                 json = option.json;
             if (xmlNode) {
@@ -687,7 +696,7 @@ define([
                     if (!json) json = {};
                     if (json[mainKey]) {
                         if (!util.isArray(json[mainKey])) {
-                            json[mainKey] = [ json[mainKey] ];
+                            json[mainKey] = [json[mainKey]];
                         }
                         json[mainKey].push(jsonNode);
                     } else {
@@ -697,19 +706,22 @@ define([
                         let nodeAttributes = xmlNode.attributes;
                         for (let attribKey in nodeAttributes) {
                             let attrib = nodeAttributes[attribKey],
-                                attribName = [ '#', attrib.name ].join(''),
+                                attribName = ['#', attrib.name].join(''),
                                 attribValue = attrib.value;
                             jsonNode[attribName] = attribValue;
                         }
                     }
-                    if (xmlNode.hasChildNodes() &&
-                            (xmlNode.childNodes.length > 1 || xmlNode.childNodes[0].nodeType != NS_Xml.NodeType.TEXT_NODE)) {
+                    if (
+                        xmlNode.hasChildNodes() &&
+                        (xmlNode.childNodes.length > 1 ||
+                            xmlNode.childNodes[0].nodeType != NS_Xml.NodeType.TEXT_NODE)
+                    ) {
                         let childNodes = xmlNode.childNodes;
                         for (let i = 0, x = childNodes.length; i < x; i += 1) {
                             let childNode = childNodes[i];
                             CTC_Util.xmlNodeToJson({
                                 node: childNode,
-                                json: jsonNode,
+                                json: jsonNode
                             });
                         }
                     } else {
@@ -729,7 +741,7 @@ define([
             }
             return json;
         },
-        xmlToJson: function(option) {
+        xmlToJson: function (option) {
             let xmlDoc = option.xml || option,
                 json = option.json;
             if (xmlDoc && xmlDoc.documentElement) {
@@ -739,7 +751,7 @@ define([
                     let node = childNodes[i];
                     CTC_Util.xmlNodeToJson({
                         node: node,
-                        json: json,
+                        json: json
                     });
                 }
             }

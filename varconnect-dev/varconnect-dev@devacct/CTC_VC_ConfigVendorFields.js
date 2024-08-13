@@ -41,8 +41,10 @@ define(function (require) {
                     custrecord_ctc_vc_vendor: '',
                     custrecord_ctc_vc_xml_vendor: '',
                     custrecord_ctc_vc_vendor_subsidiary: '',
-                    custrecord_ctc_vc_endpoint: 'https://api.ingrammicro.com:443/resellers/v6.1/orders',
-                    custrecord_ctc_vc_access_endpoint: 'https://api.ingrammicro.com:443/oauth/oauth30/token',
+                    custrecord_ctc_vc_endpoint:
+                        'https://api.ingrammicro.com:443/resellers/v6.1/orders',
+                    custrecord_ctc_vc_access_endpoint:
+                        'https://api.ingrammicro.com:443/oauth/oauth30/token',
                     custrecord_ctc_vc_api_key: '',
                     custrecord_ctc_vc_api_secret: '',
                     custrecord_ctc_vc_customer_number: ''
@@ -83,9 +85,9 @@ define(function (require) {
                     custrecord_ctc_vc_xml_vendor: '',
                     custrecord_ctc_vc_vendor_subsidiary: '',
                     custrecord_ctc_vc_endpoint: 'https://www.dandh.com/dhXML/xmlDispatch',
-                    custrecord_ctc_vc_user: '',
-                    custrecord_ctc_vc_password: '',
-                    custrecord_ctc_vc_customer_number: ''
+                    custrecord_ctc_vc_user: '-set username-',
+                    custrecord_ctc_vc_password: '-set password-',
+                    custrecord_ctc_vc_customer_number: '-set customerno-'
                 };
                 BILL_CREATE[xmlVendorId] = {
                     custrecord_vc_bc_connect_type: '',
@@ -126,12 +128,17 @@ define(function (require) {
                     custrecord_ctc_vc_password: '-none-'
                 };
                 BILL_CREATE[xmlVendorId] = {
-                    custrecord_vc_bc_connect_type: '',
+                    custrecord_vc_bc_connect_type: '1',
                     custrecord_vc_bc_entry: 'arrow_api',
-                    custrecord_vc_bc_url: 'https://qaecsoag.arrow.com',
-                    custrecord_vc_bc_pass: '',
-                    custrecord_vc_bc_user: '',
-                    custrecord_vc_bc_partner: ''
+                    custrecord_vc_bc_url:
+                        'https://qaecsapi.arrow.com/external/ArrowLink/ArrowECS/Invoice_RS/Status',
+                    custrecord_vc_bc_token_url:
+                        'https://login.microsoftonline.com/0beb0c35-9cbb-4feb-99e5-589e415c7944/oauth2/v2.0/token',
+
+                    custrecord_vc_bc_pass: '-set client-secret-',
+                    custrecord_vc_bc_user: '-set client-id-',
+                    custrecord_vc_bc_partner: '-set customer-no-',
+                    custrecord_vc_bc_host_key: '-set Ocp-Apim-Subscription-Key-'
                 };
                 break;
             case 'JENNE':
@@ -185,9 +192,9 @@ define(function (require) {
                     custrecord_ctc_vc_access_endpoint:
                         'https://login.carahsoft.com/auth/realms/carahsoft/protocol/openid-connect/token',
                     custrecord_ctc_vc_oath_scope: 'https://api.carahsoft.com',
-                    custrecord_ctc_vc_api_key: '',
-                    custrecord_ctc_vc_api_secret: '',
-                    custrecord_ctc_vc_customer_number: '',
+                    custrecord_ctc_vc_api_key: '-set api-key-',
+                    custrecord_ctc_vc_api_secret: '-set api-secret-',
+                    custrecord_ctc_vc_customer_number: '58939881-cd64-466d-9824-1005229b9176',
                     custrecord_ctc_vc_user: '-none-',
                     custrecord_ctc_vc_password: '-none-'
                 };
@@ -197,10 +204,10 @@ define(function (require) {
                     custrecord_vc_bc_url: 'https://api.carahsoft.com/odata/v1/',
                     custrecord_vc_bc_token_url:
                         'https://login.carahsoft.com/auth/realms/carahsoft/protocol/openid-connect/token',
-                    custrecord_vc_bc_pass: '',
-                    custrecord_vc_bc_user: '',
+                    custrecord_vc_bc_user: '-set api-key-',
+                    custrecord_vc_bc_pass: '-set api-secret-',
                     custrecord_vc_bc_scope: 'https://api.carahsoft.com',
-                    custrecord_vc_bc_partner: ''
+                    custrecord_vc_bc_partner: '-set customer-no-'
                 };
                 break;
             case 'SYNNEX':

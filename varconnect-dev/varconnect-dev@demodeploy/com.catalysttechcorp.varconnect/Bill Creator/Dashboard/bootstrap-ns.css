@@ -5758,24 +5758,64 @@ button.list-group-item-danger.active:focus {
 }
 
 .panel > .table:first-child > thead:first-child > tr:first-child td:first-child,
-.panel > .table-responsive:first-child > .table:first-child > thead:first-child > tr:first-child td:first-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > thead:first-child
+    > tr:first-child
+    td:first-child,
 .panel > .table:first-child > tbody:first-child > tr:first-child td:first-child,
-.panel > .table-responsive:first-child > .table:first-child > tbody:first-child > tr:first-child td:first-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > tbody:first-child
+    > tr:first-child
+    td:first-child,
 .panel > .table:first-child > thead:first-child > tr:first-child th:first-child,
-.panel > .table-responsive:first-child > .table:first-child > thead:first-child > tr:first-child th:first-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > thead:first-child
+    > tr:first-child
+    th:first-child,
 .panel > .table:first-child > tbody:first-child > tr:first-child th:first-child,
-.panel > .table-responsive:first-child > .table:first-child > tbody:first-child > tr:first-child th:first-child {
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > tbody:first-child
+    > tr:first-child
+    th:first-child {
     border-top-left-radius: 1px;
 }
 
 .panel > .table:first-child > thead:first-child > tr:first-child td:last-child,
-.panel > .table-responsive:first-child > .table:first-child > thead:first-child > tr:first-child td:last-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > thead:first-child
+    > tr:first-child
+    td:last-child,
 .panel > .table:first-child > tbody:first-child > tr:first-child td:last-child,
-.panel > .table-responsive:first-child > .table:first-child > tbody:first-child > tr:first-child td:last-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > tbody:first-child
+    > tr:first-child
+    td:last-child,
 .panel > .table:first-child > thead:first-child > tr:first-child th:last-child,
-.panel > .table-responsive:first-child > .table:first-child > thead:first-child > tr:first-child th:last-child,
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > thead:first-child
+    > tr:first-child
+    th:last-child,
 .panel > .table:first-child > tbody:first-child > tr:first-child th:last-child,
-.panel > .table-responsive:first-child > .table:first-child > tbody:first-child > tr:first-child th:last-child {
+.panel
+    > .table-responsive:first-child
+    > .table:first-child
+    > tbody:first-child
+    > tr:first-child
+    th:last-child {
     border-top-right-radius: 1px;
 }
 
@@ -5794,24 +5834,64 @@ button.list-group-item-danger.active:focus {
 }
 
 .panel > .table:last-child > tbody:last-child > tr:last-child td:first-child,
-.panel > .table-responsive:last-child > .table:last-child > tbody:last-child > tr:last-child td:first-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tbody:last-child
+    > tr:last-child
+    td:first-child,
 .panel > .table:last-child > tfoot:last-child > tr:last-child td:first-child,
-.panel > .table-responsive:last-child > .table:last-child > tfoot:last-child > tr:last-child td:first-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tfoot:last-child
+    > tr:last-child
+    td:first-child,
 .panel > .table:last-child > tbody:last-child > tr:last-child th:first-child,
-.panel > .table-responsive:last-child > .table:last-child > tbody:last-child > tr:last-child th:first-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tbody:last-child
+    > tr:last-child
+    th:first-child,
 .panel > .table:last-child > tfoot:last-child > tr:last-child th:first-child,
-.panel > .table-responsive:last-child > .table:last-child > tfoot:last-child > tr:last-child th:first-child {
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tfoot:last-child
+    > tr:last-child
+    th:first-child {
     border-bottom-left-radius: 1px;
 }
 
 .panel > .table:last-child > tbody:last-child > tr:last-child td:last-child,
-.panel > .table-responsive:last-child > .table:last-child > tbody:last-child > tr:last-child td:last-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tbody:last-child
+    > tr:last-child
+    td:last-child,
 .panel > .table:last-child > tfoot:last-child > tr:last-child td:last-child,
-.panel > .table-responsive:last-child > .table:last-child > tfoot:last-child > tr:last-child td:last-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tfoot:last-child
+    > tr:last-child
+    td:last-child,
 .panel > .table:last-child > tbody:last-child > tr:last-child th:last-child,
-.panel > .table-responsive:last-child > .table:last-child > tbody:last-child > tr:last-child th:last-child,
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tbody:last-child
+    > tr:last-child
+    th:last-child,
 .panel > .table:last-child > tfoot:last-child > tr:last-child th:last-child,
-.panel > .table-responsive:last-child > .table:last-child > tfoot:last-child > tr:last-child th:last-child {
+.panel
+    > .table-responsive:last-child
+    > .table:last-child
+    > tfoot:last-child
+    > tr:last-child
+    th:last-child {
     border-bottom-right-radius: 1px;
 }
 
@@ -6673,7 +6753,11 @@ button.close {
 }
 
 .carousel-control.left {
-    background-image: -webkit-linear-gradient(left, rgba(0, 0, 0, 0.5) 0, rgba(0, 0, 0, 0.0001) 100%);
+    background-image: -webkit-linear-gradient(
+        left,
+        rgba(0, 0, 0, 0.5) 0,
+        rgba(0, 0, 0, 0.0001) 100%
+    );
     background-image: -o-linear-gradient(left, rgba(0, 0, 0, 0.5) 0, rgba(0, 0, 0, 0.0001) 100%);
     background-image: -webkit-gradient(
         linear,
@@ -6690,7 +6774,11 @@ button.close {
 .carousel-control.right {
     left: auto;
     right: 0;
-    background-image: -webkit-linear-gradient(left, rgba(0, 0, 0, 0.0001) 0, rgba(0, 0, 0, 0.5) 100%);
+    background-image: -webkit-linear-gradient(
+        left,
+        rgba(0, 0, 0, 0.0001) 0,
+        rgba(0, 0, 0, 0.5) 100%
+    );
     background-image: -o-linear-gradient(left, rgba(0, 0, 0, 0.0001) 0, rgba(0, 0, 0, 0.5) 100%);
     background-image: -webkit-gradient(
         linear,

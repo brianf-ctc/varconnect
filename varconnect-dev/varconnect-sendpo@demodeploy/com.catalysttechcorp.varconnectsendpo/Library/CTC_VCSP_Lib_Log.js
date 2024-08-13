@@ -18,11 +18,11 @@
  * 1.00		Jan 9, 2020		paolodl		Library for main processing of VAR Connect Send PO
  */
 define(['N/record', './CTC_VCSP_Constants'], function (NS_Record, VCSP_Global) {
-    function recordLog(options) {
-        let header = options.header,
-            body = options.body,
-            transaction = options.transaction,
-            status = options.status,
+    function recordLog(option) {
+        let header = option.header,
+            body = option.body,
+            transaction = option.transaction,
+            status = option.status,
             logFields = VCSP_Global.Fields.VarConnectLog;
 
         let recLog = NS_Record.create({

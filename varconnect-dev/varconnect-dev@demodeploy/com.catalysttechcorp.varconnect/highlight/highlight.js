@@ -133,7 +133,10 @@ define(['./languages/xml.min.js'], function () {
         const expandScopeName = (name, { prefix }) => {
             if (name.includes('.')) {
                 const pieces = name.split('.');
-                return [`${prefix}${pieces.shift()}`, ...pieces.map((x, i) => `${x}${'_'.repeat(i + 1)}`)].join(' ');
+                return [
+                    `${prefix}${pieces.shift()}`,
+                    ...pieces.map((x, i) => `${x}${'_'.repeat(i + 1)}`)
+                ].join(' ');
             }
             return `${prefix}${name}`;
         };
@@ -450,7 +453,8 @@ define(['./languages/xml.min.js'], function () {
         function either(...args) {
             /** @type { object & {capture?: boolean} }  */
             const opts = stripOptionsFromArgs(args);
-            const joined = '(' + (opts.capture ? '' : '?:') + args.map((x) => source(x)).join('|') + ')';
+            const joined =
+                '(' + (opts.capture ? '' : '?:') + args.map((x) => source(x)).join('|') + ')';
             return joined;
         }
 
@@ -534,7 +538,8 @@ define(['./languages/xml.min.js'], function () {
         const IDENT_RE = '[a-zA-Z]\\w*';
         const UNDERSCORE_IDENT_RE = '[a-zA-Z_]\\w*';
         const NUMBER_RE = '\\b\\d+(\\.\\d+)?';
-        const C_NUMBER_RE = '(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)'; // 0x..., 0..., decimal, float
+        const C_NUMBER_RE =
+            '(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)'; // 0x..., 0..., decimal, float
         const BINARY_NUMBER_RE = '\\b(0b[01]+)'; // 0b...
         const RE_STARTERS_RE =
             '!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~';
@@ -1224,7 +1229,10 @@ define(['./languages/xml.min.js'], function () {
                         this.exec = () => null;
                     }
                     const terminators = this.regexes.map((el) => el[1]);
-                    this.matcherRe = langRe(_rewriteBackreferences(terminators, { joinWith: '|' }), true);
+                    this.matcherRe = langRe(
+                        _rewriteBackreferences(terminators, { joinWith: '|' }),
+                        true
+                    );
                     this.lastIndex = 0;
                 }
 
@@ -1385,7 +1393,9 @@ define(['./languages/xml.min.js'], function () {
             function buildModeRegex(mode) {
                 const mm = new ResumableMultiRegex();
 
-                mode.contains.forEach((term) => mm.addRule(term.begin, { rule: term, type: 'begin' }));
+                mode.contains.forEach((term) =>
+                    mm.addRule(term.begin, { rule: term, type: 'begin' })
+                );
 
                 if (mode.terminatorEnd) {
                     mm.addRule(mode.terminatorEnd, { type: 'end' });
@@ -1492,7 +1502,8 @@ define(['./languages/xml.min.js'], function () {
                         cmode.terminatorEnd += (mode.end ? '|' : '') + parent.terminatorEnd;
                     }
                 }
-                if (mode.illegal) cmode.illegalRe = langRe(/** @type {RegExp | string} */ (mode.illegal));
+                if (mode.illegal)
+                    cmode.illegalRe = langRe(/** @type {RegExp | string} */ (mode.illegal));
                 if (!mode.contains) mode.contains = [];
 
                 mode.contains = [].concat(
@@ -1695,7 +1706,9 @@ define(['./languages/xml.min.js'], function () {
                     return language ? match[1] : 'no-highlight';
                 }
 
-                return classes.split(/\s+/).find((_class) => shouldNotHighlight(_class) || getLanguage(_class));
+                return classes
+                    .split(/\s+/)
+                    .find((_class) => shouldNotHighlight(_class) || getLanguage(_class));
             }
 
             /**
@@ -1808,7 +1821,8 @@ define(['./languages/xml.min.js'], function () {
                             buf = '';
 
                             keywordHits[word] = (keywordHits[word] || 0) + 1;
-                            if (keywordHits[word] <= MAX_KEYWORD_HITS) relevance += keywordRelevance;
+                            if (keywordHits[word] <= MAX_KEYWORD_HITS)
+                                relevance += keywordRelevance;
                             if (kind.startsWith('_')) {
                                 // _ implied for relevance only, do not highlight
                                 // by applying a class name
@@ -1837,10 +1851,18 @@ define(['./languages/xml.min.js'], function () {
                             emitter.addText(modeBuffer);
                             return;
                         }
-                        result = _highlight(top.subLanguage, modeBuffer, true, continuations[top.subLanguage]);
+                        result = _highlight(
+                            top.subLanguage,
+                            modeBuffer,
+                            true,
+                            continuations[top.subLanguage]
+                        );
                         continuations[top.subLanguage] = /** @type {CompiledMode} */ (result._top);
                     } else {
-                        result = highlightAuto(modeBuffer, top.subLanguage.length ? top.subLanguage : null);
+                        result = highlightAuto(
+                            modeBuffer,
+                            top.subLanguage.length ? top.subLanguage : null
+                        );
                     }
 
                     // Counting embedded language score towards the host language may be disabled
@@ -1900,7 +1922,8 @@ define(['./languages/xml.min.js'], function () {
                         if (mode.beginScope._wrap) {
                             emitter.addKeyword(
                                 modeBuffer,
-                                language.classNameAliases[mode.beginScope._wrap] || mode.beginScope._wrap
+                                language.classNameAliases[mode.beginScope._wrap] ||
+                                    mode.beginScope._wrap
                             );
                             modeBuffer = '';
                         } else if (mode.beginScope._multi) {
@@ -2103,7 +2126,11 @@ define(['./languages/xml.min.js'], function () {
                         // illegal match, we do not continue processing
                         /** @type {AnnotatedError} */
                         const err = new Error(
-                            'Illegal lexeme "' + lexeme + '" for mode "' + (top.scope || '<unnamed>') + '"'
+                            'Illegal lexeme "' +
+                                lexeme +
+                                '" for mode "' +
+                                (top.scope || '<unnamed>') +
+                                '"'
                         );
                         err.mode = top;
                         throw err;
@@ -2127,7 +2154,9 @@ define(['./languages/xml.min.js'], function () {
                     // parsing) still 3x behind our index then something is very wrong
                     // so we bail
                     if (iterations > 100000 && iterations > match.index * 3) {
-                        const err = new Error('potential infinite loop, way more iterations than matches');
+                        const err = new Error(
+                            'potential infinite loop, way more iterations than matches'
+                        );
                         throw err;
                     }
 
@@ -2357,7 +2386,9 @@ define(['./languages/xml.min.js'], function () {
 
                 node = element;
                 const text = node.textContent;
-                const result = language ? highlight(text, { language, ignoreIllegals: true }) : highlightAuto(text);
+                const result = language
+                    ? highlight(text, { language, ignoreIllegals: true })
+                    : highlightAuto(text);
 
                 element.innerHTML = result.value;
                 updateClassName(element, language, result.language);
@@ -2395,7 +2426,10 @@ define(['./languages/xml.min.js'], function () {
             // TODO: remove v12, deprecated
             function initHighlightingOnLoad() {
                 highlightAll();
-                deprecated('10.6.0', 'initHighlightingOnLoad() deprecated.  Use highlightAll() now.');
+                deprecated(
+                    '10.6.0',
+                    'initHighlightingOnLoad() deprecated.  Use highlightAll() now.'
+                );
             }
 
             let wantsHighlight = false;
@@ -2435,7 +2469,12 @@ define(['./languages/xml.min.js'], function () {
                 try {
                     lang = languageDefinition(hljs);
                 } catch (error$1) {
-                    error("Language definition for '{}' could not be registered.".replace('{}', languageName));
+                    error(
+                        "Language definition for '{}' could not be registered.".replace(
+                            '{}',
+                            languageName
+                        )
+                    );
                     // hard or soft error
                     if (!SAFE_MODE) {
                         throw error$1;

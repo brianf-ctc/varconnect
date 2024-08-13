@@ -19,24 +19,18 @@ define([
     'N/format',
     '../Library/CTC_VCSP_Constants',
     '../Library/CTC_Lib_Utils'
-], function (
-    NS_Search,
-    NS_Xml,
-    NS_Format,
-    VCSP_Global,
-    CTC_Util
-) {
+], function (NS_Search, NS_Xml, NS_Format, VCSP_Global, CTC_Util) {
     let LogTitle = 'WS:Synnex';
 
     let Helper = {};
-    Helper.leftPadString = function(str, padding, len) {
+    Helper.leftPadString = function (str, padding, len) {
         let tempStr = str + ''; // convert to string
         while (tempStr.length < len) {
             tempStr = padding + tempStr;
         }
         return tempStr.slice(len * -1);
     };
-    Helper.formatToSynnexDate = function(option) {
+    Helper.formatToSynnexDate = function (option) {
         let logTitle = [LogTitle, 'Helper', 'formatToSynnexDate'].join('::'),
             dateToFormat = option.date || option,
             formattedDate = dateToFormat;
@@ -46,18 +40,18 @@ define([
                 [
                     dateToFormat.getFullYear(),
                     Helper.leftPadString(dateToFormat.getMonth() + 1, '0', 2),
-                    Helper.leftPadString(dateToFormat.getDate(), '0', 2),
+                    Helper.leftPadString(dateToFormat.getDate(), '0', 2)
                 ].join('-'),
                 [
                     Helper.leftPadString(dateToFormat.getHours(), '0', 2),
                     Helper.leftPadString(dateToFormat.getMinutes(), '0', 2),
-                    Helper.leftPadString(dateToFormat.getSeconds(), '0', 2),
-                ].join(':'),
+                    Helper.leftPadString(dateToFormat.getSeconds(), '0', 2)
+                ].join(':')
             ].join('T');
         }
         return formattedDate;
     };
-    Helper.formatFromSynnexDate = function(option) {
+    Helper.formatFromSynnexDate = function (option) {
         let logTitle = [LogTitle, 'Helper', 'formatFromSynnexDate'].join('::'),
             dateStrToParse = option,
             formattedDate = null;
@@ -100,7 +94,7 @@ define([
             }
         }
         return formattedDate;
-    }
+    };
 
     function processResponse(option) {
         let logTitle = [LogTitle, 'processResponse'].join('::'),
@@ -141,7 +135,9 @@ define([
                         orderStatus.note = orderResponseNodes[i].textContent;
                         break;
                     case 'ResponseDateTime':
-                        orderStatus.order_date = Helper.formatFromSynnexDate(orderResponseNodes[i].textContent);
+                        orderStatus.order_date = Helper.formatFromSynnexDate(
+                            orderResponseNodes[i].textContent
+                        );
                         break;
                     case 'ErrorMessage':
                         orderStatus.errorMessage = orderResponseNodes[i].textContent;
@@ -163,7 +159,13 @@ define([
                         node: orderResponseNodes[i],
                         json: json_data
                     });
-                    log.debug(logTitle, 'Parsing ' + orderResponseNodes[i].nodeName + ': ' + JSON.stringify(json_data));
+                    log.debug(
+                        logTitle,
+                        'Parsing ' +
+                            orderResponseNodes[i].nodeName +
+                            ': ' +
+                            JSON.stringify(json_data)
+                    );
                 }
             }
             let itemNodesArray = xmlDoc.getElementsByTagName({ tagName: 'Item' });
@@ -175,7 +177,7 @@ define([
                         itemJsonData = JSON.parse(JSON.stringify(json_data));
                     CTC_Util.xmlNodeToJson({
                         node: itemNode,
-                        json: itemJsonData,
+                        json: itemJsonData
                     });
                     let itemJsonDataStr = JSON.stringify(itemJsonData).replace(/,/g, ',<br>');
                     if (itemJsonDataStr == '{}') itemJsonDataStr = 'NA';
@@ -202,7 +204,7 @@ define([
                         serial_num: 'NA',
                         tracking_num: 'NA',
                         internal_reference_num: 'NA',
-                        json_data: itemJsonDataStr,
+                        json_data: itemJsonDataStr
                     };
                     let itemChildNodes = itemNode.childNodes;
                     for (let y = 0, ylen = itemChildNodes.length; y < ylen; y += 1) {
@@ -214,7 +216,8 @@ define([
                                 itemDetails.order_type = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'OrderNumber':
-                                itemDetails.vendor_order_number = itemChildNodes[y].textContent || 'NA';
+                                itemDetails.vendor_order_number =
+                                    itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SKU':
                                 itemDetails.vendor_sku = itemChildNodes[y].textContent || 'NA';
@@ -229,7 +232,8 @@ define([
                                 itemDetails.ship_from = itemChildNodes[y].textContent || 'NA';
                                 break;
                             case 'SynnexInternalReference':
-                                itemDetails.internal_reference_num = itemChildNodes[y].textContent || 'NA';
+                                itemDetails.internal_reference_num =
+                                    itemChildNodes[y].textContent || 'NA';
                                 break;
                             default:
                                 break;
@@ -253,33 +257,36 @@ define([
                 returnValue.isError = true;
                 returnValue.message = 'Send PO failed';
             } else {
-                orderStatus.items.forEach(itemDetails => {
+                orderStatus.items.forEach((itemDetails) => {
                     if (itemDetails.order_status == 'accepted') {
                         orderStatus.successLines.push(itemDetails);
                     } else {
                         orderStatus.errorLines.push(itemDetails);
                         if (itemDetails.note && itemDetails.note != 'NA') {
-                            orderStatus.lineNotes.push([
-                                itemDetails.order_status,
-                                '@',
-                                itemDetails.vendor_line,
-                                ': ',
-                                itemDetails.note
-                            ].join(''));
+                            orderStatus.lineNotes.push(
+                                [
+                                    itemDetails.order_status,
+                                    '@',
+                                    itemDetails.vendor_line,
+                                    ': ',
+                                    itemDetails.note
+                                ].join('')
+                            );
                         }
                     }
                 });
                 if (orderStatus.successLines.length && orderStatus.errorLines.length) {
-                    returnValue.message = 'With partial errors: ' +
+                    returnValue.message =
+                        'With partial errors: ' +
                         orderStatus.successLines.length +
                         ' line item(s) succeeded and ' +
                         orderStatus.errorLines.length +
                         ' failed';
-                    if (orderStatus.lineNotes.length) returnValue.message += ':\n' +
-                        orderStatus.lineNotes.join('\n');
+                    if (orderStatus.lineNotes.length)
+                        returnValue.message += ':\n' + orderStatus.lineNotes.join('\n');
                 } else if (orderStatus.errorLines.length) {
                     returnValue.isError = true;
-                    returnValue.message = 'Send PO failed.'
+                    returnValue.message = 'Send PO failed.';
                     returnValue.errorMsg = orderStatus.note;
                     if (orderStatus.lineNotes.length) {
                         returnValue.errorName = orderStatus.note;
@@ -318,10 +325,12 @@ define([
             OrderRequest: {
                 CustomerNumber: customerNo,
                 PONumber: record.tranId,
-                PODateTime: Helper.formatToSynnexDate(NS_Format.parse({
-                    value: record.createdDate,
-                    type: NS_Format.Type.DATETIME,
-                })),
+                PODateTime: Helper.formatToSynnexDate(
+                    NS_Format.parse({
+                        value: record.createdDate,
+                        type: NS_Format.Type.DATETIME
+                    })
+                ),
                 XMLPOSubmitDateTime: Helper.formatToSynnexDate(new Date()),
                 DropShipFlag: record.isDropShip ? 'Y' : 'N',
                 ShipComplete: record.shipComplete ? 'Y' : 'N',
@@ -343,7 +352,7 @@ define([
                         ContactName: record.shipAddressee,
                         PhoneNumber: record.shipPhone,
                         EmailAddress: record.shipEmail
-                    },
+                    }
                     // ShipMethod: {
                     //     Code: 'NA',
                     // },
@@ -447,14 +456,18 @@ define([
             additionalVendorDetails = CTC_Util.safeParse(record.additionalVendorDetails);
         } else if (vendorConfig.additionalPOFields) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
-                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields),
+                fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
             });
         }
         if (additionalVendorDetails) {
             for (let fieldId in additionalVendorDetails) {
                 let fieldHierarchy = fieldId.split('.');
                 let fieldContainer = requestDetails.OrderRequest;
-                for (let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1; i < len; i += 1) {
+                for (
+                    let i = 0, len = fieldHierarchy.length, fieldIdIndex = len - 1;
+                    i < len;
+                    i += 1
+                ) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
                         fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
@@ -539,7 +552,7 @@ define([
                 error: null,
                 errorId: record.id,
                 errorName: null,
-                errorMsg: null,
+                errorMsg: null
             };
 
             returnResponse = processResponse({
@@ -556,13 +569,13 @@ define([
                 error: e,
                 errorId: record.id,
                 errorName: e.name,
-                errorMsg: e.message,
+                errorMsg: e.message
             };
             returnResponse.isError = true;
-			returnResponse.error = e;
-			returnResponse.errorId = record.id;
-			returnResponse.errorName = e.name;
-			returnResponse.errorMsg = e.message;
+            returnResponse.error = e;
+            returnResponse.errorId = record.id;
+            returnResponse.errorName = e.name;
+            returnResponse.errorMsg = e.message;
             if (sendPOResponse) {
                 returnResponse.logId = sendPOResponse.logId || null;
                 returnResponse.responseBody = sendPOResponse.PARSED_RESPONSE;

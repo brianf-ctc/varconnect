@@ -33,7 +33,16 @@ define([
     '../CTC_VC2_Lib_Utils.js',
     '../CTC_VC2_Constants.js',
     '../Services/ctc_svclib_configlib.js'
-], function (ns_search, ns_record, ns_runtime, ns_https, ns_xml, vc2_util, vc2_constant, vcs_configLib) {
+], function (
+    ns_search,
+    ns_record,
+    ns_runtime,
+    ns_https,
+    ns_xml,
+    vc2_util,
+    vc2_constant,
+    vcs_configLib
+) {
     var LogTitle = 'VC|D&H Item Request';
     var Current = {};
 
@@ -50,7 +59,9 @@ define([
             if (arrResults) {
                 arrData = {};
                 for (var fld in arrResults) {
-                    arrData[fld] = util.isArray(arrResults[fld]) ? arrResults[fld][0] : arrResults[fld];
+                    arrData[fld] = util.isArray(arrResults[fld])
+                        ? arrResults[fld][0]
+                        : arrResults[fld];
                 }
             }
             return arrData;
@@ -76,7 +87,9 @@ define([
         if (!MainCFG) throw ERROR_MSG.MISSING_CONFIG;
 
         if (_checkDandHVendorConfig()) {
-            var srchId = ns_runtime.getCurrentScript().getParameter('custscript_ctc_vc_dh_itemrequest_srch');
+            var srchId = ns_runtime
+                .getCurrentScript()
+                .getParameter('custscript_ctc_vc_dh_itemrequest_srch');
             if (!srchId) srchId = 'customsearch_ctc_vc_dh_itemrequest';
 
             log.debug(logTitle, 'Search id=' + srchId);
@@ -136,8 +149,10 @@ define([
             log.debug(logTitle, 'itemNumbers=' + JSON.stringify(itemNumbers));
             var valToSave;
 
-            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase()) valToSave = itemNumbers.partNum;
-            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase()) valToSave = itemNumbers.itemNum;
+            if (itemNumbers.itemNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.partNum;
+            else if (itemNumbers.partNum.toUpperCase() == itemName.toUpperCase())
+                valToSave = itemNumbers.itemNum;
 
             values = {};
             values[vc2_constant.FIELD.ITEM.DH_MPN] = valToSave;
@@ -151,7 +166,10 @@ define([
                         id: item,
                         values: values
                     });
-                    log.debug(logTitle, '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item);
+                    log.debug(
+                        logTitle,
+                        '>> updated ' + (isSerialItem ? 'SERIALIZED_' : '') + itemType + item
+                    );
                 } catch (error) {
                     log.error(logTitle, '## ERROR: ' + JSON.stringify(error));
                     throw error;
@@ -382,7 +400,9 @@ define([
                 itemNum = vc2_util.getNodeTextContent(
                     ns_xml.XPath.select({ node: itemNode[0], xpath: 'VENDORITEMNO' })[0]
                 );
-                partNum = vc2_util.getNodeTextContent(ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]);
+                partNum = vc2_util.getNodeTextContent(
+                    ns_xml.XPath.select({ node: itemNode[0], xpath: 'PARTNUM' })[0]
+                );
             }
         }
 

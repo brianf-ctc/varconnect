@@ -165,7 +165,8 @@ define((require) => {
             if (arrMissingParams && arrMissingParams.length) {
                 var objError = {};
                 objError.name = 'Missing Script Parameter Values';
-                objError.message = 'The following script parameters are empty: ' + arrMissingParams.join(', ');
+                objError.message =
+                    'The following script parameters are empty: ' + arrMissingParams.join(', ');
                 objError = ns_error.create(objError);
                 for (let key in parametersMap) {
                     if (parametersMap.hasOwnProperty(key)) {

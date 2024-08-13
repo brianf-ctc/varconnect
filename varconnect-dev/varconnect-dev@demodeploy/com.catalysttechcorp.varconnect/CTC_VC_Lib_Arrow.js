@@ -209,7 +209,11 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                     itemArray = [];
 
                 var objOrderResponse = response.OrderResponse;
-                if (!objOrderResponse || !objOrderResponse.OrderDetails || !objOrderResponse.OrderDetails.length)
+                if (
+                    !objOrderResponse ||
+                    !objOrderResponse.OrderDetails ||
+                    !objOrderResponse.OrderDetails.length
+                )
                     throw 'Missing order details';
 
                 var orderResp = objOrderResponse.OrderDetails[0];
@@ -300,7 +304,11 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                                     shippedDate <= new Date()
                                 ]);
 
-                                if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
+                                if (
+                                    shippedDate &&
+                                    util.isDate(shippedDate) &&
+                                    shippedDate <= new Date()
+                                )
                                     orderItem.is_shipped = true;
                             }
 

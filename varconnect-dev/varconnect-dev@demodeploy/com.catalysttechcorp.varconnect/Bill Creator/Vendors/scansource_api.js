@@ -39,7 +39,8 @@ define(function (require) {
             'Content-Type': 'application/json'
         };
 
-        var invoiceListUrl = config.url + '/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum;
+        var invoiceListUrl =
+            config.url + '/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum;
         log.debug(TransId + ' | ' + stLogTitle + ' | invoiceListUrl', invoiceListUrl);
 
         var objResponse = https.get({

@@ -164,7 +164,9 @@ define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], fun
             // set due date if it exists
             for (var h = 0; h < HDRH66.length; h++) {
                 if (HDRH66[h].payment_amount_qualifier == 'ZZ') {
-                    ordObj.duedate = moment(HDRH66[h].scheduled_payment_date, 'YYYYMMDD').format('MM/DD/YYYY');
+                    ordObj.duedate = moment(HDRH66[h].scheduled_payment_date, 'YYYYMMDD').format(
+                        'MM/DD/YYYY'
+                    );
                 }
             }
 
@@ -213,7 +215,10 @@ define(['N/sftp', 'N/encode', '../Libraries/moment', '../Libraries/lodash'], fun
                         lineObj.CARRIER = dtld10.DTLD41.scac_code;
                     }
 
-                    if (dtld10.DTLD41.extended_model_number && dtld10.DTLD41.extended_model_number !== '') {
+                    if (
+                        dtld10.DTLD41.extended_model_number &&
+                        dtld10.DTLD41.extended_model_number !== ''
+                    ) {
                         lineObj.ITEMNO_EXT = dtld10.DTLD41.extended_model_number;
                     }
                 }

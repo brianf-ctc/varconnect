@@ -60,10 +60,11 @@ define([
         }
 
         let tokenResp = ctc_util.safeParse(tokenReq.RESPONSE);
-        if (!tokenResp || !tokenResp.access_token) throw ns_error.create({
-            name: 'TOKEN_ERR',
-            message: 'Unable to retrieve token'
-        });
+        if (!tokenResp || !tokenResp.access_token)
+            throw ns_error.create({
+                name: 'TOKEN_ERR',
+                message: 'Unable to retrieve token'
+            });
 
         log.audit(logTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
 
@@ -153,10 +154,11 @@ define([
                     };
                 });
                 log.audit(logTitle, '// addrInfo: ' + JSON.stringify(addrInfo));
-                if (ctc_util.isEmpty(addrInfo)) throw ns_error.create({
-                    name: 'MISSING_SHIP_ADDRESS',
-                    message: 'Missing Shipping Address Info'
-                });
+                if (ctc_util.isEmpty(addrInfo))
+                    throw ns_error.create({
+                        name: 'MISSING_SHIP_ADDRESS',
+                        message: 'Missing Shipping Address Info'
+                    });
 
                 // get the customer from 'shipto' or SO's entity
                 let customerId = poData.shipto;
@@ -237,15 +239,16 @@ define([
                 if (ctc_util.isEmpty(contactInfo)) {
                     contactInfo = {
                         entityid: poObj.shipAddressee,
-                        email: poObj.shipEmail,
+                        email: poObj.shipEmail
                     };
                 }
                 log.audit(logTitle, '// contactInfo: ' + JSON.stringify(contactInfo));
 
-                if (ctc_util.isEmpty(contactInfo)) throw ns_error.create({
-                    name: 'MISSING_SHIP_CONTACT',
-                    message: 'Missing Contact Info'
-                });
+                if (ctc_util.isEmpty(contactInfo))
+                    throw ns_error.create({
+                        name: 'MISSING_SHIP_CONTACT',
+                        message: 'Missing Contact Info'
+                    });
 
                 let shippingContactObj = {
                     company: addrInfo.addressee.value,
@@ -427,12 +430,14 @@ define([
 
                 var searchShipMethodMap = ns_search.create({
                     type: constants.Records.VENDOR_SHIPMETHOD,
-                    filters: [[constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]],
+                    filters: [
+                        [constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]
+                    ],
                     columns: [
                         'name',
-                        {name: constants.Fields.VendorShipMethod.VENDOR_CONFIG},
-                        {name: constants.Fields.VendorShipMethod.SHIP_VALUE},
-                        {name: constants.Fields.VendorShipMethod.SHIP_METHOD_MAP}
+                        { name: constants.Fields.VendorShipMethod.VENDOR_CONFIG },
+                        { name: constants.Fields.VendorShipMethod.SHIP_VALUE },
+                        { name: constants.Fields.VendorShipMethod.SHIP_METHOD_MAP }
                     ]
                 });
 
@@ -471,7 +476,13 @@ define([
             response = option.response,
             responseBody = option.responseBody,
             returnValue = option.returnResponse;
-        if ((response && response.isError) || (responseBody && (responseBody.errors || responseBody.statusCode < 200 || responseBody.statusCode >= 300))) {
+        if (
+            (response && response.isError) ||
+            (responseBody &&
+                (responseBody.errors ||
+                    responseBody.statusCode < 200 ||
+                    responseBody.statusCode >= 300))
+        ) {
             let errorMesg = response.errorMsg;
             returnValue.errorName = 'Unexpected Error';
             if (responseBody && responseBody.errors) {
@@ -520,10 +531,11 @@ define([
                 url: accessUrl,
                 poId: record.id
             });
-            if (!token) throw ns_error.create({
-                name: 'MISSING_TOKEN',
-                message: 'Missing token for authentication.'
-            });
+            if (!token)
+                throw ns_error.create({
+                    name: 'MISSING_TOKEN',
+                    message: 'Missing token for authentication.'
+                });
 
             // build the request body
             let sendPOBody = generateBody({
@@ -541,10 +553,11 @@ define([
                 transaction: record.id
             });
 
-            if (!sendPOBody) throw ns_error.create({
-                name: 'GENERATE_REQUEST_ERR',
-                message: 'Unable to generate PO Body Request'
-            });
+            if (!sendPOBody)
+                throw ns_error.create({
+                    name: 'GENERATE_REQUEST_ERR',
+                    message: 'Unable to generate PO Body Request'
+                });
 
             sendPOResponse = ctc_util.sendRequest({
                 header: [LogTitle, 'Send PO'].join(' : '),
@@ -570,7 +583,7 @@ define([
                 error: null,
                 errorId: record.id,
                 errorName: null,
-                errorMsg: null,
+                errorMsg: null
             };
 
             returnResponse = processResponse({
@@ -588,7 +601,7 @@ define([
                 error: e,
                 errorId: record.id,
                 errorName: e.name,
-                errorMsg: e.message,
+                errorMsg: e.message
             };
             returnResponse.isError = true;
             if (sendPOResponse) {

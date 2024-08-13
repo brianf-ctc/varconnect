@@ -18,8 +18,13 @@
  * 1.01		Mar 20, 2023	christian	Library for license validation
  *
  */
-define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'],
-function (ns_url, ns_https, ns_cache, ns_runtime, VCSP_Global) {
+define(['N/url', 'N/https', 'N/cache', 'N/runtime', './CTC_VCSP_Constants'], function (
+    ns_url,
+    ns_https,
+    ns_cache,
+    ns_runtime,
+    VCSP_Global
+) {
     let VC_LICENSE = {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
         PRODUCT_CODE: 4,
@@ -42,9 +47,12 @@ function (ns_url, ns_https, ns_cache, ns_runtime, VCSP_Global) {
                 let queryOption = {
                     method: ns_https.Method.GET,
                     url:
-                        VC_LICENSE.URL + '?' +
-                        [ 'producttypeid=' + VC_LICENSE.PRODUCT_CODE,
-                            'nsaccountid=' + ns_runtime.accountId].join('&')
+                        VC_LICENSE.URL +
+                        '?' +
+                        [
+                            'producttypeid=' + VC_LICENSE.PRODUCT_CODE,
+                            'nsaccountid=' + ns_runtime.accountId
+                        ].join('&')
                 };
                 log.audit(logTitle, '#### Send Request query: ' + JSON.stringify(queryOption));
                 response = ns_https.request(queryOption);
@@ -93,8 +101,13 @@ function (ns_url, ns_https, ns_cache, ns_runtime, VCSP_Global) {
                         value: vcLicenseResp,
                         ttl: VC_LICENSE.CACHE_TTL
                     });
-                    log.audit(logTitle, '// CACHE STORED: ' +
-                            ['key: ' + VC_LICENSE.KEY, 'ttl: ' + VC_LICENSE.CACHE_TTL + 's'].join(', '));
+                    log.audit(
+                        logTitle,
+                        '// CACHE STORED: ' +
+                            ['key: ' + VC_LICENSE.KEY, 'ttl: ' + VC_LICENSE.CACHE_TTL + 's'].join(
+                                ', '
+                            )
+                    );
                 } else {
                     log.audit(logTitle, '// CACHE RETRIEVED: key: ' + VC_LICENSE.KEY);
                 }
@@ -145,7 +158,7 @@ function (ns_url, ns_https, ns_cache, ns_runtime, VCSP_Global) {
             return errorMessage;
         },
         roundOff: function (value) {
-            let flValue = util.isNumber(value) ? value : (parseFloat(value) || 0);
+            let flValue = util.isNumber(value) ? value : parseFloat(value) || 0;
             if (!flValue || isNaN(flValue)) return 0;
             return Math.round(flValue * 100) / 100;
         }
@@ -154,9 +167,9 @@ function (ns_url, ns_https, ns_cache, ns_runtime, VCSP_Global) {
     function isLicenseValid(options) {
         let returnValue = false,
             response = LibLicense.validate({
-                doRetry: true,
+                doRetry: true
             });
-        if (response && response.status == "active") {
+        if (response && response.status == 'active') {
             returnValue = true;
         }
         return returnValue;

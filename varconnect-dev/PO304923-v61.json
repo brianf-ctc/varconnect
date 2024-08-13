@@ -1,0 +1,858 @@
+{
+    "Orders": [
+        {
+            "ingramOrderNumber": "60-FQJ2L",
+            "ingramOrderDate": "2024-07-25T12:19:28-07:00",
+            "customerOrderNumber": "PO306036",
+            "vendorSalesOrderNumber": "117589621",
+            "vendorName": "CISCO - MERAKI",
+            "endUserCompanyName": "MATT STINSON BOSTON IVF",
+            "orderTotal": 88523.52,
+            "orderStatus": "PROCESSING",
+            "links": {
+                "topic": "orders",
+                "href": "/resellers/v6.1/orders/60-FQJ2L",
+                "type": "GET"
+            },
+            "subOrders": [
+                {
+                    "subOrderNumber": "60-FQJ2L-11",
+                    "subOrderTotal": 88523.52,
+                    "subOrderStatus": "PROCESSING",
+                    "links": [
+                        {
+                            "topic": "orders",
+                            "href": "/resellers/v6.1/orders/60-FQJ2L-11",
+                            "type": "GET"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "OrderDetails": {
+        "60-FQJ2L": {
+            "ingramOrderNumber": "60-FQJ2L",
+            "ingramOrderDate": "2024-07-25T12:19:28",
+            "orderType": "D",
+            "customerOrderNumber": "PO306036",
+            "endCustomerOrderNumber": "07252024-MG",
+            "vendorSalesOrderNumber": "117589621",
+            "ingramPurchaseOrderNumber": "89CNX18",
+            "orderStatus": "Open Order",
+            "orderTotal": 88523.52,
+            "orderSubTotal": 88523.52,
+            "freightCharges": 0,
+            "currencyCode": "USD",
+            "totalWeight": 8.04,
+            "totalTax": 0,
+            "totalFees": 0,
+            "paymentTerms": "NET 60 DAYS",
+            "notes": "********* DIRECT SHIP INFO ******** || ////ORDER COMMENTS || ////~~~~~FRANCIS.FIGUEROA@INGRAMMIC || ////RO.COM || MARCHER@BOSTONIVF.COM",
+            "billToInfo": {
+                "contact": "KURT BLEICKEN",
+                "companyName": "BLUE MANTIS INC",
+                "addressLine1": "DBA GREENPAGES INC",
+                "addressLine2": "2 INTERNATIONAL DR STE 260",
+                "addressLine3": null,
+                "city": "PORTSMOUTH",
+                "state": "NH",
+                "postalCode": "038016810",
+                "countryCode": "US",
+                "phoneNumber": "8009892989",
+                "email": null
+            },
+            "shipToInfo": {
+                "contact": "MIKE ARCHER",
+                "companyName": "BOSTON IVF",
+                "addressLine1": "130 SECOND AVE",
+                "addressLine2": "PO# 07252024-MG / MIKE ARCHER",
+                "addressLine3": null,
+                "city": "WALTHAM",
+                "state": "MA",
+                "postalCode": "024511100",
+                "countryCode": "US",
+                "phoneNumber": "7819537954",
+                "email": null
+            },
+            "endUserInfo": {
+                "contact": null,
+                "companyName": "MATT STINSON BOSTON IVF",
+                "addressLine1": "130 SECOND AVE",
+                "addressLine2": null,
+                "addressLine3": null,
+                "city": "WALTHAM",
+                "state": "MA",
+                "postalCode": "024511100",
+                "countryCode": "US",
+                "phoneNumber": null,
+                "email": null
+            },
+            "lines": [
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": "005",
+                    "vendorSalesOrderLineNumber": "1.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "HZ0528",
+                    "vendorPartNumber": "C9300-48U-M",
+                    "vendorName": null,
+                    "partDescription": "CISCO  C9300 48-port UPOE, 1100wac PS, w/MERAKI",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 12,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 12,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": []
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "TBD",
+                                "shipDescription": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 12,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "TBD",
+                            "description": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": "006",
+                    "vendorSalesOrderLineNumber": "2.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "HZ0556",
+                    "vendorPartNumber": "LIC-C9300-48E-5Y",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki Enterprise License for C9300-M 48-port, 5 year  ENTERPRISELICENSE 5 YEAR",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 12,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 12,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": []
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "TBD",
+                                "shipDescription": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 12,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "TBD",
+                            "description": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": "007",
+                    "vendorSalesOrderLineNumber": "3.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "HZ0533",
+                    "vendorPartNumber": "C9300-NM-8X-M",
+                    "vendorName": null,
+                    "partDescription": "CISCO  C9300 8 x 10GE Network Module, w/MERAKI  NETWORK MODULE",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 4,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 4,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": []
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "TBD",
+                                "shipDescription": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 4,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "TBD",
+                            "description": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": null,
+                    "vendorSalesOrderLineNumber": "4.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Partially Shipped",
+                    "ingramPartNumber": "UK1772",
+                    "vendorPartNumber": "MA-SFP-10GB-LRM",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki 10G Base LRM Multi-Mode  MODE",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 4,
+                    "quantityConfirmed": 4,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 4,
+                            "estimatedShipDate": null,
+                            "shippedDate": "2024-07-29",
+                            "estimatedDeliveryDate": "2024-07-31",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": [
+                                {
+                                    "carrierCode": "UPSN",
+                                    "carrierName": "UPS GROUND",
+                                    "quantity": 4,
+                                    "shippedDate": "2024-07-29",
+                                    "estimatedDeliveryDate": "2024-07-31",
+                                    "deliveredDate": null,
+                                    "carrierPickupDate": "2024-07-29",
+                                    "trackingDetails": [
+                                        {
+                                            "trackingNumber": "1Z1339VW0350354147",
+                                            "trackingUrl": "https://www.ups.com/track?loc=en_US&tracknum=1Z1339VW0350354147",
+                                            "packageWeight": null,
+                                            "quantityInBox": "4",
+                                            "serialNumbers": null
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "PAST_DUE",
+                                "shipDescription": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 4,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "PAST_DUE",
+                            "description": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": null,
+                    "vendorSalesOrderLineNumber": "5.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Closed",
+                    "ingramPartNumber": "UK1772",
+                    "vendorPartNumber": "MA-SFP-10GB-LRM",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki 10G Base LRM Multi-Mode  MODE",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 4,
+                    "quantityConfirmed": 4,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 4,
+                            "estimatedShipDate": null,
+                            "shippedDate": "2024-07-29",
+                            "estimatedDeliveryDate": "2024-07-31",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": [
+                                {
+                                    "carrierCode": "UPSN",
+                                    "carrierName": "UPS GROUND",
+                                    "quantity": 4,
+                                    "shippedDate": "2024-07-29",
+                                    "estimatedDeliveryDate": "2024-07-31",
+                                    "deliveredDate": null,
+                                    "carrierPickupDate": "2024-07-29",
+                                    "trackingDetails": [
+                                        {
+                                            "trackingNumber": "1Z1339VW0350354147",
+                                            "trackingUrl": "https://www.ups.com/track?loc=en_US&tracknum=1Z1339VW0350354147",
+                                            "packageWeight": null,
+                                            "quantityInBox": "4",
+                                            "serialNumbers": null
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "PAST_DUE",
+                                "shipDescription": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 4,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "PAST_DUE",
+                            "description": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": "010",
+                    "vendorSalesOrderLineNumber": "6.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "7AK826",
+                    "vendorPartNumber": "MA-CBL-120G-50CM",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki MS390 120G Data-Stack Cable, 50 centimeter  CABLE 50CM",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 10,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 10,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": []
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "TBD",
+                                "shipDescription": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 10,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "TBD",
+                            "description": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": "011",
+                    "vendorSalesOrderLineNumber": "7.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "7AK825",
+                    "vendorPartNumber": "MA-CBL-120G-3M",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki MS390 120G Data-Stack Cable, 3 meter  CABLE 3M",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 2,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 2,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": []
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "TBD",
+                                "shipDescription": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 2,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "TBD",
+                            "description": "Pending Manufacturer estimates - will update when a shipping date is available.",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                },
+                {
+                    "subOrderNumber": null,
+                    "ingramOrderLineNumber": null,
+                    "vendorSalesOrderLineNumber": "4.0",
+                    "customerLineNumber": null,
+                    "lineStatus": "Fulfillment in Progress",
+                    "ingramPartNumber": "UK1772",
+                    "vendorPartNumber": "MA-SFP-10GB-LRM",
+                    "vendorName": null,
+                    "partDescription": "CISCO  Meraki 10G Base LRM Multi-Mode  MODE",
+                    "unitWeight": 0,
+                    "weightUom": null,
+                    "unitPrice": 0,
+                    "upcCode": null,
+                    "extendedPrice": 0,
+                    "taxAmount": 0,
+                    "currencyCode": null,
+                    "quantityOrdered": 4,
+                    "quantityConfirmed": 0,
+                    "quantityBackOrdered": 0,
+                    "specialBidNumber": null,
+                    "requestedDeliverydate": null,
+                    "promisedDeliveryDate": null,
+                    "backOrderETADate": null,
+                    "lineNotes": null,
+                    "shipmentDetails": [
+                        {
+                            "quantity": 4,
+                            "estimatedShipDate": null,
+                            "shippedDate": null,
+                            "estimatedDeliveryDate": "2024-07-30",
+                            "shipFromWarehouseId": null,
+                            "shipFromLocation": null,
+                            "invoiceNumber": null,
+                            "invoiceDate": null,
+                            "carrierDetails": [
+                                {
+                                    "carrierCode": "UPSN",
+                                    "carrierName": "UPS GROUND",
+                                    "quantity": 4,
+                                    "shippedDate": "2024-07-29",
+                                    "estimatedDeliveryDate": "2024-07-31",
+                                    "deliveredDate": null,
+                                    "carrierPickupDate": "2024-07-29",
+                                    "trackingDetails": [
+                                        {
+                                            "trackingNumber": "1Z1339VW0350354147",
+                                            "trackingUrl": "https://www.ups.com/track?loc=en_US&tracknum=1Z1339VW0350354147",
+                                            "packageWeight": null,
+                                            "quantityInBox": "4",
+                                            "serialNumbers": null
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "serviceContractInfo": {},
+                    "additionalAttributes": [],
+                    "links": [],
+                    "estimatedDates": [
+                        {
+                            "ship": {
+                                "shipDateType": null,
+                                "shipDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "shipSource": "PAST_DUE",
+                                "shipDescription": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                                "shipDate": null
+                            },
+                            "delivery": null
+                        },
+                        {
+                            "ship": null,
+                            "delivery": {
+                                "deliveryDateType": "Single",
+                                "deliveryDateRange": {
+                                    "startDate": null,
+                                    "endDate": null
+                                },
+                                "deliverySource": null,
+                                "deliveryDescription": null,
+                                "deliveryDate": "2024-07-30"
+                            }
+                        }
+                    ],
+                    "scheduleLines": [],
+                    "multipleShipments": [
+                        {
+                            "lineNumber": null,
+                            "requestedQuantity": 0,
+                            "confirmedQuantity": 4,
+                            "dateType": null,
+                            "dateRange": {
+                                "startDate": null,
+                                "endDate": null
+                            },
+                            "source": "PAST_DUE",
+                            "description": "Unable to provide a revised estimate. Please reach out to support team for further assistance",
+                            "date": null,
+                            "deliveryDate": "2024-07-30"
+                        }
+                    ],
+                    "defaultCarrierName": null
+                }
+            ],
+            "miscellaneousCharges": [],
+            "additionalAttributes": []
+        }
+    }
+}

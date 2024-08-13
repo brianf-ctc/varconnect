@@ -114,7 +114,10 @@ define(function (require) {
                     }
 
                     if (!vc2_util.isEmpty(updateLineValues)) {
-                        vc2_util.log(logTitle, '// cleanup needed line data: ', [orderLineData, updateLineValues]);
+                        vc2_util.log(logTitle, '// cleanup needed line data: ', [
+                            orderLineData,
+                            updateLineValues
+                        ]);
 
                         updateLineValues.line = line;
                         vc2_record.updateLine({
@@ -258,9 +261,8 @@ define(function (require) {
                     };
 
                     for (var i = 0, j = searchOption.columns.length; i < j; i++) {
-                        PO_Data[searchOption.columns[i].name || searchOption.columns[i]] = searchResult.getValue({
-                            name: searchOption.columns[i]
-                        });
+                        PO_Data[searchOption.columns[i].name || searchOption.columns[i]] =
+                            searchResult.getValue({ name: searchOption.columns[i] });
                     }
                 }
                 returnValue = PO_Data || false;
@@ -310,7 +312,8 @@ define(function (require) {
                 vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
             ];
 
-            var itemAltNameColId = CURRENT.OrderCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
+            var itemAltNameColId =
+                CURRENT.OrderCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
             if (itemAltNameColId) arrPOCols.push(itemAltNameColId);
 
             CURRENT.OrderLines = vc2_record.extractRecordLines({

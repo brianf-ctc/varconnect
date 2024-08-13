@@ -56,7 +56,9 @@ define([
             validVendorCfg = [],
             validVendorCfgName = [];
 
-        var paramConfigID = ns_runtime.getCurrentScript().getParameter({ name: 'custscript_ctc_vc_bc_vendor_sftp' });
+        var paramConfigID = ns_runtime
+            .getCurrentScript()
+            .getParameter({ name: 'custscript_ctc_vc_bc_vendor_sftp' });
 
         var vendorConfigSearch = ns_search.create({
             type: 'customrecord_vc_bill_vendor_config',
@@ -225,11 +227,16 @@ define([
                         list[i].name.split('.') && list[i].name.split('.').length > 1
                             ? list[i].name.split('.').pop()
                             : '-no-ext-',
-                    is90days: moment(list[i].lastModified).isSameOrAfter(moment().subtract(90, 'days'), 'day'),
+                    is90days: moment(list[i].lastModified).isSameOrAfter(
+                        moment().subtract(90, 'days'),
+                        'day'
+                    ),
                     idx: i + 1,
                     list: list.length
                 };
-                currentFile.ext_rgx = currentFile.ext_rgx ? currentFile.ext_rgx.toLowerCase() : currentFile.ext_rgx;
+                currentFile.ext_rgx = currentFile.ext_rgx
+                    ? currentFile.ext_rgx.toLowerCase()
+                    : currentFile.ext_rgx;
 
                 if (configObj.entry_function == 'synnex_sftp') {
                     if (list[i].name == '..' || currentFile.ext_rgx !== 'xml') {
@@ -281,7 +288,10 @@ define([
                 });
             }
 
-            log.audit(logTitle, '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles]));
+            log.audit(
+                logTitle,
+                '-- added accounts: ' + JSON.stringify([addedFiles.length, addedFiles])
+            );
         } catch (error) {
             vc2_util.vcLog({
                 title: 'SFTP',
