@@ -5,11 +5,15 @@
 		},
 		{
 			"path": "varconnect-dev"
+		},
+		{
+			"path": "../customization/varconnect"
 		}
 	],
 	"settings": {
 		"gotoSymbolStack.currentStackPosition": 0,
 		"gotoSymbolStack.maxStackPosition": 0,
-		"gotoSymbolStack.filePositionInfo": []
+		"gotoSymbolStack.filePositionInfo": [],
+		"git.ignoreLimitWarning": true
 	}
 }
