@@ -13,17 +13,16 @@
  */
 
 define([
-    './CTC_VC_Lib_Synnex',
-    './CTC_VC_Lib_TechData',
-    './CTC_VC_Lib_DandH',
-    './CTC_VC_Lib_Ingram',
-    './CTC_VC_Lib_Dell',
-    './CTC_VC_Lib_Arrow',
-    './CTC_VC_Lib_Ingram_v1',
-    './CTC_VC_Lib_Jenne',
-    './CTC_VC_Lib_ScanSource',
-    './CTC_VC_Lib_WeFi.js',
-    './CTC_VC_Lib_Carahsoft.js',
+    './Library/CTC_VC_Lib_Synnex',
+    './Library/CTC_VC_Lib_TechData',
+    './Library/CTC_VC_Lib_DandH',
+    './Library/CTC_VC_Lib_Ingram',
+    './Library/CTC_VC_Lib_Dell',
+    './Library/CTC_VC_Lib_Arrow',
+    './Library/CTC_VC_Lib_Jenne',
+    './Library/CTC_VC_Lib_ScanSource',
+    './Library/CTC_VC_Lib_WeFi.js',
+    './Library/CTC_VC_Lib_Carahsoft.js',
     './CTC_VC_Lib_VendorConfig',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Utils',
@@ -35,7 +34,6 @@ define([
     lib_ingram,
     lib_dell,
     lib_arrow,
-    lib_ingramv1,
     lib_jenne,
     lib_scansource,
     lib_wefi,
@@ -58,7 +56,8 @@ define([
             password = OrderCFG.password,
             customerNo = OrderCFG.customerNo;
 
-        if (!endpoint || !user || !password) throw Error('Incomplete webservice information for ' + OrderCFG.vendor);
+        if (!endpoint || !user || !password)
+            throw Error('Incomplete webservice information for ' + OrderCFG.vendor);
     }
 
     /**
@@ -127,6 +126,7 @@ define([
             libVendor;
 
         vc2_util.log(logTitle, '>> XML Vendor:', xmlVendor);
+        vc2_util.log(logTitle, '>> OrderCFG:', OrderCFG);
 
         switch (xmlVendor) {
             case vendorList.TECH_DATA:
@@ -139,6 +139,8 @@ define([
                 libVendor = lib_dnh;
                 break;
             case vendorList.INGRAM_MICRO:
+            case vendorList.INGRAM_MICRO_API:
+            case vendorList.INGRAM_MICRO_V_ONE:
                 libVendor = lib_ingram;
                 break;
             case vendorList.AVNET:
@@ -149,7 +151,6 @@ define([
             case vendorList.DELL:
                 libVendor = lib_dell;
                 break;
-            case vendorList.INGRAM_MICRO_V_ONE:
                 libVendor = lib_ingramv1;
                 break;
             case vendorList.JENNE:
@@ -255,7 +256,11 @@ define([
         var dtStartDate = parseDate(startDate),
             dtTranDate = parseDate(tranDate);
 
-        vc2_util.log(logTitle, '>> check dates: ', [dtStartDate, dtTranDate, dtStartDate <= dtTranDate]);
+        vc2_util.log(logTitle, '>> check dates: ', [
+            dtStartDate,
+            dtTranDate,
+            dtStartDate <= dtTranDate
+        ]);
 
         return dtStartDate <= dtTranDate;
     }
@@ -315,7 +320,9 @@ define([
         vc2_util.vcLog({
             recordId: poId,
             title: 'WebService | Output Lines',
-            body: !vc2_util.isEmpty(outputArray) ? JSON.stringify(outputArray) : '-no lines to process-',
+            body: !vc2_util.isEmpty(outputArray)
+                ? JSON.stringify(outputArray)
+                : '-no lines to process-',
             status: vc2_constant.LIST.VC_LOG_STATUS.INFO
         });
 

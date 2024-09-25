@@ -4,12 +4,15 @@ exports.synnexSendPO = async (req, res) => {
     try {
         if (req.method !== 'POST') throw new Error('Forbidden request method');
 
-        if (!req.body || !req.body.toString()) throw new Error('No XML Data provided in the request body');
+        if (!req.body || !req.body.toString())
+            throw new Error('No XML Data provided in the request body');
 
         const { xmlparser } = require('xml2js');
 
         var configUrl =
-            req.query.ccode == 'CA' ? 'https://ec.synnex.ca/SynnexXML/PO' : 'https://ec.synnex.com/SynnexXML/PO';
+            req.query.ccode == 'CA'
+                ? 'https://ec.synnex.ca/SynnexXML/PO'
+                : 'https://ec.synnex.com/SynnexXML/PO';
 
         console.log('CCODE', req.query.ccode);
         console.log('CONFIGURL', configUrl);

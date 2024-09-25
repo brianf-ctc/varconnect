@@ -61,7 +61,9 @@ define([
             newRecord.setValue({
                 fieldId: MAINCFG.FIELD.LICENSE_TEXT,
                 value:
-                    "<span style='background-color:red; color: white;'><b>ERROR: " + response.errorMsg + '.</b></span>'
+                    "<span style='background-color:red; color: white;'><b>ERROR: " +
+                    response.errorMsg +
+                    '.</b></span>'
             });
 
             options.form.addPageInitMessage({
@@ -116,17 +118,26 @@ define([
                 });
 
             log.debug(logTitle, '>> isProcessDropship: ' + JSON.stringify(isProcessDropship));
-            log.debug(logTitle, '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder));
+            log.debug(
+                logTitle,
+                '>> isProcessSpecialOrder: ' + JSON.stringify(isProcessSpecialOrder)
+            );
 
             if (!isProcessDropship)
                 _disableAndClearFields({
                     form: scriptContext.form,
-                    fields: [MAINCFG.FIELD.CREATE_ITEM_FULFILLMENTS, MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS]
+                    fields: [
+                        MAINCFG.FIELD.CREATE_ITEM_FULFILLMENTS,
+                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_DROPSHIPS
+                    ]
                 });
             if (!isProcessSpecialOrder)
                 _disableAndClearFields({
                     form: scriptContext.form,
-                    fields: [MAINCFG.FIELD.CREATE_ITEM_RECEIPTS, MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS]
+                    fields: [
+                        MAINCFG.FIELD.CREATE_ITEM_RECEIPTS,
+                        MAINCFG.FIELD.IGNORE_DIRECT_SHIPS_SPECIAL_ORDERS
+                    ]
                 });
         }
         if (

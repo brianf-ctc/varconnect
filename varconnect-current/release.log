@@ -1,3 +1,89 @@
+Dashboard Menu
+
+
+_PROCESSING_
+
+** Scheduled  **
+  ** Run Order Status
+  ** Run Bills Creation
+  ** Run Retrieve API Bills
+  ** Run Retrieve SFTP Bills
+
+** Serials **
+  ** 
+
+_MONITORING_
+
+** Order Status 
+  - Updated POs
+  - Pending Shipments
+  - Fulfilled/Received Orders
+  - Recent Serial Records
+
+** Bill Creator
+  - Bill Creator Dashboard
+  - Recent Bills
+  - Pending Bills
+  - Bills with Error/Variance
+  - SFTP Helper (Link)
+
+
+
+** Script Logs
+  - VAR Connect Logs
+  - VC Script Logs
+
+  
+_RECENT RECORD_
+ ** Recent Fulfillments **
+ ** Recent Bills **
+ ** Recent Serials **
+ ** Recent Error Logs **
+
+
+_SETTINGS_
+
+** Configuration
+  ** Main Config
+  ** Item Mapping
+
+** Vendor Credentials
+  ** Order Status Vendors
+  ** Bill Creator
+  ** Send PO Vendors
+
+** Tools
+  ** Process Scripts
+  ** XML/API PO Debug
+  ** SFTP Helper
+
+
+
+_ORDER STATUS_
+
+** Pending Shipments (Count?) **  
+
+
+** Links **
+- 
+_Reports
+** Order Status
+  - PO Debug Tool (Link)
+
+** Bill Creator
+  - Bill Creator Dashboard (Link)
+
+VAR Connect Logs
+ - Script Logs (link)
+ - VAR Connect logs
+ - Process scripts
+
+ Config 
+  * Main Config
+  * Vendor Config
+  * Bill Create Config
+  * Send PO Config
+
 07 Aug
 
  * Bill Creator Flex Screen - fix calculation for 'Adjustments', only includes the difference between the calculated total and the bill file total.
@@ -25,9 +111,6 @@
  
  
  https://webservice.jenne.com/JenneWebService.asmx
-
-
- 
  
   
 

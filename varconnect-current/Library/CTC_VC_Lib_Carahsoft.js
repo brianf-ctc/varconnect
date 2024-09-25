@@ -12,7 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_util, ns_search) {
+define(['N/url', './../CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_util, ns_search) {
     var EntryPoint = {};
     EntryPoint.process = function (option) {
         var LogTitle = ['CTC_VC_Lib_Carahsoft', 'process'].join('::');
@@ -64,7 +64,10 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_ut
             }
 
             var orderListUrl =
-                option.orderConfig.endPoint + '' + option.recordNum + '?$expand=Details($expand=LineItems)';
+                option.orderConfig.endPoint +
+                '' +
+                option.recordNum +
+                '?$expand=Details($expand=LineItems)';
             // var orderListUrl = config.orderConfig.endPoint+'/Order';
 
             var objResponse = vc2_util.sendRequest({

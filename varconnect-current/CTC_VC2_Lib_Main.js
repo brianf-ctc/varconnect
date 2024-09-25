@@ -132,7 +132,8 @@ define(function (require) {
                 subsidiary: subsidiary
             });
 
-            if (!vendorConfig) throw 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName;
+            if (!vendorConfig)
+                throw 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName;
 
             // log.debug(logTitle, LogPrefix + '>> vendorConfig: ' + JSON.stringify(vendorConfig));
 

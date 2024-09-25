@@ -13,7 +13,12 @@
  * @NScriptType ClientScript
  */
 
-define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (search, https, record, dialog) {
+define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (
+    search,
+    https,
+    record,
+    dialog
+) {
     // Searches NS for first customer occurrence of provided email
     // If found return customer information, if not return null
     // Note if multiple occurrences are found, only the first result is returned

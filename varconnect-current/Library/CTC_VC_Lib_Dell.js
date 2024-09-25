@@ -23,10 +23,10 @@
  */
 define([
     'N/runtime',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js',
-    './Bill Creator/Libraries/moment'
+    './../CTC_VC_Lib_Log.js',
+    './../CTC_VC2_Lib_Utils.js',
+    './../CTC_VC2_Constants.js',
+    './moment'
 ], function (ns_runtime, vc_log, vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:Dellv2';
@@ -95,11 +95,15 @@ define([
                 var faultStr = request.PARSED_RESPONSE
                     ? // check fault/faultString
                       (function (resp) {
-                          return resp.Fault && resp.Fault.faultstring ? resp.Fault.faultstring : false;
+                          return resp.Fault && resp.Fault.faultstring
+                              ? resp.Fault.faultstring
+                              : false;
                       })(request.PARSED_RESPONSE) ||
                       // check error/error_description
                       (function (resp) {
-                          return resp.error && resp.error_description ? resp.error_description : false;
+                          return resp.error && resp.error_description
+                              ? resp.error_description
+                              : false;
                       })(request.PARSED_RESPONSE) ||
                       request.errorMsg
                     : request.errorMsg;
@@ -166,7 +170,8 @@ define([
 
                 var arrResponse = this.processRequest(option);
 
-                if (!arrResponse || !arrResponse.purchaseOrderDetails) throw 'Missing purchase order details';
+                if (!arrResponse || !arrResponse.purchaseOrderDetails)
+                    throw 'Missing purchase order details';
 
                 var orderDetail = arrResponse.purchaseOrderDetails.shift();
                 if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
@@ -213,12 +218,16 @@ define([
                         }
                     }
 
-                    if (dellOrder.trackingInformation && util.isArray(dellOrder.trackingInformation)) {
+                    if (
+                        dellOrder.trackingInformation &&
+                        util.isArray(dellOrder.trackingInformation)
+                    ) {
                         var arrTracking = [];
 
                         dellOrder.trackingInformation.forEach(function (tracking) {
                             if (vc2_util.isEmpty(tracking.waybill)) return false;
-                            if (!vc2_util.inArray(tracking.waybill, arrTracking)) arrTracking.push(tracking.waybill);
+                            if (!vc2_util.inArray(tracking.waybill, arrTracking))
+                                arrTracking.push(tracking.waybill);
 
                             if (!orderItem.carrier || orderItem.carrier == 'NA') {
                                 orderItem.carrier = tracking.carrierName;
@@ -234,9 +243,15 @@ define([
 
                     // check is_shipped from status
                     orderItem.is_shipped = orderItem.line_status
-                        ? vc2_util.inArray(orderItem.line_status.toUpperCase(), LibDellAPI.ValidShippedStatus)
+                        ? vc2_util.inArray(
+                              orderItem.line_status.toUpperCase(),
+                              LibDellAPI.ValidShippedStatus
+                          )
                         : orderItem.order_status
-                        ? vc2_util.inArray(orderItem.order_status.toUpperCase(), LibDellAPI.ValidShippedStatus)
+                        ? vc2_util.inArray(
+                              orderItem.order_status.toUpperCase(),
+                              LibDellAPI.ValidShippedStatus
+                          )
                         : false;
 
                     // check is_shipped from shipped date

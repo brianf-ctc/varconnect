@@ -61,7 +61,8 @@ define([
 
                 try {
                     var fldOrig = form.getField({ id: fieldId });
-                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200) return true;
+                    if (!fldOrig || !fldOrig.defaultValue || fldOrig.defaultValue.length < 200)
+                        return true;
 
                     var fldNew = form.addField({
                         id: ['custpage', fieldId].join('_'),
@@ -130,7 +131,10 @@ define([
                 scriptContext.form.addButton({
                     id: 'custpage_flexscreen',
                     label: 'Open Flex Screen',
-                    functionName: '(function(url){return window.open(url, "_blank");})("' + flexScreenUrl + '")'
+                    functionName:
+                        '(function(url){return window.open(url, "_blank");})("' +
+                        flexScreenUrl +
+                        '")'
                 });
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
@@ -167,7 +171,9 @@ define([
                 if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
 
-                Helper.displayAsInlineTextarea(scriptContext.form, ['custrecord_ctc_vcsp_log_body']);
+                Helper.displayAsInlineTextarea(scriptContext.form, [
+                    'custrecord_ctc_vcsp_log_body'
+                ]);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;
@@ -272,7 +278,9 @@ define([
                     });
                     if (!vendorInfoJSON) continue;
                     hasVendorInfo = true;
-                    scriptVendorInfo.push('try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}');
+                    scriptVendorInfo.push(
+                        'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
+                    );
                 }
                 scriptVendorInfo.push('});</script>');
                 fldVendorScr.defaultValue = scriptVendorInfo.join('');

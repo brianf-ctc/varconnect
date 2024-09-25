@@ -16,7 +16,11 @@
             integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
             crossorigin="anonymous"
         />
-        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.24/datatables.min.css" />
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="https://cdn.datatables.net/v/dt/dt-1.10.24/datatables.min.css"
+        />
         <link rel="shortcut icon" href="#" />
         <script
             type="text/javascript"
@@ -46,7 +50,9 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-hourglass-end"></i> Due Soon
-                                        <span class="badge badge-due pull-right">{{alert_due}}</span>
+                                        <span class="badge badge-due pull-right"
+                                            >{{alert_due}}</span
+                                        >
                                     </a>
                                 </li>
                                 <li id="no_po">
@@ -56,7 +62,9 @@
                                     >
                                         <i class="fa fa-exclamation-triangle"></i>
                                         No PO Link
-                                        <span class="badge badge-exclamation pull-right">{{no_po_cnt}}</span>
+                                        <span class="badge badge-exclamation pull-right"
+                                            >{{no_po_cnt}}</span
+                                        >
                                     </a>
                                 </li>
                                 <li id="errors">
@@ -65,7 +73,9 @@
                                         target="_blank"
                                     >
                                         <i class="fa fa-bomb"></i> Errors
-                                        <span class="badge badge-error pull-right">{{alert_error}}</span>
+                                        <span class="badge badge-error pull-right"
+                                            >{{alert_error}}</span
+                                        >
                                     </a>
                                 </li>
                                 <br />
@@ -127,7 +137,8 @@
                                             <a
                                                 href="/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_missing_po_link"
                                                 target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> No PO Link</a
+                                                ><i class="fa fa-angle-double-right"></i> No PO
+                                                Link</a
                                             >
                                         </li>
                                     </ul>
@@ -261,26 +272,34 @@
                                 <li class="has_submenu"></li>
                                 <li class="has_submenu">
                                     <a href="#"
-                                        ><i class="fa fa-cog"></i>Setup <span class="nav-caret fa fa-caret-down"></span
+                                        ><i class="fa fa-cog"></i>Setup
+                                        <span class="nav-caret fa fa-caret-down"></span
                                     ></a>
                                     <ul class="list-unstyled">
                                         <li>
                                             <a
                                                 href="/app/common/custom/custrecordentrylist.nl?rectype=109"
                                                 target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Vendor Configs</a
+                                                ><i class="fa fa-angle-double-right"></i> Vendor
+                                                Configs</a
                                             >
                                         </li>
                                         <!-- change this id after deployment -->
                                         <li>
-                                            <a href="/app/common/custom/custlist.nl?id=105&e=T&ord=T" target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Bill Hold Reasons</a
+                                            <a
+                                                href="/app/common/custom/custlist.nl?id=105&e=T&ord=T"
+                                                target="_blank"
+                                                ><i class="fa fa-angle-double-right"></i> Bill Hold
+                                                Reasons</a
                                             >
                                         </li>
                                         <!-- change this id after deployment -->
                                         <li>
-                                            <a href="/app/crm/common/crmgroup.nl?id=774669" target="_blank"
-                                                ><i class="fa fa-angle-double-right"></i> Access Group</a
+                                            <a
+                                                href="/app/crm/common/crmgroup.nl?id=774669"
+                                                target="_blank"
+                                                ><i class="fa fa-angle-double-right"></i> Access
+                                                Group</a
                                             >
                                         </li>
                                         <!-- change this id after deployment -->
@@ -308,11 +327,16 @@
                             <div class="col-md-10">
                                 <div class="widget">
                                     <div class="widget-head br-blue">
-                                        <h3 class="pull-left"><i class="fa fa-clock-o"></i> TO BE PROCESSED</h3>
+                                        <h3 class="pull-left">
+                                            <i class="fa fa-clock-o"></i> TO BE PROCESSED
+                                        </h3>
                                         <div class="pull-right"></div>
                                         <div class="clearfix"></div>
                                     </div>
-                                    <table id="example" class="compact hover order-column row-border">
+                                    <table
+                                        id="example"
+                                        class="compact hover order-column row-border"
+                                    >
                                         <thead>
                                             <tr>
                                                 <th>Flex</th>
@@ -381,7 +405,11 @@
                                                     },
                                                     {
                                                         data: 'billAmount',
-                                                        render: $.fn.dataTable.render.number(',', '.', 2)
+                                                        render: $.fn.dataTable.render.number(
+                                                            ',',
+                                                            '.',
+                                                            2
+                                                        )
                                                     },
                                                     {
                                                         data: 'billDate'
@@ -391,7 +419,13 @@
                                                     },
                                                     {
                                                         data: 'po',
-                                                        fnCreatedCell: function (nTd, sData, oData, iRow, iCol) {
+                                                        fnCreatedCell: function (
+                                                            nTd,
+                                                            sData,
+                                                            oData,
+                                                            iRow,
+                                                            iCol
+                                                        ) {
                                                             $(nTd).html(
                                                                 '<a href="/app/accounting/transactions/transaction.nl?id=' +
                                                                     oData.poId +
@@ -502,7 +536,9 @@
                                                                 '/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=statusSummary',
                                                                 function (d) {
                                                                     var ctx = document
-                                                                        .getElementById('chartNotProcessed')
+                                                                        .getElementById(
+                                                                            'chartNotProcessed'
+                                                                        )
                                                                         .getContext('2d');
                                                                     var myChart = new Chart(ctx, {
                                                                         type: 'pie',
@@ -521,17 +557,22 @@
                                                                             ],
                                                                             datasets: [
                                                                                 {
-                                                                                    data: JSON.parse(d),
-                                                                                    backgroundColor: [
-                                                                                        'rgba(54, 162, 235, 1)',
-                                                                                        'rgba(255, 99, 132, 1)',
-                                                                                        'rgba(255, 206, 86, 1)',
-                                                                                        'rgba(75, 192, 192, 1)',
-                                                                                        'rgba(153, 5, 255, 1)'
-                                                                                    ],
+                                                                                    data: JSON.parse(
+                                                                                        d
+                                                                                    ),
+                                                                                    backgroundColor:
+                                                                                        [
+                                                                                            'rgba(54, 162, 235, 1)',
+                                                                                            'rgba(255, 99, 132, 1)',
+                                                                                            'rgba(255, 206, 86, 1)',
+                                                                                            'rgba(75, 192, 192, 1)',
+                                                                                            'rgba(153, 5, 255, 1)'
+                                                                                        ],
                                                                                     datalabels: {
                                                                                         listeners: {
-                                                                                            click: function (context) {
+                                                                                            click: function (
+                                                                                                context
+                                                                                            ) {
                                                                                                 switch (
                                                                                                     context.dataIndex
                                                                                                 ) {
@@ -599,89 +640,99 @@
                                                                     '/app/site/hosting/scriptlet.nl?script=customscript_vc_bill_db_data&deploy=customdeploy_ctc_vc_bc_dash_data&data=integrationSummary',
                                                                     function (d) {
                                                                         var ctx = document
-                                                                            .getElementById('chartIntegrations')
+                                                                            .getElementById(
+                                                                                'chartIntegrations'
+                                                                            )
                                                                             .getContext('2d');
-                                                                        var myChart = new Chart(ctx, {
-                                                                            type: 'bar',
-                                                                            data: {
-                                                                                labels: [
-                                                                                    'Arrow',
-                                                                                    'D&H',
-                                                                                    'Ingram Micro',
-                                                                                    'Tech Data',
-                                                                                    'Wells Fargo',
-                                                                                    'Synnex'
-                                                                                ],
-                                                                                datasets: [
-                                                                                    {
-                                                                                        data: JSON.parse(d),
-                                                                                        backgroundColor: [
-                                                                                            'rgba(255, 99, 132, 1)',
-                                                                                            'rgba(54, 162, 235, 1)',
-                                                                                            'rgba(255, 206, 86, 1)',
-                                                                                            'rgba(75, 192, 192, 1)',
-                                                                                            'rgba(153, 5, 255, 1)',
-                                                                                            'rgba(255, 159, 64, 1)'
-                                                                                        ],
-                                                                                        datalabels: {
-                                                                                            listeners: {
-                                                                                                click: function (
-                                                                                                    context
-                                                                                                ) {
-                                                                                                    switch (
-                                                                                                        context.dataIndex
-                                                                                                    ) {
-                                                                                                        case 0:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=1'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                        case 1:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=2'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                        case 2:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=3'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                        case 3:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=4'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                        case 4:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=5'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                        case 5:
-                                                                                                            window.open(
-                                                                                                                '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=6'
-                                                                                                            );
-                                                                                                            break;
-                                                                                                    }
+                                                                        var myChart = new Chart(
+                                                                            ctx,
+                                                                            {
+                                                                                type: 'bar',
+                                                                                data: {
+                                                                                    labels: [
+                                                                                        'Arrow',
+                                                                                        'D&H',
+                                                                                        'Ingram Micro',
+                                                                                        'Tech Data',
+                                                                                        'Wells Fargo',
+                                                                                        'Synnex'
+                                                                                    ],
+                                                                                    datasets: [
+                                                                                        {
+                                                                                            data: JSON.parse(
+                                                                                                d
+                                                                                            ),
+                                                                                            backgroundColor:
+                                                                                                [
+                                                                                                    'rgba(255, 99, 132, 1)',
+                                                                                                    'rgba(54, 162, 235, 1)',
+                                                                                                    'rgba(255, 206, 86, 1)',
+                                                                                                    'rgba(75, 192, 192, 1)',
+                                                                                                    'rgba(153, 5, 255, 1)',
+                                                                                                    'rgba(255, 159, 64, 1)'
+                                                                                                ],
+                                                                                            datalabels:
+                                                                                                {
+                                                                                                    listeners:
+                                                                                                        {
+                                                                                                            click: function (
+                                                                                                                context
+                                                                                                            ) {
+                                                                                                                switch (
+                                                                                                                    context.dataIndex
+                                                                                                                ) {
+                                                                                                                    case 0:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=1'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                    case 1:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=2'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                    case 2:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=3'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                    case 3:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=4'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                    case 4:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=5'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                    case 5:
+                                                                                                                        window.open(
+                                                                                                                            '/app/common/search/searchresults.nl?searchid=customsearch_vc_bc_files_by_integ&searchtype=Custom&CUSTRECORD_CTC_VC_BILL_INTEGRATION=6'
+                                                                                                                        );
+                                                                                                                        break;
+                                                                                                                }
+                                                                                                            }
+                                                                                                        }
                                                                                                 }
-                                                                                            }
                                                                                         }
-                                                                                    }
-                                                                                ]
-                                                                            },
-                                                                            options: {
-                                                                                scales: {
-                                                                                    y: {
-                                                                                        beginAtZero: true
-                                                                                    }
+                                                                                    ]
                                                                                 },
-                                                                                tooltips: {
-                                                                                    enabled: false
-                                                                                },
-                                                                                legend: {
-                                                                                    display: false
+                                                                                options: {
+                                                                                    scales: {
+                                                                                        y: {
+                                                                                            beginAtZero: true
+                                                                                        }
+                                                                                    },
+                                                                                    tooltips: {
+                                                                                        enabled: false
+                                                                                    },
+                                                                                    legend: {
+                                                                                        display: false
+                                                                                    }
                                                                                 }
                                                                             }
-                                                                        });
+                                                                        );
                                                                     }
                                                                 );
                                                             </script>

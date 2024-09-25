@@ -56,7 +56,10 @@ define(function (require) {
 
         var searchOrderResp = objResponse.PARSED_RESPONSE || objResponse.RESPONSE || {};
         if (objResponse.isError || vc2_util.isEmpty(searchOrderResp)) {
-            throw objResponse.errorMsg + (objResponse.details ? '\n' + JSON.stringify(objResponse.details) : '');
+            throw (
+                objResponse.errorMsg +
+                (objResponse.details ? '\n' + JSON.stringify(objResponse.details) : '')
+            );
         }
 
         log.debug('getInvoiceDetails | objResponse', objResponse);
@@ -75,7 +78,8 @@ define(function (require) {
         };
 
         // var orderListUrl = config.url+'/Order({key})';
-        var orderListUrl = config.url + '/Order/' + config.poNum + '?$expand=Details($expand=LineItems)';
+        var orderListUrl =
+            config.url + '/Order/' + config.poNum + '?$expand=Details($expand=LineItems)';
 
         var objResponse = vc2_util.sendRequest({
             header: logTitle,
@@ -90,7 +94,10 @@ define(function (require) {
 
         var searchOrderResp = objResponse.PARSED_RESPONSE || objResponse.RESPONSE || {};
         if (objResponse.isError || vc2_util.isEmpty(searchOrderResp)) {
-            throw objResponse.errorMsg + (objResponse.details ? '\n' + JSON.stringify(objResponse.details) : '');
+            throw (
+                objResponse.errorMsg +
+                (objResponse.details ? '\n' + JSON.stringify(objResponse.details) : '')
+            );
         }
 
         log.debug('getOrderDetails | objResponse', objResponse);

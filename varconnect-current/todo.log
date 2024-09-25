@@ -1,0 +1,58 @@
+Order status
+  * PO Field
+    - vendor status
+    - vendor msg
+
+  * Vendor Order
+    - PO link
+    - OrderStatus link
+    - vendor order number (text)
+    - vendor order status (text)
+    - order status (list) 
+    - order lines (create new record)
+    - order id
+    - po link
+    - order status
+    - line status
+    - shipdates
+    - linenumber
+    - lineuniqkey
+    - tracking
+    - serials
+        - 
+
+VAR Connect 
+    Send PO
+    Order Status
+    Serials
+Tab for Send PO
+
+
+    Mark for Order status
+    Mark for Send PO
+
+
+
+
+
+
+
+VAR Connect Todo: 
+
+_BILL CREATOR_
+ * use adhoc Bill transfor to calculate tax, totals
+ * skip non-receivable non-fulfillable lines on checking
+ * one item on multiple lines
+ * item map link
+
+_ORDER STATUS_
+ * po lines
+ * item map link
+ * serials link
+
+_DEBUG TOOL_
+ * order status
+ * invoice status
+ * po timeline
+
+_SYNC

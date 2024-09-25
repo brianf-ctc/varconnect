@@ -91,7 +91,8 @@ define([
                     recordId: Current.poId
                 });
 
-                if (!Current.isRecievable) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!Current.isRecievable)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 Current.PO_REC = ns_record.load({
                     type: 'purchaseorder',
@@ -125,7 +126,7 @@ define([
                     vc2_util.log(logTitle, '// SO Data: ', Current.SO_DATA);
                 }
 
-                if (Current.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
+                // if (Current.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
 
                 var MainCFG = vcs_configLib.mainConfig();
                 var BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId });
@@ -146,7 +147,8 @@ define([
                 //         );
                 // }
 
-                if (!BillCFG.enableFulfillment) throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+                if (!BillCFG.enableFulfillment)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
 
                 // check if IF/IR already exists and if so link it back to the file
                 if (Helper.isTransactionExists({ invoice: Current.billPayload.invoice }))
@@ -241,9 +243,12 @@ define([
                     if (billLine.AVAILQTY > 0) arrUnprocessedLines.push(billLine.ITEMNO);
                     return true;
                 });
-                if (arrMissingSKUs.length) throw 'Does not have SKU assigned -- ' + arrMissingSKUs.join(', ');
+                if (arrMissingSKUs.length)
+                    throw 'Does not have SKU assigned -- ' + arrMissingSKUs.join(', ');
                 if (arrUnprocessedLines.length)
-                    throw 'Could not fully process Fulfillment -- ' + arrUnprocessedLines.join(', ');
+                    throw (
+                        'Could not fully process Fulfillment -- ' + arrUnprocessedLines.join(', ')
+                    );
 
                 var lineCount = recItemFF.getLineCount({ sublistId: 'item' });
 
@@ -258,7 +263,11 @@ define([
                             filter: { line: line }
                         });
 
-                        if (!lineData || !lineData.matchingLines || vc2_util.isEmpty(lineData.matchingLines)) {
+                        if (
+                            !lineData ||
+                            !lineData.matchingLines ||
+                            vc2_util.isEmpty(lineData.matchingLines)
+                        ) {
                             // unselect the item receive
                             recItemFF.setCurrentSublistValue({
                                 sublistId: 'item',
@@ -316,16 +325,21 @@ define([
                         //     value: totalAppliedQty
                         // });
 
-                        if (!vc2_util.isEmpty(poLineData) && totalAppliedQty == poLineData.quantity) {
+                        if (
+                            !vc2_util.isEmpty(poLineData) &&
+                            totalAppliedQty == poLineData.quantity
+                        ) {
                             var poTrackingNum =
                                     poLineData.custcol_ctc_xml_tracking_num ||
                                     poLineData.custcol_ctc_xml_inb_tracking_num,
                                 poSerialNum = poLineData.custcol_ctc_xml_serial_num;
 
                             // update the itemff lines
-                            if (poTrackingNum && poTrackingNum != 'NA') arrLineTracking = poTrackingNum.split(/\n/g);
+                            if (poTrackingNum && poTrackingNum != 'NA')
+                                arrLineTracking = poTrackingNum.split(/\n/g);
 
-                            if (poSerialNum && poSerialNum != 'NA') arrLineSerials = poSerialNum.split(/\n/g);
+                            if (poSerialNum && poSerialNum != 'NA')
+                                arrLineSerials = poSerialNum.split(/\n/g);
 
                             orderLineFields.forEach(function (poLineFld) {
                                 var poLineValue = poLineData[poLineFld];
@@ -346,7 +360,8 @@ define([
                                     return true;
 
                                 // skip empty values
-                                if (vc2_util.isEmpty(poLineValue) || poLineValue == 'NA') return true;
+                                if (vc2_util.isEmpty(poLineValue) || poLineValue == 'NA')
+                                    return true;
 
                                 updateItemFFline[poLineFld] = poLineValue;
                                 return true;
@@ -356,15 +371,19 @@ define([
                         var formattedTracking = '';
                         arrLineTracking.forEach(function (tracking) {
                             formattedTracking += tracking + '\r\n';
-                            if (!vc2_util.inArray(tracking, arrTrackingNums)) arrTrackingNums.push(tracking);
+                            if (!vc2_util.inArray(tracking, arrTrackingNums))
+                                arrTrackingNums.push(tracking);
                         });
 
-                        if (formattedTracking) updateItemFFline['custcol_ctc_xml_tracking_num'] = formattedTracking;
+                        if (formattedTracking)
+                            updateItemFFline['custcol_ctc_xml_tracking_num'] = formattedTracking;
 
                         if (Current.billPayload.carrier) {
-                            updateItemFFline['custcol_ctc_xml_ship_method'] = Current.billPayload.carrier;
+                            updateItemFFline['custcol_ctc_xml_ship_method'] =
+                                Current.billPayload.carrier;
 
-                            updateItemFFline['custcol_ctc_xml_carrier'] = Current.billPayload.carrier;
+                            updateItemFFline['custcol_ctc_xml_carrier'] =
+                                Current.billPayload.carrier;
                         }
 
                         vc2_util.log(logTitle, '/// item ff line:  ', updateItemFFline);
@@ -386,7 +405,11 @@ define([
                                 if (totalAppliedQty <= 0) return;
                                 if (vc2_util.inArray(serial, arrAppliedSerials)) return;
 
-                                vc2_util.log(logTitle, '...serial:', [serial, totalAppliedQty, arrAppliedSerials]);
+                                vc2_util.log(logTitle, '...serial:', [
+                                    serial,
+                                    totalAppliedQty,
+                                    arrAppliedSerials
+                                ]);
 
                                 subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
                                     sublistId: 'item',
@@ -468,7 +491,10 @@ define([
                 }
                 if (!newRecordId) throw 'Unable to create item fulfillment';
 
-                vc2_util.log(logTitle, '/// Item Fulfillment created... [itemfulfillment:' + newRecordId + ']');
+                vc2_util.log(
+                    logTitle,
+                    '/// Item Fulfillment created... [itemfulfillment:' + newRecordId + ']'
+                );
 
                 util.extend(returnObj, {
                     id: newRecordId,
@@ -604,8 +630,11 @@ define([
                 logPrefix = '';
 
             // CURRENT.billPayload.lines
-            var itemAltNameColId = option.orderConfig.itemColumnIdToMatch || option.mainConfig.itemColumnIdToMatch,
-                itemMPNColId = option.orderConfig.itemMPNColumnIdToMatch || option.mainConfig.itemMPNColumnIdToMatch,
+            var itemAltNameColId =
+                    option.orderConfig.itemColumnIdToMatch || option.mainConfig.itemColumnIdToMatch,
+                itemMPNColId =
+                    option.orderConfig.itemMPNColumnIdToMatch ||
+                    option.mainConfig.itemMPNColumnIdToMatch,
                 poColumns = [
                     'item',
                     'quantity',
@@ -650,7 +679,9 @@ define([
                     return value > 0;
                 }
             };
-            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (value) {
+            vendorItemNameFilter[vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY] = function (
+                value
+            ) {
                 return value && vc2_util.inArray(itemffLine.item, value.split('\n'));
             };
             arrFulfillLines.forEach(function (itemffLine) {
@@ -774,7 +805,9 @@ define([
                     if (itemffLine.AVAILQTY <= 0) return;
 
                     var qtyToApply =
-                        matchedLine.AVAILQTY >= itemffLine.AVAILQTY ? itemffLine.AVAILQTY : matchedLine.AVAILQTY;
+                        matchedLine.AVAILQTY >= itemffLine.AVAILQTY
+                            ? itemffLine.AVAILQTY
+                            : matchedLine.AVAILQTY;
 
                     vc2_util.log(logTitle, logPrefix + '..... applied qty: ', qtyToApply);
 
@@ -869,7 +902,9 @@ define([
                     if (billLine.AVAILQTY <= 0) return;
 
                     var qtyToApply =
-                        matchedLine.AVAILQTY >= billLine.AVAILQTY ? billLine.AVAILQTY : matchedLine.AVAILQTY;
+                        matchedLine.AVAILQTY >= billLine.AVAILQTY
+                            ? billLine.AVAILQTY
+                            : matchedLine.AVAILQTY;
 
                     billLine.AVAILQTY -= qtyToApply;
                     matchedLine.AVAILQTY -= qtyToApply;

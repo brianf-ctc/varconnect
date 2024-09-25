@@ -74,8 +74,12 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid'),
-                use_fulfill_rl: ns_runtime.getCurrentScript().getParameter('custscript_fulfillcreate_restlet')
+                internalid: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_orderstatus_tranid'),
+                use_fulfill_rl: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_fulfillcreate_restlet')
             };
             vc2_util.log(logTitle, { type: 'debug', msg: '/// Params ' }, Params);
 
@@ -128,7 +132,14 @@ define([
                         'AND',
                         ['type', 'anyof', 'PurchOrd'],
                         'AND',
-                        ['status', 'noneof', 'PurchOrd:C', 'PurchOrd:G', 'PurchOrd:H', 'PurchOrd:F'],
+                        [
+                            'status',
+                            'noneof',
+                            'PurchOrd:C',
+                            'PurchOrd:G',
+                            'PurchOrd:H',
+                            'PurchOrd:F'
+                        ],
                         'AND',
                         ['custbody_ctc_bypass_vc', 'is', 'F']
                     ],
@@ -157,7 +168,11 @@ define([
 
                 var vendorFilter = [];
                 for (var i = 0, j = activeVendors.length; i < j; i++) {
-                    if (Params.vendorId && !vc2_util.inArray(Params.vendorId, activeVendors[i].vendor)) continue;
+                    if (
+                        Params.vendorId &&
+                        !vc2_util.inArray(Params.vendorId, activeVendors[i].vendor)
+                    )
+                        continue;
 
                     if (vendorFilter.length) vendorFilter.push('OR');
                     vendorFilter.push([
@@ -181,7 +196,11 @@ define([
 
         var totalResults = returnValue.runPaged().count;
 
-        vc2_util.log(logTitle, { type: 'debug', msg: '>> Total Orders to Process: ' }, totalResults);
+        vc2_util.log(
+            logTitle,
+            { type: 'debug', msg: '>> Total Orders to Process: ' },
+            totalResults
+        );
 
         vc2_util.vcLog({
             title: 'VAR Connect START',
@@ -207,8 +226,12 @@ define([
             Params = {
                 searchId: ns_runtime.getCurrentScript().getParameter('custscript_searchid2'),
                 vendorId: ns_runtime.getCurrentScript().getParameter('custscript_vendor2'),
-                internalid: ns_runtime.getCurrentScript().getParameter('custscript_orderstatus_tranid'),
-                use_fulfill_rl: ns_runtime.getCurrentScript().getParameter('custscript_fulfillcreate_restlet')
+                internalid: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_orderstatus_tranid'),
+                use_fulfill_rl: ns_runtime
+                    .getCurrentScript()
+                    .getParameter('custscript_fulfillcreate_restlet')
             };
             vc2_util.log(logTitle, '// Params: ', Params);
 
@@ -228,7 +251,8 @@ define([
 
             vc2_util.log(logTitle, '..current: ', Current);
 
-            if (Current.byPassVC == 'T' || Current.byPassVC === true) throw ERROR_MSG.BYPASS_VARCONNECT;
+            if (Current.byPassVC == 'T' || Current.byPassVC === true)
+                throw ERROR_MSG.BYPASS_VARCONNECT;
 
             Current.MainCFG = Helper.loadMainConfig();
             Current.VendorCFG = Helper.loadVendorConfig({
@@ -289,7 +313,10 @@ define([
 
             ////////////////////////////////////////////////
             // if there are no lines.. just exit the script
-            if (!outputObj.itemArray || (!outputObj.itemArray.length && !outputObj.itemArray.header_info)) {
+            if (
+                !outputObj.itemArray ||
+                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
+            ) {
                 throw outputObj.isError && outputObj.errorMessage
                     ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
                     : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
@@ -335,7 +362,9 @@ define([
             }
 
             Current.allowItemFF =
-                Current.MainCFG.processDropships && Current.VendorCFG.processDropships && Current.MainCFG.createIF;
+                Current.MainCFG.processDropships &&
+                Current.VendorCFG.processDropships &&
+                Current.MainCFG.createIF;
 
             Current.allowItemRcpt =
                 Current.MainCFG.processSpecialOrders &&
@@ -441,7 +470,10 @@ define([
                             }
                         }
 
-                        vc2_util.log(logTitle, '... matching fulfillment', [lineData.order_num, fulfillmentNum]);
+                        vc2_util.log(logTitle, '... matching fulfillment', [
+                            lineData.order_num,
+                            fulfillmentNum
+                        ]);
                     } else if (!Current.isDropPO && Current.MainCFG.processSpecialOrders) {
                         for (ii = 0; ii < arrReceipts.length; ii++) {
                             if (arrReceipts[ii].num == Current.NumPrefix + lineData.order_num) {
@@ -450,7 +482,10 @@ define([
                             }
                         }
 
-                        vc2_util.log(logTitle, '... matching fulfillment', [lineData.order_num, receiptNum]);
+                        vc2_util.log(logTitle, '... matching fulfillment', [
+                            lineData.order_num,
+                            receiptNum
+                        ]);
                     }
 
                     for (var iii = 0; iii < serialArray.length; iii++) {
@@ -501,7 +536,8 @@ define([
         if (serial == 'NA') return;
 
         if (!currentData.mainConfig) currentData.mainConfig = Helper.loadMainConfig();
-        if (!currentData.subsidiary) currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
+        if (!currentData.subsidiary)
+            currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
         // if (!currentData.vendorConfig) currentData.subsidiary = Helper.getSubsidiary(currentData.poId);
 
         vc2_util.log(logTitle, '/// current data: ', currentData);
@@ -516,7 +552,8 @@ define([
         if (!currentData.vendorConfig) {
             var vendor = po_record.getValue({ fieldId: 'entity' });
             var subsidiaryId = null;
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES)
+                subsidiaryId = po_record.getValue({ fieldId: 'subsidiary' });
 
             currentData.vendorConfig =
                 currentData.vendorConfig ||
@@ -531,7 +568,8 @@ define([
         if (!currentData.vendorConfig) throw 'Vendor Config not found';
 
         var itemAltNameColId =
-                currentData.vendorConfig.itemColumnIdToMatch || currentData.mainConfig.itemColumnIdToMatch,
+                currentData.vendorConfig.itemColumnIdToMatch ||
+                currentData.mainConfig.itemColumnIdToMatch,
             poColumns = [
                 'item',
                 'quantity',
@@ -664,7 +702,11 @@ define([
             var objVendorSearch = ns_search.create({
                 type: 'customrecord_ctc_vc_vendor_config',
                 filters: [['isinactive', 'is', 'F']],
-                columns: ['custrecord_ctc_vc_vendor', 'custrecord_ctc_vc_vendor_start', 'custrecord_ctc_vc_xml_vendor']
+                columns: [
+                    'custrecord_ctc_vc_vendor',
+                    'custrecord_ctc_vc_vendor_start',
+                    'custrecord_ctc_vc_xml_vendor'
+                ]
             });
 
             var arrVendors = [];
@@ -714,7 +756,10 @@ define([
                 });
 
             if (!vendorConfig) {
-                vc2_util.log(logTitle, 'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName);
+                vc2_util.log(
+                    logTitle,
+                    'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
+                );
             }
 
             return vendorConfig;
@@ -827,7 +872,11 @@ define([
                 var orderNumFilter = [];
                 listOrderNum.forEach(function (orderNum) {
                     if (orderNumFilter.length) orderNumFilter.push('OR');
-                    orderNumFilter.push(['custbody_ctc_if_vendor_order_match', ns_search.Operator.IS, orderNum]);
+                    orderNumFilter.push([
+                        'custbody_ctc_if_vendor_order_match',
+                        ns_search.Operator.IS,
+                        orderNum
+                    ]);
                     return true;
                 });
                 searchOption.filters.push(orderNumFilter);
@@ -877,7 +926,10 @@ define([
                     i,
                     ii;
                 for (i = 0; i < OrderLines.length; i++) {
-                    vc2_util.log(logTitle, '... processing ' + '[' + OrderLines[i].order_num + '] .....');
+                    vc2_util.log(
+                        logTitle,
+                        '... processing ' + '[' + OrderLines[i].order_num + '] .....'
+                    );
 
                     if (vc2_util.inArray(OrderLines[i].order_num, arrOrderNums)) {
                         continue;
@@ -888,7 +940,10 @@ define([
                         continue;
                     }
 
-                    if (OrderLines[i].hasOwnProperty('is_shipped') && OrderLines[i].is_shipped === false) {
+                    if (
+                        OrderLines[i].hasOwnProperty('is_shipped') &&
+                        OrderLines[i].is_shipped === false
+                    ) {
                         vc2_util.log(logTitle, '......skipped: not yet shipped');
                         continue;
                     }
@@ -962,7 +1017,9 @@ define([
                                     message:
                                         noteId +
                                         ' - ' +
-                                        (util.isArray(respdata.msg) ? respdata.msg.join('\r\n') : respdata.msg),
+                                        (util.isArray(respdata.msg)
+                                            ? respdata.msg.join('\r\n')
+                                            : respdata.msg),
                                     recordId: Current.poId
                                 });
                             }

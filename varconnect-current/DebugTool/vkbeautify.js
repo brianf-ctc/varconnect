@@ -92,7 +92,11 @@ define([], function () {
                 str += shift[deep] + ar[ix];
                 inComment = true;
                 // end comment  or <![CDATA[...]]> //
-                if (ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1 || ar[ix].search(/!DOCTYPE/) > -1) {
+                if (
+                    ar[ix].search(/-->/) > -1 ||
+                    ar[ix].search(/\]>/) > -1 ||
+                    ar[ix].search(/!DOCTYPE/) > -1
+                ) {
                     inComment = false;
                 }
             }
@@ -105,13 +109,18 @@ define([], function () {
             else if (
                 /^<\w/.exec(ar[ix - 1]) &&
                 /^<\/\w/.exec(ar[ix]) &&
-                /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) == /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
+                /^<[\w:\-\.\,]+/.exec(ar[ix - 1]) ==
+                    /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/', '')
             ) {
                 str += ar[ix];
                 if (!inComment) deep--;
             }
             // <elm> //
-            else if (ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) == -1 && ar[ix].search(/\/>/) == -1) {
+            else if (
+                ar[ix].search(/<\w/) > -1 &&
+                ar[ix].search(/<\//) == -1 &&
+                ar[ix].search(/\/>/) == -1
+            ) {
                 str = !inComment ? (str += shift[deep++] + ar[ix]) : (str += ar[ix]);
             }
             // <elm>...</elm> //
@@ -319,7 +328,9 @@ define([], function () {
     };
 
     vkbeautify.prototype.cssmin = function (text, preserveComments) {
-        var str = preserveComments ? text : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
+        var str = preserveComments
+            ? text
+            : text.replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\//g, '');
 
         return str
             .replace(/\s{1,}/g, ' ')

@@ -19,12 +19,12 @@
  * Author: shawn.blackburn
  */
 
-define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libraries/moment', 'N/cache'], function (
-    vc2_util,
-    vc2_constant,
-    moment,
-    cache
-) {
+define([
+    './../CTC_VC2_Lib_Utils.js',
+    './../CTC_VC2_Constants.js',
+    './moment',
+    'N/cache'
+], function (vc2_util, vc2_constant, moment, cache) {
     'use strict';
 
     var LogTitle = 'WS:ScanSource',
@@ -124,7 +124,9 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libr
                     query: {
                         url:
                             CURRENT.orderConfig.endPoint +
-                            ('/detail?salesOrderNumber=' + option.OrderNumber + '&customerNumber=') +
+                            ('/detail?salesOrderNumber=' +
+                                option.OrderNumber +
+                                '&customerNumber=') +
                             (CURRENT.orderConfig.customerNo + '&excludeSerialTracking=false'),
                         headers: CURRENT.Headers
                     }
@@ -231,7 +233,10 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libr
                     var shipment = { tracking: [] };
                     (deliveryLine.Parcels || []).forEach(function (parcel) {
                         if (parcel.CarrierCode) shipment.carrier = parcel.CarrierCode;
-                        if (parcel.TrackingNumber && !vc2_util.inArray(parcel.TrackingNumber, shipment.tracking))
+                        if (
+                            parcel.TrackingNumber &&
+                            !vc2_util.inArray(parcel.TrackingNumber, shipment.tracking)
+                        )
                             shipment.tracking.push(parcel.TrackingNumber);
                     });
                     vc2_util.log(logTitle, '...shipment:  ', shipment);
@@ -242,7 +247,8 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', './Bill Creator/Libr
                             order_num: orderDetail.SalesOrderNumber,
                             line_num:
                                 Math.floor(
-                                    deliveryLine.DeliveryDocumentNumber + ('.' + lineItem.DeliveryDocumentLineNumber)
+                                    deliveryLine.DeliveryDocumentNumber +
+                                        ('.' + lineItem.DeliveryDocumentLineNumber)
                                 ) * 1,
                             vendorSKU: lineItem.ItemNumber,
                             ship_qty: parseInt(lineItem.QuantityShipped),

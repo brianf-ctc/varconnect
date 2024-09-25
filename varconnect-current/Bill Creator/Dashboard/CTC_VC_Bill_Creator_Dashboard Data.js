@@ -208,7 +208,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug(logTitle, 'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var status = result.getValue({
                     name: 'custrecord_ctc_vc_bill_proc_status',
@@ -268,7 +271,10 @@ define(['N/log', 'N/search', 'N/format'], function (log, search, format) {
                 ]
             });
             var searchResultCount = customrecord_ctc_vc_billsSearchObj.runPaged().count;
-            log.debug(logTitle, 'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount);
+            log.debug(
+                logTitle,
+                'customrecord_ctc_vc_billsSearchObj result count=' + searchResultCount
+            );
             customrecord_ctc_vc_billsSearchObj.run().each(function (result) {
                 var position =
                     result.getValue({

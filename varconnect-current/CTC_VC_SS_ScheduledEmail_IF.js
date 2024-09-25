@@ -97,7 +97,7 @@ define([
                 log.debug(logTitle, ' /// sending email to: ' + newSendTo);
 
                 // load email template, build and insert item table
-                var emailDetails = buildEmail(CURRENT.emailTemplate, itemTableHTML);
+                var emailDetails = buildEmail(CURRENT.emailTemplate, itemTableHTML, resultsList);
 
                 try {
                     ns_email.send({
@@ -117,7 +117,8 @@ define([
         } finally {
             log.debug(
                 logTitle,
-                '******* Script Execution End: ' + JSON.stringify({ durationms: new Date() - startTime })
+                '******* Script Execution End: ' +
+                    JSON.stringify({ durationms: new Date() - startTime })
             );
         }
 
@@ -205,11 +206,13 @@ define([
         return emailItemTable;
     }
 
-    function buildEmail(templateId, itemTableHTML) {
+    function buildEmail(templateId, itemTableHTML, resultsList) {
         var logTitle = [LogTitle, ' buildEmail'].join('::');
 
         // Internal ID of the record to attach the email to
         //var relatedRecordJson = { 'transactionId': tranRec.id };
+
+        // log.debug(logTitle, '>> resultsList.length:  ' + resultsList.length);
 
         // Load email template
         var emailTemplate = ns_record.load({
@@ -217,12 +220,23 @@ define([
             id: templateId,
             isDynamic: false
         });
+
         // Get Template Subject and Body
         var emailBody = emailTemplate.getValue({ fieldId: 'content' }),
             emailSubj = emailTemplate.getValue({ fieldId: 'subject' });
 
+        // log.debug(logTitle, '>> emailBody:  ' + emailBody);
+
         // Create a template rendere so we can render (fill in template field tags)
         var renderer = ns_render.create();
+
+        renderer.addRecord({
+            templateName: 'transaction',
+            record: ns_record.load({
+                type: ns_record.Type.ITEM_FULFILLMENT,
+                id: resultsList[0].id
+            })
+        });
 
         // render the subject line
         renderer.templateContent = emailSubj;
@@ -231,11 +245,6 @@ define([
         // render email body
         renderer.templateContent = emailBody;
         var newBody = renderer.renderAsString();
-
-        // replace the string <TABLEINFO> in the template body with the HTML string emailBody
-        newBody = newBody.replace('%%TABLEINFO%%', itemTableHTML);
-
-        // log.audit(logTitle, '>> email body:  ' + newBody);
 
         return {
             subject: newSubject,

@@ -13,14 +13,14 @@
  * @NScriptType Suitelet
  */
 
-define(['N/ui/serverWidget', 'N/runtime', 'N/search', 'N/url', 'N/file', '../CTC_VC2_Lib_Utils'], function (
-    ns_ui,
-    ns_runtime,
-    ns_search,
-    ns_url,
-    ns_file,
-    vc2_util
-) {
+define([
+    'N/ui/serverWidget',
+    'N/runtime',
+    'N/search',
+    'N/url',
+    'N/file',
+    '../CTC_VC2_Lib_Utils'
+], function (ns_ui, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
     var LogTitle = 'VC DebugTool';
     var Helper = {
         getActiveVendors: function () {
@@ -107,6 +107,13 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/search', 'N/url', 'N/file', '../CTC
                     fldPONum.isMandatory = true;
                     fldPONum.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
                     if (Current.ponum) fldPONum.defaultValue = Current.ponum;
+
+                    Current.Form.addField({
+                        id: 'custpage_showlines',
+                        type: ns_ui.FieldType.CHECKBOX,
+                        label: 'Show Lines'
+                    });
+
                     ////////////////////////////////////////////////////////
 
                     ////////////////////////////////////////
@@ -151,7 +158,9 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/search', 'N/url', 'N/file', '../CTC
                         '<iframe id="custpage_xml_viewer_frame" srcdoc="',
                         '<html>',
                         '<head>',
-                        cssHighlightStyle.url ? "<link rel='stylesheet' href='" + cssHighlightStyle.url + "'>" : '',
+                        cssHighlightStyle.url
+                            ? "<link rel='stylesheet' href='" + cssHighlightStyle.url + "'>"
+                            : '',
                         '</head>',
                         '<body>',
 

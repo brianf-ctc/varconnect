@@ -141,6 +141,16 @@ define([
                     text: itemList[i].name
                 });
 
+                var itemGroupId = 'fldgroupxyz_' + itemId;
+
+                var fldGroup = form.addFieldGroup({
+                    id: itemGroupId,
+                    label: 'Item: ' + itemList[i].name
+                });
+                fldGroup.isSingleColumn = true;
+                fldGroup.isBorderHidden = true;
+                fldGroup.label = '';
+
                 var currentSNList = getCurrentSNList(poNum, itemId);
                 var snCount = isEmpty(currentSNList) ? 0 : currentSNList.split(',').length;
 
@@ -148,14 +158,18 @@ define([
                     id: 'custpage_label_sncount_' + itemId,
                     type: ns_ui.FieldType.LABEL,
                     label: 'Count of Existing Serial Numbers : ' + snCount,
-                    container: 'itemgroup'
+                    container: itemGroupId
+                });
+
+                labelcountfield.updateLayoutType({
+                    layoutType: ns_ui.FieldLayoutType.STARTROW
                 });
 
                 var currentField = form.addField({
                     id: 'custpage_currentsn_' + itemId,
                     type: ns_ui.FieldType.LONGTEXT,
                     label: 'Existing Serial Numbers:',
-                    container: 'itemgroup'
+                    container: itemGroupId
                 });
                 currentField.defaultValue = currentSNList;
                 currentField.updateDisplayType({
@@ -166,13 +180,18 @@ define([
                     id: 'custpage_newsn_' + itemId,
                     type: ns_ui.FieldType.LONGTEXT,
                     label: 'New Serial Numbers:',
-                    container: 'itemgroup'
+                    container: itemGroupId
+                });
+
+                newField.updateBreakType({
+                    breakType: ns_ui.FieldBreakType.STARTCOL
+                    // breakType : ns_ui.FieldBreakType.STARTROW
                 });
 
                 var lineKeyID = form.addField({
                     id: 'custpage_linekey_' + itemId,
                     type: ns_ui.FieldType.TEXT,
-                    label: 'Line Unique Key:'
+                    label: itemGroupId
                 });
                 lineKeyID.defaultValue = itemId;
                 lineKeyID.updateDisplayType({ displayType: ns_ui.FieldDisplayType.HIDDEN });
@@ -231,7 +250,9 @@ define([
                     itemObj.itemId = itemsField[i].id;
 
                     // get new sn's and strip out any carriage return/new lines
-                    var newSNStr = getNewSNStr(params, itemsField[i].id).replace(/\\n/g, ',').replace(/\\r/g, ',');
+                    var newSNStr = getNewSNStr(params, itemsField[i].id)
+                        .replace(/\\n/g, ',')
+                        .replace(/\\r/g, ',');
 
                     vc2_util.log(logTitle, 'Item ', newSNStr);
                     if (!isEmpty(newSNStr)) {
