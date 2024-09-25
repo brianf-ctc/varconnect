@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "varconnect-bundle"
+		},
+		{
+			"path": "varconnect-current"
+		},
+		{
+			"path": "varconnect-dev/varconnect-dev@demodeploy"
+		}
+	],
+	"settings": {
+		"gotoSymbolStack.currentStackPosition": 0,
+		"gotoSymbolStack.maxStackPosition": 0,
+		"gotoSymbolStack.filePositionInfo": []
+	}
+}

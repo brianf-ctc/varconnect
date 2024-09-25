@@ -45,14 +45,7 @@ define([
         return result;
     }
 
-    var VC_LICENSE = {
-        URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
-        PRODUCT_CODE: 2,
-        MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY.20240418',
-        CACHE_NAME: 'VC_LICENSE',
-        CACHE_TTL: 86400 // 24 hrs
-    };
+    var VC_LICENSE = vc2_constant.LICENSE;
 
     // {
     //     URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
@@ -139,7 +132,7 @@ define([
                 });
                 vcLicenseResp = this.safeParse(vcLicenseResp);
 
-                if (!vcLicenseResp || vcLicenseResp.error || vcLicenseResp.hasError) {
+                if (!vcLicenseResp || vcLicenseResp.error) {
                     vcLicenseResp = LibLicense.fetchLicense(option);
                     vcCache.put({
                         key: VC_LICENSE.KEY,

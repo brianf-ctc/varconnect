@@ -129,7 +129,12 @@ define(['N/url', 'N/https', 'N/runtime', 'N/cache', './CTC_VC2_Constants.js'], f
                 });
                 vcLicenseResp = this.safeParse(vcLicenseResp);
 
-                if (!vcLicenseResp || vcLicenseResp.error) {
+                if (
+                    !vcLicenseResp ||
+                    vcLicenseResp.error ||
+                    vcLicenseResp.hasError ||
+                    vcLicenseResp.status == 'inactive'
+                ) {
                     vcLicenseResp = LibLicense.fetchLicense(option);
                     vcCache.put({
                         key: VC_LICENSE.KEY,
