@@ -266,6 +266,8 @@ define([
                         'amount',
                         'quantityreceived',
                         'quantitybilled',
+                        'inventorydetailreq',
+                        'isserial',
                         'taxrate',
                         'taxrate1',
                         'taxrate2'
@@ -304,16 +306,15 @@ define([
                                 order: matchedLine
                             });
 
-                            vc2_record.updateLine({
-                                record: recVBill,
-                                lineData: {
+                            recVBill.selectLine({ sublistId: 'item', line: matchedLine.line });
+                            var updateLine = {
                                     line: matchedLine.line,
                                     quantity: matchedLine.APPLIEDQTY
-                                }
-                            });
+                            };
 
+                            // fix the rate
                             if (matchedLine.rate != vendorLine.rate) {
-                                var updateLine = { line: matchedLine.line };
+                                // var updateLine = { line: matchedLine.linex };
 
                                 if (
                                     Current.AllowVariance ||
@@ -324,20 +325,109 @@ define([
                                 } else if (doIgnoreVariance) {
                                     updateLine.rate = matchedLine.rate;
                                 }
+                            }
 
-                                vc2_util.log(logTitle, '... update line: ', [
-                                    updateLine,
-                                    Current.AllowVariance,
-                                    doProcessVariance,
-                                    doIgnoreVariance
-                                ]);
+                            //set the inventoryreq
+                            if (
+                                matchedLine.inventorydetailreq == 'T' ||
+                                matchedLine.isserial == 'T'
+                            ) {
+                                if (
+                                    !vendorLine.SERIAL ||
+                                    !vendorLine.SERIAL.length ||
+                                    vendorLine.SERIAL.length < matchedLine.APPLIEDQTY
+                                ) {
+                                    throw (
+                                        'Missing or incomplete serials for item - ' +
+                                        vendorLine.ITEMNO +
+                                        '. The total inventory detail quantity must be ' +
+                                        matchedLine.APPLIEDQTY +
+                                        '. '
+                                    );
+                                }
 
-                                // set the rate to the bill rate
-                                vc2_record.updateLine({
-                                    record: recVBill,
-                                    lineData: updateLine
+                                vc2_util.log(logTitle, '.... total serials: ', vendorLine.SERIAL);
+
+                                var subrecInvDetail = recVBill.getCurrentSublistSubrecord({
+                                    sublistId: 'item',
+                                    fieldId: 'inventorydetail'
+                                });
+
+                                var lineInvCnt = subrecInvDetail.getLineCount({
+                                        sublistId: 'inventoryassignment'
+                                    }),
+                                    hasLineChanges = false;
+
+                                vc2_util.log(logTitle, '.... serials line count: ', lineInvCnt);
+
+                                // line it up backwards to remove the unnecessary lines
+                                for (var line = lineInvCnt - 1; line >= 0; line--) {
+                                    var lineInvDet = {
+                                        line: line,
+                                        issued: subrecInvDetail.getSublistValue({
+                                            sublistId: 'inventoryassignment',
+                                            fieldId: 'issueinventorynumber',
+                                            line: line
+                                        }),
+                                        receipt: subrecInvDetail.getSublistValue({
+                                            sublistId: 'inventoryassignment',
+                                            fieldId: 'receiptinventorynumber',
+                                            line: line
+                                        })
+                                    };
+
+                                    if (
+                                        (lineInvDet.issued &&
+                                            !vc2_util.inArray(
+                                                lineInvDet.issued,
+                                                vendorLine.SERIAL
+                                            )) ||
+                                        (lineInvDet.receipt &&
+                                            !vc2_util.inArray(
+                                                lineInvDet.receipt,
+                                                vendorLine.SERIAL
+                                            ))
+                                    ) {
+                                        vc2_util.log(
+                                            logTitle,
+                                            '....... removing ! serials: ',
+                                            lineInvDet
+                                        );
+                                        hasLineChanges = true;
+
+                                        subrecInvDetail.selectLine({
+                                            sublistId: 'inventoryassignment',
+                                            line: line
+                                        });
+
+                                        // remove the line
+                                        subrecInvDetail.removeLine({
+                                            sublistId: 'inventoryassignment',
+                                            line: line
+                                        });
+                                    }
+                                }
+
+                                if (hasLineChanges) {
+                                    subrecInvDetail.commitLine({
+                                        sublistId: 'inventoryassignment'
+                                    });
+                                    // recVBill.commitLine({ sublistId: 'item' });
+                                }
+                                lineInvCnt = subrecInvDetail.getLineCount({
+                                    sublistId: 'inventoryassignment'
+                                });
+                                vc2_util.log(logTitle, '.... serials line count (2): ', lineInvCnt);
+                            }
+
+                            for (colField in updateLine) {
+                                recVBill.setCurrentSublistValue({
+                                    sublistId: 'item',
+                                    fieldId: colField,
+                                    value: updateLine[colField]
                                 });
                             }
+                            recVBill.commitLine({ sublistId: 'item' });
 
                             // add this to the Billed Lines
                             BilledLines.push(matchedLine);
@@ -359,7 +449,14 @@ define([
                     var lineValues = vc2_record.extractLineValues({
                         record: recVBill,
                         line: line,
-                        columns: ['item', 'rate', 'amount', 'quantity']
+                        columns: [
+                            'item',
+                            'rate',
+                            'amount',
+                            'quantity',
+                            'inventorydetailreq',
+                            'isserial'
+                        ]
                     });
                     lineValues.isUnbilled = true;
                     BilledLines.forEach(function (billedLine) {
@@ -375,6 +472,7 @@ define([
                         } catch (remove_err) {
                             vc2_util.logError(logTitle, remove_err);
                         }
+                    } else if (lineValues.inventorydetailreq == 'T' || lineValues.isserial == 'T') {
                     }
                 }
 

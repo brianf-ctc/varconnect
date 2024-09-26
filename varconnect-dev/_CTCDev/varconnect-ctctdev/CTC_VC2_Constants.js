@@ -192,7 +192,52 @@ define(function (require) {
                 ID: 'internalid',
                 SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
                 XML_VENDOR: 'custrecord_ctc_vcsp_api_vendor',
-                VENDOR: 'custrecord_ctc_vcsp_vendor'
+                VENDOR: 'custrecord_ctc_vcsp_vendor',
+                EVENT_TYPE: 'custrecord_ctc_vcsp_event',
+                TEST_REQUEST: 'custrecord_ctc_vcsp_test',
+                IS_SPECIAL_ITEM_NAME: 'custrecord_vcsp_is_item_name_special',
+                WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint',
+                ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint',
+                OAUTH_SCOPE: 'custrecord_ctc_vcsp_access_scope',
+                SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_key',
+                USERNAME: 'custrecord_ctc_vcsp_username',
+                PASSWORD: 'custrecord_ctc_vcsp_password',
+                CUSTOMER_NO: 'custrecord_ctc_vcsp_customer_number',
+                API_KEY: 'custrecord_ctc_vcsp_api_key',
+                API_SECRET: 'custrecord_ctc_vcsp_api_secret',
+                FIELD_MAP: 'custrecord_ctc_vcsp_fieldmapping',
+                QA_WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint_qa',
+                QA_ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint_qa',
+                QA_OAUTH_SCOPE: 'custrecord_ctc_vcsp_access_scope_qa',
+                QA_API_KEY: 'custrecord_ctc_vcsp_api_key_qa',
+                QA_API_SECRET: 'custrecord_ctc_vcsp_api_secret_qa',
+                QA_SUBSCRIPTION_KEY: 'custrecord_ctc_vcsp_access_subscr_qa',
+                PONUM_FIELD: 'custrecord_ctc_vcsp_ponum_field',
+                ITEM_COLUMN: 'custrecord_ctc_vcsp_item_field',
+                QUOTE_COLUMN: 'custrecord_ctc_vcsp_quoteno_field',
+                MEMO_FIELD: 'custrecord_ctc_vcsp_memo_field',
+                SHIP_CONTACT_FIELD: 'custrecord_ctc_vcsp_shipcontact_field',
+                SHIP_EMAIL_FIELD: 'custrecord_ctc_vcsp_shipemail_field',
+                SHIP_PHONE_FIELD: 'custrecord_ctc_vcsp_shipphone_field',
+                ENABLE_ADD_VENDOR_DETAILS: 'custrecord_ctc_vcsp_show_details',
+                ADDITIONAL_PO_FIELDS: 'custrecord_ctc_vcsp_po_fields',
+                ADD_DETAILS_ON_SUBMIT: 'custrecord_ctc_vcsp_auto_include_details',
+                PO_LINE_COLUMNS: 'custrecord_ctc_vcsp_line_cols',
+                BILL_ID: 'custrecord_ctc_vcsp_bill_addrid',
+                BILL_ADDRESSEE: 'custrecord_ctc_vcsp_bill_addressee',
+                BILL_ATTENTION: 'custrecord_ctc_vcsp_bill_attention',
+                BILL_EMAIL: 'custrecord_ctc_vcsp_bill_email',
+                BILL_PHONENO: 'custrecord_ctc_vcsp_phoneno',
+                BILL_ADDRESS_1: 'custrecord_ctc_vcsp_bill_addr1',
+                BILL_ADDRESS_2: 'custrecord_ctc_vcsp_bill_addr2',
+                BILL_CITY: 'custrecord_ctc_vcsp_bill_city',
+                BILL_STATE: 'custrecord_ctc_vcsp_bill_state',
+                BILL_ZIP: 'custrecord_ctc_vcsp_bill_zip',
+                BILL_COUNTRY: 'custrecord_ctc_vcsp_bill_country',
+                PAYMENT_MEAN: 'custrecord_ctc_vcsp_payment_mean',
+                PAYMENT_OTHER: 'custrecord_ctc_vcsp_payment_mean_other',
+                PAYMENT_TERM: 'custrecord_ctc_vcsp_payment_term',
+                BUSINESS_UNIT: 'custrecord_ctc_vcsp_businessunit'
             }
         },
         VENDOR_ITEM_MAPPING: {
@@ -202,8 +247,37 @@ define(function (require) {
                 ITEM: 'custrecord_ctc_vc_itemmap_item'
             }
         },
+        ORDER_LINE: {
+            ID: 'customrecord_ctc_vc_orderlines',
+            FIELD: {
+                TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
+                ORDER_NUM: 'custrecord_ctc_vc_orderline_vndordernum',
+                ORDER_STATUS: 'custrecord_ctc_vc_orderline_vndorderstat',
+                STATUS: 'custrecord_ctc_vc_orderline_orderstatus',
+                LINE_STATUS: 'custrecord_ctc_vc_orderline_linestatus',
+                ITEM: 'custrecord_ctc_vc_orderline_itemname',
+                SKU: 'custrecord_ctc_vc_orderline_vendorsku',
+                LINE_NO: 'custrecord_ctc_vc_orderline_vndlineno',
+                ITEM_LINK: 'custrecord_ctc_vc_orderline_itemlink',
+                POLINE_UNIQKEY: 'custrecord_ctc_vc_orderline_polinekey',
+                QTY: 'custrecord_ctc_vc_orderline_vndqty',
+                PO_QTY: 'custrecord_ctc_vc_orderline_poqty',
+                ORDER_DATE: 'custrecord_ctc_vc_orderline_orderdate',
+                ORDER_DATETXT: 'custrecord_ctc_vc_orderline_vndorderdate',
+                SHIPPED_DATE: 'custrecord_ctc_vc_orderline_shippeddate',
+                ETA_DATE: 'custrecord_ctc_vc_orderline_eta_date',
+                ETD_DATE: 'custrecord_ctc_vc_orderline_etd_date',
+                PROMISED_DATE: 'custrecord_ctc_vc_orderline_promiseddate',
+                CARRIER: 'custrecord_ctc_vc_orderline_carrier',
+                SHIP_METHOD: 'custrecord_ctc_vc_orderline_shipmethod',
+                TRACKING: 'custrecord_ctc_vc_orderline_trackingno',
+                SERIALNUM: 'custrecord_ctc_vc_orderline_serialnumber',
+                ORDER_DATA: 'custrecord_ctc_vc_orderline_vndorderdata',
+                LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata'
+            }
+        },
         VAR_CONNECT_PO_LINE: {
-            ID: '',
+            ID: 'customrecord_ctc_vc_poline',
             FIELD: {
                 PURCHASE_ORDER: 'custrecord_ctc_vc_poline_po',
                 LINE_UNIQUE_KEY: 'custrecord_ctc_vc_poline_lineuniquekey',
@@ -691,7 +765,7 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240626.01';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240826.01';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',

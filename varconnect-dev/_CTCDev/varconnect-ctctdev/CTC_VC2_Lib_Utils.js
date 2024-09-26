@@ -74,6 +74,9 @@ define(function (require) {
                     }
                 }
             });
+        },
+        isTrue: function (value) {
+            return this.inArray(value, [true, 'T', 't']);
         }
     });
 
@@ -167,6 +170,46 @@ define(function (require) {
             } catch (error) {
                 vc2_util.logError('removeNSCache', error);
             }
+        },
+        saveCacheList: function (option) {
+            var listName = option.listName,
+                cacheKey = option.cacheKey;
+
+            var cacheListName = [listName, 'LIST'].join('___');
+            var cacheListValue = vc2_util.getNSCache({ name: cacheListName, isJSON: true });
+
+            if (vc2_util.isEmpty(cacheListValue)) cacheListValue = { LIST: [cacheListName] };
+
+            if (!vc2_util.inArray(cacheKey, cacheListValue.LIST))
+                cacheListValue.LIST.push(cacheKey);
+
+            vc2_util.log('## NS CACHE (list)', ' // CACHE List: ', [
+                listName,
+                cacheKey,
+                cacheListValue
+            ]);
+
+            vc2_util.setNSCache({
+                cacheKey: cacheListName,
+                value: cacheListValue
+            });
+
+            return cacheListValue;
+        },
+        deleteCacheList: function (option) {
+            var listName = option.listName;
+
+            var cacheListName = [listName, 'LIST'].join('___');
+            var cacheListValue = vc2_util.getNSCache({ name: cacheListName, isJSON: true });
+
+            vc2_util.log('## NS CACHE (reset list)', ' // CACHE List: ', [listName]);
+
+            if (vc2_util.isEmpty(cacheListValue) || vc2_util.isEmpty(cacheListValue.LIST)) return;
+
+            cacheListValue.LIST.forEach(function (cacheKey) {
+                vc2_util.removeCache({ name: cacheKey });
+                return true;
+            });
         }
     });
 
@@ -452,6 +495,24 @@ define(function (require) {
             });
 
             return arrResults;
+        },
+
+        tryThese: function (arrTasks) {
+            if (!arrTasks) return false;
+
+            for (var i = 0; i < arrTasks.length; i++) {
+                var task = arrTasks[i],
+                    returnVal = false,
+                    isSuccess = false;
+                try {
+                    returnVal = task.call();
+                    if (returnVal || isSuccess) break;
+                } catch (e) {
+                    vc2_util.logError(logTitle, e);
+                }
+                if (isSuccess) break;
+            }
+            return true;
         }
     });
 
@@ -827,6 +888,10 @@ define(function (require) {
             var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
                 returnValue = request;
 
+            var parsedResp = request.PARSED_RESPONSE;
+            if (request.isError && !parsedResp)
+                throw request.errorMsg || 'Unable to parse response';
+
             // detect the error
             var parsedResp = request.PARSED_RESPONSE;
             if (!parsedResp) throw 'Unable to parse response';
@@ -1094,7 +1159,7 @@ define(function (require) {
             return true;
         },
         logError: function (logTitle, errorMsg) {
-            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR: ' }, errorMsg);
+            vc2_util.log(logTitle, { type: 'error', msg: '!! ERROR: ' }, errorMsg);
             return;
         },
         logDebug: function (logTitle, msg, msgVar) {

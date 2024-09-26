@@ -109,7 +109,12 @@ define(function (require) {
 
                 vc2_util.log(logTitle, '..vcLicenseResp', vcLicenseResp);
 
-                if (!vcLicenseResp || vcLicenseResp.error || vcLicenseResp.status == 'inactive') {
+                if (
+                    !vcLicenseResp ||
+                    vcLicenseResp.hasError ||
+                    vcLicenseResp.error ||
+                    vcLicenseResp.status == 'inactive'
+                ) {
                     vcLicenseResp = LibLicense.fetchLicense(option);
 
                     if (vcLicenseResp && !vcLicenseResp.error)
