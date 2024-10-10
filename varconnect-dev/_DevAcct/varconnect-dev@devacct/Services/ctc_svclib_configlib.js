@@ -19,6 +19,7 @@ define(function (require) {
         vc2_constant = require('../CTC_VC2_Constants.js');
 
     var ns_search = require('N/search'),
+        ns_record = require('N/record'),
         ns_runtime = require('N/runtime'),
         ns_url = require('N/url'),
         ns_https = require('N/https');
@@ -108,7 +109,12 @@ define(function (require) {
 
                 vc2_util.log(logTitle, '..vcLicenseResp', vcLicenseResp);
 
-                if (!vcLicenseResp || vcLicenseResp.error || vcLicenseResp.status == 'inactive') {
+                if (
+                    !vcLicenseResp ||
+                    vcLicenseResp.hasError ||
+                    vcLicenseResp.error ||
+                    vcLicenseResp.status == 'inactive'
+                ) {
                     vcLicenseResp = LibLicense.fetchLicense(option);
 
                     if (vcLicenseResp && !vcLicenseResp.error)
@@ -157,7 +163,7 @@ define(function (require) {
                     throw 'Missing record config';
 
                 // try to do look up of the search
-                var configFields = ['name', 'isinactive'],
+                var configFields = ['name', 'isinactive', 'internalid'],
                     payloadData = [];
 
                 configDef.FIELD['NAME'] = 'name';
@@ -166,9 +172,11 @@ define(function (require) {
                 configDef.FIELD['MODIFIED_BY'] = 'lastmodifiedby';
 
                 for (var fieldName in configDef.FIELD) {
-                    if (vc2_util.inArray(fieldName, SkippedFields)) continue;
+                    if (vc2_util.inArray(configDef.FIELD[fieldName], SkippedFields)) continue;
                     configFields.push(configDef.FIELD[fieldName]);
                 }
+                if (option.nameField) configFields.push(option.nameField);
+                vc2_util.log(logTitle, '// configFields ', configFields);
 
                 // Do the record lookup
                 var results = vc2_util.flatLookup({
@@ -177,8 +185,28 @@ define(function (require) {
                     columns: configFields
                 });
 
-                vc2_util.log(logTitle, '// results ', results);
+                if (results.name == results.internalid.value) {
+                    if (option.nameValue) {
+                        results.name = option.nameValue;
 
+                        ns_record.submitFields({
+                            type: configDef.ID,
+                            id: configId,
+                            values: { name: results.name }
+                        });
+                    } else if (option.nameField && results[option.nameField]) {
+                        results.name = results[option.nameField].text || results[option.nameField];
+
+                        ns_record.submitFields({
+                            type: configDef.ID,
+                            id: configId,
+                            values: { name: results.name }
+                        });
+                    }
+                    // update this record?
+                }
+
+                vc2_util.log(logTitle, '// results ', results);
                 payloadData.push({
                     settingFieldId: '_config_name',
                     settingFieldName: 'CONFIG_NAME',
@@ -280,7 +308,7 @@ define(function (require) {
             };
             if (vc2_util.isOneWorld()) lookupOption.columns.push('subsidiary');
             var result = vc2_util.flatLookup(lookupOption);
-            vc2_util.log('Helper.fetchVendorFromPO', '// PO Data: ', result);
+            // vc2_util.log('Helper.fetchVendorFromPO', '// PO Data: ', result);
 
             return result;
         },
@@ -314,7 +342,7 @@ define(function (require) {
                     return true;
                 });
 
-            vc2_util.log('Helper.fetchVendorData', '// Vendor Data: ', result);
+            // vc2_util.log('Helper.fetchVendorData', '// Vendor Data: ', result);
 
             return result;
         }
@@ -375,7 +403,7 @@ define(function (require) {
 
             returnValue = mainConfigData;
 
-            vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
 
             return returnValue;
         },
@@ -412,7 +440,9 @@ define(function (require) {
                 if (poId && !vendorId) {
                     var vendorInfo = Helper.fetchVendorFromPO(poId);
                     vendorId = vendorInfo.entity.value || vendorInfo.entity;
-                    subsId = vendorInfo.subsidiary.value || vendorInfo.subsidiary || null;
+                    subsId = vendorInfo.subsidiary
+                        ? vendorInfo.subsidiary.value || vendorInfo.subsidiary
+                        : null;
                     cacheParams.push('poid=' + poId);
                 }
 
@@ -489,7 +519,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
             return returnValue;
         },
         billVendorConfig: function (option) {
@@ -517,7 +547,9 @@ define(function (require) {
             if (poId && !vendorId) {
                 var orderInfo = Helper.fetchVendorFromPO(poId);
                 vendorId = orderInfo.entity.value || orderInfo.entity;
-                subsId = orderInfo.subsidiary.value || orderInfo.subsidiary || null;
+                subsId = orderInfo.subsidiary
+                    ? orderInfo.subsidiary.value || orderInfo.subsidiary
+                    : null;
                 cacheParams.push('poid=' + poId);
             }
             if (vendorId && !configId) {
@@ -601,7 +633,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
 
             return returnValue;
         },
@@ -635,7 +667,9 @@ define(function (require) {
                 if (poId && !vendorId) {
                     var vendorInfo = Helper.fetchVendorFromPO(poId);
                     vendorId = vendorInfo.entity.value || vendorInfo.entity;
-                    subsId = vendorInfo.subsidiary.value || vendorInfo.subsidiary || null;
+                    subsId = vendorInfo.subsidiary
+                        ? vendorInfo.subsidiary.value || vendorInfo.subsidiary
+                        : null;
                     cacheParams.push('poid=' + poId);
                 }
 
@@ -704,7 +738,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
             return returnValue;
         },
         validateLicense: function (option) {
@@ -725,7 +759,8 @@ define(function (require) {
                 config: vc2_constant.RECORD.VENDOR_CONFIG,
                 id: option.id || option.recordId,
                 configName: 'VENDOR_CONFIG',
-                skippedFields: []
+                nameField: 'custrecord_ctc_vc_xml_vendor',
+                skippedFields: ['custrecord_ctc_vc_xml_req']
             });
 
             return true;
@@ -749,7 +784,8 @@ define(function (require) {
                 config: vc2_constant.RECORD.MAIN_CONFIG,
                 id: option.id || option.recordId,
                 configName: 'MAIN_CONFIG',
-                skippedFields: ['LICENSE_TEXT']
+                nameValue: 'MAIN CONFIG',
+                skippedFields: ['custrecord_ctc_vc_license_text']
             });
 
             return true;

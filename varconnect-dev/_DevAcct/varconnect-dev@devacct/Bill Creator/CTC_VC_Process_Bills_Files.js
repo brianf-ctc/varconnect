@@ -145,8 +145,8 @@ define([
                     }
                 });
 
-                // searchOption.filters.push('AND');
-                searchOption.filters = ['internalid', 'anyof', ScriptParam.billFileID];
+                searchOption.filters.push('AND');
+                searchOption.filters.push(['internalid', 'anyof', ScriptParam.billFileID]);
             }
             log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
 
@@ -156,6 +156,15 @@ define([
 
             return searchObj;
         },
+
+        // map: function (mapContext) {
+        //     var logTitle = [LogTitle, 'reduce', context.key].join(':');
+        //     vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
+        //     var searchResult = JSON.parse(mapContext.value);
+
+        //     vc2_util.log(logTitle, '/// search result: ', searchResult);
+        // },
 
         reduce: function (context) {
             var logTitle = [LogTitle, 'reduce', context.key].join(':');

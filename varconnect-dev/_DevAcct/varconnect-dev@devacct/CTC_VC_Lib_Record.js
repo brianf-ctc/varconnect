@@ -282,7 +282,7 @@ define([
     //***********************************************************************
     //	function updatePOItemData(poNum, lineData)
     function updatePOItemData(option) {
-        var logTitle = [LogTitle, 'updatePOItemData'].join('::');
+        var logTitle = [LogTitle, 'updatePO'].join('::');
 
         Current.PO_NUM = option.poNum;
         Current.VendorLines = option.lineData; //vc2_util.copyValues();
@@ -301,6 +301,7 @@ define([
             isUpdatedSO = false,
             mapLineOrderStatus = {};
 
+        Helper.getDateFormat();
         try {
             if (!Current.PO_REC || Current.PO_REC == null) throw ERROR_MSG.MISSING_PO;
 
@@ -310,13 +311,11 @@ define([
                 isDropPO: Current.PO_REC.getValue({ fieldId: 'custbody_isdropshippo' }),
                 DocNum: Current.PO_REC.getValue({ fieldId: 'tranid' })
             };
+
             var specialOrder = false;
             vc2_util.log(logTitle, '// PO Data: ', POData);
 
             returnValue.id = POData.createdFromID;
-            if (POData.bypassVC) return returnValue;
-
-            Helper.getDateFormat();
 
             // extract lines from the PO
             var itemAltNameColId =
@@ -335,14 +334,9 @@ define([
                     vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
                     vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ];
-            if (itemAltNameColId) {
-                poColumns.push(itemAltNameColId);
-            }
-            if (itemAltMPNColId) {
-                poColumns.push(itemAltMPNColId);
-            }
 
-            vc2_util.log(logTitle, '... po columns:', poColumns);
+            if (itemAltNameColId) poColumns.push(itemAltNameColId);
+            if (itemAltMPNColId) poColumns.push(itemAltMPNColId);
 
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
@@ -352,12 +346,12 @@ define([
                 orderConfig: Current.OrderCFG
             });
 
+            vc2_util.log(logTitle, '###### UPDATE PO LINES: START ######');
             vc2_util.log(logTitle, '... PO lines data:', Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
 
-            vc2_util.log(logTitle, '###### UPDATE PO LINES: START ######');
             // loop thru all vendor lines
             for (var i = 0; i < Current.VendorLines.length; i++) {
                 var vendorLine = Current.VendorLines[i];
@@ -669,6 +663,7 @@ define([
                         // status: vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR,
                         isError: true
                     });
+
                     continue;
                 }
             }
@@ -682,18 +677,19 @@ define([
 
                 vc2_util.log(logTitle, ' // PO updated successfully');
             }
-        } catch (err) {
-            vc2_util.logError(logTitle, err);
+        } catch (error) {
             vc2_util.vcLog({
-                title: 'Update Record | Error',
-                error: err,
-                transaction: Current.PO_REC ? Current.PO_REC.id : null,
-                status: vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR,
-                isError: true
+                title: 'PO Update',
+                message: error.message || error,
+                recordId: Current.PO_REC ? Current.PO_REC.id : null,
+                status:
+                    error.status || error.logStatus || vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR
             });
 
+            vc2_util.logError(logTitle, error);
+
             returnValue.id = null;
-            returnValue.error = err;
+            returnValue.error = error;
         } finally {
             vc2_util.log(logTitle, '###### UPDATE PO LINES: END ######', returnValue);
         }

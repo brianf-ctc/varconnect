@@ -24,9 +24,9 @@ define([
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
-    './CTC_VC_Lib_WebService',
     './Services/ctc_svclib_configlib.js',
-    './Services/ctc_svclib_process-v1.js'
+    './Services/ctc_svclib_process-v1.js',
+    './Services/ctc_svclib_webservice-v1'
 ], function (
     ns_search,
     ns_runtime,
@@ -38,9 +38,9 @@ define([
     vc_itemfflib,
     vc_itemrcpt,
     vc_nslib,
-    vc_websvclib,
     vcs_configLib,
-    vcs_processLib
+    vcs_processLib,
+    vcs_websvcLib
 ) {
     var LogTitle = 'MR_OrderStatus',
         VCLOG_APPNAME = 'VAR Connect | OrderStatus';
@@ -222,13 +222,15 @@ define([
             }
             vc2_util.log(logTitle, '..current: ', Current);
 
-            if (Current.isBypassVC == 'T' || Current.isBypassVC === true)
-                throw ERROR_MSG.BYPASS_VARCONNECT;
+            if (vc2_util.isTrue(Current.isBypassVC)) throw ERROR_MSG.BYPASS_VARCONNECT;
 
             Current.MainCFG = vcs_configLib.mainConfig();
-            Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
-
+            Current.OrderCFG = vcs_configLib.loadConfig({
+                poId: Current.poId,
+                configType: vcs_configLib.ConfigType.ORDER
+            });
             if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
+            vc2_util.log(logTitle, '// vendor config: ', Current.OrderCFG);
 
             /// OVERRIDE ///
             if (Current.MainCFG.overridePONum) {
@@ -238,41 +240,11 @@ define([
                     vc2_util.log(logTitle, '**** TEMP PO NUM: ' + tempPONum + ' ****');
                 }
             }
-            /// ========== ///
 
-            // looup the country
-            var countryCode = Current.OrderCFG.countryCode;
-            var PO_REC = ns_record.load({
-                type: 'purchaseorder',
-                id: Current.poId,
-                isDynamic: true
-            });
+            /// ORDER STATUS ///
+            outputObj = vcs_websvcLib.orderStatus({ poNum: Current.poNum, poId: Current.poId });
+            ////
 
-            Current.isDropPO =
-                PO_REC.getValue({ fieldId: 'dropshipso' }) ||
-                PO_REC.getValue({
-                    fieldId: 'custbody_ctc_po_link_type'
-                }) == 'Drop Shipment' ||
-                PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
-
-            ////////////////////////////////////////////////
-            vc2_util.log(logTitle, '///// Initiating library webservice ....');
-
-            outputObj = vc_websvclib.process({
-                mainConfig: Current.MainCFG,
-                orderConfig: Current.OrderCFG,
-                vendor: Current.vendorId.value,
-                poId: Current.poId,
-                poNum: Current.poNum,
-                tranDate: Current.tranDate,
-                subsidiary: Current.subsidiary.value,
-                countryCode: countryCode
-            });
-
-            vc2_util.log(logTitle, '...  vendor data: ', outputObj);
-            ////////////////////////////////////////////////
-
-            ////////////////////////////////////////////////
             // if there are no lines.. just exit the script
             if (
                 !outputObj.itemArray ||
@@ -288,14 +260,14 @@ define([
             // vc2_util.log(logTitle, '** CURRENT **', Current);
             mapContext.write(Current.poId, util.extend(Current, { outputItems: outputObj }));
         } catch (error) {
-            vc2_util.logError(logTitle, error);
-
             vc2_util.vcLog({
-                title: 'MR Order Status | Error',
-                error: error,
+                title: 'MR Order Status | Unsuccessful',
                 recordId: Current.poId,
-                status: LOG_STATUS.ERROR
+                message: vc2_util.extractError(error),
+                details: error.details,
+                status: error.status || error.logStatus || LOG_STATUS.ERROR
             });
+            vc2_util.logError(logTitle, error);
         } finally {
             vc2_util.logDebug(logTitle, '###### END: MAP ###### ');
         }
@@ -315,7 +287,7 @@ define([
             Current.poId = context.key;
             util.extend(Current, JSON.parse(context.values[0]));
 
-            vc2_util.log(logTitle, '>>> PO Lines: ', Current.outputItems);
+            vc2_util.log(logTitle, '///  Vendor Lines: ', Current.outputItems);
             var PO_REC = ns_record.load({
                 type: 'purchaseorder',
                 id: Current.poId,
@@ -323,11 +295,11 @@ define([
             });
 
             var updateStatus = vc_nslib.updatepo({
+                mainConfig: Current.MainCFG,
+                orderConfig: Current.OrderCFG,
                 po_record: PO_REC,
                 poNum: Current.poId,
                 lineData: vc2_util.clone(Current.outputItems.itemArray),
-                mainConfig: Current.MainCFG,
-                orderConfig: Current.OrderCFG,
                 isDropPO: Current.isDropPO
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
@@ -452,6 +424,13 @@ define([
             }
         } catch (error) {
             vc2_util.logError(logTitle, error);
+            vc2_util.vcLog({
+                title: 'MR Order Status | Unsuccessful',
+                recordId: Current.poId,
+                message: vc2_util.extractError(error),
+                details: error.details,
+                status: error.status || error.logStatus || LOG_STATUS.ERROR
+            });
         } finally {
             vc2_util.logDebug(logTitle, '###### END: REDUCE ###### ');
         }

@@ -243,8 +243,7 @@ define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], f
                 key: [
                     CURRENT.TokenName,
                     CURRENT.orderConfig.apiKey,
-                    CURRENT.orderConfig.apiSecret,
-                    new Date().getTime()
+                    CURRENT.orderConfig.apiSecret
                 ].join('|')
             });
 

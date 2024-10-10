@@ -35,7 +35,7 @@ define(function (require) {
                 if (!option.fromId) throw 'Record fromId is required. [fromId]';
                 if (!option.toType) throw 'Record toType is required. [toType]';
 
-                // log.audit(logTitle, '// TRANSFORM: ' + JSON.stringify(option));
+                log.audit(logTitle, '// TRANSFORM: ' + JSON.stringify(option));
 
                 returnValue = ns_record.transform(option);
             } catch (error) {
@@ -56,7 +56,7 @@ define(function (require) {
                 if (!option.type) throw 'Record type is required. [type]';
                 if (!option.id) throw 'Record ID is required. [id]';
 
-                // log.audit(logTitle, '// LOAD RECORD: ' + JSON.stringify(option));
+                log.audit(logTitle, '// LOAD RECORD: ' + JSON.stringify(option));
                 returnValue = ns_record.load(option);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
@@ -327,6 +327,7 @@ define(function (require) {
                 var includeItemMappingIndex = columns.indexOf(
                     GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 );
+
                 // include the global var proxy column in the extract list to trigger the item mapping lookup
                 if (includeItemMappingIndex >= 0) {
                     columns.splice(includeItemMappingIndex, 1);
@@ -335,6 +336,7 @@ define(function (require) {
                 var lineCount = record.getLineCount({ sublistId: sublistId }),
                     uniqueItemIds = [],
                     arrRecordLines = [];
+
                 for (var line = 0; line < lineCount; line++) {
                     var lineData = VC2_RecordLib.extractLineValues({
                         record: record,
@@ -343,10 +345,12 @@ define(function (require) {
                         columns: columns
                     });
                     lineData.line = line;
+                    // vc2_util.log(logTitle, '... line data: ', lineData);
+
                     if (!vc2_util.inArray(lineData.item, uniqueItemIds)) {
                         uniqueItemIds.push(lineData.item);
                     }
-                    // log.audit(logTitle, lineData);
+
                     if (!option.filter) {
                         arrRecordLines.push(lineData);
                         continue;
@@ -373,12 +377,14 @@ define(function (require) {
                         if (!option.findAll) break;
                     }
                 }
+
                 returnValue =
                     arrRecordLines && arrRecordLines.length
                         ? option.findAll
                             ? arrRecordLines
                             : arrRecordLines.shift()
                         : false;
+
                 var altItemNames = VC2_RecordLib.extractAlternativeItemName({
                     item: uniqueItemIds
                 });
@@ -971,24 +977,7 @@ define(function (require) {
                 Current.MainCFG || option.mainConfig || vcs_configLib.mainConfig() || {};
             Current.OrderCFG = Current.OrderCFG || option.orderConfig || {};
 
-            vc2_util.log(logTitle, '// option: ', option);
-            vc2_util.log(logTitle, '// MainCFG: ', Current.MainCFG);
-            vc2_util.log(logTitle, '// OrderCFG: ', Current.OrderCFG);
-
-            // var field.altNames = option.source,
-            //     field.sku: sku = option.sku,
-            //     field.mpn: mpn = option.mpn,
-            //     field.returnValue: returnValue = option.target,
-            //     field.skuColumn: skuColumn =
-            //         Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
-            //     field.mpnColumn: mpnColumn =
-            //         Current.OrderCFG.itemMPNColumnIdToMatch ||
-            //         Current.MainCFG.itemMPNColumnIdToMatch;
-
-            // var field.isItemMatchedWVendorSKU =
-            //     Current.OrderCFG.matchItemToPartNumber || Current.MainCFG.matchItemToPartNumber;
-            // var field.isMPNMatchedWName =
-            //     Current.OrderCFG.matchMPNWithPartNumber || Current.MainCFG.matchMPNWithPartNumber;
+            // vc2_util.log(logTitle, '### Option: ', option);
 
             var field = {
                     altNames: option.source,
@@ -1008,8 +997,10 @@ define(function (require) {
                 },
                 lineData = option.target;
 
-            vc2_util.log(logTitle, '... field settings: ', field);
-            vc2_util.log(logTitle, '... line values: ', lineData);
+            // vc2_util.log(logTitle, '... field settings / linevalues: ', {
+            //     field: field,
+            //     lineData: lineData
+            // });
 
             if (field.altNames && field.altNames[lineData.item]) {
                 if (field.altNames._sku) {
@@ -1044,23 +1035,7 @@ define(function (require) {
                 }
             }
 
-            // if ((!field.altNames || !field.altNames._sku) && (field.sku || field.skuColumn)) {
-            //     if (field.isItemMatchedWVendorSKU) {
-            //         lineData.alternativeSKU = field.sku || lineData[field.skuColumn];
-            //     } else {
-            //         lineData.alternativeItemName = field.sku || lineData[field.skuColumn];
-            //     }
-            // }
-
-            // if ((!field.altNames || !field.altNames._mpn) && (field.mpn || field.mpnColumn)) {
-            //     if (field.isMPNMatchedWName) {
-            //         lineData.alternativeItemName2 = field.mpn || lineData[field.mpnColumn];
-            //     } else {
-            //         lineData.alternativeMPN = field.mpn || lineData[field.mpnColumn];
-            //     }
-            // }
-
-            vc2_util.log(logTitle, '// returnValue: ', lineData);
+            // vc2_util.log(logTitle, '### Return: ', lineData);
 
             return lineData;
         }
@@ -1110,13 +1085,6 @@ define(function (require) {
 
                 /// START the loop
                 var arrOutputLines = [];
-                // vc2_util.log(logTitle, '**** MATCHING ITEMS START **** ', {
-                //     orderLines: arrOrderLines,
-                //     vendorLines: arrVendorLines
-                //     // totalOrderLines: arrOrderLines.length,
-                //     // totalVendorLines: arrVendorLines.length
-                // });
-
                 arrVendorLines.forEach(function (vendorLine) {
                     try {
                         // look for required cols
@@ -1244,6 +1212,8 @@ define(function (require) {
                                 }) ||
                                 []
                         };
+
+                        vc2_util.dumpLog(logTitle, matchingOrderLines, 'Matching Lines: ');
 
                         // try to distribute the AVAILQTY
                         var fnQuantityDist = function (matchedOrderLine) {

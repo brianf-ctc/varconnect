@@ -22,18 +22,16 @@ define(function (require) {
         vcs_configLib = require('./ctc_svclib_configlib.js');
 
     // vendor libraries
-    var lib_synnex = require('../Library/CTC_VC_Lib_Synnex'),
-        lib_techdata = require('../Library/CTC_VC_Lib_TechData'),
-        lib_dnh = require('../Library/CTC_VC_Lib_DandH.js'),
-        lib_ingram = require('../Library/CTC_VC_Lib_Ingram'),
-        lib_dell = require('../Library/CTC_VC_Lib_Dell'),
-        lib_arrow = require('../Library/CTC_VC_Lib_Arrow'),
-        lib_jenne = require('../Library/CTC_VC_Lib_Jenne'),
-        lib_scansource = require('../Library/CTC_VC_Lib_ScanSource'),
-        lib_wefi = require('../Library/CTC_VC_Lib_WeFi.js'),
-        lib_carahsoft = require('../Library/CTC_VC_Lib_Carahsoft.js');
-
-    var moment = require('./lib/moment');
+    var lib_synnex = require('../CTC_VC_Lib_Synnex'),
+        lib_techdata = require('../CTC_VC_Lib_TechData'),
+        lib_dnh = require('../CTC_VC_Lib_DandH'),
+        lib_ingram = require('../CTC_VC_Lib_Ingram'),
+        lib_dell = require('../CTC_VC_Lib_Dell'),
+        lib_arrow = require('../CTC_VC_Lib_Arrow'),
+        lib_jenne = require('../CTC_VC_Lib_Jenne'),
+        lib_scansource = require('../CTC_VC_Lib_ScanSource'),
+        lib_wefi = require('../CTC_VC_Lib_WeFi.js'),
+        lib_carahsoft = require('../CTC_VC_Lib_Carahsoft.js');
 
     var CACHE_TTL = 300; // store the data for 1mins
     var VendorList = vc2_constant.LIST.XML_VENDOR;
@@ -74,42 +72,6 @@ define(function (require) {
             if (!MAPPED_VENDORLIB[vendorName]) throw 'Missing vendor library for ' + vendorNames;
 
             return MAPPED_VENDORLIB[vendorName];
-        },
-        validateShipped: function (lineData) {
-            var logTitle = [LogTitle, 'Helper.isShipped'].join('::');
-
-            var isShipped = false;
-            var lineShipped = { is_shipped: true };
-
-            try {
-                if (lineData.is_shipped) return true; // its already shipped, based on status
-
-                if (!lineData.ship_date || lineData.ship_date == 'NA') throw 'Missing ship_date';
-
-                var shippedDate = moment(lineData.ship_date).toDate();
-
-                if (!util.isDate(shippedDate)) throw 'Invalid or unrecognized shipped date format';
-
-                if (vc2_util.isEmpty(lineData.ship_qty) || lineData.ship_qty == 0)
-                    throw 'No shipped quantity declared';
-
-                if (vc2_util.isEmpty(lineData.unitprice) || lineData.unitprice == 0)
-                    throw 'Skipped: Zero unit price';
-
-                if (shippedDate > new Date()) throw 'Not yet shipped date';
-
-                isShipped = true;
-            } catch (error) {
-                vc2_util.logError(logTitle, 'NOT SHIPPED: ' + error);
-
-                lineShipped.is_shipped = false;
-                lineShipped.NOTSHIPPED = vc2_util.extractError(error);
-            } finally {
-                util.extend(lineData, lineShipped);
-                vc2_util.log(logTitle, '/// SHIPPED? ', [lineShipped, lineData]);
-            }
-
-            return isShipped;
         }
     };
 
@@ -136,29 +98,17 @@ define(function (require) {
             // get the Vendor Library
             var vendorLib = Helper.getVendorLibrary(ConfigRec);
 
-            var response = option.showLines
-                ? vendorLib.process({
-                      poNum: poNum,
-                      orderConfig: ConfigRec
-                  })
-                : vendorLib.processRequest({
-                      poNum: poNum,
-                      orderConfig: ConfigRec
-                  });
-
-            if (option.showLines && !vc2_util.isEmpty(response.Lines)) {
-                response.Lines.forEach(function (lineData, lineIdx) {
-                    vc2_util.log(logTitle, '....', lineData);
-                    lineData = Helper.validateShipped(lineData);
-                });
-            }
-
+            var response = vendorLib.processRequest({
+                poNum: poNum,
+                orderConfig: ConfigRec
+            });
             vc2_util.log(logTitle, '/// response: ', response);
 
             return response;
         },
+
         orderStatus: function (option) {
-            var logTitle = [LogTitle, 'orderStatus'].join(':'),
+            var logTitle = [LogTitle, 'OrderStatusDebug'].join(':'),
                 returnValue = {};
 
             var poNum = option.poNum || option.tranid,
@@ -179,16 +129,12 @@ define(function (require) {
                 // get the Vendor Library
                 var vendorLib = Helper.getVendorLibrary(ConfigRec);
 
-                var arrLineData = vendorLib.process({
+                var response = vendorLib.process({
                     poNum: poNum,
                     poId: poId,
                     orderConfig: ConfigRec
                 });
-
-                // check for
-                arrLineData.map(Helper.validateShipped);
-
-                returnValue.itemArray = arrLineData;
+                vc2_util.log(logTitle, '/// response: ', response);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 var errorMsg = vc2_util.extractError(error);
