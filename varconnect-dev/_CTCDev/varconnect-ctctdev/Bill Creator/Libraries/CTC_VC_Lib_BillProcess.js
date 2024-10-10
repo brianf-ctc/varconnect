@@ -717,19 +717,30 @@ define([
             /////////// EVAL /////////////
 
             if (!vc2_util.isEmpty(Current.PO.REC)) {
-                var isTrulyFullyBilled = true,
+                var isTrulyFullyBilled = true, // if all of the items are billed
                     isBillable = true;
                 Current.BILLFILE.LINES.forEach(function (vendorLine) {
-                    vc2_util.log(logTitle, '.. qty check: ', {
-                        qty: vendorLine.quantity,
-                        applied: vendorLine.APPLIEDQTY,
-                        avail: vendorLine.AVAILQTY,
-                        orderBLD: vendorLine.OrderLine.QTYBILLED,
-                        orderBLE: vendorLine.OrderLine.BILLABLE
-                    });
+                    // vc2_util.log(logTitle, '.. qty check: ', {
+                    //     qty: vendorLine.quantity,
+                    //     applied: vendorLine.APPLIEDQTY,
+                    //     avail: vendorLine.AVAILQTY,
+                    //     orderBLD: vendorLine.OrderLine.QTYBILLED,
+                    //     orderBLE: vendorLine.OrderLine.BILLABLE
+                    // });
 
-                    if (vendorLine.OrderLine.BILLABLE) isTrulyFullyBilled = false;
-                    if (!vendorLine.OrderLine.AVAILQTY) isBillable = false;
+                    // if (vendorLine.OrderLine.BILLABLE || vendorLine.OrderLine.RECEIVABLE)
+                    //     isTrulyFullyBilled = false;
+
+                    // 20
+                    // 10 | 0 | 0 = NOT BILLABLE - NOT BILLED
+                    // 10 | 10 | 0 = BILLABLE  - NOT BILLED
+                    // 10 | 10 | 10 = NOT BILLABLE - BILLED
+
+                    if (vendorLine.quantity >= vendorLine.OrderLine.QTYBILLED)
+                        isTrulyFullyBilled = false;
+
+                    // if (vendorLine.OrderLine.BILLABLE) isTrulyFullyBilled = false;
+                    // if (!vendorLine.OrderLine.AVAILQTY) isBillable = false;
                 });
                 if (isTrulyFullyBilled) Current.STATUS.IsFullyBilled = true;
                 if (isBillable) Current.STATUS.IsBillable = true;
