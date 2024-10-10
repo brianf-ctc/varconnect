@@ -111,20 +111,12 @@ define(function (require) {
                 });
 
                 returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
-
-                vc2_util.log('## NS CACHE (fetch) ##', '// CACHE fetch: ', [
-                    cacheName,
-                    cacheKey,
-                    (returnValue || '').length,
-                    cacheTTL
-                ]);
-
                 if (option.isJSON && returnValue) returnValue = vc2_util.safeParse(returnValue);
+
+                vc2_util.log('## NS CACHE ##', '// CACHE fetch: ', [cacheName, cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('getNSCache', error);
                 returnValue = null;
-                // } finally {
-                //     vc2_util.log('## NS CACHE (fetch) ##', '// CACHE fetch: ', returnValue);
             }
 
             return returnValue;
@@ -147,11 +139,11 @@ define(function (require) {
                 });
                 cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
 
-                vc2_util.log('## NS CACHE (stored) ##', '// CACHE saved: ', [
-                    cacheKey,
-                    (cacheValue ? cacheValue.toString() : '').length,
-                    cacheTTL
-                ]);
+                // vc2_util.log('## NS CACHE ##', '// CACHE stored: ', [
+                //     cacheName,
+                //     cacheKey,
+                //     cacheTTL
+                // ]);
             } catch (error) {
                 vc2_util.logError('setNSCache', error);
             }
@@ -170,7 +162,7 @@ define(function (require) {
                 });
                 cacheObj.remove({ key: cacheKey });
 
-                vc2_util.log('## NS CACHE (delete) ##', '// CACHE removed : ', [
+                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
                     cacheName,
                     cacheKey,
                     cacheTTL
@@ -290,6 +282,7 @@ define(function (require) {
         getNodeContent: function (node) {
             var returnValue;
             if (node && node.length) returnValue = node.shift().textContent;
+
             return returnValue;
         },
         loadModule: function (mod) {
