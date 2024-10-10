@@ -1168,6 +1168,12 @@ define(function (require) {
 
             vc2_util.log(logTitle, msgObj, msgVar);
             return;
+        },
+        dumpLog: function (logTitle, dumpObj, prefix) {
+            for (var fld in dumpObj) {
+                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
+            }
+            return;
         }
     });
 

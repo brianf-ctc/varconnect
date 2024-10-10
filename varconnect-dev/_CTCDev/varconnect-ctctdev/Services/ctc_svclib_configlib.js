@@ -308,7 +308,7 @@ define(function (require) {
             };
             if (vc2_util.isOneWorld()) lookupOption.columns.push('subsidiary');
             var result = vc2_util.flatLookup(lookupOption);
-            vc2_util.log('Helper.fetchVendorFromPO', '// PO Data: ', result);
+            // vc2_util.log('Helper.fetchVendorFromPO', '// PO Data: ', result);
 
             return result;
         },
@@ -342,7 +342,7 @@ define(function (require) {
                     return true;
                 });
 
-            vc2_util.log('Helper.fetchVendorData', '// Vendor Data: ', result);
+            // vc2_util.log('Helper.fetchVendorData', '// Vendor Data: ', result);
 
             return result;
         }
@@ -403,7 +403,7 @@ define(function (require) {
 
             returnValue = mainConfigData;
 
-            vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
 
             return returnValue;
         },
@@ -519,7 +519,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
             return returnValue;
         },
         billVendorConfig: function (option) {
@@ -633,7 +633,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
 
             return returnValue;
         },
@@ -738,7 +738,7 @@ define(function (require) {
             }
             ///
 
-            vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
+            // vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
             return returnValue;
         },
         validateLicense: function (option) {

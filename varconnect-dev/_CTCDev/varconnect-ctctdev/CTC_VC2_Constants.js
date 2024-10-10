@@ -412,7 +412,54 @@ define(function (require) {
         SENDPOVND_CONFIG: {
             id: SendPOVndCFG.FIELD.ID,
             vendor: SendPOVndCFG.FIELD.VENDOR,
-            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY
+            subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY,
+            xmlVendor: SendPOVndCFG.FIELD.XML_VENDOR,
+            vendor: SendPOVndCFG.FIELD.VENDOR,
+            eventType: SendPOVndCFG.FIELD.EVENT_TYPE,
+            testRequest: SendPOVndCFG.FIELD.TEST_REQUEST,
+            isSpecialItem: SendPOVndCFG.FIELD.IS_SPECIAL_ITEM_NAME,
+            webserviceEndpoint: SendPOVndCFG.FIELD.WEBSERVICE_ENDPOINT,
+            accessEndPoint: SendPOVndCFG.FIELD.ACCESS_ENDPOINT,
+            oAuthScope: SendPOVndCFG.FIELD.OAUTH_SCOPE,
+            subscriptionKey: SendPOVndCFG.FIELD.SUBSCRIPTION_KEY,
+            username: SendPOVndCFG.FIELD.USERNAME,
+            password: SendPOVndCFG.FIELD.PASSWORD,
+            customerNo: SendPOVndCFG.FIELD.CUSTOMER_NO,
+            apiKey: SendPOVndCFG.FIELD.API_KEY,
+            apiSecret: SendPOVndCFG.FIELD.API_SECRET,
+            fieldMap: SendPOVndCFG.FIELD.FIELD_MAP,
+            qaWebserviceURL: SendPOVndCFG.FIELD.QA_WEBSERVICE_ENDPOINT,
+            qaAccessURL: SendPOVndCFG.FIELD.QA_ACCESS_ENDPOINT,
+            qaApiKey: SendPOVndCFG.FIELD.QA_API_KEY,
+            qaOAuthScope: SendPOVndCFG.FIELD.QA_OAUTH_SCOPE,
+            qaApiSecret: SendPOVndCFG.FIELD.QA_API_SECRET,
+            qaSubscriptionKey: SendPOVndCFG.FIELD.QA_SUBSCRIPTION_KEY,
+            poNumField: SendPOVndCFG.FIELD.PONUM_FIELD,
+            itemColumn: SendPOVndCFG.FIELD.ITEM_COLUMN,
+            quoteColumn: SendPOVndCFG.FIELD.QUOTE_COLUMN,
+            memoField: SendPOVndCFG.FIELD.MEMO_FIELD,
+            shipContactField: SendPOVndCFG.FIELD.SHIP_CONTACT_FIELD,
+            shipEmailField: SendPOVndCFG.FIELD.SHIP_EMAIL_FIELD,
+            shipPhoneField: SendPOVndCFG.FIELD.SHIP_PHONE_FIELD,
+            enableAddDetails: SendPOVndCFG.FIELD.ENABLE_ADD_VENDOR_DETAILS,
+            additionalFields: SendPOVndCFG.FIELD.ADDITIONAL_PO_FIELDS,
+            addDetailsOnSubmit: SendPOVndCFG.FIELD.ADD_DETAILS_ON_SUBMIT,
+            poLineColumns: SendPOVndCFG.FIELD.PO_LINE_COLUMNS,
+            billId: SendPOVndCFG.FIELD.BILL_ID,
+            billAddressee: SendPOVndCFG.FIELD.BILL_ADDRESSEE,
+            billAttention: SendPOVndCFG.FIELD.BILL_ATTENTION,
+            billEmail: SendPOVndCFG.FIELD.BILL_EMAIL,
+            billPhoneNo: SendPOVndCFG.FIELD.BILL_PHONENO,
+            billAddress1: SendPOVndCFG.FIELD.BILL_ADDRESS_1,
+            billAddress2: SendPOVndCFG.FIELD.BILL_ADDRESS_2,
+            billCity: SendPOVndCFG.FIELD.BILL_CITY,
+            billState: SendPOVndCFG.FIELD.BILL_STATE,
+            billZip: SendPOVndCFG.FIELD.BILL_ZIP,
+            billCountry: SendPOVndCFG.FIELD.BILL_COUNTRY,
+            paymentMean: SendPOVndCFG.FIELD.PAYMENT_MEAN,
+            paymentOther: SendPOVndCFG.FIELD.PAYMENT_OTHER,
+            paymentTerm: SendPOVndCFG.FIELD.PAYMENT_TERM,
+            businessUnit: SendPOVndCFG.FIELD.BUSINESS_UNIT
         }
     };
 
@@ -638,6 +685,24 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
+        MISSING_POLINK: {
+            code: 'MISSING_POLINK',
+            msg: 'PO Link not found',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        MISSING_BILL_LINES: {
+            code: 'MISSING_BILL_LINES',
+            msg: 'Missing bill file lines',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        INCOMPLETE_BILLFILE: {
+            code: 'INCOMPLETE_BILLFILE',
+            msg: 'Incomplete bill file data',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
@@ -662,6 +727,13 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        
+        ITEM_NOT_BILLABLE: {
+            code: 'ITEM_NOT_BILLABLE',
+            msg: 'Item is not billable',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         MISSING_ITEMNO: {
             code: 'MISSING_ITEMNO',
             msg: 'Missing Item on Bill',
@@ -674,7 +746,6 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -714,13 +785,13 @@ define(function (require) {
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
             msg: 'Variance Total exceeded threshold',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
         },
         BILL_CREATE_DISABLED: {
@@ -765,7 +836,7 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240826.01';
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240930';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',

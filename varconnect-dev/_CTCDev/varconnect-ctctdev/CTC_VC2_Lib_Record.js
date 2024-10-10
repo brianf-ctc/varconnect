@@ -35,7 +35,7 @@ define(function (require) {
                 if (!option.fromId) throw 'Record fromId is required. [fromId]';
                 if (!option.toType) throw 'Record toType is required. [toType]';
 
-                // log.audit(logTitle, '// TRANSFORM: ' + JSON.stringify(option));
+                log.audit(logTitle, '// TRANSFORM: ' + JSON.stringify(option));
 
                 returnValue = ns_record.transform(option);
             } catch (error) {
@@ -56,7 +56,7 @@ define(function (require) {
                 if (!option.type) throw 'Record type is required. [type]';
                 if (!option.id) throw 'Record ID is required. [id]';
 
-                // log.audit(logTitle, '// LOAD RECORD: ' + JSON.stringify(option));
+                log.audit(logTitle, '// LOAD RECORD: ' + JSON.stringify(option));
                 returnValue = ns_record.load(option);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
@@ -68,6 +68,30 @@ define(function (require) {
                 //     'Unable to load record: ' +
                 //     (vc_util.extractError(error) + '\n' + JSON.stringify(error))
                 // );
+            }
+
+            return returnValue;
+        },
+        setRecordValue: function (option) {
+            var logTitle = [LogTitle, 'setRecordValue'].join('::'),
+                returnValue;
+
+            try {
+                if (!option.record) throw 'Record is required';
+                if (!option.fieldId) throw 'Field ID is required';
+
+                vc2_util.log(logTitle, '## set field value: ', [option.fieldId, option.value]);
+
+                option.record.setValue({
+                    fieldId: option.fieldId,
+                    value: option.value
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw ns_error.create({
+                    name: 'Unable to set the record field',
+                    message: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
@@ -345,7 +369,7 @@ define(function (require) {
                         columns: columns
                     });
                     lineData.line = line;
-                    vc2_util.log(logTitle, '... line data: ', lineData);
+                    // vc2_util.log(logTitle, '... line data: ', lineData);
 
                     if (!vc2_util.inArray(lineData.item, uniqueItemIds)) {
                         uniqueItemIds.push(lineData.item);
@@ -389,7 +413,7 @@ define(function (require) {
                     item: uniqueItemIds
                 });
 
-                returnValue.forEach(function (lineData) {
+                (returnValue || []).forEach(function (lineData) {
                     if (lineData && lineData.item) {
                         lineData = VC2_RecordLib.getAltPartNumValues({
                             source: altItemNames,
@@ -977,7 +1001,7 @@ define(function (require) {
                 Current.MainCFG || option.mainConfig || vcs_configLib.mainConfig() || {};
             Current.OrderCFG = Current.OrderCFG || option.orderConfig || {};
 
-            vc2_util.log(logTitle, '### Option: ', option);
+            // vc2_util.log(logTitle, '### Option: ', option);
 
             var field = {
                     altNames: option.source,
@@ -997,10 +1021,10 @@ define(function (require) {
                 },
                 lineData = option.target;
 
-            vc2_util.log(logTitle, '... field settings / linevalues: ', {
-                field: field,
-                lineData: lineData
-            });
+            // vc2_util.log(logTitle, '... field settings / linevalues: ', {
+            //     field: field,
+            //     lineData: lineData
+            // });
 
             if (field.altNames && field.altNames[lineData.item]) {
                 if (field.altNames._sku) {
@@ -1035,8 +1059,7 @@ define(function (require) {
                 }
             }
 
-
-            vc2_util.log(logTitle, '### Return: ', lineData);
+            // vc2_util.log(logTitle, '### Return: ', lineData);
 
             return lineData;
         }
@@ -1052,6 +1075,8 @@ define(function (require) {
                 var arrOrderLines = option.orderLines,
                     arrVendorLines = option.vendorLines,
                     includeZeroQtyLines = option.includeZeroQtyLines || false,
+                    includeBilledQty = option.includeUnbilledQty || false,
+                    includeFullyMatched = option.includeFullyMatched || false,
                     orderRecord = option.record || option.recOrder;
 
                 if (vc2_util.isEmpty(arrOrderLines)) {
@@ -1059,7 +1084,7 @@ define(function (require) {
 
                     arrOrderLines = VC2_RecordLib.extractRecordLines({
                         record: orderRecord,
-                        columns: ['item', 'quantity', 'rate'],
+                        columns: ['item', 'quantity', 'rate', 'quantityreceived', 'quantitybilled'],
                         findAll: true
                     });
                 }
@@ -1072,7 +1097,15 @@ define(function (require) {
                     orderLine.rate = vc2_util.forceFloat(orderLine.rate);
 
                     orderLine.AVAILQTY = orderLine.quantity;
+                    orderLine.FULLQTY = orderLine.quantity;
                     orderLine.APPLIEDQTY = 0;
+
+                    if (includeBilledQty) {
+                        orderLine.quantityreceived = vc2_util.forceInt(orderLine.quantityreceived);
+                        orderLine.quantitybilled = vc2_util.forceInt(orderLine.quantitybilled);
+                        orderLine.AVAILQTY = orderLine.quantityreceived - orderLine.quantitybilled;
+                    }
+
                     return true;
                 });
                 arrVendorLines.forEach(function (vendorLine) {
@@ -1086,13 +1119,6 @@ define(function (require) {
 
                 /// START the loop
                 var arrOutputLines = [];
-                // vc2_util.log(logTitle, '**** MATCHING ITEMS START **** ', {
-                //     orderLines: arrOrderLines,
-                //     vendorLines: arrVendorLines
-                //     // totalOrderLines: arrOrderLines.length,
-                //     // totalVendorLines: arrVendorLines.length
-                // });
-
                 arrVendorLines.forEach(function (vendorLine) {
                     try {
                         // look for required cols
@@ -1221,6 +1247,8 @@ define(function (require) {
                                 []
                         };
 
+                        vc2_util.dumpLog(logTitle, matchingOrderLines, 'Matching Lines: ');
+
                         // try to distribute the AVAILQTY
                         var fnQuantityDist = function (matchedOrderLine) {
                             try {
@@ -1252,6 +1280,8 @@ define(function (require) {
                         matchingOrderLines.itemRate.forEach(fnQuantityDist);
                         matchingOrderLines.itemQty.forEach(fnQuantityDist);
                         matchingOrderLines.itemOnly.forEach(fnQuantityDist);
+
+                        // vendorLine.MATCHED_LINES = matchingOrderLines;
                     } catch (match_error) {
                         vc2_util.logError(logTitle, match_error);
                     } finally {

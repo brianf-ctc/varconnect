@@ -145,8 +145,15 @@ define([
                     }
                 });
 
-                // searchOption.filters.push('AND');
-                searchOption.filters = ['internalid', 'anyof', ScriptParam.billFileID];
+                searchOption.filters = [
+                    ['isinactive', 'is', 'F'],
+                    'AND',
+                    [BILLFILE_FLD.PO_LINK, 'noneof', '@NONE@'],
+                    'AND',
+                    [BILLFILE_FLD.PO_LINK + '.mainline', 'is', 'T'],
+                    'AND',
+                    ['internalid', 'anyof', ScriptParam.billFileID]
+                ];
             }
             log.debug(logTitle, '>> searchOption: ' + JSON.stringify(searchOption));
 
@@ -185,87 +192,61 @@ define([
                 try {
                     vc_billprocess.resetValues();
 
-                    var isFullyBilled = vc2_util.inArray(
-                        currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].value,
-                        ['fullyBilled', 'closed']
-                    );
-
-                    if (isFullyBilled) {
-                        return util.extend(ReturnObj, BILL_CREATOR.Code.FULLY_BILLED);
-                    }
-
-                    vc_billprocess.loadBillFile({ id: currentValues.id });
-                    var BillFileData = vc_billprocess.FlexData.BillFile;
-                    vc2_util.log(logTitle, '... bill file data: ', BillFileData);
-
-                    if (vc_billprocess.FlexData.HasErrors) {
-                        return util.extend(
-                            ReturnObj,
-                            vc_billprocess.reportError() || { msg: 'Unexpected Error occurred.' }
-                        );
-                    }
-
                     util.extend(CurrentData, {
-                        PO_ID: currentValues.values[BILLFILE_FLD.PO_LINK].value,
-                        entity: currentValues.values['entity.' + BILLFILE_FLD.PO_LINK].value,
-                        poStatus: currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK],
                         billFileId: currentValues.id,
-                        billFile: BillFileData,
-                        billData: JSON.parse(BillFileData.JSON),
-                        isBillReceivable: BillFileData.IS_RCVBLE
+                        PO_ID: currentValues.values[BILLFILE_FLD.PO_LINK].value,
+                        PO_Status: currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].value,
+                        PO_StatusText:
+                            currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].text,
+                        PO_Vendor: currentValues.values['entity.' + BILLFILE_FLD.PO_LINK].value,
+                        IsFullyBilled: vc2_util.inArray(
+                            currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].value,
+                            ['fullyBilled', 'closed']
+                        ),
+                        IsOrderReceivable: vc2_util.inArray(
+                            currentValues.values['statusref.' + BILLFILE_FLD.PO_LINK].value,
+                            ['pendingReceipt', 'partiallyReceived', 'pendingBillPartReceived']
+                        )
                     });
-
                     vc2_util.LogPrefix = '[purchaseorder:' + CurrentData.PO_ID + ' ]';
-                    util.extend(CurrentData, {
-                        isOrderReceivable: vc2_util.inArray(CurrentData.poStatus.value, [
-                            'pendingReceipt',
-                            'partiallyReceived',
-                            'pendingBillPartReceived'
-                        ])
-                    });
-                    vc2_util.log(logTitle, '... CurrentData: ', CurrentData);
 
+                    vc2_util.log(logTitle, '## Current Data: ', CurrentData);
+
+                    // Fully Billed POs
+                    if (CurrentData.IsFullyBilled)
+                        return util.extend(ReturnObj, BILL_CREATOR.Code.FULLY_BILLED);
+
+                    //// LOAD the bill file
+                    vc_billprocess.loadBillFile({ billFileId: CurrentData.billFileId });
+                    var BILLPROC = vc_billprocess.Flex;
+                    var BillFileData = BILLPROC.BILLFILE.DATA;
+
+                    util.extend(CurrentData, {
+                        IsBillReceivable: !!BillFileData.IS_RCVBLE
+                    });
+                    vc2_util.log(logTitle, '// Current Data: ', CurrentData);
+
+                    // load the config
                     var BillCFG = vcs_configLib.billVendorConfig({ poId: CurrentData.PO_ID });
 
-                    var statusNote = [
-                        'PO Status: ' + CurrentData.poStatus.text,
-                        'Bill File receivable? ' + JSON.stringify(CurrentData.isBillReceivable),
-                        'Fulfillment enabled? ' + JSON.stringify(BillCFG.enableFulfillment)
-                    ].join(' ');
-
+                    /// Send to Log
                     // add it to the VC Logs
                     vc2_util.vcLog({
                         title: 'Bill Creator | Process Bill',
                         recordId: CurrentData.PO_ID,
-                        message: statusNote
+                        message: [
+                            'PO Status: ' + CurrentData.PO_StatusText,
+                            'Bill File receivable? ' + JSON.stringify(CurrentData.IsBillReceivable),
+                            'Fulfillment enabled? ' + JSON.stringify(BillCFG.enableFulfillment)
+                        ].join(' ')
                     });
-
-                    /// check for existing bill
-                    var arrExistingBills = Helper.getExistingBill({
-                        entity: CurrentData.entity,
-                        invoiceNo: CurrentData.billData.invoice
-                    });
-                    vc2_util.log(logTitle, '... existing bills? ', arrExistingBills);
-
-                    /// BILL ALREADY EXISTS //////////////////////
-                    if (arrExistingBills && arrExistingBills.length) {
-                        ReturnObj = vc2_util.extend(BILL_CREATOR.Code.EXISTING_BILLS, {
-                            id: arrExistingBills[0].id,
-                            existingBills: JSON.stringify(arrExistingBills),
-                            details: [
-                                'Bill #' + arrExistingBills[0].tranId,
-                                ' (id:' + arrExistingBills[0].id + '). '
-                            ].join('')
-                        });
-                        return;
-                    }
 
                     /// ITEM FULFILLMENT  ///////////
                     var respItemff = {};
                     if (
                         BillCFG.enableFulfillment &&
-                        CurrentData.isBillReceivable &&
-                        CurrentData.isOrderReceivable
+                        CurrentData.IsBillReceivable &&
+                        CurrentData.IsOrderReceivable
                     ) {
                         respItemff = Helper.createItemFulfillment({
                             currentData: currentValues,
@@ -284,11 +265,13 @@ define([
                     // get any updated values from the record
                     var billCreateReqBody = util.extend(
                         vc2_util.extractValues({
-                            source: CurrentData.billFile,
+                            source: BILLPROC.BILLFILE.DATA,
                             params: ['ID', 'PO_LINK', 'PROC_VARIANCE', 'IS_RCVBLE']
                         }),
                         {
-                            paramBillInAdv: ScriptParam.billInAdv
+                            paramBillInAdv: ScriptParam.billInAdv,
+                            entity: CurrentData.PO_Vendor,
+                            invoiceNo: BILLPROC.BILLFILE.JSON.invoice
                         }
                     );
                     vc2_util.log(logTitle, '... bill create req: ', billCreateReqBody);
@@ -436,7 +419,7 @@ define([
         loadVendorConfig: function (option) {
             var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
                 returnValue;
-            var entityId = option.entity;
+            var entityId = option.PO_Vendor;
             var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
 
             try {
@@ -597,7 +580,7 @@ define([
                 filters: [
                     ['type', 'anyof', 'VendBill'],
                     'AND',
-                    ['mainname', 'anyof', option.entity],
+                    ['mainname', 'anyof', option.PO_Vendor],
                     'AND',
                     ['numbertext', 'is', option.invoiceNo],
                     'AND',
