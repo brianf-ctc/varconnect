@@ -18,11 +18,11 @@
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
  */
-define([
-    './../CTC_VC2_Lib_Utils.js',
-    './../CTC_VC2_Constants.js',
-    './moment'
-], function (vc2_util, vc2_constant, moment) {
+define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], function (
+    vc2_util,
+    vc2_constant,
+    moment
+) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;

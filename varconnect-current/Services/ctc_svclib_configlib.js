@@ -159,8 +159,7 @@ define(function (require) {
         SENDPO: 'SENDPOVENDOR_CONFIG'
     };
 
-
-    //// CONFIG LIB //// 
+    //// CONFIG LIB ////
     var ConfigLib = {
         ConfigType: ListConfigType.MAIN,
         CacheKey: null,

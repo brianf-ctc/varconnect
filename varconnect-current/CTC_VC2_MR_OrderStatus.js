@@ -23,14 +23,11 @@ define((require) => {
     var MAP_REDUCE = {};
 
     MAP_REDUCE.getInputData = () => {
-        var logTitle = [LogTitle, 'getInputData'], 
+        var logTitle = [LogTitle, 'getInputData'],
             returnValue;
 
         try {
-
-        } catch (error) {
-
-        }
+        } catch (error) {}
 
         return returnValue;
     };

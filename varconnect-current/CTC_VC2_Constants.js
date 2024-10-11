@@ -685,6 +685,24 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
+        MISSING_POLINK: {
+            code: 'MISSING_POLINK',
+            msg: 'PO Link not found',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        MISSING_BILL_LINES: {
+            code: 'MISSING_BILL_LINES',
+            msg: 'Missing bill file lines',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        INCOMPLETE_BILLFILE: {
+            code: 'INCOMPLETE_BILLFILE',
+            msg: 'Incomplete bill file data',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
@@ -709,6 +727,13 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        
+        ITEM_NOT_BILLABLE: {
+            code: 'ITEM_NOT_BILLABLE',
+            msg: 'Item is not billable',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         MISSING_ITEMNO: {
             code: 'MISSING_ITEMNO',
             msg: 'Missing Item on Bill',
@@ -721,7 +746,6 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -761,13 +785,13 @@ define(function (require) {
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
             msg: 'Variance Total exceeded threshold',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
         },
         BILL_CREATE_DISABLED: {
@@ -793,8 +817,12 @@ define(function (require) {
     VC2_CONSTANT.Bill_Creator = Bill_Creator;
 
     VC2_CONSTANT.GLOBAL = {
-        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
-        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),
+        ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({
+            feature: 'subsidiaries'
+        }),
+        PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
+            feature: 'pickpackship'
+        }),
         DATE_FORMAT: 'YYYY-MM-DD',
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
@@ -808,16 +836,13 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_2024081205';
-    VC2_CONSTANT.CACHE_TTL = 60 * 60 * 12;
-
+    VC2_CONSTANT.CACHE_NAME = 'VC_20240930';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
-        SENDPOVENDOR_CONFIG: 'VC_SENDPOVND_CONFIG',
-        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
+                SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 
@@ -825,9 +850,9 @@ define(function (require) {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
         PRODUCT_CODE: 2,
         MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY.20240812.02',
+        KEY: 'LICENSE_KEY.20240626',
         CACHE_NAME: VC2_CONSTANT.CACHE_NAME, //'VC_LICENSE',
-        CACHE_TTL: 60 * 60 // 24 hrs
+        CACHE_TTL: 86400 // 24 hrs
     };
 
     VC2_CONSTANT.FIELD_TO_SEARCH_COLUMN_MAP = {

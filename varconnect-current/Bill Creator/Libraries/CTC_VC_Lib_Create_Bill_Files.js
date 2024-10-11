@@ -375,23 +375,16 @@ define([
             var logTitle = [LogTitle, 'searchBillFile'].join('::'),
                 returnValue;
 
-            // existing bill files that is not yet processed
-
-
-            if (option && option.invoice) {
+            if (option && option.date && option.invoice) {
                 var parsedDate = parseDate({ dateString: option.date });
                 var searchObj = ns_search.create({
                     type: 'customrecord_ctc_vc_bills',
                     filters: [
-                        ['isinactive', 'is', 'F'],
+                        ['custrecord_ctc_vc_bill_number', 'is', option.invoice],
                         'AND',
-                        ['custrecord_ctc_vc_bill_number', 'is', option.invoice]
-                        // 'AND',
-                        // [
-                        //     ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
-                        //     'OR',
-                        //     ['custrecord_ctc_vc_bill_date', 'noton', parsedDate]
-                        // ]
+                        ['custrecord_ctc_vc_bill_date', 'on', parsedDate],
+                        'AND',
+                        ['isinactive', 'is', 'F']
                     ],
                     columns: ['id']
                 });

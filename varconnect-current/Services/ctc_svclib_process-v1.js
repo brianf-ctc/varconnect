@@ -138,8 +138,6 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
             // required params
             var txnId = option.txnid || option.po_id || option.poId;
 
-
-
             return returnValue;
         }
     };

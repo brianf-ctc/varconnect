@@ -92,8 +92,7 @@ define((require) => {
             }
             return returnValue;
         },
-        success: (option) => {            
-        },
+        success: (option) => {},
         error: (option) => {},
         debug: (option) => {}
     };

@@ -919,8 +919,6 @@ define(function (require) {
                         id: Current.recordId,
                         configType: vcs_configLib.ConfigType.BILL
                     });
-
-
                 } catch (error) {
                     log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                     return;
@@ -978,7 +976,9 @@ define(function (require) {
                         configType: vcs_configLib.ConfigType.SENDPO
                     });
 
-                    vcs_configLib.removeConfigCache({ configType: vcs_configLib.ConfigType.SENDPO });
+                    vcs_configLib.removeConfigCache({
+                        configType: vcs_configLib.ConfigType.SENDPO
+                    });
                 } catch (error) {
                     log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                     return;

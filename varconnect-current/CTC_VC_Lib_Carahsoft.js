@@ -12,7 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/url', './../CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_util, ns_search) {
+define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_util, ns_search) {
     var EntryPoint = {};
     EntryPoint.process = function (option) {
         var LogTitle = ['CTC_VC_Lib_Carahsoft', 'process'].join('::');

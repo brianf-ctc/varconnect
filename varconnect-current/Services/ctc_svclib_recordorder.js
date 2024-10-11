@@ -19,7 +19,6 @@ define((require) => {
         lib_util = require('lib/ctc_lib_utils'),
         lib_constant = require('lib/ctc_lib_constants');
 
-
     return {
         /**
          *  Attempts to match the given item to the vendorLine
@@ -40,15 +39,13 @@ define((require) => {
         updateOrder: (option) => {},
 
         createFulfillment: (option) => {},
-        createItemReceipt: (option) => {}, 
-
+        createItemReceipt: (option) => {},
 
         // search open POs
         searchOpenOrders: function (option) {
             // auto-skip ByPass
+        }
 
-        },
-
-        // 
+        //
     };
 });

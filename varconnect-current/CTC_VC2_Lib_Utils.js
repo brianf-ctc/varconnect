@@ -23,7 +23,7 @@ define(function (require) {
         // momentLib = require('./Bill Creator/Libraries/moment'),
         ns_xml = null,
         ns_url = null,
-        vc2_constant = require('./CTC_VC2_Constants.js');
+        vc2_constant = require('../CTC_VC2_Constants.js');
 
     var ns_xml, ns_url;
     var LogTitle = 'VC2_UTILS',
@@ -1165,6 +1165,12 @@ define(function (require) {
             msgObj.type = 'debug';
 
             vc2_util.log(logTitle, msgObj, msgVar);
+            return;
+        },
+        dumpLog: function (logTitle, dumpObj, prefix) {
+            for (var fld in dumpObj) {
+                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
+            }
             return;
         }
     });

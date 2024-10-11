@@ -17,7 +17,7 @@
  * Script Name: CTC_VC_Lib_Arrow
  * Author: john.ramonel
  */
-define(['./../CTC_VC2_Lib_Utils.js', './moment'], function (vc2_util, moment) {
+define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (vc2_util, moment) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',

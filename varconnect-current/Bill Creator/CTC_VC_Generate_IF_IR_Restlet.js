@@ -126,7 +126,7 @@ define([
                     vc2_util.log(logTitle, '// SO Data: ', Current.SO_DATA);
                 }
 
-                // if (Current.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
+                if (Current.PO_DATA.dropshipso == '') throw 'Not a Drop Ship Order';
 
                 var MainCFG = vcs_configLib.mainConfig();
                 var BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId });

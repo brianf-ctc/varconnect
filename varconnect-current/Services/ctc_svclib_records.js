@@ -14,8 +14,8 @@
 define(function (require) {
     var LogTitle = 'SVC:Records';
 
-    var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('./../CTC_VC2_Constants.js');
+    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('../CTC_VC2_Constants.js');
 
     var ns_search = require('N/search'),
         ns_record = require('N/record');
@@ -201,6 +201,6 @@ define(function (require) {
             }
 
             return returnValue;
-        }, 
+        }
     };
 });

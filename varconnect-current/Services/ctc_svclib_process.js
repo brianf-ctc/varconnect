@@ -18,7 +18,5 @@ define(function (require) {
     var vc_util = require('lib/ctc_util.js'),
         vc_constant = require('lib/ctc_vc_global.js');
 
-    return {
-        
-    };
+    return {};
 });
