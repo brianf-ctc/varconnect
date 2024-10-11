@@ -12,30 +12,24 @@
  * @NModuleScope Public
  * @NScriptType UserEventScript
  */
-define([
-    'N/runtime',
-    'N/record',
-    'N/task',
-    'N/redirect',
-    'N/search',
-    'N/url',
-    './CTC_VC2_Lib_EventRouter',
-    './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants',
-    './Services/ctc_svclib_configlib'
-], function (
-    ns_runtime,
-    ns_record,
-    ns_task,
-    ns_redirect,
-    ns_search,
-    ns_url,
-    EventRouter,
-    vc2_util,
-    vc2_constant,
-    vcs_configLib
-) {
-    var LogTitle = 'VC:BILLFILE';
+define(function (require) {
+    var LogTitle = 'VC:EVENTHLPR';
+
+    var ns_runtime = require('N/runtime'),
+        ns_record = require('N/record'),
+        ns_search = require('N/search'),
+        ns_task = require('N/task'),
+        ns_redirect = require('N/redirect'),
+        ns_url = require('N/url');
+
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_constant = require('./CTC_VC2_Constants'),
+        vc_record = require('./CTC_VC_Lib_Record'),
+        vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig'),
+        EventRouter = require('./CTC_VC2_Lib_EventRouter'),
+        vcs_configLib = require('./Services/ctc_svclib_configlib');
+
+    var MainCFG, OrderCFG, BillCFG, SendPOCFG;
 
     var Helper = {
         hideFields: function (form, arrFields) {
@@ -559,6 +553,462 @@ define([
         }
     };
 
+    // EVENT ACTIONS: PURCHASE ORDERS
+    EventRouter.Action[ns_record.Type.PURCHASE_ORDER] = [
+        // --- UPDATE THE VENDOR LINE INFO ---  //
+        {
+            onBeforeLoad: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.VIEW,
+                        scriptContext.UserEventType.EDIT
+                    ])
+                )
+                    return;
+
+                var currentRecord = scriptContext.newRecord,
+                    Form = scriptContext.form;
+
+                var lineCount = currentRecord.getLineCount({
+                        sublistId: 'item'
+                    }),
+                    hasVendorInfo = false;
+
+                var fldVendorScr = Form.addField({
+                        id: 'custpage_ctc_povendor_scr',
+                        label: 'Clear Vendor Info',
+                        type: 'inlinehtml'
+                    }),
+                    sublistItem = scriptContext.form.getSublist({
+                        id: 'item'
+                    });
+
+                var scriptVendorInfo = [
+                    '<script type="text/javascript">',
+                    'jQuery(document).ready(function () {',
+                    'var jq=jQuery;',
+                    'var fnVENDLINE=function(ln){',
+                    'var tr=jq.find("table#item_splits tr")[ln], ',
+                    'td=jq(tr).find("td[data-ns-tooltip=\'VENDOR LINE INFO\']")[0],',
+                    'sp=jq(td).find("span")[0];',
+                    'jq(sp).text("Details");',
+                    'jq(td).empty().append(sp);',
+                    '};'
+                ];
+
+                for (var line = 0; line < lineCount; line++) {
+                    var vendorInfoJSON = currentRecord.getSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'custcol_ctc_vc_vendor_info',
+                        line: line
+                    });
+                    if (!vendorInfoJSON) continue;
+                    hasVendorInfo = true;
+                    scriptVendorInfo.push(
+                        'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
+                    );
+                }
+                scriptVendorInfo.push('});</script>');
+                fldVendorScr.defaultValue = scriptVendorInfo.join('');
+
+                try {
+                    if (!hasVendorInfo || Current.eventType == scriptContext.UserEventType.EDIT)
+                        sublistItem
+                            .getField({ id: 'custcol_ctc_vc_vendor_info' })
+                            .updateDisplayType({ displayType: 'HIDDEN' });
+                } catch (eer) {
+                    vc2_util.logError(logTitle, eer);
+                }
+
+                return true;
+            },
+            onAfterSubmit: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.VIEW,
+                        scriptContext.UserEventType.EDIT
+                    ])
+                )
+                    return;
+
+                // delete the PO cache
+                vc2_util.deleteCacheList({ listName: vc2_constant.CACHE_KEY.PO_DATA });
+            }
+        },
+        // --- ADD THE VC ACTION BUTTONS --- //
+        {
+            onBeforeLoad: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.VIEW,
+                        scriptContext.UserEventType.EDIT
+                    ])
+                )
+                    return;
+
+                var Form = scriptContext.form;
+                MainCFG = vcs_configLib.mainConfig();
+                if (!MainCFG) return;
+
+                if (!MainCFG.overridePONum) {
+                    Helper.hideFields(Form, ['custbody_ctc_vc_override_ponum']);
+                }
+
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError)
+                    Helper.setVCBarNote({
+                        form: scriptContext.form,
+                        error: 'Your License is no longer valid or have expired. '
+                    });
+
+                /// BUTTONS: OrderStatus
+                OrderCFG = vcs_configLib.loadConfig({
+                    poId: Current.recordId,
+                    configType: vcs_configLib.ConfigType.ORDER
+                });
+                if (OrderCFG && OrderCFG.id) {
+                    Helper.addVCButton({
+                        form: scriptContext.form,
+                        id: 'btn_orderstatus',
+                        label: ' Process Order Status',
+                        action: EventRouter.addActionURL('actionOrderStatus')
+                    });
+
+                    var orderCFGUrl = ns_url.resolveRecord({
+                        recordType: vc2_constant.RECORD.VENDOR_CONFIG.ID,
+                        recordId: OrderCFG.id
+                    });
+                    Helper.addVCBarLink({
+                        form: scriptContext.form,
+                        label: 'Order Status Config',
+                        action: orderCFGUrl
+                    });
+                }
+
+                /// BUTTONS: Bill Create
+                BillCFG = vcs_configLib.loadConfig({
+                    poId: Current.recordId,
+                    configType: vcs_configLib.ConfigType.BILL
+                });
+
+                var CONNECT_TYPE = { API: 1, SFTP: 2 };
+                if (BillCFG && BillCFG.connectionType == CONNECT_TYPE.API) {
+                    Helper.addVCButton({
+                        form: scriptContext.form,
+                        id: 'btn_billsapi',
+                        label: 'Fetch Bill Files - API',
+                        action: EventRouter.addActionURL('actionGetBillsAPI')
+                    });
+
+                    var billCFGUrl = ns_url.resolveRecord({
+                        recordType: vc2_constant.RECORD.BILLCREATE_CONFIG.ID,
+                        recordId: BillCFG.id
+                    });
+                    Helper.addVCBarLink({
+                        form: scriptContext.form,
+                        label: 'Bill Vendor Config',
+                        action: billCFGUrl
+                    });
+                }
+
+                // /// BUTTONS: Send PO
+                SendPOCFG = vcs_configLib.loadConfig({
+                    poId: Current.recordId,
+                    configType: vcs_configLib.ConfigType.SENDPO
+                });
+                if (SendPOCFG && SendPOCFG.id) {
+                    var sendPOCfgUrl = ns_url.resolveRecord({
+                        recordType: vc2_constant.RECORD.SENDPOVENDOR_CONFIG.ID,
+                        recordId: SendPOCFG.id
+                    });
+                    Helper.addVCBarLink({
+                        form: scriptContext.form,
+                        label: 'Send PO Config',
+                        action: sendPOCfgUrl
+                    });
+                }
+
+                if (OrderCFG || BillCFG) Helper.addSerialSync(scriptContext.form);
+
+                return true;
+            }
+        }
+    ];
+
+    // EVENT ACTIONS: INVOICE
+    EventRouter.Action[ns_record.Type.INVOICE] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+            if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
+            Helper.addSerialSync(scriptContext.form);
+
+            return true;
+        }
+    };
+
+    // EVENT ACTIONS: SALES ORDER
+    EventRouter.Action[ns_record.Type.INVOICE] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+            if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
+            Helper.addSerialSync(scriptContext.form);
+
+            return true;
+        }
+    };
+
+    // EVENT ACTIONS: ITEM FULFILLMENT
+    EventRouter.Action[ns_record.Type.ITEM_FULFILLMENT] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+            if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+            if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW])) return;
+            Helper.addSerialSync(scriptContext.form);
+
+            return true;
+        }
+    };
+
+    // EVENT ACTIONS: VENDOR
+    EventRouter.Action[ns_record.Type.VENDOR] = {
+        onAfterSubmit: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+            try {
+                vc2_util.log(logTitle, '>> Current: ', Current);
+
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.EDIT,
+                        scriptContext.UserEventType.XEDIT
+                    ])
+                )
+                    return;
+
+                var cacheListName = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST';
+                var vendorCacheList = vc2_util.getNSCache({
+                    name: cacheListName,
+                    isJSON: true
+                });
+                vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
+
+                if (vendorCacheList && vendorCacheList.LIST)
+                    (vendorCacheList.LIST || []).forEach(function (cacheKey) {
+                        vc2_util.removeCache({ name: cacheKey });
+                    });
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        }
+    };
+
+    // EVENT ACTIONS: MAIN CONFIG RECORD
+    EventRouter.Action[vc2_constant.RECORD.MAIN_CONFIG.ID] = [
+        {
+            onBeforeLoad: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                try {
+                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                    vcs_configLib.mainConfig();
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                }
+                return true;
+            },
+            onAfterSubmit: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+
+                try {
+                    if (
+                        !vc2_util.inArray(Current.eventType, [
+                            scriptContext.UserEventType.EDIT,
+                            scriptContext.UserEventType.CREATE,
+                            scriptContext.UserEventType.XEDIT
+                        ])
+                    )
+                        return;
+
+                    vcs_configLib.sendConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.MAIN
+                    });
+                    vcs_configLib.removeConfigCache({ configType: vcs_configLib.ConfigType.MAIN });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                }
+
+                return true;
+            }
+        }
+    ];
+
+    // EVENT ACTIONS: VENDOR CONFIG
+    EventRouter.Action[vc2_constant.RECORD.VENDOR_CONFIG.ID] = [
+        {
+            onBeforeLoad: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                try {
+                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+
+                    vcs_configLib.loadConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.ORDER
+                    });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                }
+                return true;
+            },
+
+            onAfterSubmit: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+
+                try {
+                    vc2_util.log(logTitle, '>> Current: ', Current);
+                    if (
+                        !vc2_util.inArray(Current.eventType, [
+                            scriptContext.UserEventType.EDIT,
+                            scriptContext.UserEventType.CREATE,
+                            scriptContext.UserEventType.XEDIT
+                        ])
+                    )
+                        return;
+
+                    vcs_configLib.sendConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.ORDER
+                    });
+                    vcs_configLib.removeConfigCache({ configType: vcs_configLib.ConfigType.ORDER });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                    return;
+                }
+            }
+        }
+    ];
+
+    // EVENT ACTIONS: BILLCREATE CONFIG
+    EventRouter.Action[vc2_constant.RECORD.BILLCREATE_CONFIG.ID] = [
+        {
+            onBeforeLoad: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+                try {
+                    vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
+                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+                    Helper.hideFields(scriptContext.form, ['custrecord_vc_bc_maincfg']);
+
+                    if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                    Helper.displayAsInlineTextarea(scriptContext.form, [
+                        'custrecord_vc_bc_host_key'
+                    ]);
+
+                    vcs_configLib.loadConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.BILL
+                    });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                    return;
+                }
+            }
+        },
+        {
+            onAfterSubmit: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+                try {
+                    vc2_util.log(logTitle, '>> Current: ', Current);
+
+                    if (
+                        !vc2_util.inArray(Current.eventType, [
+                            scriptContext.UserEventType.EDIT,
+                            scriptContext.UserEventType.CREATE,
+                            scriptContext.UserEventType.XEDIT
+                        ])
+                    )
+                        return;
+
+                    vcs_configLib.sendConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.BILL
+                    });
+
+                    vcs_configLib.removeConfigCache({ configType: vcs_configLib.ConfigType.BILL });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                    return;
+                }
+            }
+        }
+    ];
+
+    // EVENT ACTIONS: SEND PO CONFIG
+    EventRouter.Action[vc2_constant.RECORD.SENDPOVENDOR_CONFIG.ID] = [
+        {
+            onAfterSubmit: function (scriptContext, Current) {
+                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
+                try {
+                    vc2_util.log(logTitle, '>> Current: ', Current);
+
+                    if (
+                        !vc2_util.inArray(Current.eventType, [
+                            scriptContext.UserEventType.EDIT,
+                            scriptContext.UserEventType.CREATE,
+                            scriptContext.UserEventType.XEDIT
+                        ])
+                    )
+                        return;
+
+                    vcs_configLib.sendConfig({
+                        id: Current.recordId,
+                        configType: vcs_configLib.ConfigType.SENDPO
+                    });
+
+                    vcs_configLib.removeConfigCache({
+                        configType: vcs_configLib.ConfigType.SENDPO
+                    });
+                } catch (error) {
+                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                    return;
+                }
+            }
+        }
+    ];
+
+    // EVENT ACTIONS: VC LOGS
+    EventRouter.Action[vc2_constant.RECORD.VC_LOG.ID] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+            try {
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
+
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+
+                Helper.displayAsInlineTextarea(scriptContext.form, [
+                    'custrecord_ctc_vcsp_log_body'
+                ]);
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        }
+    };
+
+    // EVENT ACTIONS: BILLFILE
     EventRouter.Action[vc2_constant.RECORD.BILLFILE.ID] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
@@ -603,483 +1053,15 @@ define([
         }
     };
 
-    EventRouter.Action[vc2_constant.RECORD.BILLCREATE_CONFIG.ID] = [
-        {
-            onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
-                try {
-                    vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
-                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                    Helper.hideFields(scriptContext.form, ['custrecord_vc_bc_maincfg']);
-
-                    if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                    Helper.displayAsInlineTextarea(scriptContext.form, [
-                        'custrecord_vc_bc_host_key'
-                    ]);
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        },
-        {
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-                try {
-                    vc2_util.log(logTitle, '>> Current: ', Current);
-
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.EDIT,
-                            scriptContext.UserEventType.XEDIT
-                        ])
-                    )
-                        return;
-
-                    var cacheListName = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST';
-                    var vendorCacheList = vc2_util.getNSCache({
-                        name: cacheListName,
-                        isJSON: true
-                    });
-                    vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
-
-                    if (vendorCacheList && vendorCacheList.LIST)
-                        (vendorCacheList.LIST || []).forEach(function (cacheKey) {
-                            vc2_util.removeCache({ name: cacheKey });
-                        });
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        },
-        // add the send config
-        {
-            // TOOD: move this to a scheduled script
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-
-                try {
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.EDIT,
-                            scriptContext.UserEventType.XEDIT
-                        ])
-                    )
-                        return;
-
-                    // send to server
-                    vcs_configLib.sendBillConfig({ id: Current.recordId });
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        }
-    ];
-
-    EventRouter.Action[ns_record.Type.VENDOR] = {
-        onAfterSubmit: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-            try {
-                vc2_util.log(logTitle, '>> Current: ', Current);
-
-                if (
-                    !vc2_util.inArray(Current.eventType, [
-                        scriptContext.UserEventType.EDIT,
-                        scriptContext.UserEventType.XEDIT
-                    ])
-                )
-                    return;
-
-                var cacheListName = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST';
-                var vendorCacheList = vc2_util.getNSCache({
-                    name: cacheListName,
-                    isJSON: true
-                });
-                vc2_util.log(logTitle, 'Bill VendorConfig CACHE List: ', vendorCacheList);
-
-                if (vendorCacheList && vendorCacheList.LIST)
-                    (vendorCacheList.LIST || []).forEach(function (cacheKey) {
-                        vc2_util.removeCache({ name: cacheKey });
-                    });
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                return;
-            }
-        }
-    };
-
-    EventRouter.Action[vc2_constant.RECORD.VENDOR_CONFIG.ID] = [
-        {
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-
-                try {
-                    vc2_util.log(logTitle, '>> Current: ', Current);
-                    // if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-
-                    var cacheListName = vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST';
-                    var vendorCacheList = vc2_util.getNSCache({
-                        name: cacheListName,
-                        isJSON: true
-                    });
-                    vc2_util.log(logTitle, 'VendorConfig CACHE List: ', vendorCacheList);
-
-                    if (vendorCacheList && vendorCacheList.LIST)
-                        (vendorCacheList.LIST || []).forEach(function (cacheKey) {
-                            vc2_util.removeCache({ name: cacheKey });
-                        });
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        },
-
-        // add the send config
-        {
-            // TOOD: move this to a scheduled script
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-
-                try {
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.EDIT,
-                            scriptContext.UserEventType.XEDIT
-                        ])
-                    )
-                        return;
-
-                    // send to server
-                    vcs_configLib.sendVendorConfig({ id: Current.recordId });
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        }
-    ];
-
-    EventRouter.Action[vc2_constant.RECORD.MAIN_CONFIG.ID] = [
-        {
-            onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
-                try {
-                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-
-                    var MainCFG = vcs_configLib.mainConfig();
-                    vc2_util.log(logTitle, 'MainCFG>> ', MainCFG);
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                }
-                return true;
-            },
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onAfterSubmit'].join('::');
-
-                try {
-                    vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.MAIN_CONFIG });
-                    var MainCFG = vcs_configLib.mainConfig({ forced: true });
-                    vc2_util.log(logTitle, 'mainConfig >> ', MainCFG);
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                }
-
-                return true;
-            }
-        },
-        // add the send config
-        {
-            // TOOD: move this to a scheduled script
-            onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'SendConfig'].join('::');
-
-                try {
-                    vc2_util.log(logTitle, 'Current >> ', Current);
-
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.EDIT,
-                            scriptContext.UserEventType.XEDIT
-                        ])
-                    )
-                        return;
-
-                    // send to server
-                    vcs_configLib.sendMainConfig({ id: Current.recordId });
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    return;
-                }
-            }
-        }
-    ];
-
-    EventRouter.Action[vc2_constant.RECORD.VC_LOG.ID] = {
-        onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
-            try {
-                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
-
-                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-
-                Helper.displayAsInlineTextarea(scriptContext.form, [
-                    'custrecord_ctc_vcsp_log_body'
-                ]);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                return;
-            }
-        }
-    };
-
-    var MainCFG, OrderCFG, BillCFG;
-
-    EventRouter.Action[ns_record.Type.PURCHASE_ORDER] = [
-        // --- UPDATE THE VENDOR LINE INFO ---  //
-        {
-            onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
-                try {
-                    vc2_util.log(logTitle, '// VENDOR LINE START');
-
-                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.VIEW,
-                            scriptContext.UserEventType.EDIT
-                        ])
-                    )
-                        return;
-
-                    var currentRecord = scriptContext.newRecord,
-                        Form = scriptContext.form;
-
-                    var lineCount = currentRecord.getLineCount({
-                            sublistId: 'item'
-                        }),
-                        hasVendorInfo = false;
-
-                    var fldVendorScr = Form.addField({
-                            id: 'custpage_ctc_povendor_scr',
-                            label: 'Clear Vendor Info',
-                            type: 'inlinehtml'
-                        }),
-                        sublistItem = scriptContext.form.getSublist({
-                            id: 'item'
-                        });
-
-                    var scriptVendorInfo = [
-                        '<script type="text/javascript">',
-                        'jQuery(document).ready(function () {',
-                        'var jq=jQuery;',
-                        'var fnVENDLINE=function(ln){',
-                        'var tr=jq.find("table#item_splits tr")[ln], ',
-                        'td=jq(tr).find("td[data-ns-tooltip=\'VENDOR LINE INFO\']")[0],',
-                        'sp=jq(td).find("span")[0];',
-                        'jq(sp).text("Details");',
-                        'jq(td).empty().append(sp);',
-                        '};'
-                    ];
-
-                    for (var line = 0; line < lineCount; line++) {
-                        var vendorInfoJSON = currentRecord.getSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'custcol_ctc_vc_vendor_info',
-                            line: line
-                        });
-                        if (!vendorInfoJSON) continue;
-                        hasVendorInfo = true;
-                        scriptVendorInfo.push(
-                            'try{ fnVENDLINE("' + (line + 1) + '"); } catch(e){console.log(e);}'
-                        );
-                    }
-                    scriptVendorInfo.push('});</script>');
-                    fldVendorScr.defaultValue = scriptVendorInfo.join('');
-
-                    try {
-                        if (!hasVendorInfo || Current.eventType == scriptContext.UserEventType.EDIT)
-                            sublistItem
-                                .getField({ id: 'custcol_ctc_vc_vendor_info' })
-                                .updateDisplayType({ displayType: 'HIDDEN' });
-                    } catch (eer) {
-                        vc2_util.logError(logTitle, eer);
-                    }
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                } finally {
-                    vc2_util.log(logTitle, '// VENDOR LINE END');
-                    return true;
-                }
-            }
-        },
-
-        // --- ADD THE VC ACTION BUTTONS --- //
-        {
-            onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-
-                try {
-                    vc2_util.log(logTitle, '// VC BUTTONS: START');
-
-                    if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                    if (
-                        !vc2_util.inArray(Current.eventType, [
-                            scriptContext.UserEventType.VIEW,
-                            scriptContext.UserEventType.EDIT
-                        ])
-                    )
-                        return;
-
-                    var Form = scriptContext.form;
-                    MainCFG = vcs_configLib.mainConfig();
-                    if (!MainCFG) return;
-
-                    if (!MainCFG.overridePONum) {
-                        Helper.hideFields(Form, ['custbody_ctc_vc_override_ponum']);
-                    }
-
-                    var license = vcs_configLib.validateLicense();
-                    if (license.hasError)
-                        Helper.setVCBarNote({
-                            form: scriptContext.form,
-                            error: 'Your License is no longer valid or have expired. '
-                        });
-
-                    OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.recordId });
-                    if (OrderCFG) {
-                        Helper.addVCButton({
-                            form: scriptContext.form,
-                            id: 'btn_orderstatus',
-                            label: ' Process Order Status',
-                            action: EventRouter.addActionURL('actionOrderStatus')
-                        });
-
-                        var orderCFGUrl = ns_url.resolveRecord({
-                            recordType: vc2_constant.RECORD.VENDOR_CONFIG.ID,
-                            recordId: OrderCFG.id
-                        });
-                        Helper.addVCBarLink({
-                            form: scriptContext.form,
-                            label: 'Order Status Config',
-                            action: orderCFGUrl
-                        });
-                    }
-
-                    BillCFG = vcs_configLib.billVendorConfig({ poId: Current.recordId });
-                    // vc2_util.log(logTitle, '// billVendorCfg:  ' + JSON.stringify(BillCFG));
-
-                    var CONNECT_TYPE = { API: 1, SFTP: 2 };
-
-                    if (BillCFG && BillCFG.connectionType == CONNECT_TYPE.API) {
-                        Helper.addVCButton({
-                            form: scriptContext.form,
-                            id: 'btn_billsapi',
-                            label: 'Fetch Bill Files - API',
-                            action: EventRouter.addActionURL('actionGetBillsAPI')
-                        });
-
-                        var billCFGUrl = ns_url.resolveRecord({
-                            recordType: vc2_constant.RECORD.BILLCREATE_CONFIG.ID,
-                            recordId: BillCFG.id
-                        });
-                        Helper.addVCBarLink({
-                            form: scriptContext.form,
-                            label: 'Bill Vendor Config',
-                            action: billCFGUrl
-                        });
-                    }
-
-                    var SendPOCFG = vcs_configLib.sendPOVendorConfig({ poId: Current.recordId });
-                    // vc2_util.log(logTitle, '// sendpo vendor:  ' + JSON.stringify(SendPOCFG));
-
-                    if (SendPOCFG) {
-                        var sendPOCfgUrl = ns_url.resolveRecord({
-                            recordType: vc2_constant.RECORD.SENDPOVENDOR_CONFIG.ID,
-                            recordId: SendPOCFG.id
-                        });
-                        Helper.addVCBarLink({
-                            form: scriptContext.form,
-                            label: 'Send PO Config',
-                            action: sendPOCfgUrl
-                        });
-                    }
-
-                    if (OrderCFG || BillCFG) Helper.addSerialSync(scriptContext.form);
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                } finally {
-                    vc2_util.log(logTitle, '// VC BUTTONS: END');
-                    return true;
-                }
-            }
-        }
-    ];
-
-    EventRouter.Action[ns_record.Type.INVOICE] = {
-        onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-            try {
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
-                Helper.addSerialSync(scriptContext.form);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                return;
-            }
-
-            return true;
-        }
-    };
-
-    EventRouter.Action[ns_record.Type.SALES_ORDER] = {
-        onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-            try {
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
-                Helper.addSerialSync(scriptContext.form);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                return;
-            }
-
-            return true;
-        }
-    };
-
-    EventRouter.Action[ns_record.Type.ITEM_FULFILLMENT] = {
-        onBeforeLoad: function (scriptContext, Current) {
-            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
-            try {
-                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
-                if (!vc2_util.inArray(Current.eventType, [scriptContext.UserEventType.VIEW]))
-                    return;
-                Helper.addSerialSync(scriptContext.form);
-            } catch (error) {
-                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                return;
-            }
-
-            return true;
-        }
-    };
-
     EventRouter.Action['__ALL__'] = {
         onBeforeLoad: function (scriptContext, Current) {},
         onBeforeSubmit: function (scriptContext, Current) {},
         onAfterSubmit: function (scriptContext, Current) {}
     };
 
+    /**
+     * CUSTOM EVENT Actions
+     */
     EventRouter.Action[EventRouter.Type.CUSTOM] = {
         actionOrderStatus: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'actionOrderStatus'].join('::'),
@@ -1163,23 +1145,27 @@ define([
             var logTitle = [LogTitle || '', 'onBeforeLoad'].join('::'),
                 returnValue = null;
 
-            EventRouter.initialize(scriptContext);
-
-            var Current = EventRouter.Current;
-            vc2_util.LogPrefix = [
-                mapRecordNames[Current.recordType],
-                Current.recordId || '_new_',
-                Current.eventType
-            ].join(':');
-            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
-
             try {
+                EventRouter.initialize(scriptContext);
+
+                var Current = EventRouter.Current;
+                vc2_util.LogPrefix = [
+                    mapRecordNames[Current.recordType],
+                    Current.recordId || '_new_',
+                    Current.eventType
+                ].join(':');
+                vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+
+                vc2_util.log(logTitle, '///////// START SCRIPT ///////////');
+
                 EventRouter.execute(EventRouter.Type.CUSTOM);
                 EventRouter.execute(EventRouter.Type.BEFORE_LOAD);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
                 throw error;
+            } finally {
+                vc2_util.log(logTitle, '/////////// END SCRIPT ///////////');
             }
 
             return returnValue;
@@ -1188,22 +1174,26 @@ define([
             var logTitle = [LogTitle || '', 'onBeforeSubmit'].join('::'),
                 returnValue = null;
 
-            EventRouter.initialize(scriptContext);
-
-            var Current = EventRouter.Current;
-            vc2_util.LogPrefix = [
-                mapRecordNames[Current.recordType],
-                Current.recordId || '_new_',
-                Current.eventType
-            ].join(':');
-            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
-
             try {
+                EventRouter.initialize(scriptContext);
+
+                var Current = EventRouter.Current;
+                vc2_util.LogPrefix = [
+                    mapRecordNames[Current.recordType],
+                    Current.recordId || '_new_',
+                    Current.eventType
+                ].join(':');
+                vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+
+                vc2_util.log(logTitle, '/////////// START SCRIPT ///////////');
+
                 EventRouter.execute(EventRouter.Type.BEFORE_SUBMIT);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
                 throw error;
+            } finally {
+                vc2_util.log(logTitle, '/////////// END SCRIPT ///////////');
             }
 
             return returnValue;
@@ -1212,22 +1202,25 @@ define([
             var logTitle = [LogTitle || '', 'onAfterSubmit'].join('::'),
                 returnValue = null;
 
-            EventRouter.initialize(scriptContext);
-
-            var Current = EventRouter.Current;
-            vc2_util.LogPrefix = [
-                mapRecordNames[Current.recordType],
-                Current.recordId || '_new_',
-                Current.eventType
-            ].join(':');
-            vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
-
             try {
+                EventRouter.initialize(scriptContext);
+
+                var Current = EventRouter.Current;
+                vc2_util.LogPrefix = [
+                    mapRecordNames[Current.recordType],
+                    Current.recordId || '_new_',
+                    Current.eventType
+                ].join(':');
+                vc2_util.LogPrefix = '[' + vc2_util.LogPrefix + '] ';
+                log.audit(logTitle, '/////////// START SCRIPT /////////// ');
+
                 EventRouter.execute(EventRouter.Type.AFTER_SUBMIT);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
                 throw error;
+            } finally {
+                vc2_util.log(logTitle, '/////////// END SCRIPT ///////////');
             }
 
             return returnValue;

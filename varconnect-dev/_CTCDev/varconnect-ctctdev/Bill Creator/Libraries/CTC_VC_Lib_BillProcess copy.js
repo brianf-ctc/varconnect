@@ -76,7 +76,7 @@ define([
      *      - PO
      *      - bill config (can be extracted)
      *      - vendor config (can be extracted)
-     * 
+     *
      * PreProcessing
      *  - Load the Bill File record
      *  - Load the JSON data and lines
@@ -84,19 +84,19 @@ define([
      *  - Load the PO Lines, grouped with same item+rate
      *  - Validate the Bill File
      *  - Validate the Variance Configs
-     * 
+     *
      *  - Load the Biill, if billable
      *  - calculate only if billable
      *  - hide the calculated section, if not billable
-     * 
-     * 
+     *
+     *
      * Actions
      *  * Process Bill
      *  * Ignore Variance
      *  * Include Variance
-     * 
+     *
      *  - Match Vendor lines to PO Lines
-     *  - 
+     *  -
      */
 
     var VC_BillProcess = {

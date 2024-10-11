@@ -14,16 +14,11 @@
 define(function (require) {
     var LogTitle = 'SVC:Records';
 
-    var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('./../CTC_VC2_Constants.js'),
-        vc2_record = require('./../CTC_VC2_Lib_Record.js'),
-        vcs_configLib = require('./ctc_svclib_configlib.js');
+    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('../CTC_VC2_Constants.js');
 
     var ns_search = require('N/search'),
-        ns_record = require('N/record'),
-        ns_error = require('N/error');
-
-    var fuse = require('./lib/fuse.js');
+        ns_record = require('N/record');
 
     var CACHE_TTL = 300; // store the data for 1mins
 
@@ -92,143 +87,35 @@ define(function (require) {
             }
         };
 
-    var Helper = {
-        cleanupOrderLines: function (option) {
-            var logTitle = [LogTitle, 'cleanupOrderLines'].join('::'),
+    return {
+        searchTransaction: function (option) {
+            var logTitle = [LogTitle, 'searchTransaction'].join('::'),
                 returnValue;
+
+            var poNum = option.name || option.tranid || option.poName || option.poNum,
+                poId = option.id || option.internalid,
+                recordType = option.type || option.recordType || ns_record.Type.PURCHASE_ORDER,
+                searchFields = option.fields || option.columns,
+                searchFilters = option.filters,
+                mainConfig = option.mainConfig,
+                overridePO =
+                    mainConfig && mainConfig.overridePONum
+                        ? mainConfig.overridePONum
+                        : option.overridePO;
 
             try {
-                var lineCount = CURRENT.PO_REC.getLineCount({ sublistId: 'item' }),
-                    hasLineUpdates = false;
+                if (!poNum && !poId) throw 'Missing parameter: PO Num/ PO Id';
 
-                for (line = 0; line < lineCount; line++) {
-                    var orderLineData = vc2_record.extractLineValues({
-                            record: CURRENT.PO_REC,
-                            line: line,
-                            columns: vc2_util.arrayKeys(MAPPING.lineColumn)
-                        }),
-                        updateLineValues = {};
-
-                    for (var fld in orderLineData) {
-                        if (orderLineData[fld] == 'Duplicate Item') updateLineValues[fld] = ' ';
-                    }
-
-                    if (!vc2_util.isEmpty(updateLineValues)) {
-                        vc2_util.log(logTitle, '// cleanup needed line data: ', [
-                            orderLineData,
-                            updateLineValues
-                        ]);
-
-                        updateLineValues.line = line;
-                        vc2_record.updateLine({
-                            record: CURRENT.PO_REC,
-                            lineData: updateLineValues
-                        });
-
-                        hasLineUpdates = true;
-                    }
-                }
-
-                returnValue = hasLineUpdates;
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
-            }
-        }
-    };
-
-    return {
-        fuzzyItemSearch: function (option) {},
-        itemSearch: function (option) {
-            vc2_util.log(LogTitle, 'option', option);
-
-            if (option.sku) throw 'SKU Name is ' + option.sku;
-
-            return '## OPTION ##' + JSON.stringify(option);
-        },
-        fetchItemsPO: function (option) {
-            var logTitle = [LogTitle, 'fetchItemsPO'].join('::'),
-                returnValue;
-
-            var poId = option.poId || option.internalId || option.po;
-            if (!poId) throw 'Missing Paramter: PO ID';
-
-            var itemSearch = ns_search.create({
-                type: 'transaction',
-                filters: [['internalid', 'anyof', poId], 'AND', ['mainline', 'is', 'F']],
-                columns: [
-                    ns_search.createColumn({
-                        name: 'item',
-                        summary: 'GROUP'
-                    })
-                ]
-            });
-
-            var arrSKUs = [];
-            itemSearch.run().each(function (result) {
-                arrSKUs.push({
-                    text: result.getText({
-                        name: 'item',
-                        summary: 'GROUP'
-                    }),
-                    itemNum: result.getText({
-                        name: 'item',
-                        summary: 'GROUP'
-                    }),
-                    value: result.getValue({
-                        name: 'item',
-                        summary: 'GROUP'
-                    })
-                });
-                return true;
-            });
-            returnValue = arrSKUs;
-
-            // var arrPOItems = [];
-            // arrSKUs.forEach(function (skuDetails) {
-            //     arrPOItems.push({ item: skuDetails.value });
-            //     return true;
-            // });
-            // var arrSKUsVendorNames = Helper.extractVendorItemNames({ lines: arrPOItems });
-            // vc2_util.log(logTitle, '// arrSKUsVendorNames: ', arrSKUsVendorNames);
-
-            // for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
-            //     arrSKUs[i].vendorItemName =
-            //         arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
-            //     // return true;
-            // }
-
-            returnValue = arrSKUs;
-            return returnValue;
-        },
-        searchPO: function (option) {
-            var logTitle = [LogTitle, 'searchPO'],
-                returnValue;
-
-            var poNum = option.name || option.poName || option.poNum,
-                poId = option.id || option.internalid;
-
-            if (!poNum && !poId) throw 'Missing parameter: PO Num/ PO Id';
-
-            // retrive
-            var cachedData = vc2_util.getNSCache({
-                name: JSON.stringify([logTitle, option]),
-                isJSON: true
-            });
-            returnValue = cachedData;
-
-            if (!cachedData || option.forced) {
-                var MainCFG = vcs_configLib.mainConfig();
-                var searchOption = {
-                        type: 'purchaseorder',
-                        filters: [['mainline', 'is', 'T'], 'AND', ['type', 'anyof', 'PurchOrd']],
+                var recordData = {},
+                    searchOption = {
+                        type: recordType,
+                        filters: [['mainline', 'is', 'T']],
                         columns: [
                             'internalid',
                             'type',
                             'tranid',
                             'trandate',
                             'entity',
-                            'subsidiary',
                             'postingperiod',
                             'custbody_ctc_vc_override_ponum',
                             'custbody_ctc_bypass_vc',
@@ -236,116 +123,84 @@ define(function (require) {
                             'createdfrom',
                             'custbody_isdropshippo',
                             'custbody_ctc_po_link_type'
-                            // 'dropshipso'
                         ]
-                    },
-                    PO_Data;
+                    };
+
+                if (vc2_util.isOneWorld()) searchOption.columns.push('subsidiary');
+
+                // if the searchFields is not empty, concatenate it with searchOption.columns
+                if (!vc2_util.isEmpty(searchFields))
+                    searchOption.columns = searchOption.columns.concat(searchFields);
 
                 if (poId) {
-                    searchOption.filters.push('AND');
-                    searchOption.filters.push(['internalid', 'anyof', poId]);
+                    searchOption.filters.push('AND', ['internalid', 'anyof', poId]);
                 } else if (poNum) {
                     searchOption.filters.push('AND');
-                    if (MainCFG.overridePONum) {
+                    if (overridePO) {
                         searchOption.filters.push(['custbody_ctc_vc_override_ponum', 'is', poNum]);
                     } else {
                         searchOption.filters.push(['numbertext', 'is', poNum]);
                     }
+                } else if (!vc2_util.isEmpty(searchFilters)) {
+                    searchOption.filters.push('AND', searchFilters);
                 }
+
+                // vc2_util.log(logTitle, '>> search option', searchOption);
+
+                //// RETRIEVE CACHED DATA
+                var cacheKey = [
+                    vc2_constant.CACHE_KEY.PO_DATA,
+                    JSON.stringify(searchOption.filters)
+                ].join('__');
+
+                // retrive the cache
+                var cachedData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
+                if (!vc2_util.isEmpty(cachedData)) return cachedData;
+
                 var searchObj = ns_search.create(searchOption);
-                if (searchObj.runPaged().count) {
-                    var searchResult = searchObj.run().getRange({ start: 0, end: 1 }).shift();
+                if (!searchObj.runPaged().count)
+                    throw (
+                        'Unable to find the record : filters=' +
+                        JSON.stringify(searchOption.filters)
+                    );
 
-                    var PO_Data = {
-                        id: searchResult.getValue({ name: 'internalid' })
-                    };
+                searchObj.run().each(function (row) {
+                    recordData.id = row.id;
 
+                    // update the PO_Data with the column values
                     for (var i = 0, j = searchOption.columns.length; i < j; i++) {
-                        PO_Data[searchOption.columns[i].name || searchOption.columns[i]] =
-                            searchResult.getValue({ name: searchOption.columns[i] });
+                        var colName = searchOption.columns[i].name || searchOption.columns[i],
+                            colValue = row.getValue(searchOption.columns[i]),
+                            colText = row.getText(searchOption.columns[i]);
+
+                        // vc2_util.log(logTitle, '>> values: ', {
+                        //     name: colName,
+                        //     value: colValue,
+                        //     text: colText
+                        // });
+
+                        recordData[colName] = colValue;
+
+                        if (colText && colText != colValue) recordData[colName + '_text'] = colText;
                     }
-                }
-                returnValue = PO_Data || false;
+                    return true; // return false to break the loop when a record is found.
+                });
+                returnValue = recordData;
 
                 // set the cachedData
-                vc2_util.setNSCache({
-                    name: JSON.stringify([logTitle, option]),
-                    value: PO_Data,
-                    cacheTTL: CACHE_TTL
+                vc2_util.setNSCache({ name: cacheKey, value: recordData, cacheTTL: CACHE_TTL });
+                vc2_util.saveCacheList({
+                    listName: vc2_constant.CACHE_KEY.PO_DATA,
+                    cacheKey: cacheKey
                 });
-            }
-            return returnValue;
-        },
-        updatePOLines: function (option) {
-            var logTitle = [LogTitle, 'updatePOLines'],
-                returnValue;
 
-            var poData = option.poData;
-
-            CURRENT.PO_RECORD = option.po_record || option.record;
-            CURRENT.VendorLines = option.vendorLines;
-            CURRENT.MainCFG = option.mainConfig;
-            CURRENT.OrderCFG = option.orderConfig;
-
-            if (!CURRENT.VendorLines) throw 'Missing vendor lines';
-            if (!CURRENT.PO_RECORD) {
-                if (!poData || !poData.id) throw 'Missing PO Record';
-                CURRENT.PO_RECORD = vc2_record.load({
-                    type: 'purchaseorder',
-                    id: poData.id,
-                    isDynamic: true
-                });
-            }
-
-            // clean up the lines ///
-            var isUpdatedPO = Helper.cleanupOrderLines();
-
-            var arrPOCols = [
-                'item',
-                'quantity',
-                'rate',
-                'amount',
-                vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
-                vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
-                vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
-            ];
-
-            var itemAltNameColId =
-                CURRENT.OrderCFG.itemColumnIdToMatch || CURRENT.MainCFG.itemColumnIdToMatch;
-            if (itemAltNameColId) arrPOCols.push(itemAltNameColId);
-
-            CURRENT.OrderLines = vc2_record.extractRecordLines({
-                record: CURRENT.PO_REC,
-                findAll: true,
-                mainConfig: CURRENT.MainCFG,
-                orderConfig: CURRENT.OrderCFG,
-                columns: arrPOCols
-            });
-
-            // loop thru the vendor lines
-            for (var i = 0, j = CURRENT.VendorLines.length; i < j; i++) {
-                var vendorLine = CURRENT.VendorLines[i];
-                vc2_util.log(logTitle, ' #### VENDOR LINE ####', vendorLine);
-
-                try {
-                    /**
-                    (0) -- create PO line --
-                    (1) find if there are matching order lines
-                    (2) map the vendor values to the order lines
-                    (3) 
-
-                    
-                    */
-                } catch (error) {}
+                vc2_util.log(logTitle, '## RecordData: ', recordData);
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
             }
 
             return returnValue;
-        },
-
-        findMatchingOrderLine: function (option) {},
-
-        findMatchingVendorLine: function (option) {}
+        }
     };
 });

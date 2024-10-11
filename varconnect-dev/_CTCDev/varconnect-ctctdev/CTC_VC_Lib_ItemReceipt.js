@@ -56,12 +56,6 @@ define(function (require) {
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
 
-    // var ERROR_MSG = {
-    //     ORDER_EXISTS: 'Order already exists',
-    //     TRANSFORM_ERROR: 'Transform error ' + Current.SO_ID,
-    //     NO_RECEIVABLES: 'No receivable lines'
-    // };
-
     //***********************************************************************
     //** Update PO Fields with parsed XML data
     //***********************************************************************
@@ -161,7 +155,7 @@ define(function (require) {
                     orderLine.RESULT = vc2_util.extractError(order_error);
 
                     vc2_util.vcLog({
-                        title: 'Fulfillment [' + orderLine.order_num + '] ',
+                        title: 'Item Receipt Error [' + orderLine.order_num + '] (1) ',
                         error: order_error,
                         details: orderLine,
                         recordId: Current.PO_ID
@@ -222,7 +216,10 @@ define(function (require) {
                     } catch (transform_err) {
                         vc2_util.logError(logTitle, transform_err);
                         record = null;
-                        throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR);
+                        throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR, {
+                            message: 'Error while creating item receipt ',
+                            details: vc2_util.extractError(transform_err)
+                        });
                     }
 
                     var recordIsChanged = false,
@@ -475,6 +472,10 @@ define(function (require) {
                                 sublistId: 'item',
                                 fieldId: 'isserial'
                             }),
+                            isSerialItem: record.getCurrentSublistValue({
+                                sublistId: 'item',
+                                fieldId: 'isserialitem'
+                            }),
                             isInvDetailReqd: record.getCurrentSublistValue({
                                 sublistId: 'item',
                                 fieldId: 'inventorydetailreq'
@@ -681,7 +682,7 @@ define(function (require) {
                             });
 
                             if (
-                                lineRRData.isSerialized === 'T' &&
+                                (lineRRData.isSerialized == 'T' || lineRRData.isSerialItem) &&
                                 arrSerials.length &&
                                 Helper.validateSerials({ serials: arrSerials })
                             ) {
@@ -774,9 +775,8 @@ define(function (require) {
                 } catch (ordernum_error) {
                     vc2_util.logError(logTitle, ordernum_error);
                     vc2_util.vcLog({
-                        title: 'Item Receipt | OrderNum Error ',
+                        title: 'Item Receipt Error [' + vendorOrderNum + ']',
                         error: ordernum_error,
-                        // status: LOG_STATUS.RECORD_ERROR,
                         recordId: Current.PO_ID
                     });
                     continue;
@@ -961,7 +961,6 @@ define(function (require) {
             if (objVar && objVar !== null) content += ' -- ' + JSON.stringify(objVar);
             return log[logtype](title, vc2_util.getUsage() + LogPrefix + content);
         },
-
         validateSerials: function (option) {
             var logTitle = [LogTitle, 'validateSerials'].join('::');
 
@@ -985,61 +984,70 @@ define(function (require) {
         },
         // Added by Clemen - 04/28/2022
         addNativeSerials: function (option) {
-            var logTitle = [LogTitle, 'addNativeSerials'].join('::'),
-                logPrefix = LogPrefix + '// Set Inventory Details: ';
+            var logTitle = [LogTitle, 'addNativeSerials'].join('::');
 
-            var ifRec = option.record;
+            var record = option.record;
             var validSerialList = this.validateSerials(option);
+            vc2_util.log(logTitle, '// Set Inventory Details: ', validSerialList);
             if (!validSerialList) return;
 
-            var inventoryDetailRecord = ifRec.getCurrentSublistSubrecord({
-                sublistId: 'item',
-                fieldId: 'inventorydetail'
-            });
-
-            log.audit(logTitle, logPrefix + ' //setting up serials...');
-
             var addedSerials = [];
-            for (var i = 0; i < validSerialList.length; i++) {
-                if (!validSerialList[i] || validSerialList[i] == 'NA') continue;
+
+            var TryThese = [
+                // Attempt to add the serials using inventorydetail
+                function () {
+                    var inventoryDetailRec = record.getCurrentSublistSubrecord({
+                        sublistId: 'item',
+                        fieldId: 'inventorydetail'
+                    });
+
+                    for (var i = 0; i < validSerialList.length; i++) {
+                        if (!validSerialList[i] || validSerialList[i] == 'NA') continue;
+                        vc2_util.log(logTitle, '... add new serial:  ', validSerialList[i]);
+
+                        inventoryDetailRec.selectNewLine({ sublistId: 'inventoryassignment' });
+                        inventoryDetailRec.setCurrentSublistValue({
+                            sublistId: 'inventoryassignment',
+                            fieldId: 'receiptinventorynumber',
+                            value: validSerialList[i]
+                        });
+                        inventoryDetailRec.commitLine({ sublistId: 'inventoryassignment' });
+
+                        addedSerials.push(validSerialList[i]);
+                    }
+                },
+                // just use the serial numbers
+                function () {
+                    // just set the serial number field
+                    record.setCurrentSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'serialnumbers',
+                        value: validSerialList.join('\n')
+                    });
+
+                    addedSerials = validSerialList;
+                }
+            ];
+
+            // now try it
+            TryThese.forEach(function (fn) {
+                var isSuccess = false;
 
                 try {
-                    inventoryDetailRecord.selectLine({
-                        sublistId: 'inventoryassignment',
-                        line: i
-                    });
-
-                    inventoryDetailRecord.setCurrentSublistValue({
-                        sublistId: 'inventoryassignment',
-                        fieldId: 'receiptinventorynumber',
-                        value: validSerialList[i]
-                    });
-                    inventoryDetailRecord.commitLine({
-                        sublistId: 'inventoryassignment'
-                    });
-                    // log.audit(logTitle, logPrefix + '...added serial no: ' + validSerialList[i]);
-
-                    addedSerials.push(validSerialList[i]);
-                } catch (serial_error) {
-                    log.error(
+                    fn.call();
+                } catch (error) {
+                    vc2_util.log(
                         logTitle,
-                        vc2_util.getUsage() +
-                            LogPrefix +
-                            '## ERROR ## ' +
-                            JSON.stringify(serial_error)
+                        '!! ERROR adding serialnumbers - ' + vc2_util.extractError(error),
+                        error
                     );
+                    isSuccess = false;
                 }
-            }
 
-            log.audit(
-                logTitle,
-                LogPrefix +
-                    ' >> done <<' +
-                    JSON.stringify({
-                        length: addedSerials.length,
-                        serials: addedSerials
-                    })
-            );
+                if (isSuccess) return false;
+            });
+
+            vc2_util.log(logTitle, '## Added Serials: ', addedSerials);
 
             return true;
         },
@@ -1381,7 +1389,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         removeIRLine: function (option) {
             var logTitle = [LogTitle, 'removeIRLine'].join('::'),
                 logPrefix = LogPrefix + ' removeIRLine || ',
@@ -1408,7 +1415,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         addIRLine: function (option) {
             var logTitle = [LogTitle, 'addIRLine'].join('::'),
                 logPrefix = LogPrefix + ' addIRLine || ',

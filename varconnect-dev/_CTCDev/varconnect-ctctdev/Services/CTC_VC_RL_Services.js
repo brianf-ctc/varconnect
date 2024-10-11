@@ -16,8 +16,8 @@ define(function (require) {
     var LogTitle = 'VC_SERV',
         LogPrefix = '';
 
-    var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('./../CTC_VC2_Constants.js');
+    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('../CTC_VC2_Constants.js');
 
     var SERVICES_MAP = {
         processV1: {

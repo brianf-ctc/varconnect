@@ -727,7 +727,7 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-        
+
         ITEM_NOT_BILLABLE: {
             code: 'ITEM_NOT_BILLABLE',
             msg: 'Item is not billable',

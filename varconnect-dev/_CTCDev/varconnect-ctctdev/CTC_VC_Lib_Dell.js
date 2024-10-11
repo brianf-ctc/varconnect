@@ -23,10 +23,10 @@
  */
 define([
     'N/runtime',
-    './CTC_VC_Lib_Log.js',
-    './CTC_VC2_Lib_Utils.js',
-    './CTC_VC2_Constants.js',
-    './Bill Creator/Libraries/moment'
+    './../CTC_VC_Lib_Log.js',
+    './../CTC_VC2_Lib_Utils.js',
+    './../CTC_VC2_Constants.js',
+    './moment'
 ], function (ns_runtime, vc_log, vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:Dellv2';

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Catalyst Tech Corp
+ * Copyright (c) 2024 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -7,6 +7,9 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
+ *
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 
 /**
@@ -15,17 +18,14 @@
  * Version	Date            Author		Remarks
  * 1.00		July 25, 2019	paolodl		Library for retrieving Vendor Configuration
  *
- */ /**
- * @NApiVersion 2.x
- * @NModuleScope Public
  */
 
-define([
-    'N/xml',
-    './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Utils.js',
-    './Bill Creator/Libraries/moment'
-], function (ns_xml, vc2_constant, vc2_util, moment) {
+define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './moment'], function (
+    ns_xml,
+    vc2_constant,
+    vc2_util,
+    moment
+) {
     var LogTitle = 'WS:Synnex';
 
     var LOG_LEVEL = 0;
@@ -52,26 +52,59 @@ define([
             }
 
             return returnValue;
+        },
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr).toDate() : null;
+            } catch (err) {}
+
+            return dateObj;
         }
     };
 
     var CURRENT = {};
+
+    var SynnexOrders = {
+        EndPoint: {},
+        LIST: [],
+        ORDERS: {},
+        RESULT: {}
+    };
+
     var LibSynnexAPI = {
         SkippedStatus: ['NOTFOUND', 'NOT FOUND', 'REJECTED', 'DELETED'],
         ShippedStatus: ['SHIPPED', 'INVOICED'],
         //ACCEPTED, SHIPPED, DELETED, NOT FOUND, REJECTED
 
+        initialize: function (option) {
+            var logTitle = [LogTitle, 'initialize'].join('::'),
+                returnValue;
+
+            CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
+
+            vc2_util.LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
+
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
+
+            return returnValue;
+        },
         getOrderStatus: function (option) {
             var logTitle = [LogTitle, 'getOrderStatus'].join('::'),
                 returnValue;
             option = option || {};
 
+            SynnexOrders.EndPoint.search = CURRENT.orderConfig.endPoint;
+
             try {
-                var reqOrderStatus = vc2_util.sendRequest({
+                var respOrderStatus = vc2_util.sendRequest({
                     header: [LogTitle, 'Orders Search'].join(' : '),
                     method: 'post',
                     isXML: true,
-                    doRetry: true,
                     query: {
                         url: CURRENT.orderConfig.endPoint,
                         body:
@@ -96,285 +129,237 @@ define([
                     recordId: CURRENT.recordId
                 });
 
-                // this.handleResponse(reqOrderStatus);
-                vc2_util.handleXMLResponse(reqOrderStatus);
+                vc2_util.log(logTitle, '// respOrderStatus: ', respOrderStatus);
 
-                // if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
-                var respOrderStatus = reqOrderStatus.RESPONSE.body;
-                if (!respOrderStatus) throw 'Unable to fetch server response';
-                returnValue = respOrderStatus;
+                vc2_util.handleXMLResponse(respOrderStatus);
+                this.handleResponse(respOrderStatus);
+
+                returnValue = respOrderStatus.RESPONSE.body;
+                if (!returnValue) throw 'Unable to fetch server response';
             } catch (error) {
-                throw error;
+                var errorMsg = vc2_util.extractError(error);
+                throw ['Order Search', this.evaluateErrors(errorMsg)].join('| ');
             }
 
             return returnValue;
         },
+        handleResponse: function (option) {
+            if (!option.RESPONSE || !option.RESPONSE.body) throw 'Invalid or missing XML response';
 
-        handleResponse: function (request) {
-            var logTitle = [LogTitle, 'handleResponse'].join('::'),
-                returnValue = true;
+            var xmlDoc = ns_xml.Parser.fromString({ text: option.RESPONSE.body });
+            var respErrorDetail = vc2_util.getNodeContent(
+                ns_xml.XPath.select({ node: xmlDoc, xpath: '//BizError/detail' })
+            );
+            vc2_util.log('handleResponse', respErrorDetail);
+            if (respErrorDetail) throw respErrorDetail;
 
-            if (
-                request.isError ||
-                !request.RESPONSE ||
-                !request.RESPONSE.body ||
-                request.RESPONSE.code != '200'
-            )
-                throw 'Unable to fetch server response';
-
-            var xmlDoc = ns_xml.Parser.fromString({ text: request.RESPONSE.body });
-            var errMsgNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ErrorDetail' });
-            if (!vc2_util.isEmpty(errMsgNode)) throw errMsgNode[0].textContent;
-
-            return returnValue;
+            // if (respErrorDetail) throw respErrorDetail;
+            // return true;
         },
+        processItem: function (option) {
+            var logTitle = [LogTitle, 'processItem'].join('::');
 
-        parseToNSDate: function (dateStr) {
-            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
-                dateObj;
+            var itemNode = option.node || option.itemNode;
+            var itemObj = {};
 
             try {
-                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr).toDate() : null;
-            } catch (err) {}
+                itemObj = {
+                    line_num: itemNode.getAttribute({ name: 'lineNumber' }) || 'NA',
+                    item_num: Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
+                    vendorSKU: Helper.getNodeValue(itemNode, 'SKU') || 'NA',
+                    order_num: Helper.getNodeValue(itemNode, 'OrderNumber') || 'NA',
+                    order_status:
+                        Helper.getNodeValue(itemNode.parentNode.parentNode, 'Code') || 'NA',
+                    line_status: Helper.getNodeValue(itemNode, 'Code') || 'NA',
+                    order_date:
+                        Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') || 'NA',
+                    order_eta: Helper.getNodeValue(itemNode, 'EstimatedShipDate') || 'NA',
+                    order_delivery_eta:
+                        Helper.getNodeValue(itemNode, 'EstimatedDeliveryDate') ||
+                        Helper.getNodeValue(itemNode, 'EstimateDeliveryDate') ||
+                        'NA',
+                    ship_date: Helper.getNodeValue(itemNode, 'ShipDatetime') || 'NA',
+                    ship_qty: Helper.getNodeValue(itemNode, 'ShipQuantity') || 'NA',
+                    carrier: Helper.getNodeValue(itemNode, 'ShipMethodDescription') || 'NA',
+                    unitprice: vc2_util.parseFloat(
+                        Helper.getNodeValue(itemNode, 'UnitPrice') || ''
+                    ),
+                    tracking_num: 'NA',
+                    serial_num: 'NA',
+                    is_shipped: false
+                };
+                vc2_util.log(logTitle, '/// itemObj: ', itemObj);
 
-            return dateObj;
+                //// Filter: Order Status
+                if (
+                    !itemObj.order_status ||
+                    vc2_util.inArray(itemObj.order_status.toUpperCase(), LibSynnexAPI.SkippedStatus)
+                )
+                    throw 'Skipped Order Status: ' + itemObj.order_status;
+
+                //// Filter: Line Status
+                if (
+                    !itemObj.line_status ||
+                    vc2_util.inArray(itemObj.line_status.toUpperCase(), LibSynnexAPI.SkippedStatus)
+                )
+                    throw 'Skipped Line Status: ' + itemObj.line_status;
+
+                //// Extract SerialNums/Tracking Nums
+                var packageNodeValue = this.extractPackageContent(option);
+                vc2_util.log(logTitle, '.... (tracking/serials) ', packageNodeValue);
+                if (packageNodeValue) {
+                    itemObj.tracking_num = packageNodeValue.tracking_num;
+                    itemObj.serial_num = packageNodeValue.serial_num;
+                }
+            } catch (err) {
+                itemObj.SKIPPED = vc2_util.extractError(err);
+                vc2_util.logError(logTitle, err);
+            }
+
+            return itemObj;
+        },
+        extractPackageContent: function (option) {
+            var logTitle = [LogTitle, 'extractSerials'].join('::');
+
+            var itemNode = option.node || option.itemNode;
+
+            var itemObj = {};
+
+            var packagesNode = ns_xml.XPath.select({
+                node: itemNode,
+                xpath: 'Packages/Package'
+            });
+
+            vc2_util.log(logTitle, '.... packagesNode: ', packagesNode.length);
+
+            var trackingList = [],
+                serialNumList = [];
+
+            if (!packagesNode || !packagesNode.length) return false;
+
+            // loop through packagesNode
+            for (var i = 0; i < packagesNode.length; i++) {
+                var packageNode = packagesNode[i];
+
+                var trackingNo = Helper.getNodeValue(packageNode, 'TrackingNumber');
+
+                if (trackingNo && trackingNo != 'NA' && !vc2_util.inArray(trackingNo, trackingList))
+                    trackingList.push(trackingNo);
+
+                var serialNodes = ns_xml.XPath.select({ node: packageNode, xpath: 'SerialNo' });
+
+                (serialNodes || []).forEach(function (serialNode) {
+                    var serialNo = vc2_util.getNodeTextContent(serialNode);
+
+                    if (serialNo && serialNo != 'NA' && !vc2_util.inArray(serialNo, serialNumList))
+                        serialNumList.push(serialNo);
+
+                    return true;
+                });
+            }
+
+            return {
+                tracking_num: trackingList && trackingList.length ? trackingList.join(',') : 'NA',
+                serial_num: serialNumList && serialNumList.length ? serialNumList.join(',') : 'NA'
+            };
+        },
+        evaluateErrors: function (errorMsg) {
+            // if (errorMsg.match(/^Invalid client identifier/gi)) {
+            //     return 'Invalid credentials';
+            // } else return errorMsg;
+            return errorMsg;
         }
     };
 
     return {
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
-                vc2_util.LogPrefix = LogPrefix;
+                LibSynnexAPI.initialize(option);
+                var response = this.processRequest(option);
 
-                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
+                var xmlDoc = ns_xml.Parser.fromString({ text: response }),
+                    itemArray = [];
+                if (!xmlDoc) throw 'Unable to parse XML';
 
-                var respOrderStatus = this.processRequest(option);
-                returnValue = this.processResponse({ xmlResponse: respOrderStatus });
+                var OrderData = {
+                    Status: vc2_util.getNodeContent(
+                        ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' })
+                    ),
+                    OrderNum: vc2_util.getNodeContent(
+                        ns_xml.XPath.select({ node: xmlDoc, xpath: '//CustomerNumber' })
+                    ),
+                    Reason: vc2_util.getNodeContent(
+                        ns_xml.XPath.select({ node: xmlDoc, xpath: '//Reason' })
+                    )
+                };
+
+                // Check for Order Not Fou
+                if (!OrderData.Status) throw 'Missing order status';
+                if (OrderData.Status.toUpperCase() == 'NOTFOUND') throw 'Order is not found';
+                if (vc2_util.inArray(OrderData.Status.toUpperCase(), LibSynnexAPI.SkippedStatus))
+                    throw 'SKIPPED Order Status: ' + OrderData.Status;
+
+                // get the initial code
+                var arrItemsNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//Item' });
+                if (!arrItemsNode || !arrItemsNode.length) throw 'XML: Missing Item Details';
+
+                for (var ii = 0, jj = arrItemsNode.length; ii < jj; ii++) {
+                    var itemNode = arrItemsNode[ii];
+
+                    var itemObj = LibSynnexAPI.processItem({ node: itemNode });
+
+                    // check if there's a duplicate item already
+                    var dupLine = vc2_util.findMatching({
+                        list: itemArray,
+                        findAll: true,
+                        filter: {
+                            line_num: itemObj.line_num,
+                            item_num: itemObj.item_num,
+                            vendorSKU: itemObj.vendorSKU,
+                            order_num: itemObj.order_num,
+                            order_status: itemObj.order_status,
+                            line_status: itemObj.line_status,
+                            ship_qty: itemObj.ship_qty,
+                            tracking_num: itemObj.tracking_num,
+                            serial_num: itemObj.serial_num
+                        }
+                    });
+
+                    vc2_util.log(logTitle, '... has dup?', [dupLine]);
+                    if (dupLine) continue;
+                    itemArray.push(itemObj);
+                }
+
+                util.extend(returnValue, {
+                    Orders: [OrderData],
+                    Lines: itemArray
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                throw error;
+                util.extend(returnValue, {
+                    HasError: true,
+                    ErrorMsg: vc2_util.extractError(error)
+                });
             }
 
             return returnValue;
         },
         processRequest: function (option) {
             var logTitle = [LogTitle, 'processRequest'].join('::'),
-                returnValue = [];
+                returnValue;
             option = option || {};
 
             try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] SYNNEX - ';
-                vc2_util.LogPrefix = LogPrefix;
-
-                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
-
+                LibSynnexAPI.initialize(option);
                 returnValue = LibSynnexAPI.getOrderStatus(option);
             } catch (error) {
+                vc2_util.logError(logTitle, error);
                 throw error;
             }
-
-            return returnValue;
-        },
-        processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = [];
-            option = option || {};
-            try {
-                var xmlResponse = option.xmlResponse,
-                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
-                    itemArray = [];
-
-                if (!xmlDoc) throw 'Unable to parse XML';
-
-                // get the initial code
-                var orderCode = vc2_util.getNodeContent(
-                    ns_xml.XPath.select({ node: xmlDoc, xpath: '//Code' })
-                );
-
-                if (vc2_util.inArray(orderCode.toUpperCase(), LibSynnexAPI.SkippedStatus))
-                    throw 'Order is' + orderCode;
-
-                var arrItemsNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//Item' });
-                if (!arrItemsNode || !arrItemsNode.length) throw 'XML: Missing Item Details';
-
-                for (var i = 0, j = arrItemsNode.length; i < j; i++) {
-                    var itemNode = arrItemsNode[i];
-
-                    var orderItem = {
-                        line_num: itemNode.getAttribute({ name: 'lineNumber' }) || 'NA',
-                        item_num: Helper.getNodeValue(itemNode, 'MfgPN') || 'NA',
-                        vendorSKU: Helper.getNodeValue(itemNode, 'SKU') || 'NA',
-                        order_num: Helper.getNodeValue(itemNode, 'OrderNumber') || 'NA',
-                        order_status:
-                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'Code') || 'NA',
-                        line_status: Helper.getNodeValue(itemNode, 'Code') || 'NA',
-                        order_date:
-                            Helper.getNodeValue(itemNode.parentNode.parentNode, 'PODatetime') ||
-                            'NA',
-                        order_eta: Helper.getNodeValue(itemNode, 'EstimatedShipDate') || 'NA',
-                        order_delivery_eta:
-                            Helper.getNodeValue(itemNode, 'EstimatedDeliveryDate') ||
-                            Helper.getNodeValue(itemNode, 'EstimateDeliveryDate') ||
-                            'NA',
-                        ship_date: Helper.getNodeValue(itemNode, 'ShipDatetime') || 'NA',
-                        ship_qty: Helper.getNodeValue(itemNode, 'ShipQuantity') || 'NA',
-                        carrier: Helper.getNodeValue(itemNode, 'ShipMethodDescription') || 'NA',
-                        is_shipped: false,
-                        tracking_num: 'NA',
-                        serial_num: 'NA'
-                    };
-
-                    // Filter: Order Status
-                    if (
-                        !orderItem.order_status ||
-                        vc2_util.inArray(
-                            orderItem.order_status.toUpperCase(),
-                            LibSynnexAPI.SkippedStatus
-                        )
-                    ) {
-                        // skip this order status
-                        vc2_util.log(
-                            logTitle,
-                            '** SKIPPED: OrderStatus:' + orderItem.order_status,
-                            orderItem
-                        );
-
-                        continue;
-                    }
-
-                    // Filter: Line Status
-                    if (
-                        !orderItem.line_status ||
-                        vc2_util.inArray(
-                            orderItem.line_status.toUpperCase(),
-                            LibSynnexAPI.SkippedStatus
-                        )
-                    ) {
-                        // skip this order status
-                        vc2_util.log(
-                            logTitle,
-                            '** SKIPPED: LineStatus:' + orderItem.line_status,
-                            orderItem
-                        );
-                        continue;
-                    }
-
-                    // do the Packages
-                    var packagesNode = ns_xml.XPath.select({
-                        node: itemNode,
-                        xpath: 'Packages/Package'
-                    });
-
-                    vc2_util.log(logTitle, '// packagesNode: ', packagesNode);
-
-                    var trackingNumList = [],
-                        serialNumList = [];
-
-                    for (var ii = 0, jj = packagesNode.length; ii < jj; ii++) {
-                        var trackingNo = Helper.getNodeValue(packagesNode[ii], 'TrackingNumber');
-                        // serialNo = Helper.getNodeValue(packagesNode[ii], 'SerialNo');
-                        // vc2_util.log(logTitle, '// trackingNo: ', trackingNo);
-
-                        if (
-                            trackingNo &&
-                            trackingNo != 'NA' &&
-                            !vc2_util.inArray(trackingNo, trackingNumList)
-                        )
-                            trackingNumList.push(trackingNo);
-
-                        var serialNodes = ns_xml.XPath.select({
-                            node: packagesNode[ii],
-                            xpath: 'SerialNo'
-                        });
-
-                        for (var iii = 0, jjj = serialNodes.length; iii < jjj; iii++) {
-                            var serialNo = vc2_util.getNodeTextContent(serialNodes[iii]);
-                            // vc2_util.log(logTitle, '// serialNo: ', serialNo);
-
-                            serialNumList.push(serialNo);
-                        }
-
-                        // if (
-                        //     serialNo &&
-                        //     serialNo != 'NA' &&
-                        //     !vc2_util.inArray(serialNo, serialNumList)
-                        // )
-                        //     serialNumList.push(serialNo);
-                    }
-
-                    if (trackingNumList && trackingNumList.length)
-                        orderItem.tracking_num = trackingNumList.join(',');
-
-                    if (serialNumList && serialNumList.length)
-                        orderItem.serial_num = serialNumList.join(',');
-
-                    if (
-                        !orderItem.is_shipped &&
-                        orderItem.ship_date &&
-                        orderItem.ship_date != 'NA' &&
-                        orderItem.ship_qty &&
-                        orderItem.ship_qty != 0
-                    ) {
-                        var shippedDate = moment(orderItem.ship_date).toDate();
-
-                        vc2_util.log(logTitle, '**** shipped date: ****', [
-                            shippedDate,
-                            util.isDate(shippedDate),
-                            shippedDate <= new Date()
-                        ]);
-
-                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
-                            orderItem.is_shipped = true;
-                    }
-
-                    vc2_util.log(logTitle, '>> line data: ', orderItem);
-
-                    // check for any duplicates
-                    var dupLinData = vc2_util.findMatching({
-                        list: itemArray,
-                        findAll: true,
-                        filter: {
-                            line_num: orderItem.line_num,
-                            item_num: orderItem.item_num,
-                            vendorSKU: orderItem.vendorSKU,
-                            order_num: orderItem.order_num,
-                            order_status: orderItem.order_status,
-                            line_status: orderItem.line_status,
-                            ship_qty: orderItem.ship_qty,
-                            tracking_num: orderItem.tracking_num,
-                            serial_num: orderItem.serial_num
-                        }
-                    });
-
-                    vc2_util.log(logTitle, '.... has dup?: ', [
-                        dupLinData,
-                        vc2_util.isEmpty(dupLinData)
-                    ]);
-
-                    orderItem.ship_nsdate = LibSynnexAPI.parseToNSDate(orderItem.ship_date);
-                    orderItem.eta_nsdate = LibSynnexAPI.parseToNSDate(orderItem.order_eta);
-                    orderItem.ship_nsdate = LibSynnexAPI.parseToNSDate(orderItem.ship_date);
-                    orderItem.order_nsdate = LibSynnexAPI.parseToNSDate(orderItem.order_date);
-
-                    if (!dupLinData) itemArray.push(orderItem);
-                }
-
-                returnValue = itemArray;
-            } catch (error) {
-                throw error;
-            }
-
             return returnValue;
         }
     };

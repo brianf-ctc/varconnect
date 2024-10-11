@@ -35,7 +35,6 @@ define([
     lib_ingram,
     lib_dell,
     lib_arrow,
-    lib_ingramv1,
     lib_jenne,
     lib_scansource,
     lib_wefi,
@@ -128,6 +127,7 @@ define([
             libVendor;
 
         vc2_util.log(logTitle, '>> XML Vendor:', xmlVendor);
+        vc2_util.log(logTitle, '>> OrderCFG:', OrderCFG);
 
         switch (xmlVendor) {
             case vendorList.TECH_DATA:
@@ -140,6 +140,8 @@ define([
                 libVendor = lib_dnh;
                 break;
             case vendorList.INGRAM_MICRO:
+            case vendorList.INGRAM_MICRO_API:
+            case vendorList.INGRAM_MICRO_V_ONE:
                 libVendor = lib_ingram;
                 break;
             case vendorList.AVNET:
@@ -150,7 +152,6 @@ define([
             case vendorList.DELL:
                 libVendor = lib_dell;
                 break;
-            case vendorList.INGRAM_MICRO_V_ONE:
                 libVendor = lib_ingramv1;
                 break;
             case vendorList.JENNE:
