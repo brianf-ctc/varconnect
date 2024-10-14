@@ -11,7 +11,11 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/xml', './../CTC_VC2_Lib_Utils.js', './moment'], function (ns_xml, vc2_util, moment) {
+define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
+    ns_xml,
+    vc2_util,
+    moment
+) {
     var LogTitle = 'WS:D&H';
 
     var CURRENT = {};
@@ -296,11 +300,12 @@ define(['N/xml', './../CTC_VC2_Lib_Utils.js', './moment'], function (ns_xml, vc2
                 if (!xmlDoc) throw 'Unable to parse XML';
 
                 var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
-                if (util.isArray(arrItemNodes) || vc2_util.isEmpty(arrItemNodes))
+                vc2_util.log(logTitle, '// Item Nodes: ', arrItemNodes);
+                if (!util.isArray(arrItemNodes) || vc2_util.isEmpty(arrItemNodes))
                     throw 'XML: Missing Item Details';
 
                 // retrieve the package nodes
-                var arrPackageNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: 'PACKAGE' });
+                var arrPackageNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//PACKAGE' });
                 CURRENT.PackagesList = LibDnH.processPackages({ nodes: arrPackageNodes });
 
                 vc2_util.log(logTitle, '// Package List: ', CURRENT.PackagesList);

@@ -19,11 +19,10 @@
  * Author: shawn.blackburn
  */
 define([
-    'N/search',
     './CTC_VC2_Lib_Utils.js',
     './CTC_VC2_Constants.js',
     './Bill Creator/Libraries/moment'
-], function (ns_search, vc2_util, vc2_constant, moment) {
+], function (vc2_util, vc2_constant, moment) {
     'use strict';
     var LogTitle = 'WS:IngramAPI',
         LogPrefix;
@@ -36,7 +35,21 @@ define([
     var CURRENT = { apiver: APIVER.ver6 },
         LogStatus = vc2_constant.LIST.VC_LOG_STATUS;
 
-    var LibIngramAPI = {
+    var HelperOld = {
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj =
+                    dateStr && dateStr !== 'NA' ? moment(dateStr, 'YYYY-MM-DD').toDate() : null;
+            } catch (err) {}
+
+            return dateObj;
+        }
+    };
+
+    var LibIngramAPI_old = {
         ValidOrderStatus: [
             'SHIPPED',
             'PROCESSING',
@@ -96,16 +109,25 @@ define([
             return returnValue;
         },
         getTokenCache: function () {
+            // Retrieve the token from the cache
             var token = vc2_util.getNSCache({ key: 'VC_INGRAM_TOKEN' });
+
+            // If the token is not available in the cache, generate a new one
             if (vc2_util.isEmpty(token)) token = this.generateToken();
+
+            // If a token is available, store it in the cache
             if (token) {
                 vc2_util.setNSCache({
                     key: 'VC_INGRAM_TOKEN',
-                    cacheTTL: 14400,
+                    cacheTTL: 14400, // Cache TTL is set to 4 hours (14400 seconds)
                     value: token
                 });
+
+                // Store the token in the CURRENT object for future use
                 CURRENT.accessToken = token;
             }
+
+            // Return the token
             return token;
         },
         getValidOrders: function (option) {
@@ -171,7 +193,7 @@ define([
                 var ingramOrder = option.ingramOrder;
                 if (!ingramOrder) throw 'Ingram Order is required';
 
-                vc2_util.log(logTitle, '/// GET ORDER DETAILS:', ingramOrder);
+                vc2_util.log(logTitle, '/// GET ORDER DETAILS:', ingramOrder.ingramOrderNumber);
                 if (!ingramOrder.ingramOrderNumber) throw 'Ingram Order is required';
 
                 var reqOrderDetails = vc2_util.sendRequest({
@@ -241,6 +263,7 @@ define([
                     order_eta: respLineData.promisedDeliveryDate || shipment.order_eta || 'NA',
                     carrier: shipment.carrier || 'NA',
                     order_eta_ship: shipment.order_eta_ship || 'NA',
+                    eta_delivery_date: shipment.eta_delivery_date || 'NA',
                     serial_num:
                         shipment.serialNos && shipment.serialNos.length
                             ? shipment.serialNos.join(',')
@@ -270,6 +293,7 @@ define([
 
             return returnValue;
         },
+        extractLineDataV61: function (respLineData, orderDetails) {},
         extractShipmentDetails: function (shipmentDetails, lineData) {
             var logTitle = [LogTitle, 'extractShipmentDetails'].join('::'),
                 returnValue;
@@ -410,23 +434,6 @@ define([
 
             returnValue = defaultETA.text;
             return returnValue;
-        },
-        parseToNSDate: function (dateStr) {
-            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
-                dateObj;
-
-            try {
-                dateObj =
-                    dateStr && dateStr !== 'NA' ? moment(dateStr, 'YYYY-MM-DD').toDate() : null;
-            } catch (err) {}
-
-            // vc2_util.log(logTitle, '// dateStr: ', {
-            //     dateStr: dateStr,
-            //     dateObj: dateObj,
-            //     isDate: util.isDate(dateObj)
-            // });
-
-            return dateObj;
         }
     };
 
@@ -492,7 +499,7 @@ define([
         }
     });
 
-    return {
+    var returnOld = {
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
                 returnValue = [];
@@ -596,9 +603,9 @@ define([
                                 orderItem.is_shipped = true;
                         }
 
-                        // orderItem.eta_nsdate = LibIngramAPI.parseToNSDate(orderItem.order_eta);
-                        // orderItem.ship_nsdate = LibIngramAPI.parseToNSDate(orderItem.ship_date);
-                        // orderItem.order_nsdate = LibIngramAPI.parseToNSDate(orderItem.order_date);
+                        // orderItem.eta_nsdate = Helper.parseToNSDate(orderItem.order_eta);
+                        // orderItem.ship_nsdate = Helper.parseToNSDate(orderItem.ship_date);
+                        // orderItem.order_nsdate = Helper.parseToNSDate(orderItem.order_date);
 
                         vc2_util.log(logTitle, '>> line data: ', orderItem);
                         itemArray.push(orderItem);
@@ -642,7 +649,7 @@ define([
                         ingramOrder: validOrder
                     });
 
-                    arrOrderDetails[validOrder.ingramOrderNumber] = respOrderDetails;
+                    // arrOrderDetails[validOrder. ] = respOrderDetails;
                 }
 
                 returnValue = {
@@ -653,6 +660,336 @@ define([
                 throw error;
             }
 
+            return returnValue;
+        }
+    };
+
+    var CURRENT = {};
+    var Helper = {
+        setCurrentValues: function (option) {
+            CURRENT.recordId = option.poId || option.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum;
+            CURRENT.orderConfig = option.orderConfig;
+
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
+
+            // Detect the endpoints
+            var endPoint = CURRENT.orderConfig.endPoint;
+            if (!endPoint) throw 'Missing end point configuration';
+
+            if (endPoint.match(/\/v6.1\//gi)) {
+                LibIngramAPI.EndPointV61 = endPoint;
+                LibIngramAPI.EndPointV6 = endPoint.replace('/v6.1/', '/v6/');
+            } else {
+                LibIngramAPI.EndPointV6 = endPoint;
+                LibIngramAPI.EndPointV61 = endPoint.replace('/v6/', '/v6.1/');
+            }
+
+            vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+        },
+        validate
+    };
+
+    var LibIngramAPI = {
+        EndPointV61: '',
+        EndPointV6: '',
+        ValidOrderStatus: [
+            'SHIPPED',
+            'PROCESSING',
+            'DELIVERED',
+            'BACKORDERED',
+            'PARTIALLY DELIVERED',
+            'PARTIALLY SHIPPED'
+        ],
+        ValidLineStatus: [
+            'SHIPPED',
+            'PROCESSING',
+            'IN PROGRESS',
+            'ON HOLD',
+            'DELIVERED',
+            'BACKORDERED',
+            'ORDER NOT PRINTED'
+        ],
+        CacheName: 'VC_INGRAM_TOKEN',
+        SkippedStatus: ['CANCELED', 'CANCELLED'],
+        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED', 'E-DELIVERED'],
+
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
+
+            try {
+                vc2_util.log(logTitle, '**** Generate Access Token ****');
+
+                var requestOption = {
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'POST',
+                    recordId: CURRENT.recordId,
+                    doRetry: true,
+                    maxRetry: 3,
+                    query: {
+                        url: CURRENT.orderConfig.accessEndPoint,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: vc2_util.convertToQuery({
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
+                            grant_type: 'client_credentials'
+                        })
+                    }
+                };
+                var tokenReq = vc2_util.sendRequest(requestOption);
+                vc2_util.handleJSONResponse(tokenReq);
+
+                var tokenResp = tokenReq.PARSED_RESPONSE;
+
+                if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
+
+                returnValue = tokenResp.access_token;
+                CURRENT.accessToken = tokenResp.access_token;
+            } catch (error) {
+                throw error;
+            } finally {
+                vc2_util.log(logTitle, '>> Access Token: ', returnValue);
+            }
+
+            return returnValue;
+        },
+        getTokenCache: function () {
+            // retrieve it on the cache
+            var tokenCache = vc2_util.getNSCache({ key: this.CacheName });
+
+            if (vc2_util.isEmpty(tokenCache)) tokenCache = this.generateToken();
+            if (!vc2_util.isEmpty(tokenCache)) {
+                // save the cached token
+                vc2_util.setNSCache({
+                    key: this.CacheName,
+                    value: tokenCache
+                });
+                CURRENT.accessToken = tokenCache;
+            }
+
+            return tokenCache;
+        },
+
+        fetchValidOrders: function () {
+            var logTitle = [LogTitle, 'fetchValidOrders'].join('::'),
+                returnValue;
+
+            try {
+                vc2_util.log(logTitle, '**** Fetch Valid Orders ****');
+
+                var respOrderSearch = vc2_util.sendRequest({
+                    header: [LogTitle, 'Orders Search'].join(' '),
+                    query: {
+                        url: [
+                            LibIngramAPI.EndPointV6,
+                            '/search?customerOrderNumber=',
+                            CURRENT.recordNum
+                        ].join(),
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
+                            'IM-CustomerOrderNumber': CURRENT.recordNum,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        }
+                    },
+                    recordId: CURRENT.recordId
+                });
+                vc2_util.handleJSONResponse(respOrderSearch);
+                if (respOrderSearch.PARSED_RESPONSE) throw 'Unable to parse server response';
+
+                var parsedResponse = respOrderSearch.PARSED_RESPONSE;
+                if (!vc2_util.isEmpty(parsedResponse.orders)) throw 'Orders are not found';
+
+                var arrOrderList = [];
+
+                for (var i = 0; i < parsedResponse.orders.length; i++) {
+                    var ingramOrder = parsedResponse.orders[i];
+                    if (!ingramOrder.orderStatus) continue;
+
+                    if (
+                        vc2_util.inArray(
+                            ingramOrder.orderStatus.toUpperCase(),
+                            LibIngramAPI.SkippedStatus
+                        )
+                    )
+                        continue;
+
+                    arrOrderList.push(ingramOrder);
+                }
+                returnValue = arrOrderList;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+
+        fetchOrderDetailsV61: function (ingramOrder) {
+            var logTitle = [LogTitle, 'fetchorderdetailsV61'].join('::'),
+                returnValue;
+
+            try {
+                if (!ingramOrder) throw 'Missing Ingram order information';
+                var ingramOrderNum = ingramOrder.ingramOrderNumber;
+
+                vc2_util.log(logTitle, '**** Fetch Order Details ****', ingramOrderNum);
+
+                var respOrderDetails = vc2_util.sendRequest({
+                    header: [LogTitle, 'Order Details'].join(' '),
+                    query: {
+                        url: [LibIngramAPI.EndPointV61, '/', ingramOrderNum].join(),
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        }
+                    },
+                    recordId: CURRENT.recordId
+                });
+
+                vc2_util.handleJSONResponse(respOrderDetails);
+                returnValue = respOrderDetails.PARSED_RESPONSE;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+
+        fetchOrderDetailsV6: function (ingramOrder) {
+            var logTitle = [LogTitle, 'fetchorderdetailsV6'].join('::'),
+                returnValue;
+
+            try {
+                if (!ingramOrder) throw 'Missing Ingram order information';
+                var ingramOrderNum = ingramOrder.ingramOrderNumber;
+
+                vc2_util.log(logTitle, '**** Fetch Order Details ****', ingramOrderNum);
+
+                var respOrderDetails = vc2_util.sendRequest({
+                    header: [LogTitle, 'Order Details'].join(' '),
+                    query: {
+                        url: [LibIngramAPI.EndPointV6, '/', ingramOrderNum].join(),
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'IM-CustomerNumber': CURRENT.orderConfig.customerNo,
+                            'IM-CountryCode': CURRENT.orderConfig.country,
+                            'IM-CorrelationID': [CURRENT.recordNum, CURRENT.recordId].join('-')
+                        }
+                    },
+                    recordId: CURRENT.recordId
+                });
+
+                vc2_util.handleJSONResponse(respOrderDetails);
+                returnValue = respOrderDetails.PARSED_RESPONSE;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        }
+    };
+
+    return {
+        sampleProcess: function (option) {
+            var ingramOrder = new IngramAPI();
+            var accessToken = ingramOrder.generateToken();
+
+            var ingramNewOrder = new IngramAPI({ accessToken: accessToken });
+
+            var arrValidOrders = ingramOrder.search({ orderNum: option.orderNum });
+
+            // loop arrOrders using for
+            for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                var validOrder = arrValidOrders[i];
+
+                var orderDetailsV6 = ingramOrder.orderDetails({
+                    ingramOrderNum: validOrder.ingramOrderNumber,
+                    version: 6
+                });
+            }
+        },
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                Helper.setCurrentValues(option);
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
+
+                var arrIngramOrders = this.processRequest(option),
+                    arrValidOrders = arrIngramOrders.Orders || [];
+
+                if (vc2_util.isEmpty(arrValidOrders)) throw 'Order search returned empty';
+
+                vc2_util.log(logTitle, '***  Total Orders: ', arrValidOrders.length);
+
+                for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                    var validOrder = arrValidOrders[i],
+                        ingramOrderNum = validOrder.ingramOrderNumber;
+                    var logPrefix = '[' + ingramOrderNum + '] ';
+
+                    vc2_util.log(
+                        logTitle,
+                        logPrefix + '/// PROCESSING Ingram Order: ',
+                        ingramOrderNum
+                    );
+
+                    var orderDetailV61 = arrIngramOrders[ingramOrderNum].V61;
+                }
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
+            return returnValue;
+        },
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                Helper.setCurrentValues(option);
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
+
+                // Generate the token
+                LibIngramAPI.getTokenCache();
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
+
+                var arrValidOrders = LibIngramAPI.fetchValidOrders(),
+                    OrderDetails = {};
+
+                // Process the orders
+                for (var i = 0, j = arrValidOrders.length; i < j; i++) {
+                    var validOrder = arrValidOrders[i],
+                        ingramOrderNum = validOrder.ingramOrderNumber;
+
+                    OrderDetails[ingramOrderNum] = {
+                        V6: LibIngramAPI.fetchOrderDetailsV6(validOrder),
+                        'V6.1': LibIngramAPI.fetchOrderDetailsV61(validOrder)
+                    };
+                }
+
+                returnValue = {
+                    Orders: arrValidOrders,
+                    Detais: OrderDetails
+                };
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
             return returnValue;
         }
     };

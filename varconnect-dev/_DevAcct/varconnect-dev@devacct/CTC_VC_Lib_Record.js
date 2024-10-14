@@ -316,6 +316,7 @@ define([
             vc2_util.log(logTitle, '// PO Data: ', POData);
 
             returnValue.id = POData.createdFromID;
+            if (POData.bypassVC) return returnValue;
 
             // extract lines from the PO
             var itemAltNameColId =
@@ -457,7 +458,7 @@ define([
                                         ? currLineVal.split(/\n/)
                                         : [];
 
-                                // no change at all, if empty
+                                // no change at all, if empty`
                                 if (vc2_util.isEmpty(newValue) || newValue == 'NA') continue;
 
                                 // make the list unique

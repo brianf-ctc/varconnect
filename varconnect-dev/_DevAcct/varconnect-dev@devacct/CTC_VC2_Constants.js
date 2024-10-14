@@ -685,6 +685,24 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
+        MISSING_POLINK: {
+            code: 'MISSING_POLINK',
+            msg: 'PO Link not found',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        MISSING_BILL_LINES: {
+            code: 'MISSING_BILL_LINES',
+            msg: 'Missing bill file lines',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
+        INCOMPLETE_BILLFILE: {
+            code: 'INCOMPLETE_BILLFILE',
+            msg: 'Incomplete bill file data',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
+        },
         NOT_BILLABLE: {
             code: 'NOT_BILLABLE',
             msg: 'PO is not ready for billing. ',
@@ -709,6 +727,13 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        
+        ITEM_NOT_BILLABLE: {
+            code: 'ITEM_NOT_BILLABLE',
+            msg: 'Item is not billable',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
         MISSING_ITEMNO: {
             code: 'MISSING_ITEMNO',
             msg: 'Missing Item on Bill',
@@ -721,7 +746,6 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -761,13 +785,13 @@ define(function (require) {
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
             msg: 'Variance Total exceeded threshold',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
         BILL_NOT_CREATED: {
             code: 'BILL_NOT_CREATED',
             msg: 'Failed to create the Vendor Bill',
-            status: Bill_Creator.Status.PENDING,
+            status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.RECORD_ERROR
         },
         BILL_CREATE_DISABLED: {
@@ -818,7 +842,7 @@ define(function (require) {
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
-        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
+                SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 

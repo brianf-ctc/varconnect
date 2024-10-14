@@ -72,6 +72,30 @@ define(function (require) {
 
             return returnValue;
         },
+        setRecordValue: function (option) {
+            var logTitle = [LogTitle, 'setRecordValue'].join('::'),
+                returnValue;
+
+            try {
+                if (!option.record) throw 'Record is required';
+                if (!option.fieldId) throw 'Field ID is required';
+
+                vc2_util.log(logTitle, '## set field value: ', [option.fieldId, option.value]);
+
+                option.record.setValue({
+                    fieldId: option.fieldId,
+                    value: option.value
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw ns_error.create({
+                    name: 'Unable to set the record field',
+                    message: vc2_util.extractError(error)
+                });
+            }
+
+            return returnValue;
+        },
         extractValues: function (option) {
             var logTitle = [LogTitle, 'extractValues'].join('::'),
                 returnValue;
@@ -389,7 +413,7 @@ define(function (require) {
                     item: uniqueItemIds
                 });
 
-                returnValue.forEach(function (lineData) {
+                (returnValue || []).forEach(function (lineData) {
                     if (lineData && lineData.item) {
                         lineData = VC2_RecordLib.getAltPartNumValues({
                             source: altItemNames,
@@ -1051,6 +1075,8 @@ define(function (require) {
                 var arrOrderLines = option.orderLines,
                     arrVendorLines = option.vendorLines,
                     includeZeroQtyLines = option.includeZeroQtyLines || false,
+                    includeBilledQty = option.includeUnbilledQty || false,
+                    includeFullyMatched = option.includeFullyMatched || false,
                     orderRecord = option.record || option.recOrder;
 
                 if (vc2_util.isEmpty(arrOrderLines)) {
@@ -1058,7 +1084,7 @@ define(function (require) {
 
                     arrOrderLines = VC2_RecordLib.extractRecordLines({
                         record: orderRecord,
-                        columns: ['item', 'quantity', 'rate'],
+                        columns: ['item', 'quantity', 'rate', 'quantityreceived', 'quantitybilled'],
                         findAll: true
                     });
                 }
@@ -1071,7 +1097,15 @@ define(function (require) {
                     orderLine.rate = vc2_util.forceFloat(orderLine.rate);
 
                     orderLine.AVAILQTY = orderLine.quantity;
+                    orderLine.FULLQTY = orderLine.quantity;
                     orderLine.APPLIEDQTY = 0;
+
+                    if (includeBilledQty) {
+                        orderLine.quantityreceived = vc2_util.forceInt(orderLine.quantityreceived);
+                        orderLine.quantitybilled = vc2_util.forceInt(orderLine.quantitybilled);
+                        orderLine.AVAILQTY = orderLine.quantityreceived - orderLine.quantitybilled;
+                    }
+
                     return true;
                 });
                 arrVendorLines.forEach(function (vendorLine) {
@@ -1246,6 +1280,8 @@ define(function (require) {
                         matchingOrderLines.itemRate.forEach(fnQuantityDist);
                         matchingOrderLines.itemQty.forEach(fnQuantityDist);
                         matchingOrderLines.itemOnly.forEach(fnQuantityDist);
+
+                        // vendorLine.MATCHED_LINES = matchingOrderLines;
                     } catch (match_error) {
                         vc2_util.logError(logTitle, match_error);
                     } finally {

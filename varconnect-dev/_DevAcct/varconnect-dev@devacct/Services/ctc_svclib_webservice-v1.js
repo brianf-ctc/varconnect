@@ -22,16 +22,16 @@ define(function (require) {
         vcs_configLib = require('./ctc_svclib_configlib.js');
 
     // vendor libraries
-    var lib_synnex = require('../Library/CTC_VC_Lib_Synnex'),
-        lib_techdata = require('../Library/CTC_VC_Lib_TechData'),
-        lib_dnh = require('../Library/CTC_VC_Lib_DandH.js'),
-        lib_ingram = require('../Library/CTC_VC_Lib_Ingram'),
-        lib_dell = require('../Library/CTC_VC_Lib_Dell'),
-        lib_arrow = require('../Library/CTC_VC_Lib_Arrow'),
-        lib_jenne = require('../Library/CTC_VC_Lib_Jenne'),
-        lib_scansource = require('../Library/CTC_VC_Lib_ScanSource'),
-        lib_wefi = require('../Library/CTC_VC_Lib_WeFi.js'),
-        lib_carahsoft = require('../Library/CTC_VC_Lib_Carahsoft.js');
+    var lib_synnex = require('../CTC_VC_Lib_Synnex'),
+        lib_techdata = require('../CTC_VC_Lib_TechData'),
+        lib_dnh = require('../CTC_VC_Lib_DandH.js'),
+        lib_ingram = require('../CTC_VC_Lib_Ingram'),
+        lib_dell = require('../CTC_VC_Lib_Dell'),
+        lib_arrow = require('../CTC_VC_Lib_Arrow'),
+        lib_jenne = require('../CTC_VC_Lib_Jenne'),
+        lib_scansource = require('../CTC_VC_Lib_ScanSource'),
+        lib_wefi = require('../CTC_VC_Lib_WeFi.js'),
+        lib_carahsoft = require('../CTC_VC_Lib_Carahsoft.js');
 
     var moment = require('./lib/moment');
 

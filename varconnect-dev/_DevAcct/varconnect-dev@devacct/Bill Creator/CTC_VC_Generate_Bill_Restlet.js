@@ -36,6 +36,7 @@ define([
     var LogTitle = 'VC BILL CREATE RL',
         VCLOG_APPNAME = 'VAR Connect | Process Bill',
         Current = { MainCFG: {} },
+        BILLPROC,
         LogPrefix = '',
         BILL_CREATOR = vc2_constant.Bill_Creator;
 
@@ -54,7 +55,9 @@ define([
                     poId: context.PO_LINK,
                     billFileId: context.ID,
                     billInAdvance: context.billInAdvance || false,
-                    processVariance: context.PROC_VARIANCE || false
+                    processVariance: context.PROC_VARIANCE || false,
+                    poVendor: context.entity,
+                    invoiceNo: context.invoiceNo
                 });
 
                 if (!Current.poId) {
@@ -64,48 +67,11 @@ define([
                 LogPrefix = '[purchaseorder:' + Current.poId + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
-                // Load the PO Record
-                var recPO = vc2_recordlib.load({ type: 'purchaseorder', id: Current.poId });
-                var poColumns = [
-                    'tranid',
-                    'entity',
-                    'taxtotal',
-                    'tax2total',
-                    'status',
-                    'statusRef'
-                ];
-                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES) {
-                    poColumns.push('subsidiary');
-                }
-                Current.PO_DATA = vc2_recordlib.extractValues({
-                    record: recPO,
-                    fields: poColumns
-                });
-
-                Current.MainCFG = vcs_configLib.mainConfig();
-                Current.BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId });
-                Current.OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
-
-                /// PROCESS THE BILL  =================
-                var BillData = vc_billprocess.preprocessBill({
-                    recOrder: recPO,
-                    billFileId: Current.billFileId
-                });
-
-                if (BillData.VendorData && BillData.VendorData.hasOwnProperty('ignoreVariance')) {
-                    Current.ignoreVariance = !!vc2_util.inArray(
-                        BillData.VendorData.ignoreVariance,
-                        ['T', 't', true]
-                    );
-                }
-                /// =====================================
-
                 /// FIND EXISTING BILLS =================
-                vc2_util.log(logTitle, ' // Checking for existing bills...');
-
-                var arrExistingBills = Helper.getExistingBill({
-                    entity: Current.PO_DATA.entity,
-                    invoiceNo: BillData.VendorData.invoice
+                vc2_util.log(logTitle, '// Checking for existing bills...');
+                var arrExistingBills = vc_billprocess.searchExistingBills({
+                    entity: Current.poVendor,
+                    invoiceNo: Current.invoiceNo
                 });
 
                 /// BILL ALREADY EXISTS //////////////////////
@@ -125,197 +91,146 @@ define([
                 }
                 /// =====================================
 
+                /// PRE PROCESS THE BILL ////
+                BILLPROC = vc_billprocess.preprocessBill({
+                    billFileId: Current.billFileId,
+                    poId: Current.poId
+                });
+                /// PRE PROCESS THE BILL ////
+
+                // Load the PO Record
+                Current.PO_REC = BILLPROC.PO.REC;
+                Current.PO_DATA = BILLPROC.PO.DATA;
+                BILLPROC.CFG.MainCFG = BILLPROC.CFG.MainCFG;
+                Current.BillCFG = BILLPROC.CFG.BillCFG;
+                Current.OrderCFG = BILLPROC.CFG.OrderCFG;
+
+                /// CHECK FOR STATUS ///
+                if (
+                    BILLPROC.STATUS.HasErrors &&
+                    !(BILLPROC.STATUS.AllowVariance || BILLPROC.STATUS.IgnoreVariance)
+                ) {
+                    vc2_util.log(logTitle, '-- Errors Detected: ', BILLPROC.ErrorList);
+
+                    var errorCode = BILLPROC.ErrorList.shift();
+                    return util.extend(
+                        returnObj,
+                        BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' }
+                    );
+                }
+
+                /// PROCESS THE BILL  =================
+                var BillData = BILLPROC.BILLFILE.DATA;
+                Current.ignoreVariance = BILLPROC.STATUS.IgnoreVariance;
+
+                vc2_util.log(logTitle, '/// BILL PROCESS STATUS', BILLPROC.STATUS);
+                vc2_util.log(logTitle, '/// PO DATA', BILLPROC.PO.DATA);
+
+                /// VARiANCE CHECK =======================
+                if (
+                    BILLPROC.STATUS.HasVariance &&
+                    !(BILLPROC.STATUS.AllowVariance || BILLPROC.STATUS.IgnoreVariance)
+                ) {
+                    vc2_util.log(logTitle, '-- Variance Detected: ', BILLPROC.VarianceList);
+
+                    return util.extend(
+                        util.extend(returnObj, {
+                            details: BILLPROC.VarianceList.join(', ')
+                        }),
+                        BILL_CREATOR.Code.HAS_VARIANCE
+                    );
+                }
+
                 /// STATUS CHECK ========================
-                vc2_util.log(logTitle, '/// PO status is: ', BillData.OrderData.status);
-                if (BillData.OrderData.isBillable || Current.billInAdvance) {
-                    // continue processing
-                    vc2_util.log(logTitle, '>> PO is ready for billing. ');
-                } else {
+                if (
+                    !BILLPROC.STATUS.AllowToBill &&
+                    !Current.billInAdvance &&
+                    !(BILLPROC.STATUS.AllowVariance || BILLPROC.STATUS.IgnoreVariance)
+                ) {
                     return util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
                 }
-                /// =====================================
 
-                /// =====================================
-                vc2_util.log(logTitle, '/// Current: ', Current);
-                vc2_util.log(
-                    logTitle,
-                    '/// BillData (params): ',
-                    vc2_util.extractValues({
-                        source: BillData,
-                        params: [
-                            'AllowBill',
-                            'AllowVariance',
-                            'HasErrors',
-                            'HasVariance',
-                            'VarianceList',
-                            'ErrorList',
-                            'Error',
-                            'Total',
-                            'BillLines',
-                            'Charges'
-                        ]
-                    })
-                );
-
-                /// =====================================
-
-                vc2_util.log(logTitle, '>> Settings: ', {
-                    AllowBill: BillData.AllowBill,
-                    processVariance: Current.processVariance,
-                    ignoreVariance: Current.ignoreVariance,
-                    hasVariance: BillData.HasVariance,
-                    notAllowed: !BillData.AllowBill && !Current.processVariance
-                });
-                /// VALIDATE BEFORE BILL CREATE =========
-                if (!BillData.AllowBill && !Current.processVariance) {
-                    if (BillData.HasVariance && !Current.ignoreVariance) {
-                        vc2_util.log(logTitle, '>> Has Variances - ', BillData.VarianceList);
-
-                        return util.extend(
-                            util.extend(returnObj, {
-                                details: BillData.VarianceList.join(', ')
-                            }),
-                            BILL_CREATOR.Code.HAS_VARIANCE
-                        );
-                    }
-
-                    if (BillData.HasErrors) {
-                        /// just get the first error
-                        var errorCode = BillData.ErrorList.shift();
-                        return util.extend(
-                            returnObj,
-                            BILL_CREATOR.Code[errorCode] || { msg: 'Unexpected error' }
-                        );
-                    }
-                }
                 /// =====================================
 
                 /// START BILL CREATE  ==================
                 // Get sales order details
                 vc2_util.log(logTitle, '**** START: Vendor Bill Creation *****');
-                Current.SO_DATA = Helper.getSalesOrderDetails({ poId: Current.poId });
+
+                Current.SO_DATA = Helper.getSalesOrderDetails({ poId: BILLPROC.PO.ID });
                 vc2_util.log(logTitle, '... SO Data: ', Current.SO_DATA);
 
-                /// TRANSFORM TO VENDOR BILL
-                var transformOption = {
-                    fromType: 'purchaseorder',
-                    fromId: Current.poId,
-                    toType: 'vendorbill',
-                    isDynamic: true
-                };
-
-                if (Current.MainCFG.defaultBillForm) {
-                    transformOption.customform = Current.MainCFG.defaultBillForm;
-                }
-                vc2_util.log(logTitle, '... Transform: ', transformOption);
-
-                Current.POBILL_REC = vc2_recordlib.transform(transformOption);
-
-                if (Current.MainCFG.defaultBillForm) {
-                    Current.POBILL_REC.setValue({
-                        fieldId: 'customform',
-                        value: Current.MainCFG.defaultBillForm
-                    });
-                }
-
                 /// SET POSTING PERIOD
-                var currentPostingPeriod = Current.POBILL_REC.getValue({
-                    fieldId: 'postingperiod'
-                });
+                var currentPostingPeriod = BILLPROC.BILL.REC.getValue({ fieldId: 'postingperiod' });
                 vc2_util.log(logTitle, '>> posting period: ', currentPostingPeriod);
-                Current.POBILL_REC.setValue({
+
+                // vc2_util.dumpLog(logTitle, BILLPROC.BILLFILE.JSON, 'BILLFILE(JSON): ');
+                // vc2_util.dumpLog(logTitle, BILLPROC.BILLFILE.DATA, 'BILLFILE(DATA): ');
+                /// Set INVOICE NAME
+                vc2_recordlib.setRecordValue({
+                    record: BILLPROC.BILL.REC,
+                    fieldId: 'tranid',
+                    value: BILLPROC.BILLFILE.JSON.invoice
+                });
+
+                /// SET the trandate
+                vc2_recordlib.setRecordValue({
+                    record: BILLPROC.BILL.REC,
                     fieldId: 'trandate',
                     value: ns_format.parse({
-                        value: moment(BillData.VendorData.date).toDate(),
+                        value: moment(BILLPROC.BILLFILE.JSON.date).toDate(),
                         type: ns_format.Type.DATE
                     })
                 });
 
                 /// SET DUE DATE
-                if (BillData.VendorData.duedate) {
-                    Current.POBILL_REC.setValue({
+                if (BILLPROC.BILLFILE.DATA.duedate) {
+                    vc2_recordlib.setRecordValue({
+                        record: BILLPROC.BILL.REC,
                         fieldId: 'duedate',
                         value: ns_format.parse({
-                            value: moment(BillData.VendorData.duedate).toDate(),
+                            value: moment(BILLPROC.BILLFILE.JSON.duedate).toDate(),
                             type: ns_format.Type.DATE
                         })
                     });
                 }
 
                 /// SET POSTING PERIOD
-                var isPeriodLocked = Helper.isPeriodLocked({ recordBill: Current.POBILL_REC });
+                var isPeriodLocked = Helper.isPeriodLocked({ recordBill: BILLPROC.BILL.REC });
                 if (isPeriodLocked) {
                     // set to original period
-                    Current.POBILL_REC.setValue({
+                    vc2_recordlib.setRecordValue({
+                        record: BILLPROC.BILL.REC,
                         fieldId: 'postingperiod',
                         value: currentPostingPeriod
                     });
                 }
 
-                /// Set INVOICE NAME
-                Current.POBILL_REC.setValue({
-                    fieldId: 'tranid',
-                    value: BillData.VendorData.invoice
-                });
-
-                /// ADD THE LINES =======================
-                var lineCount = Current.POBILL_REC.getLineCount({
-                    sublistId: 'item'
-                });
-
-                vc2_util.log(logTitle, 'Matching vb-to-payload lines...line count: ', {
-                    vbLines: lineCount,
-                    payloadLines: BillData.VendorData.lines.length
-                });
-
-                vc_billprocess.processBillLines({
-                    record: Current.POBILL_REC,
-                    processVariance: Current.processVariance,
-                    ignoreVariance: Current.ignoreVariance,
-                    orderData: Current.SO_DATA
-                });
-
-                if (BillData.HasErrors) {
-                    vc2_util.log(
-                        logTitle,
-                        '## Errors ## ',
-                        vc2_util.extractValues({
-                            source: BillData,
-                            params: ['Error', 'HasErrors', 'HasVariannce', 'VarianceList']
-                        })
-                    );
-                    for (var errorCode in BillData.Error) {
-                        util.extend(returnObj, BILL_CREATOR.Code[errorCode]);
-                        util.extend(returnObj, {
-                            details: util.isArray(BillData.Error[errorCode])
-                                ? BillData.Error[errorCode].join(', ')
-                                : BillData.Error[errorCode]
-                        });
-                        return returnObj;
-                    }
-                }
-
                 /// SAVING THE BILL =====================
-                Current.POBILL_REC.setValue({
+                vc2_recordlib.setRecordValue({
+                    record: BILLPROC.BILL.REC,
                     fieldId: 'approvalstatus',
-                    value: Current.MainCFG.defaultVendorBillStatus || 1
+                    value: BILLPROC.CFG.MainCFG.defaultVendorBillStatus || 1
                 }); // defaults to pending approval
 
                 // Bill Save is disabled
-                if (Current.MainCFG.isBillCreationDisabled) {
+                if (BILLPROC.CFG.MainCFG.isBillCreationDisabled) {
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATE_DISABLED);
                     return returnObj;
                 }
 
                 // set the createdby field
-                Current.POBILL_REC.setValue({
+                vc2_recordlib.setRecordValue({
+                    record: BILLPROC.BILL.REC,
                     fieldId: 'custbody_ctc_vc_createdby_vc',
                     value: true
                 });
 
-                vc2_util.log(logTitle, '**** SAVING Bill Record *** ');
+                if (BILLPROC.STATUS.AllowVariance) {
+                    vc_billprocess.addBillLines();
+                }
 
-                var newRecordId = Current.POBILL_REC.save({
+                vc2_util.log(logTitle, '**** SAVING Bill Record *** ');
+                var newRecordId = BILLPROC.BILL.REC.save({
                     enableSourcing: true,
                     ignoreMandatoryFields: true
                 });
@@ -323,23 +238,22 @@ define([
                 if (newRecordId) {
                     vc2_util.log(logTitle, '... Bill Create succesfull - ', newRecordId);
 
-                    returnObj = JSON.parse(JSON.stringify(Current.POBILL_REC));
+                    returnObj = JSON.parse(JSON.stringify(BILLPROC.BILL.REC));
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_CREATED);
 
                     returnObj.details =
                         'Linked to vendor bill ' +
                         JSON.stringify({
                             id: newRecordId,
-                            name: BillData.VendorData.invoice
+                            name: BILLPROC.BILLFILE.DATA.invoice
                         });
                 } else {
                     vc2_util.log(logTitle, '// bill creation fail...', [
                         Current.PO_DATA.tranid,
-                        BillData.VendorData.invoice
+                        BILLPROC.BILLFILE.DATA.invoice
                     ]);
                     util.extend(returnObj, BILL_CREATOR.Code.BILL_NOT_CREATED);
                 }
-
                 /// =====================================
 
                 return returnObj;
@@ -460,103 +374,7 @@ define([
             returnValue = isLocked;
 
             return returnValue;
-        },
-        roundOff: function (value) {
-            var flValue = parseFloat(value || '0');
-            if (!flValue || isNaN(flValue)) return 0;
-
-            return Math.round(flValue * 100) / 100;
         }
-        // loadBillingConfig: function () {
-        //     var MainCFG = vc_mainCfg.getMainConfiguration();
-        //     if (!MainCFG) {
-        //         log.error('No Configuration available');
-        //         throw new Error('No Configuration available');
-        //     }
-        //     return {
-        //         defaultBillForm: MainCFG.defaultBillForm,
-        //         billDefaultStatus: MainCFG.defaultVendorBillStatus,
-        //         allowedThreshold: MainCFG.allowedVarianceAmountThreshold,
-        //         allowAdjustLine: MainCFG.allowAdjustLine,
-
-        //         applyTax: MainCFG.isVarianceOnTax || false,
-        //         taxItem: MainCFG.defaultTaxItem,
-        //         taxItem2: MainCFG.defaultTaxItem2,
-        //         applyShip: MainCFG.isVarianceOnShipping || false,
-        //         shipItem: MainCFG.defaultShipItem,
-        //         applyOther: MainCFG.isVarianceOnOther || false,
-        //         otherItem: MainCFG.defaultOtherItem,
-
-        //         dontSaveBill: MainCFG.isBillCreationDisabled || false,
-
-        //         autoprocPriceVar: MainCFG.autoprocPriceVar || false,
-        //         autoprocTaxVar: MainCFG.autoprocTaxVar || false,
-        //         autoprocShipVar: MainCFG.autoprocShipVar || false,
-        //         autoprocOtherVar: MainCFG.autoprocOtherVar || false
-        //     };
-        // },
-        // loadVendorConfig: function (option) {
-        //     var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
-        //         returnValue;
-        //     var entityId = option.entity;
-        //     var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
-
-        //     try {
-        //         var searchOption = {
-        //             type: 'vendor',
-        //             filters: [['internalid', 'anyof', entityId]],
-        //             columns: []
-        //         };
-
-        //         for (var field in BILLCREATE_CFG.FIELD) {
-        //             searchOption.columns.push(
-        //                 ns_search.createColumn({
-        //                     name: BILLCREATE_CFG.FIELD[field],
-        //                     join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-        //                 })
-        //             );
-        //         }
-
-        //         var searchObj = ns_search.create(searchOption);
-        //         if (!searchObj.runPaged().count) throw 'No config available';
-
-        //         returnValue = {};
-        //         searchObj.run().each(function (row) {
-        //             for (var field in BILLCREATE_CFG.FIELD) {
-        //                 returnValue[field] = row.getValue({
-        //                     name: BILLCREATE_CFG.FIELD[field],
-        //                     join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-        //                 });
-        //             }
-        //             return true;
-        //         });
-        //     } catch (error) {
-        //         vc2_util.logError(logTitle, error);
-        //         returnValue = false;
-        //     }
-
-        //     return returnValue;
-        // },
-        // loadOrderStatusVendorConfig: function (option) {
-        //     var logTitle = [LogTitle, 'loadOrderStatusVendorConfig'].join('::');
-
-        //     var vendor = option.vendor,
-        //         vendorName = option.vendorName,
-        //         subsidiary = option.subsidiary,
-        //         BillCFG = vc_vendorcfg.getVendorConfiguration({
-        //             vendor: vendor,
-        //             subsidiary: subsidiary
-        //         });
-
-        //     if (!BillCFG) {
-        //         vc2_util.log(
-        //             logTitle,
-        //             'No vendor configuration setup - [vendor:' + vendor + '] ' + vendorName
-        //         );
-        //     }
-
-        //     return BillCFG;
-        // }
     };
 
     return RESTLET;

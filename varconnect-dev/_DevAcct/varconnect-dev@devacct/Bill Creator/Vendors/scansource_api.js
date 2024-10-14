@@ -23,6 +23,8 @@ define(function (require) {
     var TransId = '';
     var EntryPoint = {};
 
+    var LogTitle = 'WS:ScanSource';
+
     EntryPoint.getInvoice = function (input, config) {
         TransId = input;
         var responseBody = getInvoiceList(config);
@@ -33,67 +35,60 @@ define(function (require) {
     function getInvoiceList(config) {
         var stLogTitle = 'scansource_api:getInvoiceList';
 
-        var objHeaders = {
+        var respInvoiceList = vc2_util.sendRequest({
+            header: [LogTitle, 'Invoice List'].join(' '),
+            method: 'get',
+            recordId: TransId,
+            query: {
+                url:
+                    config.url +
+                    ('/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum),
+                headers: {
             'Ocp-Apim-Subscription-Key': config.subscription_key,
             Authorization: getTokenCache(config),
             'Content-Type': 'application/json'
-        };
-
-        var invoiceListUrl =
-            config.url + '/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum;
-        log.debug(TransId + ' | ' + stLogTitle + ' | invoiceListUrl', invoiceListUrl);
-
-        var objResponse = https.get({
-            url: invoiceListUrl,
-            headers: objHeaders
+                }
+            }
         });
-        log.debug(TransId + ' | ' + stLogTitle + ' | objResponse', objResponse);
 
-        var responseBody = '';
-        if (objResponse.body) {
-            responseBody = JSON.parse(objResponse.body);
-        }
-        return responseBody;
+        return respInvoiceList.PARSED_RESPONSE;
     }
 
     function getToken(config) {
         var stLogTitle = 'scansource_api:getToken';
+        var objBody = {};
+        log.debug(TransId + ' | ' + stLogTitle + ' | objBody', objBody);
 
-        var objHeaders = {
+        var respToken = vc2_util.sendRequest({
+            header: [LogTitle, 'Generate Token'].join(' '),
+            method: 'get',
+            recordId: TransId,
+            doRetry: true,
+            maxRetry: 3,
+            query: {
+                url: config.token_url,
+                headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Ocp-Apim-Subscription-Key': config.subscription_key
-        };
-        var objBody = {
+                },
+                body: {
             client_id: config.user_id,
             client_secret: config.user_pass,
             grant_type: 'client_credentials',
             scope: config.scope
-        };
-        log.debug(TransId + ' | ' + stLogTitle + ' | objHeaders', objHeaders);
-        log.debug(TransId + ' | ' + stLogTitle + ' | objBody', objBody);
-
-        var objResponse = https.post({
-            url: config.token_url,
-            headers: objHeaders,
-            body: objBody
+                }
+            }
         });
-        log.debug(TransId + ' | ' + stLogTitle + ' | objResponse', objResponse);
 
-        var tokenResponse = '';
-        if (objResponse.code == '200' || objResponse.code == 200) {
-            var responseBody = objResponse.body;
-            responseBody = JSON.parse(responseBody);
-            tokenResponse = 'Bearer ' + responseBody.access_token;
-        }
-
-        log.debug(TransId + ' | ' + stLogTitle + ' | tokenResponse', tokenResponse);
-        return tokenResponse;
+        vc2_util.handleJSONResponse(respToken);
+        var responseBody = respToken.PARSED_RESPONSE;
+        return 'Bearer ' + responseBody.access_token;
     }
 
     function getTokenCache(config) {
         var extraParams = vc2_util.extractValues({
             source: config,
-            params: ['id', 'subsidiary', 'entry_function', 'partner_id']
+            params: ['id', 'subsidiary', 'host_key', 'partner_id', 'user_id', 'user_pass']
         });
         var cacheKey = 'SCANSOURCE_TOKEN-' + vc2_util.convertToQuery(extraParams),
             token = vc2_util.getNSCache({ key: cacheKey });
@@ -104,7 +99,7 @@ define(function (require) {
         if (!vc2_util.isEmpty(token)) {
             vc2_util.setNSCache({
                 key: cacheKey,
-                cacheTTL: 14400,
+                cacheTTL: 3500,
                 value: token
             });
         }

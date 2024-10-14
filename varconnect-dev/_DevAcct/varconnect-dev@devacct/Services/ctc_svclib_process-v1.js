@@ -117,6 +117,28 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
             });
 
             return true;
+        },
+        processOrderLines: function (option) {
+            var logTitle = [LogTitle, 'processOrderLines'].join(':'),
+                returnValue,
+                ORDERLINE_REC = vc2_constant.RECORD.ORDER_LINE;
+            /**
+    OrderNum: orderResult.ingramOrderNumber,
+    OrderDate: orderResult.ingramOrderDate,
+    customerOrderNum: orderResult.customerOrderNumber,
+    Status: orderResult.orderStatus,
+    Total: orderResult.orderTotal
+             */
+        },
+        processOrderLine: function (option) {
+            var logTitle = [LogTitle, 'processOrderLine'].join(':'),
+                returnValue,
+                ORDERLINE_REC = vc2_constant.RECORD.ORDER_LINE;
+
+            // required params
+            var txnId = option.txnid || option.po_id || option.poId;
+
+            return returnValue;
         }
     };
 });

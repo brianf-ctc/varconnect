@@ -32,9 +32,9 @@ define([
     'N/runtime',
     'N/record',
     'N/search',
-    '../CTC_VC2_Constants.js',
-    '../CTC_VC2_Lib_Utils',
-    '../Services/ctc_svclib_configlib.js'
+    './../CTC_VC2_Constants.js',
+    './../CTC_VC2_Lib_Utils',
+    './../Services/ctc_svclib_configlib.js'
 ], function (
     ns_task,
     ns_ui,
@@ -224,7 +224,8 @@ define([
                 if (
                     record.type == ns_record.Type.INVOICE &&
                     MainCFG.copySerialsInv &&
-                    hasSerialListChanged
+                    (hasSerialListChanged ||
+                        scriptContext.type == scriptContext.UserEventType.CREATE)
                 ) {
                     OrderCFG = Helper.searchVendorConfig({
                         salesOrder: record.getValue({ fieldId: 'createdfrom' })

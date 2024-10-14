@@ -90,12 +90,12 @@ define(function (require) {
         }
     });
 
-    ns_cache = require('N/cache');
     // CACHE
+    ns_cache = require('N/cache');
     util.extend(vc2_util, {
         NSCACHE_NAME: vc2_constant.CACHE_NAME,
         NSCACHE_KEY: 'VC_20240101',
-        NSCACHE_TTL: 86400, // 1 whole day
+        NSCACHE_TTL: vc2_constant.CACHE_TTL,
         getNSCache: function (option) {
             var returnValue;
             try {
@@ -893,7 +893,6 @@ define(function (require) {
                 throw request.errorMsg || 'Unable to parse response';
 
             // detect the error
-            var parsedResp = request.PARSED_RESPONSE;
             if (!parsedResp) throw 'Unable to parse response';
 
             // check for faultstring
@@ -1093,7 +1092,6 @@ define(function (require) {
             }
             return true;
         },
-
         vcLogError: function (option) {
             var logTitle = [LogTitle, ''].join(':'),
                 returnValue = true;
@@ -1171,7 +1169,7 @@ define(function (require) {
         },
         dumpLog: function (logTitle, dumpObj, prefix) {
             for (var fld in dumpObj) {
-                vc2_util.log(logTitle, [prefix || '', '::', fld].join(''), dumpObj[fld]);
+                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
             }
             return;
         }

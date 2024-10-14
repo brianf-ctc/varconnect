@@ -178,8 +178,7 @@ define(function (require) {
                 vc2_util.log(logTitle, '.... line: ', lineData);
                 currentBillObj.lines.push(lineData);
             } else if (rowData[0] == '|T|') {
-                vc2_util.log(logTitle, '---- SUMMARY LINE ----');
-
+                
                 var summary = {
                     taxAmount: trimPadding(rowData[3]).match(/\d|\./g).join('') * 1,
                     tax1: trimPadding(rowData[5]).match(/\d|\./g).join('') * 1,
@@ -191,8 +190,7 @@ define(function (require) {
                     invoiceTotal: trimPadding(rowData[9]).match(/\d|\./g).join('') * 1
                 };
                 arrRawData.push(rowData);
-
-                vc2_util.log(logTitle, '.... summary: ', summary);
+                vc2_util.log(logTitle, '---- SUMMARY LINE ----', summary);
 
                 currentBillObj.total = summary.invoiceTotal;
                 currentBillObj.charges.tax =
@@ -202,7 +200,7 @@ define(function (require) {
 
                 // then push it
                 returnArr.push({
-                    ordObj: currentBillObj,
+                    ordObj: currentBillObj, 
                     xmlStr: arrRawData.join('\n')
                 });
             }

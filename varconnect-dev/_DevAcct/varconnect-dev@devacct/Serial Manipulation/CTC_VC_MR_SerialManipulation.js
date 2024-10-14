@@ -31,9 +31,9 @@ define([
     'N/search',
     'N/runtime',
     'N/email',
-    '../CTC_VC2_Constants.js',
-    '../CTC_VC2_Lib_Utils',
-    '../Services/ctc_svclib_configlib.js'
+    './../CTC_VC2_Constants.js',
+    './../CTC_VC2_Lib_Utils',
+    './../Services/ctc_svclib_configlib.js'
 ], function (ns_record, ns_search, ns_runtime, ns_email, vc2_constant, vc2_utils, vcs_configLib) {
     var LogTitle = 'MR_LinkSerials',
         LogPrefix = '',
