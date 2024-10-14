@@ -1,3 +1,7 @@
+/**
+ *
+ * @NModuleScope Public
+ */
 //! moment.js
 //! version : 2.27.0
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors

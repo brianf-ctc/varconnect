@@ -23,9 +23,9 @@
 define([
     'N/search',
     'N/xml',
-    './../CTC_VC2_Lib_Utils.js',
-    './../CTC_VC2_Constants.js',
-    './moment'
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment'
 ], function (ns_search, ns_xml, vc2_util, vc2_constant, moment) {
     var LogTitle = 'WS:TechData';
     var Helper = {

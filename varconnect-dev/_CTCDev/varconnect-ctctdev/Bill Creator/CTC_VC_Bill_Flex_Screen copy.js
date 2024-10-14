@@ -569,7 +569,7 @@ define([
                     var varianceList = [],
                         withinThreshold = false,
                         exceedThreshold = false;
-                        
+
                     BillData.VarianceList.forEach(function (xvar) {
                         if (xvar == 'EXCEED_THRESHOLD') exceedThreshold = true;
                         if (xvar == 'WITHIN_THRESHOLD') withinThreshold = true;

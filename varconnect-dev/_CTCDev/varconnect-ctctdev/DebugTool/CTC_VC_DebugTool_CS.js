@@ -112,7 +112,7 @@ define([
                         action: 'OrderStatusDebug',
                         parameters: {
                             poNum: poNum,
-                            vendorConfigId: vendorConfigId,
+                            vendorConfigId: vendorConfigId, 
                             showLines: showLines
                         }
                     },

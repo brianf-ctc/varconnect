@@ -17,7 +17,7 @@
  *
  *
  */
-define(['N/error', './../CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
+define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
     'use strict';
 
     var CURRENT = {};

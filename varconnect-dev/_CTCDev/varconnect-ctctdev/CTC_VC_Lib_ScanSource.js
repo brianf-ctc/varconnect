@@ -19,12 +19,12 @@
  * Author: shawn.blackburn
  */
 
-define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment', 'N/cache'], function (
-    vc2_util,
-    vc2_constant,
-    moment,
-    cache
-) {
+define([
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment',
+    'N/cache'
+], function (vc2_util, vc2_constant, moment, cache) {
     'use strict';
 
     var LogTitle = 'WS:ScanSource',

@@ -20,12 +20,12 @@
  *
  */
 
-define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './moment'], function (
-    ns_xml,
-    vc2_constant,
-    vc2_util,
-    moment
-) {
+define([
+    'N/xml',
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_constant, vc2_util, moment) {
     var LogTitle = 'WS:Synnex';
 
     var LOG_LEVEL = 0;

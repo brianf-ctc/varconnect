@@ -18,7 +18,7 @@ define([
     'N/runtime',
     'N/error',
     './Libraries/moment',
-    '../CTC_VC2_Lib_Utils',
+    './../CTC_VC2_Lib_Utils',
     './../CTC_VC2_Constants',
     './Libraries/CTC_VC_Lib_Create_Bill_Files',
     './Libraries/CTC_VC_Lib_Vendor_Map',

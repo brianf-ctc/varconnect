@@ -197,10 +197,10 @@ define(['../../CTC_VC2_Lib_Utils', '../Libraries/moment', '../Libraries/lodash']
                             charges: {
                                 tax: invoiceDetail.TotalTaxAmount * 1,
                                 shipping: invoiceDetail.TotalFrieghtAmt * 1,
-                                other:
-                                    invoiceDetail.TotalPSTAmount * 1 +
-                                    invoiceDetail.TotalHSTAmount * 1 +
-                                    invoiceDetail.TotalGSTAmount * 1
+                                other: 0
+                                // invoiceDetail.TotalPSTAmount * 1 +
+                                // invoiceDetail.TotalHSTAmount * 1 +
+                                // invoiceDetail.TotalGSTAmount * 1
                             },
                             lines: []
                         };
