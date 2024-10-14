@@ -250,6 +250,7 @@ define(function (require) {
         ORDER_LINE: {
             ID: 'customrecord_ctc_vc_orderlines',
             FIELD: {
+                VENDOR: 'custrecord_ctc_vc_orderline_vendor',
                 TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
                 ORDER_NUM: 'custrecord_ctc_vc_orderline_vndordernum',
                 ORDER_STATUS: 'custrecord_ctc_vc_orderline_vndorderstat',
@@ -271,9 +272,12 @@ define(function (require) {
                 CARRIER: 'custrecord_ctc_vc_orderline_carrier',
                 SHIP_METHOD: 'custrecord_ctc_vc_orderline_shipmethod',
                 TRACKING: 'custrecord_ctc_vc_orderline_trackingno',
-                SERIALNUM: 'custrecord_ctc_vc_orderline_serialnumber',
+                SERIALNUM: 'custrecord_ctc_vc_orderline_serialno',
                 ORDER_DATA: 'custrecord_ctc_vc_orderline_vndorderdata',
-                LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata'
+                LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata',
+                ITEMFF_LINK: 'custrecord_ctc_vc_orderline_itemfflink',
+                VB_LINK: 'custrecord_ctc_vc_orderline_vblink',
+                BILLFILE_LINK: 'custrecord_ctc_vc_orderline_billfile'
             }
         },
         VAR_CONNECT_PO_LINE: {
@@ -727,7 +731,7 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-        
+
         ITEM_NOT_BILLABLE: {
             code: 'ITEM_NOT_BILLABLE',
             msg: 'Item is not billable',
@@ -842,7 +846,7 @@ define(function (require) {
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
-                SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
+        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 

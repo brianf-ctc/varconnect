@@ -20,7 +20,7 @@ define([
     'N/search',
     'N/url',
     'N/file',
-    '../CTC_VC2_Lib_Utils'
+    './../CTC_VC2_Lib_Utils'
 ], function (ns_ui, ns_msg, ns_runtime, ns_search, ns_url, ns_file, vc2_util) {
     var LogTitle = 'VC DebugTool';
     var Helper = {

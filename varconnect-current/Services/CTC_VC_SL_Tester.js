@@ -19,8 +19,8 @@ define(function (require) {
     var nsSearch = require('N/search'),
         ns_https = require('N/https'),
         ns_ui = require('N/ui/serverWidget'),
-        vc2_util = require('../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('../CTC_VC2_Constants.js');
+        vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('./../CTC_VC2_Constants.js');
 
     const RL_SERVICES = {
         scriptId: 'customscript_ctc_vc_rl_services',

@@ -11,7 +11,11 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/xml', './../CTC_VC2_Lib_Utils.js', './moment'], function (ns_xml, vc2_util, moment) {
+define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
+    ns_xml,
+    vc2_util,
+    moment
+) {
     var LogTitle = 'WS:D&H';
 
     var CURRENT = {};

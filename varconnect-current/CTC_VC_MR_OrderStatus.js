@@ -24,6 +24,7 @@ define([
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
+    './CTC_VC2_Lib_Record',
     './Services/ctc_svclib_configlib.js',
     './Services/ctc_svclib_process-v1.js',
     './Services/ctc_svclib_webservice-v1'
@@ -38,6 +39,7 @@ define([
     vc_itemfflib,
     vc_itemrcpt,
     vc_nslib,
+    vc2_record,
     vcs_configLib,
     vcs_processLib,
     vcs_websvcLib
@@ -243,7 +245,6 @@ define([
 
             /// ORDER STATUS ///
             outputObj = vcs_websvcLib.orderStatus({ poNum: Current.poNum, poId: Current.poId });
-
             // if there are no lines.. just exit the script
             if (
                 !outputObj.itemArray ||
@@ -286,12 +287,24 @@ define([
             Current.poId = context.key;
             util.extend(Current, JSON.parse(context.values[0]));
 
-            vc2_util.log(logTitle, '///  Vendor Lines: ', Current.outputItems);
-            var PO_REC = ns_record.load({
+            // vc2_util.log(logTitle, '///  Vendor Lines: ', Current.outputItems);
+
+            vc2_util.dumpLog(logTitle, Current.outputItems, '// Vendor Data');
+
+            var PO_REC = vc2_record.load({
                 type: 'purchaseorder',
                 id: Current.poId,
                 isDynamic: true
             });
+
+            // Helper.processPOLines({
+            //     record: PO_REC,
+            //     vendorLine: Current.outputItems.itemArray,
+            //     orderData: Current.outputItems.orderInfo
+            // });
+
+            // // try to match the lines
+            // throw 'TESTING';
 
             var updateStatus = vc_nslib.updatepo({
                 mainConfig: Current.MainCFG,
@@ -299,6 +312,7 @@ define([
                 po_record: PO_REC,
                 poNum: Current.poId,
                 lineData: vc2_util.clone(Current.outputItems.itemArray),
+                orderData: Current.outputItems.orderInfo,
                 isDropPO: Current.isDropPO
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
@@ -777,8 +791,71 @@ define([
             }
             return returnValue;
         },
+        processPOLines: function (option) {
+            var logTitle = [LogTitle, 'processPOLines'].join('::'),
+                returnValue;
 
-        processPOLines: function (option) {}
+            var poRec = option.record,
+                vendorLines = option.vendorLines,
+                orderData = option.orderData;
+
+            if (vc2_util.isEmpty(poRec)) throw 'Record is required';
+            if (vc2_util.isEmpty(vendorLines)) throw 'Vendor Lines is required';
+            if (vc2_util.isEmpty(orderData)) throw 'Missing Order Data';
+
+            var PO_LINES = vc2_record.extractRecordLines({
+                record: poRec,
+                findAll: true,
+                columns: [
+                    'line',
+                    'linenumber',
+                    'item',
+                    'rate',
+                    'quantity',
+                    'amount',
+                    'quantityreceived',
+                    'quantitybilled'
+                ],
+                orderConfig: Current.OrderCFG,
+                mainConfig: Current.MainCFG
+            });
+
+            (vendorLines || []).forEach(function (vendorLine) {
+                util.extend(billfileLine, {
+                    quantity: billfileLine.QUANTITY,
+                    itemId: (billfileLine.NSITEM || '').toString(),
+                    rate: billfileLine.BILLRATE || billfileLine.PRICE,
+
+                    item: (billfileLine.NSITEM || '').toString(),
+                    itemName: billfileLine.ITEMNO,
+                    description: billfileLine.DESCRIPTION,
+                    quantity: billfileLine.QUANTITY
+                });
+            });
+
+            // {
+            //     line_num: "001",
+            //     item_num: "SFP-10G-LR=",
+            //     item_num_alt: "06UR72",
+            //     vendorSKU: "06UR72",
+            //     line_status: "Shipped",
+            //     order_date: "NA",
+            //     order_status: "Shipped",
+            //     ship_qty: 1,
+            //     line_no: 1,
+            //     ship_date: "NA",
+            //     order_eta: "NA",
+            //     carrier: "NA",
+            //     order_eta_ship: "NA",
+            //     eta_delivery_date: "NA",
+            //     serial_num: "NA",
+            //     tracking_num: "NA",
+            //     order_num: "60-FJY15-31",
+            //     is_shipped: true
+            //  }
+
+            vc2_util.dumpLog(logTitle, PO_LINES, '// PO Lines');
+        }
     };
 
     return MAP_REDUCE;

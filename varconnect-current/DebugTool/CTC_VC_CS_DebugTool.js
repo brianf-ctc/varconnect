@@ -24,9 +24,7 @@ define(['N/search', 'N/currentRecord', 'N/url', 'N/https'], function (
     };
     var CurrentRecord;
 
-    var DebugToolCS = {
-        
-    };
+    var DebugToolCS = {};
 
     (function () {
         function createShiftArr(step) {

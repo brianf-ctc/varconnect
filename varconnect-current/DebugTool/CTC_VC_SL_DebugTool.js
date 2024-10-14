@@ -12,22 +12,15 @@
  * @NModuleScope Public
  * @NScriptType Suitelet
  */
-define(['N/ui/serverWidget', 'N/runtime', 'N/search', '../Services/lib/ctc_lib_utils'], function (
-    ns_ui,
-    ns_runtime,
-    ns_search,
-    vc2_util
-) {
-    // define(function (require) {
-
+define(function (require) {
     const LogTitle = 'DebugTool';
 
-    // let vc2_util = require('../Services/lib/ctc_lib_utils');
-    // let ns_ui = require('N/ui/serverWidget'),
-    //     ns_runtime = require('N/runtime'),
-    //     ns_search = require('N/search'),
-    //     ns_url = require('N/url'),
-    //     ns_file = require('N/file');
+    let vc2_util = require('../Services/lib/ctc_lib_utils');
+    let ns_ui = require('N/ui/serverWidget'),
+        ns_runtime = require('N/runtime'),
+        ns_search = require('N/search'),
+        ns_url = require('N/url'),
+        ns_file = require('N/file');
 
     var DebugUI = {
         Form: null,

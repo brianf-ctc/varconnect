@@ -21,10 +21,10 @@ require([
     'N/runtime',
     VCFolder + 'Libraries/CTC_VC_Lib_BillProcess',
 
-    VCFolder + '../CTC_VC2_Constants',
-    VCFolder + '../CTC_VC2_Lib_Utils',
-    VCFolder + '../CTC_VC2_Lib_Record',
-    VCFolder + '../CTC_VC_Lib_MainConfiguration',
+    VCFolder + './../CTC_VC2_Constants',
+    VCFolder + './../CTC_VC2_Lib_Utils',
+    VCFolder + './../CTC_VC2_Lib_Record',
+    VCFolder + './../CTC_VC_Lib_MainConfiguration',
     VCFolder + 'Libraries/moment'
 ], function (
     ns_record,

@@ -18,11 +18,11 @@
  * Script Name: CTC_VC_Lib_Ingram_v1
  * Author: shawn.blackburn
  */
-define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], function (
-    vc2_util,
-    vc2_constant,
-    moment
-) {
+define([
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment'
+], function (vc2_util, vc2_constant, moment) {
     var LogTitle = 'WS:IngramAPI';
 
     var CURRENT = {
@@ -435,7 +435,6 @@ define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], f
             lineData.line_no = vc2_util.parseFloat(lineData.line_num);
 
             var shipment = LibOrderStatus.extractShipmentDetails(ingramLine.shipmentDetails);
-
             util.extend(lineData, {
                 ship_date: shipment.ship_date || 'NA',
                 order_date: shipment.order_date || 'NA',
@@ -454,7 +453,6 @@ define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], f
             });
 
             var estimatedDates = this.extractEstimatedDates(ingramLine.estimatedDates);
-
             if (!vc2_util.isEmpty(estimatedDates)) {
                 util.extend(lineData, {
                     order_eta: estimatedDates.shipDate || lineData.order_eta,
@@ -462,6 +460,19 @@ define(['./../CTC_VC2_Lib_Utils.js', './../CTC_VC2_Constants.js', './moment'], f
                     eta_ship_source: estimatedDates.shipSource,
                     eta_delivery_date: estimatedDates.deliveryDate
                 });
+            }
+
+            /// GET ADDITIONAL INFO ///
+            var addLineData = {};
+            ['serviceContractInfo'].forEach(function (nodeData) {
+                if (ingramLine[nodeData] && !vc2_util.isEmpty(ingramLine[nodeData])) {
+                    addLineData[nodeData] = ingramLine[nodeData];
+                }
+                return true;
+            });
+
+            if (!vc2_util.isEmpty(addLineData)) {
+                lineData.vendorData = JSON.stringify(addLineData);
             }
 
             return lineData;

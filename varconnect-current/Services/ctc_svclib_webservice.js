@@ -15,16 +15,16 @@ define(function (require) {
     const LogTitle = 'SVC:WebSVC',
         LOG_APP = 'WebSVC';
 
-    let lib_util = require('../lib/ctc_lib_util'),
-        lib_global = require('../lib/ctc_lib_global'),
-        lib_log = require('../lib/ctc_lib_vclogs');
+    let lib_util = require('./../lib/ctc_lib_util'),
+        lib_global = require('./../lib/ctc_lib_global'),
+        lib_log = require('./../lib/ctc_lib_vclogs');
 
     let vcs_configLib = require('./ctc_svclib_configlib.js');
 
     let ns_search = require('N/search'),
         ns_record = require('N/record');
 
-    let lib_ingram = require('../vendor/ingram_lib');
+    let lib_ingram = require('./../vendor/ingram_lib');
 
     var Helper = {
         getVendorLibrary: function (option) {}

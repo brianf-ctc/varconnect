@@ -28,8 +28,8 @@ define([
     'N/render',
     'N/record',
     'N/search',
-    '../CTC_VC2_Constants.js',
-    '../Services/ctc_svclib_configlib.js'
+    './../CTC_VC2_Constants.js',
+    './../Services/ctc_svclib_configlib.js'
 ], function (ns_render, ns_record, ns_search, vc2_constant, vcs_configLib) {
     var PARAMS = {
             RECORD_TYPE: 'custscript_ctc_vc_serials_rectype',
