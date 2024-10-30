@@ -15,8 +15,9 @@ define(function (require) {
     const LogTitle = 'SVC:ConfigLib',
         LOG_APP = 'ConfigLib';
 
-    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('../CTC_VC2_Constants.js');
+    var vc2_util = require('../CTC_VC2_Lib_Utils'),
+        vc2_constant = require('../CTC_VC2_Constants'),
+        vcs_recordsLib = require('./ctc_svclib_records.js');
 
     var ns_search = require('N/search'),
         ns_record = require('N/record'),
@@ -25,34 +26,34 @@ define(function (require) {
         ns_https = require('N/https');
 
     var MAIN_CFG = vc2_constant.RECORD.MAIN_CONFIG,
-        MAIN_CFG_MAP = vc2_constant.MAPPING.MAIN_CONFIG,
-        // vendor config fields/map
         VENDOR_CFG = vc2_constant.RECORD.VENDOR_CONFIG,
-        VENDOR_CFG_MAP = vc2_constant.MAPPING.VENDOR_CONFIG,
-        // bill vendor config fields/map
         BILL_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG,
-        BILL_CFG_MAP = vc2_constant.MAPPING.BILLCREATE_CONFIG,
-        // sendpo vendor config
-        SENDPOVND_CFG = vc2_constant.RECORD.SENDPOVENDOR_CONFIG,
-        SENDPOVND_CFG_MAP = vc2_constant.MAPPING.SENDPOVND_CONFIG;
+        SENDPOVND_CFG = vc2_constant.RECORD.SENDPOVENDOR_CONFIG;
 
     var VC_LICENSE = vc2_constant.LICENSE;
 
+    //// LICENSE LIBRARY ////
     var LibLicense = {
+        /**
+         * Fetch license info from license server
+         * @param {*} option
+         *  option.doRetry: retry on fail
+         *  option.maxRetry: max amount of retry
+         *  option.retryWait: waitms before trying again
+         * @returns
+         */
         fetchLicense: function (option) {
             var logTitle = 'VC_LICENSE::fetchLicense',
                 logPrefix = '[LICENSE-CHECK] ',
                 response,
                 returnValue = {};
 
-            vc2_util.LogPrefix = logPrefix;
-
             var startTime = new Date();
 
             var doRetry = option.doRetry,
                 maxRetry = doRetry ? option.maxRetry || VC_LICENSE.MAX_RETRY : 0,
                 retryCount = option.retryCount || 1,
-                retryWaitMS = option.retryWaitMS || option.retryWait || 2000;
+                retryWaitMS = option.retryWaitMS || option.retryWait || 1000;
 
             try {
                 var queryOption = {
@@ -63,9 +64,9 @@ define(function (require) {
                         ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
                         ('&nsaccountid=' + ns_runtime.accountId)
                 };
-                vc2_util.log(logTitle, 'Send Request query: ', queryOption);
+                vc2_util.log(logTitle, logPrefix + 'Send Request query: ', queryOption);
                 response = ns_https.request(queryOption);
-                vc2_util.log(logTitle, 'Response: ', response);
+                vc2_util.log(logTitle, logPrefix + 'Response: ', response);
 
                 if (!response || !response.body) throw 'Unable to get response';
                 if (!response.code || response.code !== 200)
@@ -83,14 +84,14 @@ define(function (require) {
                 returnValue.errorMsg = vc2_util.extractError(error);
 
                 if (doRetry && maxRetry > retryCount) {
-                    vc2_util.log(logTitle, '... retry count : ' + retryCount);
+                    vc2_util.log(logTitle, logPrefix + '... retry count : ' + retryCount);
                     option.retryCount = retryCount + 1;
                     vc2_util.waitMs(retryWaitMS); // wait before re-sending
                     LibLicense.fetchLicense(option);
                 }
             } finally {
                 var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
-                vc2_util.log(logTitle, '# response time: ' + durationSec + 's');
+                vc2_util.log(logTitle, logPrefix + '# response time: ' + durationSec + 's');
             }
 
             return returnValue;
@@ -100,646 +101,686 @@ define(function (require) {
                 logPrefix = '[LICENSE-CHECK] ',
                 returnValue = {};
 
-            vc2_util.LogPrefix = logPrefix;
-
             try {
                 // prep the cache
-                var vcLicenseResp = vc2_util.getNSCache({ name: VC_LICENSE.KEY });
-                vcLicenseResp = vc2_util.safeParse(vcLicenseResp);
+                var licenseInfo = vc2_util.getNSCache({ name: VC_LICENSE.KEY });
+                licenseInfo = vc2_util.safeParse(licenseInfo);
 
-                vc2_util.log(logTitle, '..vcLicenseResp', vcLicenseResp);
+                vc2_util.log(logTitle, logPrefix + '...license data: ', licenseInfo);
 
-                if (
-                    !vcLicenseResp ||
-                    vcLicenseResp.hasError ||
-                    vcLicenseResp.error ||
-                    vcLicenseResp.status == 'inactive'
-                ) {
-                    vcLicenseResp = LibLicense.fetchLicense(option);
+                var checkLicenseBad = function (licenseData) {
+                    return (
+                        // no cache retrieved
+                        !licenseData ||
+                        // error on license response
+                        licenseData.hasError ||
+                        // error on license server
+                        licenseData.error ||
+                        // inactive license
+                        licenseData.status !== 'active'
+                    );
+                };
 
-                    if (vcLicenseResp && !vcLicenseResp.error)
-                        vc2_util.setNSCache({
-                            name: VC_LICENSE.KEY,
-                            value: vcLicenseResp,
-                            cacheTTL: VC_LICENSE.CACHE_TTL
-                        });
+                if (checkLicenseBad(licenseInfo)) {
+                    // force fetch the license
+                    licenseInfo = LibLicense.fetchLicense(option);
+
+                    // if it still bad, then throw an error
+                    if (checkLicenseBad(licenseInfo))
+                        throw licenseInfo.error ||
+                            licenseInfo.errorMsg ||
+                            licenseInfo.status != 'active'
+                            ? 'License is not active'
+                            : licenseInfo.message;
+
+                    //// CACHE the license info
+                    vc2_util.setNSCache({
+                        name: VC_LICENSE.KEY,
+                        value: licenseInfo,
+                        cacheTTL: VC_LICENSE.CACHE_TTL
+                    });
                 }
 
-                if (
-                    !vcLicenseResp ||
-                    vcLicenseResp.error ||
-                    vcLicenseResp.isError ||
-                    vcLicenseResp.hasError
-                )
-                    throw vcLicenseResp.error || vcLicenseResp.errorMsg || vcLicenseResp.message;
-
-                if (!vcLicenseResp.status) throw 'Unable to fetch license status';
-                if (vcLicenseResp.status != 'active') throw 'License is not active';
-
-                returnValue = vcLicenseResp;
+                returnValue = licenseInfo;
             } catch (error) {
                 returnValue.hasError = true;
                 returnValue.errorMsg = vc2_util.extractError(error);
             }
 
             return returnValue;
-        },
-        sendConfig: function (option) {
-            var logTitle = 'VC_LICENSE::sendConfig',
-                logPrefix = '[SEND-CONFIG] ',
-                response,
-                returnValue = {};
-
-            vc2_util.LogPrefix = logPrefix;
-            var startTime = new Date();
-
-            try {
-                var configDef = option.config,
-                    configId = option.id,
-                    configName = option.configName,
-                    SkippedFields = option.skippedFields;
-
-                if (vc2_util.isEmpty(configDef) || vc2_util.isEmpty(configId))
-                    throw 'Missing record config';
-
-                // try to do look up of the search
-                var configFields = ['name', 'isinactive', 'internalid'],
-                    payloadData = [];
-
-                configDef.FIELD['NAME'] = 'name';
-                configDef.FIELD['INACTIVE'] = 'isinactive';
-                configDef.FIELD['MODIFIED'] = 'lastmodified';
-                configDef.FIELD['MODIFIED_BY'] = 'lastmodifiedby';
-
-                for (var fieldName in configDef.FIELD) {
-                    if (vc2_util.inArray(configDef.FIELD[fieldName], SkippedFields)) continue;
-                    configFields.push(configDef.FIELD[fieldName]);
-                }
-                if (option.nameField) configFields.push(option.nameField);
-                vc2_util.log(logTitle, '// configFields ', configFields);
-
-                // Do the record lookup
-                var results = vc2_util.flatLookup({
-                    type: configDef.ID,
-                    id: configId,
-                    columns: configFields
-                });
-
-                if (results.name == results.internalid.value) {
-                    if (option.nameValue) {
-                        results.name = option.nameValue;
-
-                        ns_record.submitFields({
-                            type: configDef.ID,
-                            id: configId,
-                            values: { name: results.name }
-                        });
-                    } else if (option.nameField && results[option.nameField]) {
-                        results.name = results[option.nameField].text || results[option.nameField];
-
-                        ns_record.submitFields({
-                            type: configDef.ID,
-                            id: configId,
-                            values: { name: results.name }
-                        });
-                    }
-                    // update this record?
-                }
-
-                vc2_util.log(logTitle, '// results ', results);
-                payloadData.push({
-                    settingFieldId: '_config_name',
-                    settingFieldName: 'CONFIG_NAME',
-                    settingValue: configName
-                });
-
-                // build the paylod
-                for (var fieldName in configDef.FIELD) {
-                    var fieldId = configDef.FIELD[fieldName],
-                        fieldValue =
-                            results[fieldId] == null
-                                ? 'null'
-                                : results[fieldId] === true
-                                ? 'T'
-                                : results[fieldId] === false
-                                ? 'F'
-                                : results[fieldId];
-
-                    var data = {
-                        settingFieldId: fieldId,
-                        settingFieldName: fieldName,
-                        settingValue: fieldValue.value || fieldValue
-                    };
-                    if (
-                        results.hasOwnProperty(fieldId) &&
-                        fieldValue.text &&
-                        fieldValue.text !== data.settingValue
-                    ) {
-                        data['settingFieldText'] = fieldValue.text;
-                    }
-                    payloadData.push(data);
-                }
-                // vc2_util.log(logTitle, '// Config Data: ', payloadData);
-
-                var configURL =
-                    'https://' +
-                    ns_url.resolveDomain({
-                        hostType: ns_url.HostType.APPLICATION,
-                        accountId: ns_runtime.accountId
-                    }) +
-                    ns_url.resolveRecord({ recordType: configDef.ID, recordId: configId });
-
-                vc2_util.log(logTitle, '// configURL: ', configURL);
-
-                // prepare the payload
-                var queryOption = {
-                    method: ns_https.Method.POST,
-                    url:
-                        'https://nscatalystserver.azurewebsites.net/logconfig.php' +
-                        '?' +
-                        ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
-                        ('&nsaccountid=' + ns_runtime.accountId) +
-                        ('&settingsid=' + configId) +
-                        ('&rectype=' + configDef.ID) +
-                        ('&settingsurl=' + encodeURIComponent(configURL)),
-                    body: JSON.stringify(payloadData)
-                };
-                //// SEND THE REQUEST ////
-                vc2_util.log(logTitle, 'Send Request query: ', queryOption);
-                response = ns_https.request(queryOption);
-                vc2_util.log(logTitle, 'Response: ', response);
-
-                if (!response || !response.body) throw 'Unable to get response';
-                if (!response.code || response.code !== 200)
-                    throw 'Received invalid response code - ' + response.code;
-
-                var parsedResp = vc2_util.safeParse(response.body);
-                if (!parsedResp) throw 'Unable to parse response';
-
-                returnValue = parsedResp;
-            } catch (error) {
-                returnValue.hasError = true;
-                returnValue.errorMsg = vc2_util.extractError(error);
-            } finally {
-                var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
-                vc2_util.log(logTitle, '# response time: ' + durationSec + 's');
-
-                vc2_util.log(logTitle, '// returnValue ', returnValue);
-            }
-
-            returnValue;
         }
     };
 
-    var Helper = {
-        fetchVendorFromPO: function (poId) {
-            if (!poId) return false;
+    var ListConfigType = {
+        MAIN: 'MAIN_CONFIG',
+        VENDOR: 'VENDOR_CONFIG',
+        ORDER: 'VENDOR_CONFIG',
+        BILL: 'BILLCREATE_CONFIG',
+        SENDPO: 'SENDPOVENDOR_CONFIG'
+    };
 
-            var lookupOption = {
-                type: 'purchaseorder',
-                id: poId,
-                columns: [
-                    'internalid',
-                    'entity',
-                    'vendor.internalid',
-                    'vendor.entityid',
-                    'vendor.custentity_vc_bill_config'
-                ]
+    //// CONFIG LIB ////
+    var ConfigLib = {
+        ConfigType: ListConfigType.MAIN,
+        CacheKey: null,
+        CacheParams: [],
+        buildSearchOption: function (option) {
+            var configType = option.configType || this.ConfigType;
+
+            var configRecord = vc2_constant.RECORD[configType],
+                configMap = vc2_constant.MAPPING[configType];
+
+            // reset the cache params
+            this.CacheParams = [];
+
+            return {
+                type: configRecord.ID,
+                filters: [['isinactive', 'is', 'F']],
+                columns: (function () {
+                    var flds = [];
+                    for (var fld in configMap) flds.push(configMap[fld]);
+                    return flds;
+                })()
             };
-            if (vc2_util.isOneWorld()) lookupOption.columns.push('subsidiary');
-            var result = vc2_util.flatLookup(lookupOption);
-            vc2_util.log('Helper.fetchVendorFromPO', '// PO Data: ', result);
-
-            return result;
         },
+        search: function (option) {
+            var logTitle = [LogTitle, 'ConfigLib.search'].join('::'),
+                returnValue;
+            option = option || {};
 
-        fetchVendorData: function (vendorId) {
-            if (!vendorId) return false;
+            // generate the search
+            var searchOption = this.buildSearchOption(option);
 
-            var searchOption = {
-                type: 'vendor',
-                filters: [['internalid', 'anyof', vendorId]],
-                columns: ['internalid', 'entityid', 'custentity_vc_bill_config']
-            };
-            if (vc2_util.isOneWorld()) searchOption.columns.push('subsidiary');
+            // vc2_util.log(logTitle, '// search option: ', searchOption);
+            if (!searchOption) return false;
 
-            var result = {};
-            ns_search
-                .create(searchOption)
-                .run()
-                .each(function (row) {
-                    result.internalid = row.id;
-                    result.custentity_vc_bill_config = row.getValue({
-                        name: 'custentity_vc_bill_config'
-                    });
+            // RETURN cached valued
+            var cachedValue = this.getCache(option);
+            if (!vc2_util.isEmpty(cachedValue)) return cachedValue;
 
-                    // check if multiple
-                    var billConfigs = result.custentity_vc_bill_config.split(/,/);
-                    if (billConfigs.length > 1) result.custentity_vc_bill_config = billConfigs;
+            // Else, try to fetch the config
+            try {
+                var configMap = vc2_constant.MAPPING[this.ConfigType],
+                    configData = {};
 
-                    if (vc2_util.isOneWorld())
-                        result.subsidiary = row.getValue({ name: 'subsidiary' });
+                var searchObj = ns_search.create(searchOption);
+
+                // total results
+                var numResults = searchObj.runPaged().count;
+                var countryCodeField = this.CountryCodeField;
+                vc2_util.log(logTitle, '// total results: ', numResults);
+
+                searchObj.run().each(function (row) {
+                    for (var field in configMap) {
+                        var value = row.getValue({ name: configMap[field] });
+                        configData[field] = !vc2_util.isEmpty(value) ? value.value || value : null;
+                    }
+
+                    if (countryCodeField) {
+                        var rowValue = row.getValue({ name: 'country', join: countryCodeField });
+                        configData.country = rowValue;
+                    }
+
+                    // check for country
                     return true;
                 });
 
-            vc2_util.log('Helper.fetchVendorData', '// Vendor Data: ', result);
+                // set the CountryCodeField
+                configData.country = configData.country || 'US'; // default is US
 
-            return result;
+                // vc2_util.log(logTitle, '## Config Data: ', configData);
+
+                if (!vc2_util.isEmpty(configData)) this.setCache(configData);
+                returnValue = configData;
+            } catch (error) {
+                vc2_util.logError(logTitle, 'Error occurred during search', error);
+                throw error;
+            }
+
+            return returnValue;
+        },
+        buildPayload: function (option) {
+            var logTitle = [LogTitle, 'ConfigLib.buildPayload'].join('::'),
+                returnValue;
+            option = option || {};
+
+            // generate the payload
+            var configType = option.configType || this.ConfigType;
+            var configRecordDef = vc2_constant.RECORD[configType],
+                configId = option.configId || option.id,
+                skippedFields = option.skippedFields || this.SkippedFields,
+                configFields = ['name', 'isinactive', 'internalid'],
+                configNameField = option.nameField || this.ConfigNameField,
+                configNameValue = option.nameValue || this.ConfigNameValue,
+                payloadData = [];
+
+            configRecordDef.FIELD['NAME'] = 'name';
+            configRecordDef.FIELD['INACTIVE'] = 'isinactive';
+            configRecordDef.FIELD['MODIFIED'] = 'lastmodified';
+            configRecordDef.FIELD['MODIFIED_BY'] = 'lastmodifiedby';
+
+            for (var fieldName in configRecordDef.FIELD) {
+                if (vc2_util.inArray(configRecordDef.FIELD[fieldName], skippedFields)) continue;
+                configFields.push(configRecordDef.FIELD[fieldName]);
+            }
+            if (configNameField) configFields.push(configNameField);
+
+            // Do the lookup
+            var configData = vc2_util.flatLookup({
+                type: configRecordDef.ID,
+                id: configId,
+                columns: configFields
+            });
+            // vc2_util.log(logTitle, '>>> configData: ', configData);
+
+            // vc2_util.log(logTitle, '>>> configData: ', [
+            //     configNameField,
+            //     configData[configNameField],
+            //     configNameValue
+            // ]);
+
+            // TRY to update CONFIG.name ////////
+            if (
+                configData.name == configData.internalid.value &&
+                (configNameValue || (configNameField && configData[configNameField]))
+            ) {
+                configData.name =
+                    configNameField && configData[configNameField]
+                        ? configData[configNameField].text || configData[configNameField]
+                        : configNameValue;
+
+                vc2_util.log(logTitle, ' **** FIX CONFIG NAME ***** ', configData.name);
+
+                ns_record.submitFields({
+                    type: configRecordDef.ID,
+                    id: configId,
+                    values: { name: configData.name }
+                });
+            }
+            //////////////////////////////////////////
+            // initialize the payloadData
+            payloadData.push({
+                settingFieldId: '_config_name',
+                settingFieldName: 'CONFIG_NAME',
+                settingValue: configType
+            });
+
+            for (var fieldName in configRecordDef.FIELD) {
+                var fieldId = configRecordDef.FIELD[fieldName],
+                    fieldValue =
+                        configData[fieldId] == null
+                            ? 'null'
+                            : configData[fieldId] === true
+                            ? 'T'
+                            : configData[fieldId] === false
+                            ? 'F'
+                            : configData[fieldId];
+
+                var data = {
+                    settingFieldId: fieldId,
+                    settingFieldName: fieldName,
+                    settingValue: fieldValue.value || fieldValue
+                };
+                if (
+                    configData.hasOwnProperty(fieldId) &&
+                    fieldValue.text &&
+                    fieldValue.text !== data.settingValue
+                ) {
+                    data['settingFieldText'] = fieldValue.text;
+                }
+                payloadData.push(data);
+            }
+
+            return payloadData;
+        },
+        send: function (option) {
+            var logTitle = [LogTitle, 'ConfigLib.send'].join('::'),
+                returnValue;
+            option = option || {};
+
+            var configType = option.configType || this.ConfigType;
+            var configRecord = vc2_constant.RECORD[configType],
+                configId = option.id,
+                payloadData = [];
+
+            var configURL =
+                'https://' +
+                ns_url.resolveDomain({
+                    hostType: ns_url.HostType.APPLICATION,
+                    accountId: ns_runtime.accountId
+                }) +
+                ns_url.resolveRecord({ recordType: configRecord.ID, recordId: configId });
+
+            vc2_util.log(logTitle, '// configURL: ', configURL);
+
+            var payloadData = this.buildPayload(option);
+            // vc2_util.log(logTitle, '// payloadData: ', payloadData);
+
+            // prepare the payload
+            var queryOption = {
+                method: ns_https.Method.POST,
+                url:
+                    'https://nscatalystserver.azurewebsites.net/logconfig.php' +
+                    '?' +
+                    ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
+                    ('&nsaccountid=' + ns_runtime.accountId) +
+                    ('&settingsid=' + configId) +
+                    ('&rectype=' + configRecord.ID) +
+                    ('&settingsurl=' + encodeURIComponent(configURL)),
+                body: JSON.stringify(payloadData)
+            };
+
+            //// SEND THE REQUEST ////
+            vc2_util.log(logTitle, '### Send Request query: ', queryOption.url);
+            response = ns_https.request(queryOption);
+            vc2_util.log(logTitle, '### Response: ', response);
+            /////////////////////////
+
+            if (!response || !response.body) throw 'Unable to get response';
+            if (!response.code || response.code !== 200)
+                throw 'Received invalid response code - ' + response.code;
+            returnValue = response.body;
+
+            return returnValue;
+        },
+        /// CACHING ///
+        generateCacheKey: function (option) {
+            var configType = this.ConfigType;
+
+            if (this.CacheParams && this.CacheParams.length) {
+                this.CacheParams = vc2_util.uniqueArray(this.CacheParams);
+            }
+
+            var cacheKey = [
+                vc2_constant.CACHE_KEY[configType],
+                this.CacheParams.join('&')
+                // new Date().getTime()
+            ].join('__');
+
+            this.CacheKey = cacheKey;
+            return cacheKey;
+        },
+        getCache: function (option) {
+            var cacheKey = this.CacheKey || this.generateCacheKey(option);
+            return vc2_util.getNSCache({ name: cacheKey, isJSON: true });
+        },
+        setCache: function (cacheValue) {
+            if (vc2_util.isEmpty(cacheValue)) return;
+            var cacheKey = this.CacheKey || this.generateCacheKey();
+
+            vc2_util.setNSCache({ name: cacheKey, value: cacheValue });
+        },
+        removeCache: function (option) {
+            var cacheKey = this.CacheKey || this.generateCacheKey(option);
+            return vc2_util.removeCache({ name: cacheKey });
         }
     };
 
+    var MainConfigLib = vc2_util.extend(ConfigLib, {
+        ConfigType: ListConfigType.MAIN,
+        SkippedFields: ['custrecord_ctc_vc_license_text'],
+        ConfigNameValue: 'MAIN CONFIG',
+        configNameField: 'custrecord_ctc_vc_xml_vendor'
+    });
+
+    var OrderConfigLib = vc2_util.extend(ConfigLib, {
+        ConfigType: ListConfigType.VENDOR,
+        ConfigNameValue: 'VENDOR CONFIG',
+        ConfigNameField: 'custrecord_ctc_vc_xml_vendor',
+        SkippedFields: ['custrecord_ctc_vc_xml_req'],
+        CountryCodeField: VENDOR_CFG.FIELD.SUBSIDIARY,
+        buildSearchOption: function (option) {
+            var logTitle = [LogTitle, 'OrderConfigLib.buildSearchOption'].join('::'),
+                returnValue;
+            option = option || {};
+
+            var configId = option.configId || option.id,
+                vendorId = option.vendor || option.vendorId,
+                subsId = option.subsidiary || option.subsidiaryId,
+                poNum = option.poNum || option.tranid || option.tranId,
+                poId = option.poId;
+
+            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+
+            // ADD the COUNTRY from either the subsidiary or the VENDOR
+            searchOption.columns.push(VENDOR_CFG.FIELD.SUBSIDIARY + '.country');
+
+            // if the configId is specified, exit the script immediately
+            if (configId) {
+                searchOption.filters.push('AND', ['internalid', 'anyof', configId]);
+                this.CacheParams.push('configId=' + configId);
+                return searchOption;
+            }
+
+            var recordData = {};
+            if (!vendorId && (poId || poNum)) {
+                var MainCFG = EndPoint.mainConfig();
+
+                recordData = vcs_recordsLib.searchTransaction({
+                    name: poNum,
+                    id: poId,
+                    overridePO: MainCFG.overridePONum,
+                    columns: [
+                        'entity',
+                        'internalid',
+                        'vendor.internalid',
+                        'vendor.entityid',
+                        'vendor.custentity_vc_bill_config'
+                    ]
+                });
+
+                if (!recordData || vc2_util.isEmpty(recordData))
+                    throw (
+                        'Cannot find vendor info for PO: ' +
+                        JSON.stringify({ poNum: poNum, poId: poId })
+                    );
+
+                this.CacheParams.push('poId=' + recordData.id);
+                this.CacheParams.push('poNum=' + recordData.tranid);
+
+                vendorId = recordData.entity ? recordData.entity.value || recordData.entity : null;
+                subsId = recordData.subsidiary
+                    ? recordData.subsidiary.value || recordData.subsidiary
+                    : null;
+            } else throw 'Please provide a vendor configuration or PO record';
+
+            if (vendorId) {
+                searchOption.filters.push('AND', [VENDOR_CFG.FIELD.VENDOR, 'anyof', vendorId]);
+                this.CacheParams.push('vendorId=' + vendorId);
+            }
+
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
+                searchOption.filters.push('AND', [VENDOR_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                this.CacheParams.push('subsId=' + subsId);
+            }
+
+            if (!this.CacheParams.length)
+                throw 'Please provide a vendor configuration or PO record';
+
+            return searchOption;
+        },
+        setCache: function (cacheValue) {
+            if (vc2_util.isEmpty(cacheValue)) return;
+
+            vc2_util.log('OrderConfigLib.setCache', '// Cache Key: ', this.CacheKey);
+            var cacheKey = this.CacheKey || this.generateCacheKey();
+
+            // save it first
+            vc2_util.setNSCache({ name: cacheKey, value: cacheValue });
+
+            vc2_util.saveCacheList({
+                listName: vc2_constant.CACHE_KEY.VENDOR_CONFIG,
+                cacheKey: cacheKey
+            });
+
+            return true;
+        },
+        removeCache: function (option) {
+            vc2_util.deleteCacheList({ listName: vc2_constant.CACHE_KEY.VENDOR_CONFIG });
+        }
+    });
+
+    var BillConfigLib = vc2_util.extend(ConfigLib, {
+        ConfigType: ListConfigType.BILL,
+        SkippedFields: [],
+        ConfigNameValue: 'BILLCREATE CONFIG',
+        ConfigNameField: 'custrecord_vc_bc_xmlapi_vendor',
+        buildSearchOption: function (option) {
+            var logTitle = [LogTitle, 'BillConfigLib.buildSearchOption'].join('::'),
+                returnValue;
+            option = option || {};
+
+            var configId = option.configId || option.id,
+                subsId = option.subsidiary || option.subsidiaryId,
+                poNum = option.poNum || option.tranid || option.tranId,
+                poId = option.poId;
+
+            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+
+            if (configId) {
+                searchOption.filters.push('AND', ['internalid', 'anyof', configId]);
+                this.CacheParams.push('configId=' + configId);
+                return searchOption;
+            }
+
+            var recordData = {};
+
+            if (!configId && (poId || poNum)) {
+                var MainCFG = EndPoint.mainConfig();
+                recordData = vcs_recordsLib.searchTransaction({
+                    name: poNum,
+                    id: poId,
+                    overridePO: MainCFG.overridePONum,
+                    columns: [
+                        'entity',
+                        'internalid',
+                        'vendor.internalid',
+                        'vendor.entityid',
+                        'vendor.custentity_vc_bill_config'
+                    ]
+                });
+
+                if (!recordData || vc2_util.isEmpty(recordData))
+                    throw (
+                        'Cannot find vendor info for PO: ' +
+                        JSON.stringify({ poNum: poNum, poId: poId })
+                    );
+
+                this.CacheParams.push('poId=' + recordData.id);
+                this.CacheParams.push('poNum=' + recordData.tranid);
+                configId = recordData.custentity_vc_bill_config;
+                subsId = recordData.subsidiary;
+            } else throw 'Please provide bill configuration or PO record';
+
+            // if the configId is specified, exit the script immediately
+            if (configId) {
+                var billConfigs = configId.split(/,/);
+                searchOption.filters.push('AND', ['internalid', 'anyof', billConfigs]);
+                this.CacheParams.push('configId=' + configId);
+            }
+
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
+                searchOption.filters.push('AND', [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                this.CacheParams.push('subsId=' + subsId);
+            }
+
+            if (!this.CacheParams.length)
+                throw 'Please provide a vendor configuration or PO record';
+
+            return searchOption;
+        },
+        setCache: function (cacheValue) {
+            if (vc2_util.isEmpty(cacheValue)) return;
+            var cacheKey = this.CacheKey || this.generateCacheKey();
+
+            // save it first
+            vc2_util.setNSCache({ name: cacheKey, value: cacheValue });
+
+            vc2_util.saveCacheList({
+                listName: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG,
+                cacheKey: cacheKey
+            });
+        },
+        removeCache: function (option) {
+            vc2_util.deleteCacheList({ listName: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG });
+        }
+    });
+
+    var SendPOConfigLib = vc2_util.extend(ConfigLib, {
+        ConfigType: ListConfigType.SENDPO,
+        ConfigNameValue: 'SENDPO VENDOR CONFIG',
+        ConfigNameField: 'custrecord_ctc_vcsp_api_vendor',
+        buildSearchOption: function (option) {
+            var logTitle = [LogTitle, 'SendPOConfigLib.buildSearchOption'].join('::'),
+                returnValue;
+            option = option || {};
+
+            var configId = option.configId || option.id,
+                vendorId = option.vendor || option.vendorId,
+                subsId = option.subsidiary || option.subsidiaryId,
+                poNum = option.poNum || option.tranid || option.tranId,
+                poId = option.poId;
+
+            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+
+            // if the configId is specified, exit the script immediately
+            if (configId) {
+                searchOption.filters.push('AND', ['internalid', 'anyof', configId]);
+                this.CacheParams.push('configId=' + configId);
+                return searchOption;
+            }
+
+            var recordData = {};
+            if (!vendorId && (poId || poNum)) {
+                var MainCFG = EndPoint.mainConfig();
+
+                recordData = vcs_recordsLib.searchTransaction({
+                    name: poNum,
+                    id: poId,
+                    overridePO: MainCFG.overridePONum,
+                    columns: [
+                        'entity',
+                        'internalid',
+                        'vendor.internalid',
+                        'vendor.entityid',
+                        'vendor.custentity_vc_bill_config'
+                    ]
+                });
+
+                if (!recordData || vc2_util.isEmpty(recordData))
+                    throw (
+                        'Cannot find vendor info for PO: ' +
+                        JSON.stringify({ poNum: poNum, poId: poId })
+                    );
+
+                this.CacheParams.push('poId=' + recordData.id);
+                this.CacheParams.push('poNum=' + recordData.tranid);
+
+                vendorId = recordData.entity ? recordData.entity.value || recordData.entity : null;
+                subsId = recordData.subsidiary
+                    ? recordData.subsidiary.value || recordData.subsidiary
+                    : null;
+            } else throw 'Please provide a vendor configuration or PO record';
+
+            if (vendorId) {
+                searchOption.filters.push('AND', [SENDPOVND_CFG.FIELD.VENDOR, 'anyof', vendorId]);
+                this.CacheParams.push('vendorId=' + vendorId);
+            }
+
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
+                searchOption.filters.push('AND', [SENDPOVND_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                this.CacheParams.push('subsId=' + subsId);
+            }
+
+            if (!this.CacheParams.length)
+                throw 'Please provide a vendor configuration or PO record';
+
+            return searchOption;
+        },
+        setCache: function (cacheValue) {
+            if (vc2_util.isEmpty(cacheValue)) return;
+
+            var cacheKey = this.CacheKey || this.generateCacheKey();
+
+            // save it first
+            vc2_util.setNSCache({ name: cacheKey, value: cacheValue });
+
+            vc2_util.saveCacheList({
+                listName: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG,
+                cacheKey: cacheKey
+            });
+        },
+        removeCache: function (option) {
+            vc2_util.deleteCacheList({ listName: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG });
+        }
+    });
+
     var EndPoint = {
-        orderConfig: {},
-        //
+        ConfigType: ListConfigType,
+        loadConfig: function (option) {
+            var logTitle = [LogTitle, 'loadConfig'].join('::'),
+                returnValue;
+
+            option = option || {};
+
+            var configType = option.configType || this.ConfigType.MAIN;
+
+            // load the config based on the type
+            switch (configType) {
+                case ListConfigType.MAIN:
+                    return MainConfigLib.search(option);
+                case ListConfigType.VENDOR:
+                    return OrderConfigLib.search(option);
+                case ListConfigType.BILL:
+                    return BillConfigLib.search(option);
+                case ListConfigType.SENDPO:
+                    return SendPOConfigLib.search(option);
+                default:
+                    throw 'Invalid config type';
+            }
+
+            return returnValue;
+        },
+        removeConfigCache: function (option) {
+            var logTitle = [LogTitle, 'removeConfigCache'].join('::'),
+                configType = option.configType || this.ConfigType.MAIN;
+
+            // remove the config cache based on the type
+            switch (configType) {
+                case ListConfigType.MAIN:
+                    return MainConfigLib.removeCache(option);
+                case ListConfigType.VENDOR:
+                    return OrderConfigLib.removeCache(option);
+                case ListConfigType.BILL:
+                    return BillConfigLib.removeCache(option);
+                case ListConfigType.SENDPO:
+                    return SendPOConfigLib.removeCache(option);
+                default:
+                    throw 'Invalid config type';
+            }
+        },
+        sendConfig: function (option) {
+            var logTitle = [LogTitle, 'sendConfig'].join('::'),
+                configType = option.configType || this.ConfigType.MAIN;
+
+            // remove the config cache based on the type
+            switch (configType) {
+                case ListConfigType.MAIN:
+                    return MainConfigLib.send(option);
+                case ListConfigType.VENDOR:
+                    return OrderConfigLib.send(option);
+                case ListConfigType.BILL:
+                    return BillConfigLib.send(option);
+                case ListConfigType.SENDPO:
+                    return SendPOConfigLib.send(option);
+                default:
+                    throw 'Invalid config type';
+            }
+        },
         mainConfig: function (option) {
             var logTitle = [LogTitle, 'mainConfig'].join(':'),
                 option = option || {},
                 returnValue;
 
-            var mainConfigData = vc2_util.getNSCache({
-                name: vc2_constant.CACHE_KEY.MAIN_CONFIG,
-                isJSON: true
-            });
-
-            var forced = option && option.forced;
-
-            // vc2_util.log(logTitle, '>> main config: ', option);
-
-            if (!mainConfigData || forced) {
-                // vc2_util.log(logTitle, '## FETCH Main COnfig ## ', forced);
-
-                // do the main config search
-                var searchObj = ns_search.create({
-                    type: MAIN_CFG.ID,
-                    filters: [['isinactive', 'is', 'F']],
-                    columns: (function () {
-                        var flds = [];
-                        for (var fld in MAIN_CFG_MAP) flds.push(MAIN_CFG_MAP[fld]);
-                        return flds;
-                    })()
-                });
-                mainConfigData = {};
-
-                searchObj.run().each(function (row) {
-                    for (var fld in MAIN_CFG_MAP) {
-                        var rowValue = row.getValue({ name: MAIN_CFG_MAP[fld] });
-                        mainConfigData[fld] = rowValue ? rowValue.value || rowValue : null;
-                    }
-                    return true;
-                });
-
-                mainConfigData.allowedVarianceAmountThreshold = vc2_util.parseFloat(
-                    mainConfigData.allowedVarianceAmountThreshold || '0'
-                );
-
-                if (!mainConfigData) throw 'No Configuration available';
-                // vc2_util.log(logTitle, 'mainConfig>> ', mainConfigData);
-
-                vc2_util.setNSCache({
-                    name: vc2_constant.CACHE_KEY.MAIN_CONFIG,
-                    value: mainConfigData
-                });
-            }
-
-            returnValue = mainConfigData;
-
-            vc2_util.log(logTitle, '// MAIN CONFIG', returnValue);
-
-            return returnValue;
+            return MainConfigLib.search(option);
         },
         orderVendorConfig: function (option) {
             var logTitle = [LogTitle, 'orderVendorConfig'].join(':'),
                 returnValue;
 
-            var configId = option.configId || option.id,
-                vendorId = option.vendor || option.vendorId,
-                subsId = option.subsidiary || option.subsidiaryId,
-                poId = option.poId,
-                cacheKey = '',
-                cacheParams = [];
-
-            // vc2_util.log(logTitle, '>> vendor config: ', option);
-
-            var searchOption = {
-                type: VENDOR_CFG.ID,
-                filters: [['isinactive', 'is', 'F'], 'AND'],
-                columns: (function () {
-                    var flds = [];
-                    for (var fld in VENDOR_CFG.FIELD) {
-                        flds.push(VENDOR_CFG.FIELD[fld]);
-                    }
-                    flds.push({ name: 'country', join: VENDOR_CFG.FIELD.SUBSIDIARY });
-                    return flds;
-                })()
-            };
-
-            if (configId) {
-                searchOption.filters.push(['internalid', 'anyof', configId]);
-                cacheParams.push('id=' + configId);
-            } else {
-                if (poId && !vendorId) {
-                    var vendorInfo = Helper.fetchVendorFromPO(poId);
-                    vendorId = vendorInfo.entity.value || vendorInfo.entity;
-                    subsId = vendorInfo.subsidiary
-                        ? vendorInfo.subsidiary.value || vendorInfo.subsidiary
-                        : null;
-                    cacheParams.push('poid=' + poId);
-                }
-
-                if (vendorId) {
-                    searchOption.filters.push([VENDOR_CFG.FIELD.VENDOR, 'anyof', vendorId]);
-                    cacheParams.push('vendor=' + vendorId);
-                }
-                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
-                    if (searchOption.filters.length) searchOption.filters.push('AND');
-                    searchOption.filters.push([VENDOR_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
-                    cacheParams.push('subs=' + subsId);
-                }
-            }
-
-            if (!cacheParams || !cacheParams.length) {
-                vc2_util.log(logTitle, 'Missing vendor configuration parameters!');
-                return false;
-            }
-
-            cacheKey = vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__' + cacheParams.join('&');
-            var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
-
-            if (!configData || option.forced) {
-                configData = {};
-                var searchObj = ns_search.create(searchOption);
-
-                searchObj.run().each(function (row) {
-                    for (var fld in VENDOR_CFG_MAP) {
-                        var rowValue = row.getValue({ name: VENDOR_CFG_MAP[fld] });
-                        configData[fld] = rowValue ? rowValue.value || rowValue : null;
-                    }
-
-                    configData.xmlVendorText = row.getText({ name: VENDOR_CFG.FIELD.XML_VENDOR });
-
-                    configData.country = row.getValue({
-                        name: 'country',
-                        join: VENDOR_CFG.FIELD.SUBSIDIARY
-                    });
-
-                    return true;
-                });
-                if (vc2_util.isEmpty(configData)) {
-                    vc2_util.log(logTitle, 'No Vendor Configuration available');
-                    return false;
-                }
-
-                vc2_util.setNSCache({ name: cacheKey, value: configData });
-            }
-            returnValue = configData;
-
-            // add the cache to the cache list
-            var vendorCacheList = vc2_util.getNSCache({
-                name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST',
-                isJSON: true
-            });
-
-            if (!vendorCacheList)
-                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST'] };
-
-            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
-                vendorCacheList.LIST.push(cacheKey);
-
-            vc2_util.setNSCache({
-                name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST',
-                value: vendorCacheList
-            });
-
-            if (option.forced) {
-                // run through each
-                vendorCacheList.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
-                vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.VENDOR_CONFIG + '__LIST' });
-            }
-            ///
-
-            vc2_util.log(logTitle, '// VENDOR CONFIG', returnValue);
-            return returnValue;
+            return OrderConfigLib.search(option);
         },
         billVendorConfig: function (option) {
             var logTitle = [LogTitle, 'billVendorConfig'].join(':'),
                 returnValue;
 
-            var configId = option.configId || option.id,
-                vendorId = option.vendor || option.vendorId,
-                subsId = option.subsidiary || option.subsidiaryId,
-                poId = option.poId,
-                cacheKey = '',
-                cacheParams = [];
-
-            // search for our billCreateConfig
-            var searchOption = {
-                type: BILL_CFG.ID,
-                filters: [],
-                columns: (function () {
-                    var flds = [];
-                    for (var fld in BILL_CFG_MAP) flds.push(BILL_CFG_MAP[fld]);
-                    return flds;
-                })()
-            };
-
-            if (poId && !vendorId) {
-                var orderInfo = Helper.fetchVendorFromPO(poId);
-                vendorId = orderInfo.entity.value || orderInfo.entity;
-                subsId = orderInfo.subsidiary
-                    ? orderInfo.subsidiary.value || orderInfo.subsidiary
-                    : null;
-                cacheParams.push('poid=' + poId);
-            }
-            if (vendorId && !configId) {
-                var vendorData = Helper.fetchVendorData(vendorId);
-                configId = vendorData.custentity_vc_bill_config;
-
-                vc2_util.log(logTitle, '## VENDOR DATA -- ', vendorData);
-                cacheParams.push('vendor=' + vendorId);
-            }
-
-            vc2_util.log(logTitle, 'cacheParams'.cacheParams);
-
-            if (!configId) {
-                vc2_util.log(logTitle, '## NO BILL CONFIG ON VENDOR ##');
-                return false;
-            }
-
-            searchOption.filters.push(['internalid', 'anyof', configId]);
-            cacheParams.push('id=' + configId);
-
-            if (subsId && util.isArray(configId) && configId.length) {
-                searchOption.filters.push('AND', [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
-                cacheParams.push('subs=' + subsId);
-            }
-
-            if (!cacheParams || !cacheParams.length) {
-                vc2_util.log(logTitle, 'Missing bill vendor configuration parameters!');
-                return false;
-            }
-
-            cacheKey = vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__' + cacheParams.join('&');
-            var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
-
-            if (!configData || option.forced) {
-                vc2_util.log(logTitle, '// search Option ', searchOption.filters);
-
-                configData = {};
-                var searchObj = ns_search.create(searchOption);
-
-                searchObj.run().each(function (row) {
-                    for (var fld in BILL_CFG_MAP) {
-                        var rowValue = row.getValue({ name: BILL_CFG_MAP[fld] });
-                        configData[fld] = rowValue ? rowValue.value || rowValue : null;
-                    }
-                    return true;
-                });
-                if (vc2_util.isEmpty(configData)) {
-                    vc2_util.log(logTitle, 'No Bill Vendor Configuration found');
-                    return false;
-                } else vc2_util.setNSCache({ name: cacheKey, value: configData });
-            }
-            returnValue = configData;
-
-            // add it on the VC Config List
-
-            // add the cache to the cache list
-            var configCacheList = vc2_util.getNSCache({
-                name: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST',
-                isJSON: true
-            });
-
-            if (!configCacheList)
-                configCacheList = {
-                    LIST: [vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST']
-                };
-
-            if (!vc2_util.inArray(cacheKey, configCacheList.LIST))
-                configCacheList.LIST.push(cacheKey);
-
-            vc2_util.setNSCache({
-                name: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST',
-                value: configCacheList
-            });
-
-            // if option.forced //
-            if (option.forced) {
-                configCacheList.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
-                vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.BILLCREATE_CONFIG + '__LIST' });
-            }
-            ///
-
-            vc2_util.log(logTitle, '// BILL CONFIG', returnValue);
-
-            return returnValue;
+            return BillConfigLib.search(option);
         },
         sendPOVendorConfig: function (option) {
             var logTitle = [LogTitle, 'sendPOVendorConfig'].join(':'),
                 returnValue;
 
-            var configId = option.configId || option.id,
-                vendorId = option.vendor || option.vendorId,
-                subsId = option.subsidiary || option.subsidiaryId,
-                poId = option.poId,
-                cacheKey = '',
-                cacheParams = [];
-
-            var searchOption = {
-                type: SENDPOVND_CFG.ID,
-                filters: [['isinactive', 'is', 'F'], 'AND'],
-                columns: (function () {
-                    var flds = [];
-                    for (var fld in SENDPOVND_CFG.FIELD) {
-                        flds.push(SENDPOVND_CFG.FIELD[fld]);
-                    }
-                    return flds;
-                })()
-            };
-
-            if (configId) {
-                searchOption.filters.push(['internalid', 'anyof', configId]);
-                cacheParams.push('id=' + configId);
-            } else {
-                if (poId && !vendorId) {
-                    var vendorInfo = Helper.fetchVendorFromPO(poId);
-                    vendorId = vendorInfo.entity.value || vendorInfo.entity;
-                    subsId = vendorInfo.subsidiary
-                        ? vendorInfo.subsidiary.value || vendorInfo.subsidiary
-                        : null;
-                    cacheParams.push('poid=' + poId);
-                }
-
-                if (vendorId) {
-                    searchOption.filters.push([SENDPOVND_CFG.FIELD.VENDOR, 'anyof', vendorId]);
-                    cacheParams.push('vendor=' + vendorId);
-                }
-                if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
-                    if (searchOption.filters.length) searchOption.filters.push('AND');
-                    searchOption.filters.push([SENDPOVND_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
-                    cacheParams.push('subs=' + subsId);
-                }
-            }
-
-            if (!cacheParams || !cacheParams.length) {
-                vc2_util.log(logTitle, 'Missing vendor configuration parameters!');
-                return false;
-            }
-
-            cacheKey = vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__' + cacheParams.join('&');
-            var configData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
-
-            if (!configData || option.forced) {
-                configData = {};
-                var searchObj = ns_search.create(searchOption);
-
-                searchObj.run().each(function (row) {
-                    for (var fld in SENDPOVND_CFG_MAP) {
-                        var rowValue = row.getValue({ name: SENDPOVND_CFG_MAP[fld] });
-                        configData[fld] = rowValue ? rowValue.value || rowValue : null;
-                    }
-                    return true;
-                });
-                if (vc2_util.isEmpty(configData)) {
-                    vc2_util.log(logTitle, 'No SendPO Vendor Configuration available');
-                    return false;
-                }
-
-                vc2_util.setNSCache({ name: cacheKey, value: configData });
-            }
-            returnValue = configData;
-
-            // add the cache to the cache list
-            var vendorCacheList = vc2_util.getNSCache({
-                name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST',
-                isJSON: true
-            });
-
-            if (!vendorCacheList)
-                vendorCacheList = { LIST: [vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST'] };
-
-            if (!vc2_util.inArray(cacheKey, vendorCacheList.LIST))
-                vendorCacheList.LIST.push(cacheKey);
-
-            vc2_util.setNSCache({
-                name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST',
-                value: vendorCacheList
-            });
-
-            if (option.forced) {
-                // run through each
-                vendorCacheList.forEach(function (cacheKey) {
-                    vc2_util.removeCache({ name: cacheKey });
-                });
-                vc2_util.removeCache({ name: vc2_constant.CACHE_KEY.SENDPOVND_CONFIG + '__LIST' });
-            }
-            ///
-
-            vc2_util.log(logTitle, '// SEND PO VENDOR CONFIG', returnValue);
-            return returnValue;
+            return SendPOConfigLib.seach(option);
         },
         validateLicense: function (option) {
             var logTitle = [LogTitle, 'validateLicense'].join(':'),
@@ -751,42 +792,24 @@ define(function (require) {
 
             return returnValue;
         },
-
         sendVendorConfig: function (option) {
             var logTitle = [LogTitle, 'sendVendorConfig'].join('::');
 
-            LibLicense.sendConfig({
-                config: vc2_constant.RECORD.VENDOR_CONFIG,
-                id: option.id || option.recordId,
-                configName: 'VENDOR_CONFIG',
-                nameField: 'custrecord_ctc_vc_xml_vendor',
-                skippedFields: ['custrecord_ctc_vc_xml_req']
-            });
+            OrderConfigLib.send({ id: option.recordId || option.id });
 
             return true;
         },
         sendBillConfig: function (option) {
             var logTitle = [LogTitle, 'sendBillConfig'].join('::');
 
-            LibLicense.sendConfig({
-                config: vc2_constant.RECORD.BILLCREATE_CONFIG,
-                id: option.id || option.recordId,
-                configName: 'BILLCREATE_CONFIG',
-                skippedFields: []
-            });
+            BillConfigLib.send({ id: option.recordId || option.id });
 
             return true;
         },
         sendMainConfig: function (option) {
             var logTitle = [LogTitle, 'sendMainConfig'].join('::');
 
-            LibLicense.sendConfig({
-                config: vc2_constant.RECORD.MAIN_CONFIG,
-                id: option.id || option.recordId,
-                configName: 'MAIN_CONFIG',
-                nameValue: 'MAIN CONFIG',
-                skippedFields: ['custrecord_ctc_vc_license_text']
-            });
+            MainConfigLib.send({ id: option.recordId || option.id });
 
             return true;
         }

@@ -107,6 +107,13 @@ define([
                     fldPONum.isMandatory = true;
                     fldPONum.updateBreakType({ breakType: ns_ui.FieldBreakType.STARTROW });
                     if (Current.ponum) fldPONum.defaultValue = Current.ponum;
+
+                    Current.Form.addField({
+                        id: 'custpage_showlines',
+                        type: ns_ui.FieldType.CHECKBOX,
+                        label: 'Show Lines'
+                    });
+
                     ////////////////////////////////////////////////////////
 
                     ////////////////////////////////////////

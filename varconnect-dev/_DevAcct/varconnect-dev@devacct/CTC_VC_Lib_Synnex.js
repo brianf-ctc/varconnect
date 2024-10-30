@@ -20,12 +20,12 @@
  *
  */
 
-define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './moment'], function (
-    ns_xml,
-    vc2_constant,
-    vc2_util,
-    moment
-) {
+define([
+    'N/xml',
+    './CTC_VC2_Constants.js',
+    './CTC_VC2_Lib_Utils.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_constant, vc2_util, moment) {
     var LogTitle = 'WS:Synnex';
 
     var LOG_LEVEL = 0;
@@ -73,6 +73,16 @@ define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './mo
         ORDERS: {},
         RESULT: {}
     };
+
+    var DateFields = [
+        'ship_date',
+        'order_date',
+        'estdeliv_date',
+        'order_eta_ship',
+        'order_eta',
+        'eta_delivery_date',
+        'order_delivery_eta'
+    ];
 
     var LibSynnexAPI = {
         SkippedStatus: ['NOTFOUND', 'NOT FOUND', 'REJECTED', 'DELETED'],
@@ -311,6 +321,11 @@ define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './mo
                     var itemNode = arrItemsNode[ii];
 
                     var itemObj = LibSynnexAPI.processItem({ node: itemNode });
+
+                    //set the ddate fields to YYYY-MM-DD
+                    DateFields.forEach(function (dateField) {
+                        itemObj[dateField] = vc2_util.parseFormatDate(itemObj[dateField]);
+                    });
 
                     // check if there's a duplicate item already
                     var dupLine = vc2_util.findMatching({

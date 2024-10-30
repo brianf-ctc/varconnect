@@ -100,6 +100,7 @@ define([
             var thisRecord = ns_currentRecord.get();
             try {
                 var poNum = thisRecord.getValue({ fieldId: 'custpage_ponum' }),
+                    showLines = thisRecord.getValue({ fieldId: 'custpage_showlines' }),
                     vendorConfigId = thisRecord.getValue({ fieldId: 'custpage_vendor' });
 
                 if (!poNum) throw 'PO Number is required';
@@ -111,7 +112,8 @@ define([
                         action: 'OrderStatusDebug',
                         parameters: {
                             poNum: poNum,
-                            vendorConfigId: vendorConfigId
+                            vendorConfigId: vendorConfigId,
+                            showLines: showLines
                         }
                     },
                     method: 'POST'

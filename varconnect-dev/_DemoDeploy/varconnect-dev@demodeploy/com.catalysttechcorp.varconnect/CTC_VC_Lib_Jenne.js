@@ -20,11 +20,11 @@
  */
 define([
     'N/https',
-    './CTC_VC_Lib_Log.js',
     'N/xml',
+    './CTC_VC_Lib_Log.js',
     './CTC_VC2_Lib_Utils.js',
     './Bill Creator/Libraries/moment'
-], function (ns_https, vcLog, ns_xml, vc2_util, moment) {
+], function (ns_https, ns_xml, vcLog, vc2_util, moment) {
     'use strict';
 
     var LogTitle = 'WS:Jenne',

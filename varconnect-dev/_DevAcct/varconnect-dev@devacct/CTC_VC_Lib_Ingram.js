@@ -37,6 +37,15 @@ define([
         RESULT: {}
     };
 
+    var DateFields = [
+        'ship_date',
+        'order_date',
+        'estdeliv_date',
+        'order_eta_ship',
+        'order_eta',
+        'eta_delivery_date'
+    ];
+
     var LibIngramAPI = {
         ValidOrderStatus: [
             'SHIPPED',
@@ -308,7 +317,8 @@ define([
         },
         extractShipmentDetails: function (shipmentDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractShipmentDetails'].join('::');
-            if (!vc2_util.isEmpty(shipmentDetails)) return false;
+
+            if (vc2_util.isEmpty(shipmentDetails)) return false;
 
             var shipData = {
                 quantity: 0,
@@ -327,16 +337,15 @@ define([
                     order_eta_ship: shipmentDetail.estimatedDeliveryDate
                 });
 
-                if (!shipmentDetail.carrierDetails) continue;
+                if (vc2_util.isEmpty(shipmentDetail.carrierDetails)) continue;
 
                 shipData.carrier = shipmentDetail.carrierDetails.carrierName;
 
-                if (!shipmentDetail.carrierDetails.trackingDetails) continue;
+                if (vc2_util.isEmpty(shipmentDetail.carrierDetails.trackingDetails)) continue;
                 var trackingDetails = shipmentDetail.carrierDetails.trackingDetails;
 
                 var serialNos = this.extractSerialNos(trackingDetails),
                     trackingNos = this.extractTrackingNos(trackingDetails);
-
                 shipData.serialNos = shipData.serialNos.concat(serialNos);
                 shipData.trackingNos = shipData.trackingNos.concat(trackingNos);
             }
@@ -344,12 +353,14 @@ define([
             shipData.serialNos = vc2_util.uniqueArray(shipData.serialNos);
             shipData.trackingNos = vc2_util.uniqueArray(shipData.trackingNos);
 
+            vc2_util.log(logTitle, '// shipment details: ', shipData);
+
             return shipData;
         },
         extractTrackingNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractTrackingNos'].join('::');
 
-            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var trackingNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -367,7 +378,7 @@ define([
         extractSerialNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractSerialNos'].join('::');
 
-            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var serialNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -390,8 +401,8 @@ define([
         extractEstimatedDates: function (estDateDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractEstimatedDates'].join('::');
 
+            if (vc2_util.isEmpty(estDateDetails)) return;
             var estimatedDates = {};
-            if (!estDateDetails || !estDateDetails.length) return;
 
             for (var i = 0, j = estDateDetails.length; i < j; i++) {
                 var ship = estDateDetails[i].ship,
@@ -406,6 +417,8 @@ define([
 
                 if (delivery) util.extend(estimatedDates, { deliveryDate: delivery.deliveryDate });
             }
+
+            vc2_util.log(logTitle, '... estimated dates: ', estimatedDates);
 
             return estimatedDates;
         },
@@ -433,9 +446,9 @@ define([
                         : 'NA'
             };
             lineData.line_no = vc2_util.parseFloat(lineData.line_num);
+            vc2_util.log(logTitle, '** Ingram Line(2) : ', lineData);
 
             var shipment = LibOrderStatus.extractShipmentDetails(ingramLine.shipmentDetails);
-
             util.extend(lineData, {
                 ship_date: shipment.ship_date || 'NA',
                 order_date: shipment.order_date || 'NA',
@@ -454,7 +467,6 @@ define([
             });
 
             var estimatedDates = this.extractEstimatedDates(ingramLine.estimatedDates);
-
             if (!vc2_util.isEmpty(estimatedDates)) {
                 util.extend(lineData, {
                     order_eta: estimatedDates.shipDate || lineData.order_eta,
@@ -462,6 +474,19 @@ define([
                     eta_ship_source: estimatedDates.shipSource,
                     eta_delivery_date: estimatedDates.deliveryDate
                 });
+            }
+
+            /// GET ADDITIONAL INFO ///
+            var addLineData = {};
+            ['serviceContractInfo'].forEach(function (nodeData) {
+                if (ingramLine[nodeData] && !vc2_util.isEmpty(ingramLine[nodeData])) {
+                    addLineData[nodeData] = ingramLine[nodeData];
+                }
+                return true;
+            });
+
+            if (!vc2_util.isEmpty(addLineData)) {
+                lineData.vendorData = JSON.stringify(addLineData);
             }
 
             return lineData;
@@ -506,6 +531,14 @@ define([
                                 lineData.order_status.toUpperCase(),
                                 LibIngramAPI.ValidShippedStatus
                             )
+                        });
+
+                        //set the ddate fields to YYYY-MM-DD
+                        DateFields.forEach(function (dateField) {
+                            lineData[dateField] = vc2_util.parseFormatDate(
+                                lineData[dateField],
+                                'YYYY-MM-DD'
+                            );
                         });
 
                         orderLines.push(lineData);

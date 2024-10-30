@@ -63,12 +63,13 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_ut
                 option.recordNum = getTranId(option.recordId);
             }
 
+            // var orderListUrl = option.vendorConfig.endPoint+''+option.recordNum+'?$expand=Details($expand=LineItems)';
+            // var orderListUrl = config.vendorConfig.endPoint+'/Order';
             var orderListUrl =
                 option.orderConfig.endPoint +
-                '' +
+                "?$filter=CustomerPO eq '" +
                 option.recordNum +
-                '?$expand=Details($expand=LineItems)';
-            // var orderListUrl = config.orderConfig.endPoint+'/Order';
+                "'&$expand=Details($expand=LineItems)&top=1";
 
             var objResponse = vc2_util.sendRequest({
                 header: LogTitle,
@@ -102,6 +103,10 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_ut
 
         if (!vc2_util.isEmpty(responseBody.Queryable)) {
             responseBody = responseBody.Queryable;
+        }
+
+        if (!vc2_util.isEmpty(responseBody.value)) {
+            responseBody = responseBody.value;
         }
 
         var itemArray = [];
@@ -181,7 +186,7 @@ define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_ut
             filters: [
                 ['type', 'anyof', 'PurchOrd'],
                 'AND',
-                ['number', 'equalto', tranId],
+                ['tranid', 'is', tranId],
                 'AND',
                 ['mainline', 'is', 'T']
             ],

@@ -11,17 +11,99 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants.js'], function (
-    ns_search,
-    ns_record,
-    vc2_util,
-    vc2_constant
-) {
+define([
+    'N/search',
+    'N/record',
+    './lib/moment.js',
+    '../CTC_VC2_Lib_Utils.js',
+    '../CTC_VC2_Lib_Record.js',
+    '../CTC_VC2_Constants.js'
+], function (ns_search, ns_record, moment, vc2_util, vc2_record, vc2_constant) {
     var LogTitle = 'SVC:VCProcess',
         LOG_APP = 'VCProcess';
 
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
+
+    var Helper = {
+        parseDate: function () {},
+        searchOrderLine: function (option) {
+            var logTitle = [LogTitle, 'searchOrderLine'].join(':'),
+                returnValue,
+                ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
+                ORDLINE_FLD = ORDLINE_REC.FIELD;
+
+            var poId = option.poId,
+                vendorLines = option.vendorLines,
+                orderNum = option.orderNum,
+                itemName = option.itemName,
+                lineNo = option.lineNo;
+
+            var OrdLineFields = ['internalid'];
+            for (var fld in ORDLINE_FLD) OrdLineFields.push(ORDLINE_FLD[fld]);
+
+            try {
+                // prep the search option
+                var searchOption = {
+                        type: ORDLINE_REC.ID,
+                        columns: OrdLineFields,
+                        filters: [
+                            ['isinactive', 'is', 'F'],
+                            'AND',
+                            [ORDLINE_FLD.TXN_LINK, 'anyof', poId]
+                        ]
+                    },
+                    resultValues = {};
+
+                // vc2_util.log(logTitle, ' # search Option: ', searchOption);
+
+                var ordLineSearch = ns_search.create(searchOption);
+                if (!ordLineSearch.runPaged().count) throw 'No Orderlines for PO ID: ' + poId;
+
+                var OrderLineResults = [];
+
+                ordLineSearch.run().each(function (searchRow) {
+                    var ordLineData = { ID: searchRow.id };
+                    for (var fld in ORDLINE_FLD)
+                        ordLineData[fld] = searchRow.getValue({ name: ORDLINE_FLD[fld] });
+
+                    OrderLineResults.push(ordLineData);
+                    return true;
+                });
+
+                vendorLines.forEach(function (vendorLine) {
+                    var matchingOrderLine =
+                        vc2_util.findMatching({
+                            list: OrderLineResults,
+                            filter: {
+                                ITEM: vendorLine.item_num,
+                                ORDER_NUM: vendorLine.order_num,
+                                LINE_NO: vendorLine.line_num
+                            }
+                        }) ||
+                        vc2_util.findMatching({
+                            list: OrderLineResults,
+                            filter: {
+                                ITEM: vendorLine.item_num,
+                                ORDER_NUM: vendorLine.order_num
+                            }
+                        });
+
+                    vc2_util.log(logTitle, '.. matching orderline: ', matchingOrderLine);
+
+                    vendorLine.ORDERLINE_ID = matchingOrderLine.ID || null;
+                });
+                vc2_util.log(logTitle, '// VendorLines: ', vendorLines);
+
+                // choose to load all the orderlines of a given PO
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        }
+    };
 
     return {
         processSerials: function (option) {
@@ -117,6 +199,131 @@ define(['N/search', 'N/record', '../CTC_VC2_Lib_Utils.js', '../CTC_VC2_Constants
             });
 
             return true;
+        },
+        processOrderLines: function (option) {
+            var logTitle = [LogTitle, 'processOrderLines'].join(':'),
+                returnValue,
+                ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
+                ORDLINE_FLD = ORDLINE_REC.FIELD,
+                ORDLINE_STATUS = vc2_constant.LIST.ORDER_STATUS;
+
+            var vendorLines = option.vendorLines,
+                xmlVendor = option.xmlVendor,
+                poId = option.poId || option.purchaseOrderId;
+
+            if (vc2_util.isEmpty(vendorLines) || !util.isArray(vendorLines)) return false;
+            if (vc2_util.isEmpty(poId)) return false;
+
+            Helper.searchOrderLine({
+                poId: poId,
+                vendorLines: vendorLines
+            });
+
+            vendorLines.forEach(function (vendorLine) {
+                var orderLine = vendorLine.MATCHED_ORDERLINE || {};
+                var OrderlineValues = {
+                    VENDOR: xmlVendor,
+                    TXN_LINK: poId,
+                    ORDER_NUM: vendorLine.order_num,
+                    ORDER_STATUS: vendorLine.order_status,
+                    LINE_STATUS: vendorLine.line_status,
+                    ITEM: vendorLine.item_num,
+                    ITEM_LINK: orderLine.item,
+                    SKU: vendorLine.vendorSKU || vendorLine.item_num_alt,
+                    LINE_NO: vendorLine.line_num,
+                    POLINE_UNIQKEY: orderLine.line,
+                    QTY: vendorLine.ship_qty,
+                    PO_QTY: orderLine.quantity,
+                    ORDER_DATE: vc2_util.momentParseToNSDate(vendorLine.order_date),
+                    SHIPPED_DATE: vc2_util.momentParseToNSDate(vendorLine.ship_date),
+                    ETA_DATE: vc2_util.momentParseToNSDate(vendorLine.order_eta),
+                    ETD_DATE: vc2_util.momentParseToNSDate(vendorLine.eta_delivery_date),
+                    CARRIER: vendorLine.carrier,
+                    TRACKING: vendorLine.tracking_num,
+                    SERIALNUM: vendorLine.serial_num,
+                    ORDER_DATA: '',
+                    LINE_DATA: vendorLine.vendorData
+                };
+
+                var fnOrderStatus = {
+                    PENDING: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^pending/gi);
+                    },
+                    SHIPPED: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^shipped/gi);
+                    },
+                    INVOICED: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^invoiced/gi);
+                    },
+                    PARTIALLY_SHIPPED: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^partially.*shipped/gi);
+                    },
+                    SCHEDULED: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^scheduled/gi);
+                    },
+                    BACKORDERED: function (orderStatus, lineStatus) {
+                        return orderStatus.match(/^backordered/gi);
+                    },
+                    IN_PROGRESS: function (orderStatus, lineStatus) {
+                        return lineStatus.match(/in\sprogress/gi);
+                    }
+                };
+
+                for (var status in fnOrderStatus) {
+                    var statusResult = fnOrderStatus[status].call(
+                        OrderlineValues,
+                        OrderlineValues.ORDER_STATUS,
+                        OrderlineValues.LINE_STATUS
+                    );
+
+                    vc2_util.log(logTitle, '// choose status: ', [
+                        status,
+                        fnOrderStatus[status],
+                        OrderlineValues.ORDER_STATUS,
+                        OrderlineValues.LINE_STATUS
+                    ]);
+                    if (statusResult) {
+                        OrderlineValues.STATUS = ORDLINE_STATUS[status];
+                        break;
+                    }
+                }
+
+                var OrdLineFieldValues = {};
+                for (var fld in OrderlineValues) {
+                    if (!vc2_util.isEmpty(OrderlineValues[fld]))
+                        OrdLineFieldValues[ORDLINE_FLD[fld]] = OrderlineValues[fld];
+                }
+                vc2_util.log(logTitle, '---  order line values: ', [
+                    OrderlineValues,
+                    OrdLineFieldValues
+                ]);
+
+                if (vendorLine.ORDERLINE_ID) {
+                    ns_record.submitFields({
+                        type: ORDLINE_REC.ID,
+                        id: vendorLine.ORDERLINE_ID,
+                        values: OrdLineFieldValues
+                    });
+                    vc2_util.log(logTitle, '** Update Order Line ** ', [vendorLine.ORDERLINE_ID]);
+                } else {
+                    var recordOrdLine = ns_record.create({ type: ORDLINE_REC.ID });
+
+                    for (var fld in OrdLineFieldValues) {
+                        vc2_record.setRecordValue({
+                            record: recordOrdLine,
+                            fieldId: fld,
+                            value: OrdLineFieldValues[fld]
+                        });
+                    }
+
+                    var ID = recordOrdLine.save();
+                    vc2_util.log(logTitle, '** Create Order Line ** ', [ID]);
+                }
+
+                return true;
+            });
+
+            return returnValue;
         }
     };
 });

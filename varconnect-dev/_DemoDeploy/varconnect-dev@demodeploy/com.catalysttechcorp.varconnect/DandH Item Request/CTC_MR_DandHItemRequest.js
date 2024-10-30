@@ -30,9 +30,9 @@ define([
     'N/runtime',
     'N/https',
     'N/xml',
-    '../CTC_VC2_Lib_Utils.js',
-    '../CTC_VC2_Constants.js',
-    '../Services/ctc_svclib_configlib.js'
+    './../CTC_VC2_Lib_Utils.js',
+    './../CTC_VC2_Constants.js',
+    './../Services/ctc_svclib_configlib.js'
 ], function (
     ns_search,
     ns_record,

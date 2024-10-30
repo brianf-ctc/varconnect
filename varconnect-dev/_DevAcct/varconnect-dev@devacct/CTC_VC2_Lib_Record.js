@@ -588,7 +588,7 @@ define(function (require) {
                 if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
                 if (vc2_util.isEmpty(orderLines)) throw 'Order lines is required';
 
-                vc2_util.log(logTitle, '...orderLines: ', orderLines);
+                // vc2_util.log(logTitle, '...orderLines: ', orderLines);
 
                 var matchedLines = vc2_util.findMatching({
                     list: orderLines,
@@ -614,13 +614,14 @@ define(function (require) {
                         }
                     }
                 });
-                vc2_util.log(logTitle, '// matched line ?: ', matchedLines);
+                // vc2_util.log(logTitle, '// matched line ?: ', matchedLines);
 
                 var orderLineMatch = matchedLines && matchedLines[0] ? matchedLines[0] : null;
 
                 if (!matchedLines || !matchedLines.length) {
                     // lineValue.LINE_MATCH = false;
                     vendorLine.ORDER_LINE = null;
+
                     vc2_util.log(logTitle, '// no matching order line');
                 } else if (matchedLines.length == 1) {
                 } else if (matchedLines.length > 1) {
@@ -664,7 +665,7 @@ define(function (require) {
                         })
                     };
 
-                    vc2_util.log(logTitle, '///...matching: ', matching);
+                    // vc2_util.log(logTitle, '///...matching: ', matching);
 
                     orderLineMatch =
                         matching.qtyLine || matching.line || matching.qty || matchedLines[0];
@@ -715,8 +716,8 @@ define(function (require) {
             if (vc2_util.isEmpty(vendorLine)) throw 'Vendor line is required';
             if (vc2_util.isEmpty(orderLine)) throw 'Order line is required';
 
-            vc2_util.log(logTitle, '... is matched? [orderLine] ', orderLine);
-            vc2_util.log(logTitle, '... is matched? [vendorLine] ', vendorLine);
+            // vc2_util.log(logTitle, '... is matched? [orderLine] ', orderLine);
+            // vc2_util.log(logTitle, '... is matched? [vendorLine] ', vendorLine);
 
             var item = {
                 forcedValue: option.alternativeItemName || orderLine.alternativeItemName,
@@ -733,7 +734,7 @@ define(function (require) {
                 dellQuoteNo: option.dellQuoteNo || orderLine[LineColField.DELL_QUOTE_NO],
                 vendorItemNames: orderLine[GlobalVar.INCLUDE_ITEM_MAPPING_LOOKUP_KEY]
             };
-            vc2_util.log(logTitle, '.. item values: ', item);
+            // vc2_util.log(logTitle, '.. item values: ', item);
 
             var settings = {
                 isDandH:
@@ -756,7 +757,7 @@ define(function (require) {
                         ? Current.OrderCFG.xmlVendor == VendorList.DELL
                         : null
             };
-            vc2_util.log(logTitle, '... settings:', settings);
+            // vc2_util.log(logTitle, '... settings:', settings);
 
             var matchedValue;
             try {
@@ -1247,7 +1248,7 @@ define(function (require) {
                                 []
                         };
 
-                        vc2_util.dumpLog(logTitle, matchingOrderLines, 'Matching Lines: ');
+                        // vc2_util.dumpLog(logTitle, matchingOrderLines, 'Matching Lines: ');
 
                         // try to distribute the AVAILQTY
                         var fnQuantityDist = function (matchedOrderLine) {

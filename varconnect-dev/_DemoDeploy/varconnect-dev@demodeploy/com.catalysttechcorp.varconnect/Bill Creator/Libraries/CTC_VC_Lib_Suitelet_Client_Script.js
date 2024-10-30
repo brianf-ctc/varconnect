@@ -225,11 +225,12 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
     function pageInit(context) {
         var currRecord = context.currentRecord;
 
-        var lineCount = currRecord.getLineCount({ sublistId: 'variance' });
+        var sublistCharges = 'charges_list';
+        var lineCount = currRecord.getLineCount({ sublistId: sublistCharges });
 
         for (var line = 0; line < lineCount; line++) {
             var isActive = currRecord.getSublistValue({
-                sublistId: 'variance',
+                sublistId: sublistCharges,
                 fieldId: 'is_active',
                 line: line
             });
@@ -239,7 +240,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
                     function (fld) {
                         try {
                             currRecord.getSublistField({
-                                sublistId: 'variance',
+                                sublistId: sublistCharges,
                                 fieldId: fld,
                                 line: line
                             }).isDisabled = true;
@@ -249,25 +250,11 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             }
         }
 
-        // console.log('currRecord', currRecord);
-
-        // var taxValueField = currRecord.getField('custpage_variance_tax');
-        // taxValueField.isDisabled = !currRecord.getValue('custpage_variance_tax_apply');
-        // // console.log('tax', taxValueField, currRecord.getValue('custpage_variance_tax_apply'));
-
-        // var shipValueField = currRecord.getField('custpage_variance_shipping');
-        // shipValueField.isDisabled = !currRecord.getValue('custpage_variance_ship_apply');
-        // // console.log('shipValueField', shipValueField, currRecord.getValue('custpage_variance_ship_apply'));
-
-        // var otherValueField = currRecord.getField('custpage_variance_other');
-        // otherValueField.isDisabled = !currRecord.getValue('custpage_variance_other_apply');
-
-        // var adjustmentValueField = currRecord.getField('custpage_variance_adjustment');
-        // adjustmentValueField.isDisabled = !currRecord.getValue(
-        //     'custpage_variance_adjustment_apply'
-        // );
-
-        // console.log('otherValueField', otherValueField, currRecord.getValue('custpage_variance_other_apply'));
+        var redirUrl = currRecord.getValue('custpage_redir_url');
+        if (redirUrl) {
+            redirUrl += '&taskact=viewForm';
+            location.href = redirUrl;
+        }
 
         return true;
     }

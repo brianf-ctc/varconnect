@@ -29,8 +29,8 @@ define([
     'N/record',
     'N/render',
     'N/search',
-    '../CTC_VC2_Constants.js',
-    '../Services/ctc_svclib_configlib.js'
+    './../CTC_VC2_Constants.js',
+    './../Services/ctc_svclib_configlib.js'
 ], function (record, render, search, vc2_constant, vcs_configLib) {
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;

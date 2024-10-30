@@ -33,11 +33,24 @@
 define([
     'N/config',
     'N/format',
+    'N/search',
+    'N/record',
     './CTC_VC2_Lib_Record',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
-    './Services/ctc_svclib_configlib.js'
-], function (ns_config, ns_format, vc2_record, vc2_util, vc2_constant, vcs_configLib) {
+    './Services/ctc_svclib_configlib.js',
+    './Services/ctc_svclib_process-v1.js'
+], function (
+    ns_config,
+    ns_format,
+    ns_search,
+    ns_record,
+    vc2_record,
+    vc2_util,
+    vc2_constant,
+    vcs_configLib,
+    vcs_processLib
+) {
     var LogTitle = 'NS_Library',
         LogPrefix;
 
@@ -282,7 +295,7 @@ define([
     //***********************************************************************
     //	function updatePOItemData(poNum, lineData)
     function updatePOItemData(option) {
-        var logTitle = [LogTitle, 'updatePOItemData'].join('::');
+        var logTitle = [LogTitle, 'updatePO'].join('::');
 
         Current.PO_NUM = option.poNum;
         Current.VendorLines = option.lineData; //vc2_util.copyValues();
@@ -301,6 +314,7 @@ define([
             isUpdatedSO = false,
             mapLineOrderStatus = {};
 
+        Helper.getDateFormat();
         try {
             if (!Current.PO_REC || Current.PO_REC == null) throw ERROR_MSG.MISSING_PO;
 
@@ -310,20 +324,21 @@ define([
                 isDropPO: Current.PO_REC.getValue({ fieldId: 'custbody_isdropshippo' }),
                 DocNum: Current.PO_REC.getValue({ fieldId: 'tranid' })
             };
+
             var specialOrder = false;
             vc2_util.log(logTitle, '// PO Data: ', POData);
 
             returnValue.id = POData.createdFromID;
             if (POData.bypassVC) return returnValue;
 
-            Helper.getDateFormat();
-
             // extract lines from the PO
             var itemAltNameColId =
                     Current.OrderCFG.itemColumnIdToMatch || Current.MainCFG.itemColumnIdToMatch,
+                // Alt MPN Col
                 itemAltMPNColId =
                     Current.OrderCFG.itemMPNColumnIdToMatch ||
                     Current.MainCFG.itemMPNColumnIdToMatch,
+                // PO Columns
                 poColumns = [
                     'item',
                     'quantity',
@@ -335,14 +350,9 @@ define([
                     vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
                     vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
                 ];
-            if (itemAltNameColId) {
-                poColumns.push(itemAltNameColId);
-            }
-            if (itemAltMPNColId) {
-                poColumns.push(itemAltMPNColId);
-            }
 
-            vc2_util.log(logTitle, '... po columns:', poColumns);
+            if (itemAltNameColId) poColumns.push(itemAltNameColId);
+            if (itemAltMPNColId) poColumns.push(itemAltMPNColId);
 
             Current.OrderLines = vc2_record.extractRecordLines({
                 record: Current.PO_REC,
@@ -352,12 +362,12 @@ define([
                 orderConfig: Current.OrderCFG
             });
 
+            vc2_util.log(logTitle, '###### UPDATE PO LINES: START ######');
             vc2_util.log(logTitle, '... PO lines data:', Current.OrderLines);
 
             // clean up the order lines
             isUpdatedPO = Helper.cleanupOrderLines();
 
-            vc2_util.log(logTitle, '###### UPDATE PO LINES: START ######');
             // loop thru all vendor lines
             for (var i = 0; i < Current.VendorLines.length; i++) {
                 var vendorLine = Current.VendorLines[i];
@@ -372,6 +382,29 @@ define([
                         mainConfig: Current.MainCFG,
                         orderConfig: Current.OrderCFG
                     });
+                    vendorLine.STATUS = Helper.buildVendorStatus(vendorLine);
+
+                    var orderLineData,
+                        updateLineValues = {};
+
+                    if (orderLineMatch) {
+                        orderLineData = vc2_record.extractLineValues({
+                            record: Current.PO_REC,
+                            line: orderLineMatch.line,
+                            columns: vc2_util.arrayKeys(MAPPING.lineColumn)
+                        });
+                    }
+
+                    // addOrderLine({
+                    //     vendorLine: vendorLine,
+                    //     poId: Current.PO_REC.id
+                    // });
+
+                    // vc2_util.log(logTitle, '-- orderLineMatch: ', {
+                    //     orderLineMatch: orderLineMatch,
+                    //     vendorLine: vendorLine,
+                    //     orderLineData: orderLineData
+                    // });
 
                     if (!orderLineMatch) {
                         throw util.extend(ERROR_MSG.MATCH_NOT_FOUND, {
@@ -379,24 +412,9 @@ define([
                         });
                     }
 
-                    vendorLine.STATUS = Helper.buildVendorStatus(vendorLine);
-
-                    var orderLineData = vc2_record.extractLineValues({
-                            record: Current.PO_REC,
-                            line: orderLineMatch.line,
-                            columns: vc2_util.arrayKeys(MAPPING.lineColumn)
-                        }),
-                        updateLineValues = {};
-
                     // clear the vendor order status && vendor info
                     orderLineData['custcol_ctc_vc_order_status'] = '';
                     orderLineData['custcol_ctc_vc_vendor_info'] = '';
-
-                    vc2_util.log(logTitle, '-- orderLineMatch: ', {
-                        orderLineMatch: orderLineMatch,
-                        vendorLine: vendorLine,
-                        orderLineData: orderLineData
-                    });
 
                     // var SHIP_FIELDS = ['ship_date', 'tracking_num', 'carrier', 'serial_num'];
                     var SHIP_FIELDS = []; // ['ship_date', 'tracking_num', 'serial_num'];
@@ -463,7 +481,7 @@ define([
                                         ? currLineVal.split(/\n/)
                                         : [];
 
-                                // no change at all, if empty
+                                // no change at all, if empty`
                                 if (vc2_util.isEmpty(newValue) || newValue == 'NA') continue;
 
                                 // make the list unique
@@ -669,6 +687,7 @@ define([
                         // status: vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR,
                         isError: true
                     });
+
                     continue;
                 }
             }
@@ -680,20 +699,40 @@ define([
                 });
                 returnValue.lineuniquekey = null;
 
-                vc2_util.log(logTitle, ' // PO updated successfully');
+                vc2_util.log(logTitle, ' // PO updated successfully!');
             }
-        } catch (err) {
-            vc2_util.logError(logTitle, err);
-            vc2_util.vcLog({
-                title: 'Update Record | Error',
-                error: err,
-                transaction: Current.PO_REC ? Current.PO_REC.id : null,
-                status: vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR,
-                isError: true
+            vc2_util.log(logTitle, 'VendorLines', Current.VendorLines);
+
+            // send the serviceRequest instead of a lib access
+
+            vc2_util.serviceRequest({
+                moduleName: 'processV1',
+                action: 'processOrderLines',
+                parameters: {
+                    vendorLines: Current.VendorLines,
+                    poId: Current.PO_REC.id,
+                    xmlVendor: Current.OrderCFG.xmlVendor
+                }
             });
 
+            // vcs_processLib.processOrderLines({
+            //     vendorLines: Current.VendorLines,
+            //     poId: Current.PO_REC.id,
+            //     xmlVendor: Current.OrderCFG.xmlVendor
+            // });
+        } catch (error) {
+            vc2_util.vcLog({
+                title: 'PO Update',
+                message: error.message || error,
+                recordId: Current.PO_REC ? Current.PO_REC.id : null,
+                status:
+                    error.status || error.logStatus || vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR
+            });
+
+            vc2_util.logError(logTitle, error);
+
             returnValue.id = null;
-            returnValue.error = err;
+            returnValue.error = error;
         } finally {
             vc2_util.log(logTitle, '###### UPDATE PO LINES: END ######', returnValue);
         }
@@ -701,13 +740,6 @@ define([
         return returnValue;
     }
 
-    /**
-     * Matches item number to PO line number
-     * @param {obj} po_record the opened PO record
-     * @param {str} itemNum the display item number to be matched
-     * @param {*} vendorSKU optionally the vendorSKU if matching that instead of mpn
-     * @returns {int} the line number of the matching item or null
-     */
     function validateLineNumber(option) {
         //po_record, itemNum, vendorSKU, hashSpace, xmlVendor
         var logTitle = [LogTitle, 'validateLineNumber'].join('::'),
@@ -1019,6 +1051,127 @@ define([
             soLine: soLine,
             fulfillmentLine: fulfillmentLine
         };
+    }
+
+    function addOrderLine(option) {
+        var logTitle = [LogTitle, 'addOrderLine'].join('::'),
+            returnValue = true;
+
+        try {
+            var vendorLine = option.vendorLine,
+                poID = option.poId;
+
+            vc2_util.log(logTitle, '// vendorLine: ', vendorLine);
+
+            var ORDERLINE_REC = vc2_constant.RECORD.ORDER_LINE;
+            var orderLine = vendorLine.MATCHED_ORDERLINE || {};
+
+            var OrderlineValues = {
+                VENDOR: Current.OrderCFG.xmlVendor,
+                TXN_LINK: poID,
+                ORDER_NUM: vendorLine.order_num,
+                ORDER_STATUS: vendorLine.order_status,
+                LINE_STATUS: vendorLine.line_status,
+                ITEM: vendorLine.item_num,
+                ITEM_LINK: orderLine.item,
+                SKU: vendorLine.vendorSKU || vendorLine.item_num_alt,
+                LINE_NO: vendorLine.line_num,
+                POLINE_UNIQKEY: orderLine.line,
+                QTY: vendorLine.ship_qty,
+                PO_QTY: orderLine.quantity,
+                ORDER_DATE:
+                    vc2_util.isEmpty(vendorLine.order_date) || vendorLine.order_date == 'NA'
+                        ? null
+                        : parseDate({ dateString: vendorLine.order_date }),
+
+                ORDER_DATETXT: vendorLine.order_date,
+                SHIPPED_DATE:
+                    vc2_util.isEmpty(vendorLine.ship_date) || vendorLine.ship_date == 'NA'
+                        ? null
+                        : parseDate({ dateString: vendorLine.ship_date }),
+
+                ETA_DATE:
+                    vc2_util.isEmpty(vendorLine.order_eta_ship) || vendorLine.order_eta_ship == 'NA'
+                        ? null
+                        : parseDate({ dateString: vendorLine.order_eta_ship }),
+
+                ETD_DATE:
+                    vc2_util.isEmpty(vendorLine.eta_delivery_date) ||
+                    vendorLine.eta_delivery_date == 'NA'
+                        ? null
+                        : parseDate({ dateString: vendorLine.eta_delivery_date }),
+
+                CARRIER: vendorLine.carrier,
+                // SHIP_METHOD: '',
+                TRACKING: vendorLine.tracking_num,
+                SERIALNUM: vendorLine.serial_num,
+                ORDER_DATA: '',
+                LINE_DATA: vendorLine.vendorData
+            };
+
+            vc2_util.log(logTitle, '///OrderlineValues ', OrderlineValues);
+
+            // do a search
+            var searchOption = {
+                type: ORDERLINE_REC.ID,
+                columns: ['internalid'],
+                filters: [
+                    ['isinactive', 'is', 'F'],
+                    'AND',
+                    [ORDERLINE_REC.FIELD.TXN_LINK, 'anyof', OrderlineValues.TXN_LINK],
+                    'AND',
+                    [ORDERLINE_REC.FIELD.ORDER_NUM, 'is', OrderlineValues.ORDER_NUM],
+                    'AND',
+                    [ORDERLINE_REC.FIELD.ITEM, 'is', OrderlineValues.ITEM]
+                ]
+            };
+
+            if (OrderlineValues.POLINE_UNIQKEY) {
+                searchOption.filters.push('AND', [
+                    ORDERLINE_REC.FIELD.POLINE_UNIQKEY,
+                    'is',
+                    OrderlineValues.POLINE_UNIQKEY
+                ]);
+            }
+
+            vc2_util.log(logTitle, '// search option:  ', searchOption);
+            var searchObj = ns_search.create(searchOption);
+
+            var hasExisting = searchObj.runPaged().count;
+            vc2_util.log(logTitle, '>> Total existing orderline: ', hasExisting);
+
+            if (hasExisting) {
+                searchObj.run().each(function (row) {
+                    ns_record.submitFields({
+                        type: ORDERLINE_REC.ID,
+                        id: row.id,
+                        values: OrderlineValues
+                    });
+                });
+            } else {
+                var recOL = ns_record.create({ type: ORDERLINE_REC.ID });
+
+                for (var fld in OrderlineValues) {
+                    recOL.setValue({
+                        fieldId: ORDERLINE_REC.FIELD[fld],
+                        value: OrderlineValues[fld]
+                    });
+                }
+                recOL.save();
+            }
+        } catch (error) {
+            vc2_util.logError(logTitle, error);
+
+            // vc2_util.vcLog({
+            //     title: 'Update Record Line',
+            //     error: line_error,
+            //     transaction: Current.PO_REC ? Current.PO_REC.id : null,
+            //     // status: vc2_constant.LIST.VC_LOG_STATUS.RECORD_ERROR,
+            //     isError: true
+            // });
+        }
+
+        return returnValue;
     }
 
     return {

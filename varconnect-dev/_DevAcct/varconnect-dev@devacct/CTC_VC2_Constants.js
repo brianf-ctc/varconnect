@@ -250,6 +250,8 @@ define(function (require) {
         ORDER_LINE: {
             ID: 'customrecord_ctc_vc_orderlines',
             FIELD: {
+                RECKEY: 'custrecord_ctc_vc_orderline_reckey',
+                VENDOR: 'custrecord_ctc_vc_orderline_vendor',
                 TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
                 ORDER_NUM: 'custrecord_ctc_vc_orderline_vndordernum',
                 ORDER_STATUS: 'custrecord_ctc_vc_orderline_vndorderstat',
@@ -263,7 +265,7 @@ define(function (require) {
                 QTY: 'custrecord_ctc_vc_orderline_vndqty',
                 PO_QTY: 'custrecord_ctc_vc_orderline_poqty',
                 ORDER_DATE: 'custrecord_ctc_vc_orderline_orderdate',
-                ORDER_DATETXT: 'custrecord_ctc_vc_orderline_vndorderdate',
+                // ORDER_DATETXT: 'custrecord_ctc_vc_orderline_vndorderdate',
                 SHIPPED_DATE: 'custrecord_ctc_vc_orderline_shippeddate',
                 ETA_DATE: 'custrecord_ctc_vc_orderline_eta_date',
                 ETD_DATE: 'custrecord_ctc_vc_orderline_etd_date',
@@ -271,9 +273,12 @@ define(function (require) {
                 CARRIER: 'custrecord_ctc_vc_orderline_carrier',
                 SHIP_METHOD: 'custrecord_ctc_vc_orderline_shipmethod',
                 TRACKING: 'custrecord_ctc_vc_orderline_trackingno',
-                SERIALNUM: 'custrecord_ctc_vc_orderline_serialnumber',
+                SERIALNUM: 'custrecord_ctc_vc_orderline_serialno',
                 ORDER_DATA: 'custrecord_ctc_vc_orderline_vndorderdata',
-                LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata'
+                LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata',
+                ITEMFF_LINK: 'custrecord_ctc_vc_orderline_itemfflink',
+                VB_LINK: 'custrecord_ctc_vc_orderline_vblink',
+                BILLFILE_LINK: 'custrecord_ctc_vc_orderline_billfile'
             }
         },
         VAR_CONNECT_PO_LINE: {
@@ -515,6 +520,21 @@ define(function (require) {
         COUNTRY: {
             US: '1',
             CANADA: '2'
+        },
+        ORDER_STATUS: {
+            PENDING: 1,
+            SHIPPED: 2,
+            INVOICED: 3,
+            PARTIALLY_SHIPPED: 4,
+            PARTIALLY_BILED: 5,
+            BACKORDERED: 6,
+            DELETED: 7,
+            NOT_FOUND: 8,
+            ON_HOLD: 9,
+            IN_PROGRESS: 10,
+            SCHEDULED: 11,
+            CLOSED: 12,
+            OPEN_ORDER: 13
         }
     };
     VC2_CONSTANT.SCRIPT = {
@@ -727,7 +747,7 @@ define(function (require) {
             status: Bill_Creator.Status.CLOSED,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-        
+
         ITEM_NOT_BILLABLE: {
             code: 'ITEM_NOT_BILLABLE',
             msg: 'Item is not billable',
@@ -836,13 +856,13 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240930';
+    VC2_CONSTANT.CACHE_NAME = 'VC_202410';
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
         VENDOR_CONFIG: 'VC_VENDOR_CONFIG',
         BILLCREATE_CONFIG: 'VC_BILLCREATE_CONFIG',
-                SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
+        SENDPOVND_CONFIG: 'VC_SENDPOVND_CONFIG',
         PO_DATA: 'VC_PODATA'
     };
 

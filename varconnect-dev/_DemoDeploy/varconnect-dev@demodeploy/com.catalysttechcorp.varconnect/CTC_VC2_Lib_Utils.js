@@ -20,7 +20,7 @@ define(function (require) {
         ns_search = require('N/search'),
         ns_cache = require('N/cache'),
         ns_config = require('N/config'),
-        // momentLib = require('./Bill Creator/Libraries/moment'),
+        momentLib = require('./Services/lib/moment'),
         ns_xml = null,
         ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
@@ -74,6 +74,9 @@ define(function (require) {
                     }
                 }
             });
+        },
+        isTrue: function (value) {
+            return this.inArray(value, [true, 'T', 't']);
         }
     });
 
@@ -87,12 +90,12 @@ define(function (require) {
         }
     });
 
-    ns_cache = require('N/cache');
     // CACHE
+    ns_cache = require('N/cache');
     util.extend(vc2_util, {
         NSCACHE_NAME: vc2_constant.CACHE_NAME,
         NSCACHE_KEY: 'VC_20240101',
-        NSCACHE_TTL: 86400, // 1 whole day
+        NSCACHE_TTL: vc2_constant.CACHE_TTL,
         getNSCache: function (option) {
             var returnValue;
             try {
@@ -167,6 +170,46 @@ define(function (require) {
             } catch (error) {
                 vc2_util.logError('removeNSCache', error);
             }
+        },
+        saveCacheList: function (option) {
+            var listName = option.listName,
+                cacheKey = option.cacheKey;
+
+            var cacheListName = [listName, 'LIST'].join('___');
+            var cacheListValue = vc2_util.getNSCache({ name: cacheListName, isJSON: true });
+
+            if (vc2_util.isEmpty(cacheListValue)) cacheListValue = { LIST: [cacheListName] };
+
+            if (!vc2_util.inArray(cacheKey, cacheListValue.LIST))
+                cacheListValue.LIST.push(cacheKey);
+
+            vc2_util.log('## NS CACHE (list)', ' // CACHE List: ', [
+                listName,
+                cacheKey,
+                cacheListValue
+            ]);
+
+            vc2_util.setNSCache({
+                cacheKey: cacheListName,
+                value: cacheListValue
+            });
+
+            return cacheListValue;
+        },
+        deleteCacheList: function (option) {
+            var listName = option.listName;
+
+            var cacheListName = [listName, 'LIST'].join('___');
+            var cacheListValue = vc2_util.getNSCache({ name: cacheListName, isJSON: true });
+
+            vc2_util.log('## NS CACHE (reset list)', ' // CACHE List: ', [listName]);
+
+            if (vc2_util.isEmpty(cacheListValue) || vc2_util.isEmpty(cacheListValue.LIST)) return;
+
+            cacheListValue.LIST.forEach(function (cacheKey) {
+                vc2_util.removeCache({ name: cacheKey });
+                return true;
+            });
         }
     });
 
@@ -321,6 +364,76 @@ define(function (require) {
             vc2_util.log(logTitle, 'PARSE DATE', { dateStr: dateString, dateObj: dateObj });
             return dateObj;
         },
+        parseFormatDate: function (dateStr, parseformat, outFormat) {
+            if (!dateStr || dateStr == 'NA') return 'NA';
+            // if (!parseformat) parseformat = 'YYYY-MM-DD';
+            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT;
+            return parseformat
+                ? momentLib(dateStr, parseformat).format(outFormat)
+                : momentLib(dateStr).format(outFormat);
+        },
+        momentParse: function (dateStr, format) {
+            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT;
+
+            var returnDate =
+                dateStr || dateStr != 'NA' ? momentLib(dateStr, format).toDate() : null;
+
+            return returnDate;
+        },
+        momentParseToNSDate: function (dateStr, format) {
+            if (!dateStr || dateStr == 'NA') return null;
+            var dateObj, returnDate, dateFormat;
+
+            dateFormat = this.getDateFormat();
+            vc2_util.log('momentParseToNSDate', '// (1)  ', [
+                dateStr,
+                [format, dateFormat],
+                dateObj,
+                returnDate
+            ]);
+
+            try {
+                dateObj = this.momentParse(dateStr, format);
+                returnDate = ns_format.format({ value: dateObj, type: dateFormat });
+            } catch (err) {
+                vc2_util.logError('momentParseToNSDate', err);
+            }
+            vc2_util.log('momentParseToNSDate', '// (2)  ', [
+                dateStr,
+                [format, dateFormat],
+                dateObj,
+                returnDate
+            ]);
+
+            return returnDate;
+        },
+        getDateFormat: function () {
+            var dateFormat = null; //vc2_util.CACHE.DATE_FORMAT;
+
+            if (!dateFormat) {
+                try {
+                    require(['N/config'], function (config) {
+                        var generalPref = config.load({
+                            type: config.Type.COMPANY_PREFERENCES
+                        });
+                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+                        return true;
+                    });
+                } catch (e) {}
+
+                if (!dateFormat) {
+                    try {
+                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+                    } catch (e) {}
+                }
+                vc2_util.CACHE.DATE_FORMAT = dateFormat;
+            }
+
+            vc2_util.log('getDateFormat', '// ', [dateFormat]);
+
+            return dateFormat;
+        },
+
         parseDate: function (option) {
             var logTitle = [LogTitle, 'parseDate'].join('::');
 
@@ -452,6 +565,24 @@ define(function (require) {
             });
 
             return arrResults;
+        },
+
+        tryThese: function (arrTasks) {
+            if (!arrTasks) return false;
+
+            for (var i = 0; i < arrTasks.length; i++) {
+                var task = arrTasks[i],
+                    returnVal = false,
+                    isSuccess = false;
+                try {
+                    returnVal = task.call();
+                    if (returnVal || isSuccess) break;
+                } catch (e) {
+                    vc2_util.logError(logTitle, e);
+                }
+                if (isSuccess) break;
+            }
+            return true;
         }
     });
 
@@ -827,8 +958,11 @@ define(function (require) {
             var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
                 returnValue = request;
 
-            // detect the error
             var parsedResp = request.PARSED_RESPONSE;
+            if (request.isError && !parsedResp)
+                throw request.errorMsg || 'Unable to parse response';
+
+            // detect the error
             if (!parsedResp) throw 'Unable to parse response';
 
             // check for faultstring
@@ -1028,7 +1162,6 @@ define(function (require) {
             }
             return true;
         },
-
         vcLogError: function (option) {
             var logTitle = [LogTitle, ''].join(':'),
                 returnValue = true;
@@ -1094,7 +1227,7 @@ define(function (require) {
             return true;
         },
         logError: function (logTitle, errorMsg) {
-            vc2_util.log(logTitle, { type: 'error', msg: '### ERROR: ' }, errorMsg);
+            vc2_util.log(logTitle, { type: 'error', msg: '!! ERROR: ' }, errorMsg);
             return;
         },
         logDebug: function (logTitle, msg, msgVar) {
@@ -1102,6 +1235,12 @@ define(function (require) {
             msgObj.type = 'debug';
 
             vc2_util.log(logTitle, msgObj, msgVar);
+            return;
+        },
+        dumpLog: function (logTitle, dumpObj, prefix) {
+            for (var fld in dumpObj) {
+                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
+            }
             return;
         }
     });

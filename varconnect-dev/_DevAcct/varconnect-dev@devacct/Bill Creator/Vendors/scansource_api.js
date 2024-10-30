@@ -44,9 +44,9 @@ define(function (require) {
                     config.url +
                     ('/list?customerNumber=' + config.partner_id + '&poNumber=' + config.poNum),
                 headers: {
-            'Ocp-Apim-Subscription-Key': config.subscription_key,
-            Authorization: getTokenCache(config),
-            'Content-Type': 'application/json'
+                    'Ocp-Apim-Subscription-Key': config.subscription_key,
+                    Authorization: getTokenCache(config),
+                    'Content-Type': 'application/json'
                 }
             }
         });
@@ -68,14 +68,14 @@ define(function (require) {
             query: {
                 url: config.token_url,
                 headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Ocp-Apim-Subscription-Key': config.subscription_key
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Ocp-Apim-Subscription-Key': config.subscription_key
                 },
                 body: {
-            client_id: config.user_id,
-            client_secret: config.user_pass,
-            grant_type: 'client_credentials',
-            scope: config.scope
+                    client_id: config.user_id,
+                    client_secret: config.user_pass,
+                    grant_type: 'client_credentials',
+                    scope: config.scope
                 }
             }
         });

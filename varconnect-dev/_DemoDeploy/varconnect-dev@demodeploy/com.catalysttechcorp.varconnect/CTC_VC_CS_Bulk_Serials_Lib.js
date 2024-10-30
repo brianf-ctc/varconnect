@@ -55,24 +55,8 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
     }
 
     function pageInit(context) {
-        console.log('page init');
-
-        jQuery("div [data-field-type='textarea']").hide();
-        jQuery('span [id^="custpage_label_sncount"]').closest('div').hide();
-
-        //alert('page init');
-        //            jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
-        //            jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
-        // var rdoLabelField = context.currentRecord.getField('donationlabelfield')
-        // var rdobehalfField = context.currentRecord.getField('rdoidentify')
-        // try {
-        // rdoLabelField.isDisplay = false;
-        // rdobehalfField.isDisplay = false;
-        // }
-        // catch (err){
-        // jQuery('#tr_fg_donationgroup > :nth-child(2)').hide();
-        // jQuery('#tr_fg_donationgroup > :nth-child(3)').hide();
-        // }
+        jQuery('tr[id*="tr_fg_fldgroupxyz_"]').hide();
+        jQuery('td[id*="fg_fldgroupxyz_"]').hide();
     }
 
     function fieldChanged(context) {
@@ -80,23 +64,13 @@ define(['N/search', 'N/https', 'N/record'], function (search, https, record) {
         //			alert ('field changed ' + context.fieldId)
 
         if (context.fieldId == 'itemselectfield') {
-            var itemValue = context.currentRecord.getValue({
-                fieldId: context.fieldId
-            });
-            //alert ('select value = '  + itemValue);
-            jQuery("div [data-field-type='textarea']").hide();
-            jQuery('span [id^="custpage_label_sncount"]').closest('div').hide();
+            var itemValue = context.currentRecord.getValue({ fieldId: context.fieldId });
 
-            var tempStr = 'custpage_label_sncount_' + itemValue;
-            jQuery('span [id^=' + tempStr + ']')
-                .closest('div')
-                .show(500);
-            jQuery('#custpage_currentsn_' + itemValue)
-                .closest('div')
-                .show(500);
-            jQuery('#custpage_newsn_' + itemValue)
-                .closest('div')
-                .show(500);
+            jQuery('tr[id*="tr_fg_fldgroupxyz_"]').hide();
+            jQuery('td[id*="fg_fldgroupxyz_"]').hide();
+
+            jQuery('tr[id*="tr_fg_fldgroupxyz_' + itemValue + '"]').show();
+            jQuery('td[id*="fg_fldgroupxyz_' + itemValue + '"]').show();
         }
     }
 

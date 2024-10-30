@@ -178,7 +178,6 @@ define(function (require) {
                 vc2_util.log(logTitle, '.... line: ', lineData);
                 currentBillObj.lines.push(lineData);
             } else if (rowData[0] == '|T|') {
-                
                 var summary = {
                     taxAmount: trimPadding(rowData[3]).match(/\d|\./g).join('') * 1,
                     tax1: trimPadding(rowData[5]).match(/\d|\./g).join('') * 1,
@@ -200,7 +199,7 @@ define(function (require) {
 
                 // then push it
                 returnArr.push({
-                    ordObj: currentBillObj, 
+                    ordObj: currentBillObj,
                     xmlStr: arrRawData.join('\n')
                 });
             }

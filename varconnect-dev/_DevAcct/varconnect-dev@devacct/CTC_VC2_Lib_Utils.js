@@ -20,7 +20,7 @@ define(function (require) {
         ns_search = require('N/search'),
         ns_cache = require('N/cache'),
         ns_config = require('N/config'),
-        // momentLib = require('./Bill Creator/Libraries/moment'),
+        momentLib = require('./Services/lib/moment'),
         ns_xml = null,
         ns_url = null,
         vc2_constant = require('./CTC_VC2_Constants.js');
@@ -364,6 +364,76 @@ define(function (require) {
             vc2_util.log(logTitle, 'PARSE DATE', { dateStr: dateString, dateObj: dateObj });
             return dateObj;
         },
+        parseFormatDate: function (dateStr, parseformat, outFormat) {
+            if (!dateStr || dateStr == 'NA') return 'NA';
+            // if (!parseformat) parseformat = 'YYYY-MM-DD';
+            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT;
+            return parseformat
+                ? momentLib(dateStr, parseformat).format(outFormat)
+                : momentLib(dateStr).format(outFormat);
+        },
+        momentParse: function (dateStr, format) {
+            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT;
+
+            var returnDate =
+                dateStr || dateStr != 'NA' ? momentLib(dateStr, format).toDate() : null;
+
+            return returnDate;
+        },
+        momentParseToNSDate: function (dateStr, format) {
+            if (!dateStr || dateStr == 'NA') return null;
+            var dateObj, returnDate, dateFormat;
+
+            dateFormat = this.getDateFormat();
+            vc2_util.log('momentParseToNSDate', '// (1)  ', [
+                dateStr,
+                [format, dateFormat],
+                dateObj,
+                returnDate
+            ]);
+
+            try {
+                dateObj = this.momentParse(dateStr, format);
+                returnDate = ns_format.format({ value: dateObj, type: dateFormat });
+            } catch (err) {
+                vc2_util.logError('momentParseToNSDate', err);
+            }
+            vc2_util.log('momentParseToNSDate', '// (2)  ', [
+                dateStr,
+                [format, dateFormat],
+                dateObj,
+                returnDate
+            ]);
+
+            return returnDate;
+        },
+        getDateFormat: function () {
+            var dateFormat = null; //vc2_util.CACHE.DATE_FORMAT;
+
+            if (!dateFormat) {
+                try {
+                    require(['N/config'], function (config) {
+                        var generalPref = config.load({
+                            type: config.Type.COMPANY_PREFERENCES
+                        });
+                        dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
+                        return true;
+                    });
+                } catch (e) {}
+
+                if (!dateFormat) {
+                    try {
+                        dateFormat = nlapiGetContext().getPreference('DATEFORMAT');
+                    } catch (e) {}
+                }
+                vc2_util.CACHE.DATE_FORMAT = dateFormat;
+            }
+
+            vc2_util.log('getDateFormat', '// ', [dateFormat]);
+
+            return dateFormat;
+        },
+
         parseDate: function (option) {
             var logTitle = [LogTitle, 'parseDate'].join('::');
 
