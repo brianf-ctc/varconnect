@@ -215,16 +215,19 @@ define(function (require) {
                     ('{id:"' + Helper.VCBarId + '",') +
                     ('style:"' + vcBarCSS + '",') +
                     ('class:"' + vcBarClass + '"});'),
-                // add the vcBarMenu
-                'jq("<div>", {id:"vcBarMenu", style:"margin: 0;padding: 10px; background-color: #f5f5f5;"})',
-                '.appendTo(vcBarEl);',
-                // add the vcBarLinks
-                'jq("<div>", {id:"vcBarLinks", style:"margin: 0;padding: 10px; background-color: #f5f5f5;"})',
-                '.appendTo(vcBarEl);',
+
                 // add the vcBarNotes
                 'jq("<div>", {id:"vcBarNote"}).appendTo(vcBarEl);',
                 // ('vcBarEl.append("' + option.message + '");') +
                 'jq("#' + tabId + '_form table:eq(1)").before(vcBarEl);',
+
+                // add the vcBarMenu
+                'jq("<div>", {id:"vcBarMenu", style:"margin: 0;padding: 10px; background-color: #f5f5f5;"})',
+                '.appendTo(vcBarEl);',
+
+                // add the vcBarLinks
+                'jq("<div>", {id:"vcBarLinks", style:"margin: 0;padding: 10px; background-color: #f5f5f5;"})',
+                '.appendTo(vcBarEl);',
 
                 'jq("#vcBarMenu").hide();',
                 'jq("#vcBarLinks").hide();',
@@ -246,7 +249,8 @@ define(function (require) {
 
             Helper.addVCBar(option);
 
-            var note = option.note || option.message || option.error,
+            var note = option.note || option.message || option.error || option.warn,
+                isWarning = !!option.warn,
                 isError = !!option.error;
 
             var vcBarCSS = 'padding: 8px;',
@@ -257,6 +261,10 @@ define(function (require) {
                 vcBarCSS += 'background: #FCCFCF none !important;';
                 vcNoteCSS += 'color:#F00;';
                 note = '<b> ERROR :</b> ' + note;
+            } else if (isWarning) {
+                vcBarCSS += 'background: #f5eaca none !important;';
+                vcNoteCSS += 'color:#333;';
+                note = '<b> WARNING :</b> ' + note;
             }
 
             var vcBarNoteJS = [
@@ -282,12 +290,20 @@ define(function (require) {
         },
         addVCButton: function (option) {
             var form = option.form,
-                tabId = option.tabId || Helper.getVCTab(form);
+                tabId = option.tabId || Helper.getVCTab(form),
+                isDisabled = option.isDisabled ? option.isDisabled : false;
+
+            // isDisabled = true;
 
             Helper.addVCBar(option);
 
-            var VCBtnCSS =
-                    'border: .8px solid #999; padding: 5px 15px;text-decoration:none;background-color:#E5E5E5;margin:0 15px 0 0;border-radius:4px;',
+            var VCBtnCSS = isDisabled
+                    ? 'border: .8px solid #aeaeae; padding: 5px 15px;text-decoration:none;' +
+                      'background-color:#f0f0f0;margin:0 15px 0 0;border-radius:4px;color: #a5a5a5;'
+                    : 'border: .8px solid #999; padding: 5px 15px;text-decoration:none;' +
+                      'background-color:#E5E5E5;margin:0 15px 0 0;border-radius:4px;',
+                hoverColor = isDisabled ? '#f0f0f0' : '#C5C5C5',
+                bgColor = isDisabled ? '#f0f0f0' : '#E5E5E5',
                 VCBtnClass = '';
 
             var VCButtonJS = [
@@ -297,9 +313,13 @@ define(function (require) {
                 'var btnElm = jq("<a>", ' +
                     ('{class:"' + VCBtnClass + '",') +
                     ('style: "' + VCBtnCSS + '",') +
-                    ('href: "' + option.action + '", target: "_blank"})') +
-                    '.hover( function () {jq(this).css({ backgroundColor: "#C5C5C5" });}, function () {jq(this).css({ backgroundColor: "#E5E5E5" });} ) ' +
-                    ('.html("' + option.label.toUpperCase() + '");'),
+                    (isDisabled
+                        ? 'href: "javascript:;"})'
+                        : 'href: "' + option.action + '", target: "_blank"})'),
+                '.hover( ' +
+                    ('function () {jq(this).css({ backgroundColor: "' + hoverColor + '" });},') +
+                    ('function () {jq(this).css({ backgroundColor: "' + bgColor + '" });} ) '),
+                '.html("' + option.label.toUpperCase() + '");',
                 'var spanEl = jq("<span>", {style:"font-size: 12px;"}).append(btnElm);',
                 'jq("#' + Helper.VCBarId + ' #vcBarMenu").append(spanEl);',
                 'jq("#vcBarMenu").show();',
@@ -654,76 +674,110 @@ define(function (require) {
                 )
                     return;
 
-                var Form = scriptContext.form;
+                var currentRecord = scriptContext.newRecord,
+                    Form = scriptContext.form;
+
                 MainCFG = vcs_configLib.mainConfig();
                 if (!MainCFG) return;
 
-                if (!MainCFG.overridePONum) {
-                    Helper.hideFields(Form, ['custbody_ctc_vc_override_ponum']);
-                }
-
-                var license = vcs_configLib.validateLicense();
-                if (license.hasError)
-                    Helper.setVCBarNote({
-                        form: scriptContext.form,
-                        error: 'Your License is no longer valid or have expired. '
-                    });
-
-                /// BUTTONS: OrderStatus
+                // load the ORderConfig
                 OrderCFG = vcs_configLib.loadConfig({
                     poId: Current.recordId,
                     configType: vcs_configLib.ConfigType.ORDER
                 });
-                if (OrderCFG && OrderCFG.id) {
-                    Helper.addVCButton({
-                        form: scriptContext.form,
-                        id: 'btn_orderstatus',
-                        label: ' Process Order Status',
-                        action: EventRouter.addActionURL('actionOrderStatus')
-                    });
 
-                    var orderCFGUrl = ns_url.resolveRecord({
-                        recordType: vc2_constant.RECORD.VENDOR_CONFIG.ID,
-                        recordId: OrderCFG.id
-                    });
-                    Helper.addVCBarLink({
-                        form: scriptContext.form,
-                        label: 'Order Status Config',
-                        action: orderCFGUrl
-                    });
-                }
-
-                /// BUTTONS: Bill Create
+                // load the BillConfig
                 BillCFG = vcs_configLib.loadConfig({
                     poId: Current.recordId,
                     configType: vcs_configLib.ConfigType.BILL
                 });
 
-                var CONNECT_TYPE = { API: 1, SFTP: 2 };
-                if (BillCFG && BillCFG.connectionType == CONNECT_TYPE.API) {
-                    Helper.addVCButton({
-                        form: scriptContext.form,
-                        id: 'btn_billsapi',
-                        label: 'Fetch Bill Files - API',
-                        action: EventRouter.addActionURL('actionGetBillsAPI')
-                    });
-
-                    var billCFGUrl = ns_url.resolveRecord({
-                        recordType: vc2_constant.RECORD.BILLCREATE_CONFIG.ID,
-                        recordId: BillCFG.id
-                    });
-                    Helper.addVCBarLink({
-                        form: scriptContext.form,
-                        label: 'Bill Vendor Config',
-                        action: billCFGUrl
-                    });
-                }
-
-                // /// BUTTONS: Send PO
+                // load the send PO config
                 SendPOCFG = vcs_configLib.loadConfig({
                     poId: Current.recordId,
                     configType: vcs_configLib.ConfigType.SENDPO
                 });
+
+                vc2_util.log(logTitle, '## OrderCfg: ', OrderCFG);
+                vc2_util.log(logTitle, '## BillCFG: ', BillCFG);
+                vc2_util.log(logTitle, '## SendPOCFG: ', SendPOCFG);
+
+                if (!MainCFG.overridePONum)
+                    Helper.hideFields(Form, ['custbody_ctc_vc_override_ponum']);
+
+                // Exit if there's no active VC Config
+                if (
+                    (vc2_util.isEmpty(OrderCFG) || !OrderCFG.id) &&
+                    (vc2_util.isEmpty(BillCFG) || !BillCFG.id) &&
+                    (vc2_util.isEmpty(SendPOCFG) || !SendPOCFG.id)
+                ) {
+                    Helper.setVCBarNote({
+                        form: scriptContext.form,
+                        warn: 'No active VAR Connect Vendor configuration'
+                    });
+                    return false;
+                }
+
+                var isByPass = currentRecord.getValue({ fieldId: 'custbody_ctc_bypass_vc' });
+
+                if (isByPass)
+                    Helper.setVCBarNote({
+                        form: scriptContext.form,
+                        warn: 'Bypass VAR Connect is checked on this PO'
+                    });
+
+                var license = vcs_configLib.validateLicense();
+                if (license.hasError)
+                    Helper.setVCBarNote({
+                        form: scriptContext.form,
+                        error: 'VAR Connect license is no longer valid or have expired. '
+                    });
+
+                /// BUTTONS: OrderStatus
+                if (OrderCFG && OrderCFG.id) {
+                    Helper.addVCButton({
+                        form: scriptContext.form,
+                        id: 'btn_orderstatus',
+                        isDisabled: isByPass || license.hasError,
+                        label: ' Process Order Status',
+                        action: EventRouter.addActionURL('actionOrderStatus')
+                    });
+
+                    Helper.addVCBarLink({
+                        form: scriptContext.form,
+                        label: 'Order Status Config',
+                        action: ns_url.resolveRecord({
+                            recordType: vc2_constant.RECORD.VENDOR_CONFIG.ID,
+                            recordId: OrderCFG.id
+                        })
+                    });
+                }
+
+                /// BUTTONS: Bill Create
+                var CONNECT_TYPE = { API: 1, SFTP: 2 };
+                if (BillCFG) {
+                    if (BillCFG.connectionType == CONNECT_TYPE.API) {
+                        Helper.addVCButton({
+                            form: scriptContext.form,
+                            id: 'btn_billsapi',
+                            label: 'Fetch Bill Files - API',
+                            isDisabled: isByPass || license.hasError,
+                            action: EventRouter.addActionURL('actionGetBillsAPI')
+                        });
+                    }
+
+                    Helper.addVCBarLink({
+                        form: scriptContext.form,
+                        label: 'Bill Vendor Config',
+
+                        action: ns_url.resolveRecord({
+                            recordType: vc2_constant.RECORD.BILLCREATE_CONFIG.ID,
+                            recordId: BillCFG.id
+                        })
+                    });
+                }
+
+                // /// BUTTONS: Send PO
                 if (SendPOCFG && SendPOCFG.id) {
                     var sendPOCfgUrl = ns_url.resolveRecord({
                         recordType: vc2_constant.RECORD.SENDPOVENDOR_CONFIG.ID,
@@ -736,7 +790,13 @@ define(function (require) {
                     });
                 }
 
-                if (OrderCFG || BillCFG) Helper.addSerialSync(scriptContext.form);
+                Helper.addVCButton({
+                    form: scriptContext.form,
+                    id: 'btn_linkserials',
+                    label: 'Link SerialNumbers',
+                    isDisabled: isByPass || license.hasError,
+                    action: EventRouter.addActionURL('actionLinkSerials')
+                });
 
                 return true;
             }

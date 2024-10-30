@@ -17,7 +17,6 @@ define([
     'N/search',
     'N/runtime',
     'N/record',
-    'N/https',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Record',
@@ -32,7 +31,6 @@ define([
     ns_search,
     ns_runtime,
     ns_record,
-    ns_https,
     vc2_util,
     vc2_constant,
     vc2_record,
@@ -297,14 +295,12 @@ define([
                 isDynamic: true
             });
 
-            // Helper.processPOLines({
-            //     record: PO_REC,
-            //     vendorLine: Current.outputItems.itemArray,
-            //     orderData: Current.outputItems.orderInfo
-            // });
-
-            // // try to match the lines
-            // throw 'TESTING';
+            Current.isDropPO =
+                PO_REC.getValue({ fieldId: 'dropshipso' }) ||
+                PO_REC.getValue({
+                    fieldId: 'custbody_ctc_po_link_type'
+                }) == 'Drop Shipment' ||
+                PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
 
             var updateStatus = vc_nslib.updatepo({
                 mainConfig: Current.MainCFG,

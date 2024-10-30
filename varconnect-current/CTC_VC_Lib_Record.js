@@ -38,7 +38,8 @@ define([
     './CTC_VC2_Lib_Record',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
-    './Services/ctc_svclib_configlib.js'
+    './Services/ctc_svclib_configlib.js',
+    './Services/ctc_svclib_process-v1.js'
 ], function (
     ns_config,
     ns_format,
@@ -47,7 +48,8 @@ define([
     vc2_record,
     vc2_util,
     vc2_constant,
-    vcs_configLib
+    vcs_configLib,
+    vcs_processLib
 ) {
     var LogTitle = 'NS_Library',
         LogPrefix;
@@ -295,8 +297,8 @@ define([
     function updatePOItemData(option) {
         var logTitle = [LogTitle, 'updatePO'].join('::');
 
+        var arrVendorLines = option.lineData; //vc2_util.copyValues();
         Current.PO_NUM = option.poNum;
-        Current.VendorLines = option.lineData; //vc2_util.copyValues();
         Current.PO_REC = option.po_record;
         Current.isDropPO = option.isDropPO;
         returnValue = { id: null };
@@ -308,10 +310,7 @@ define([
         LogPrefix = ['[', Current.PO_REC.type, ':', Current.PO_REC.id, '] '].join('');
         vc2_util.LogPrefix = LogPrefix;
 
-        var isUpdatedPO = false,
-            isUpdatedSO = false,
-            mapLineOrderStatus = {};
-
+        var isUpdatedPO = false;
         Helper.getDateFormat();
         try {
             if (!Current.PO_REC || Current.PO_REC == null) throw ERROR_MSG.MISSING_PO;
@@ -367,8 +366,8 @@ define([
             isUpdatedPO = Helper.cleanupOrderLines();
 
             // loop thru all vendor lines
-            for (var i = 0; i < Current.VendorLines.length; i++) {
-                var vendorLine = Current.VendorLines[i];
+            for (var i = 0; i < arrVendorLines.length; i++) {
+                var vendorLine = arrVendorLines[i];
                 vc2_util.log(logTitle, '***** Line Info ****** ', vendorLine);
 
                 try {
@@ -393,16 +392,16 @@ define([
                         });
                     }
 
-                    addOrderLine({
-                        vendorLine: vendorLine,
-                        poId: Current.PO_REC.id
-                    });
+                    // addOrderLine({
+                    //     vendorLine: vendorLine,
+                    //     poId: Current.PO_REC.id
+                    // });
 
-                    vc2_util.log(logTitle, '-- orderLineMatch: ', {
-                        orderLineMatch: orderLineMatch,
-                        vendorLine: vendorLine,
-                        orderLineData: orderLineData
-                    });
+                    // vc2_util.log(logTitle, '-- orderLineMatch: ', {
+                    //     orderLineMatch: orderLineMatch,
+                    //     vendorLine: vendorLine,
+                    //     orderLineData: orderLineData
+                    // });
 
                     if (!orderLineMatch) {
                         throw util.extend(ERROR_MSG.MATCH_NOT_FOUND, {
@@ -696,9 +695,27 @@ define([
                     ignoreMandatoryFields: true
                 });
                 returnValue.lineuniquekey = null;
-
-                vc2_util.log(logTitle, ' // PO updated successfully');
+                vc2_util.log(logTitle, ' // PO updated successfully!');
             }
+            vc2_util.log(logTitle, 'VendorLines', arrVendorLines);
+
+            // send the serviceRequest instead of a lib access
+
+            vc2_util.serviceRequest({
+                moduleName: 'processV1',
+                action: 'processOrderLines',
+                parameters: {
+                    vendorLines: arrVendorLines,
+                    poId: Current.PO_REC.id,
+                    xmlVendor: Current.OrderCFG.xmlVendor
+                }
+            });
+
+            // vcs_processLib.processOrderLines({
+            //     vendorLines: Current.VendorLines,
+            //     poId: Current.PO_REC.id,
+            //     xmlVendor: Current.OrderCFG.xmlVendor
+            // });
         } catch (error) {
             vc2_util.vcLog({
                 title: 'PO Update',
@@ -1046,7 +1063,7 @@ define([
             var orderLine = vendorLine.MATCHED_ORDERLINE || {};
 
             var OrderlineValues = {
-                VENDOR: Current.OrderCFG.xmlVendor, 
+                VENDOR: Current.OrderCFG.xmlVendor,
                 TXN_LINK: poID,
                 ORDER_NUM: vendorLine.order_num,
                 ORDER_STATUS: vendorLine.order_status,

@@ -623,10 +623,8 @@ define(function (require) {
                     vendorLine.ORDER_LINE = null;
 
                     vc2_util.log(logTitle, '// no matching order line');
-
                 } else if (matchedLines.length == 1) {
                 } else if (matchedLines.length > 1) {
-
                     vc2_util.log(logTitle, '// multiple matches found: ', matchedLines.length);
                     // more than one matched line
                     var matching = {

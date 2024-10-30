@@ -1,0 +1,405 @@
+{
+    "ResponseHeader": [
+        {
+            "TransactionType": "RESELLER_ORDER_STATUS",
+            "ResponseTimestamp": "2024-10-23T06:54:58.494+00:00",
+            "Region": "NORTH_AMERICAS",
+            "Country": "US",
+            "PartnerID": "1019794",
+            "TransactionStatus": "SUCCESS",
+            "TransactionMessage": "Number of Orders Fetched:2 Number of Lines Fetched:",
+            "TotalPages": "1",
+            "RemainingPages": "0",
+            "TransactionKeyID": "3115489"
+        }
+    ],
+    "OrderResponse": {
+        "OrderDetails": [
+            {
+                "Status": "SUCCESS",
+                "UniqueSequenceNumber": "2301326",
+                "ArrowOrg": "USA",
+                "ArrowSONumber": "5045071",
+                "ArrowSODate": "07/18/2024",
+                "OrderStatusDescription": "BOOKED",
+                "OrderCurrencyCode": "USD",
+                "OrderStatus": "Order is Booked",
+                "DocGenTimeStamp": "18-SEP-2024 11:36:59 PM",
+                "ArrowREPName": "Flores, Claudia Estefhane Estefhane",
+                "ArrowREPPhone": "+52 3321013163",
+                "ArrowREPContactEmail": "Estefhane.Flores@arrow.com",
+                "BillTo": {
+                    "Name": "CHOICE SOLUTIONS LLC",
+                    "AddrLine1": "7015 COLLEGE BLVD",
+                    "AddrLine2": "SUITE 300",
+                    "CityName": "LEAWOOD",
+                    "StateCode": "KS",
+                    "PostalCode": "66211",
+                    "CountryCode": "US",
+                    "BillToContactName": "CHOICE SOLUTIONS LLC",
+                    "BillToContactPhone": "3396315"
+                },
+                "Reseller": {
+                    "PONumber": "PO100075",
+                    "PODate": "07/18/2024",
+                    "SoldToAccNum": "1019794",
+                    "Name": "CHOICE SOLUTIONS LLC",
+                    "AddressLine1": "7015 COLLEGE BLVD",
+                    "AddressLine2": "SUITE 300",
+                    "CityName": "LEAWOOD",
+                    "StateCode": "KS",
+                    "PostalCode": "66211",
+                    "CountryCode": "US",
+                    "SoldToLocationId": "27183",
+                    "SoldToContactName": "CHOICE SOLUTIONS LLC",
+                    "SoldToContactPhone": "3396315"
+                },
+                "OrderTotalAmount": "12814.22",
+                "OrderLinesList": {
+                    "OrderLines": [
+                        {
+                            "ResellerPONumber": "PO100075",
+                            "ResellerPOLineNumber": "1",
+                            "ArrowSOLineNumber": "1.1",
+                            "InvoiceNumber": "53845001",
+                            "InvoiceDate": "08/01/2024",
+                            "ItemStatusOracle": "SHIPPED",
+                            "ShipTo": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "ContactName": "TYG PRODUCTS"
+                            },
+                            "DeliverTo": {
+                                "DeliverToName": "TYG PRODUCTS",
+                                "DeliverToAddrLine1": "1800 N MCDONALD ST",
+                                "DeliverToCityName": "MCKINNEY",
+                                "DeliverToStateCd": "TX",
+                                "DeliverToPostalCd": "75071",
+                                "DeliverToCountryCd": "US",
+                                "DeliverToContactName": "TYG PRODUCTS"
+                            },
+                            "EndUser": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "EndUserContactName": "TYG PRODUCTS"
+                            },
+                            "OracleShipViaCode": "000001_FedEx_R_94",
+                            "LineChangedIndicator": "true",
+                            "Manufacturer": "NVIDIA",
+                            "MFGPartNumber": "MSN2010-CB2FC",
+                            "VendorPartNumber": "MSN2010-CB2FC",
+                            "ProductDescription": "NVIDIA Spectrum based 25GbE/100GbE 1U Open Ethernet switch with Cumulus Linux, 18 SFP28 ports and 4 QSFP28 ports, 2 Power Supplies (AC), x86 CPU , short depth, P2C airflow. Rail Kit must be purchased separately",
+                            "UOM": "EA",
+                            "ShippedQty": "2",
+                            "OrderQuantity": "2",
+                            "CancelQuantity": "0",
+                            "FulfilledQuantity": "2",
+                            "UnitPrice": "5378.64",
+                            "SerialNumberList": {
+                                "SerialNumber": [
+                                    {
+                                        "ID": "MT2253J09771"
+                                    }
+                                ]
+                            },
+                            "StatusInfoList": {
+                                "StatusInfo": [
+                                    {
+                                        "RequestedShipDate": "07/18/2024",
+                                        "EstimatedShipDate": "08/04/2024",
+                                        "ActualShipDate": "08/01/2024",
+                                        "CarrierName": "FedEx",
+                                        "TrackingNumber": "735440187919",
+                                        "TrackingInfoList": {
+                                            "TrackingInfo": [
+                                                {
+                                                    "CarrierId": "FedEx",
+                                                    "ShippedQty": "1",
+                                                    "ShipperRefNum": "735440187919",
+                                                    "ActualShipDate": "08/01/2024",
+                                                    "RequestedShipDate": "07/18/2024",
+                                                    "ShipViaCode": "FedEx Ground"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "RequestedShipDate": "07/18/2024",
+                                        "EstimatedShipDate": "08/04/2024",
+                                        "ActualShipDate": "08/01/2024",
+                                        "CarrierName": "FedEx",
+                                        "TrackingNumber": "735440187920",
+                                        "TrackingInfoList": {
+                                            "TrackingInfo": [
+                                                {
+                                                    "CarrierId": "FedEx",
+                                                    "ShippedQty": "1",
+                                                    "ShipperRefNum": "735440187920",
+                                                    "ActualShipDate": "08/01/2024",
+                                                    "RequestedShipDate": "07/18/2024",
+                                                    "ShipViaCode": "FedEx Ground"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "ResellerPONumber": "PO100075",
+                            "ResellerPOLineNumber": "2",
+                            "ArrowSOLineNumber": "2.1",
+                            "ItemStatusOracle": "AWAITING_SHIPPING",
+                            "ShipTo": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "ContactName": "TYG PRODUCTS"
+                            },
+                            "DeliverTo": {
+                                "DeliverToName": "TYG PRODUCTS",
+                                "DeliverToAddrLine1": "1800 N MCDONALD ST",
+                                "DeliverToCityName": "MCKINNEY",
+                                "DeliverToStateCd": "TX",
+                                "DeliverToPostalCd": "75071",
+                                "DeliverToCountryCd": "US",
+                                "DeliverToContactName": "TYG PRODUCTS"
+                            },
+                            "EndUser": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "EndUserContactName": "TYG PRODUCTS"
+                            },
+                            "OracleShipViaCode": "000001_FedEx_R_94",
+                            "LineChangedIndicator": "false",
+                            "Manufacturer": "NVIDIA",
+                            "MFGPartNumber": "MTEF-KIT-D",
+                            "VendorPartNumber": "MTEF-KIT-D",
+                            "ProductDescription": "NVIDIA 19? racks fixed mounting-kit, for SN2100, SN2010 systems, Dual sw itch side-by-side, Short-depth, Rack size 600-800mm",
+                            "UOM": "EA",
+                            "ShippedQty": "0",
+                            "OrderQuantity": "1",
+                            "CancelQuantity": "0",
+                            "FulfilledQuantity": "0",
+                            "UnitPrice": "535.86",
+                            "StatusInfoList": {
+                                "StatusInfo": [
+                                    {
+                                        "RequestedShipDate": "07/18/2024",
+                                        "EstimatedShipDate": "08/04/2024",
+                                        "TrackingInfoList": {
+                                            "TrackingInfo": [
+                                                {
+                                                    "ShippedQty": "0",
+                                                    "RequestedShipDate": "07/18/2024"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "ResellerPONumber": "PO100075",
+                            "ResellerPOLineNumber": "3",
+                            "ArrowSOLineNumber": "3.1",
+                            "ItemStatusOracle": "AWAITING_RECEIPT",
+                            "ShipTo": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "ContactName": "TYG PRODUCTS"
+                            },
+                            "DeliverTo": {
+                                "DeliverToName": "TYG PRODUCTS",
+                                "DeliverToAddrLine1": "1800 N MCDONALD ST",
+                                "DeliverToCityName": "MCKINNEY",
+                                "DeliverToStateCd": "TX",
+                                "DeliverToPostalCd": "75071",
+                                "DeliverToCountryCd": "US",
+                                "DeliverToContactName": "TYG PRODUCTS"
+                            },
+                            "EndUser": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "EndUserContactName": "TYG PRODUCTS"
+                            },
+                            "OracleShipViaCode": "000001_FedEx_R_94",
+                            "LineChangedIndicator": "false",
+                            "Manufacturer": "NVIDIA",
+                            "MFGPartNumber": "781-S21N0Z+P2CMI36",
+                            "VendorPartNumber": "781-S21N0Z+P2CMI36",
+                            "ProductDescription": "NVIDIA ENT Business Standard Support Services for SN2010 Series,3 Years",
+                            "UOM": "EA",
+                            "ShippedQty": "0",
+                            "OrderQuantity": "2",
+                            "CancelQuantity": "0",
+                            "FulfilledQuantity": "0",
+                            "UnitPrice": "760.54",
+                            "StatusInfoList": {
+                                "StatusInfo": [
+                                    {
+                                        "RequestedShipDate": "07/18/2024",
+                                        "EstimatedShipDate": "08/06/2024",
+                                        "TrackingInfoList": {
+                                            "TrackingInfo": [
+                                                {
+                                                    "ShippedQty": "0",
+                                                    "RequestedShipDate": "07/18/2024"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "Status": "SUCCESS",
+                "UniqueSequenceNumber": "2301339",
+                "ArrowOrg": "USA",
+                "ArrowSONumber": "5067126",
+                "ArrowSODate": "08/15/2024",
+                "OrderStatusDescription": "CLOSED",
+                "OrderCurrencyCode": "USD",
+                "OrderStatus": "Order is closed",
+                "DocGenTimeStamp": "18-SEP-2024 11:40:16 PM",
+                "ArrowREPName": "Flores, Claudia Estefhane Estefhane",
+                "ArrowREPPhone": "+52 3321013163",
+                "ArrowREPContactEmail": "Estefhane.Flores@arrow.com",
+                "BillTo": {
+                    "Name": "CHOICE SOLUTIONS LLC",
+                    "AddrLine1": "7015 COLLEGE BLVD",
+                    "AddrLine2": "SUITE 300",
+                    "CityName": "LEAWOOD",
+                    "StateCode": "KS",
+                    "PostalCode": "66211",
+                    "CountryCode": "US",
+                    "BillToContactName": "CHOICE SOLUTIONS LLC",
+                    "BillToContactPhone": "3396315"
+                },
+                "Reseller": {
+                    "PONumber": "PO100075",
+                    "PODate": "08/15/2024",
+                    "SoldToAccNum": "1019794",
+                    "Name": "CHOICE SOLUTIONS LLC",
+                    "AddressLine1": "7015 COLLEGE BLVD",
+                    "AddressLine2": "SUITE 300",
+                    "CityName": "LEAWOOD",
+                    "StateCode": "KS",
+                    "PostalCode": "66211",
+                    "CountryCode": "US",
+                    "SoldToLocationId": "27183",
+                    "SoldToContactName": "CHOICE SOLUTIONS LLC",
+                    "SoldToContactPhone": "3396315"
+                },
+                "OrderTotalAmount": "5378.64",
+                "OrderLinesList": {
+                    "OrderLines": [
+                        {
+                            "ResellerPONumber": "PO100075",
+                            "ResellerPOLineNumber": "1",
+                            "ArrowSOLineNumber": "1.1",
+                            "InvoiceNumber": "53850875",
+                            "InvoiceDate": "08/15/2024",
+                            "ItemStatusOracle": "SHIPPED",
+                            "ShipTo": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "ContactName": "TYG PRODUCTS"
+                            },
+                            "DeliverTo": {
+                                "DeliverToName": "TYG PRODUCTS",
+                                "DeliverToAddrLine1": "1800 N MCDONALD ST",
+                                "DeliverToCityName": "MCKINNEY",
+                                "DeliverToStateCd": "TX",
+                                "DeliverToPostalCd": "75071",
+                                "DeliverToCountryCd": "US",
+                                "DeliverToContactName": "TYG PRODUCTS"
+                            },
+                            "EndUser": {
+                                "Name": "TYG PRODUCTS",
+                                "AddressLine1": "1800 N MCDONALD ST",
+                                "City": "MCKINNEY",
+                                "State": "TX",
+                                "PostalCode": "75071",
+                                "Country": "US",
+                                "EndUserContactName": "TYG PRODUCTS"
+                            },
+                            "OracleShipViaCode": "000001_UPS_R_94",
+                            "LineChangedIndicator": "true",
+                            "Manufacturer": "NVIDIA",
+                            "MFGPartNumber": "MSN2010-CB2FC",
+                            "VendorPartNumber": "MSN2010-CB2FC",
+                            "ProductDescription": "NVIDIA Spectrum based 25GbE/100GbE 1U Open Ethernet switch with Cumulus Linux, 18 SFP28 ports and 4 QSFP28 ports, 2 Power Supplies (AC), x86 CPU , short depth, P2C airflow. Rail Kit must be purchased separately",
+                            "UOM": "EA",
+                            "ShippedQty": "1",
+                            "OrderQuantity": "1",
+                            "CancelQuantity": "0",
+                            "FulfilledQuantity": "1",
+                            "UnitPrice": "5378.64",
+                            "SerialNumberList": {
+                                "SerialNumber": [
+                                    {
+                                        "ID": "MT2253J23493"
+                                    }
+                                ]
+                            },
+                            "StatusInfoList": {
+                                "StatusInfo": [
+                                    {
+                                        "RequestedShipDate": "08/15/2024",
+                                        "EstimatedShipDate": "09/01/2024",
+                                        "ActualShipDate": "08/15/2024",
+                                        "CarrierName": "FedEx",
+                                        "TrackingNumber": "408268745248",
+                                        "TrackingInfoList": {
+                                            "TrackingInfo": [
+                                                {
+                                                    "CarrierId": "FedEx",
+                                                    "ShippedQty": "1",
+                                                    "ShipperRefNum": "408268745248",
+                                                    "ActualShipDate": "08/15/2024",
+                                                    "RequestedShipDate": "08/15/2024",
+                                                    "ShipViaCode": "FedEx Ground"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

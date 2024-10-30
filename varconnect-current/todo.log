@@ -1,3 +1,46 @@
+BIll CREATOR_
+
+ - Allow Variance
+   (Applied to Tax, Shipping, Other Charges)
+   (Applied to price, uses Other charges)
+   On: calculate variances on charges
+        variances are collected, 
+        if threshold is not set, show variance error
+        if threshold is set, and it exceeds, show variance error
+        if within threshold, bill is created, using charges and unitprice set on the bill
+        
+   Off: Ignore the variance calculations
+        no calculation of variances
+        bill will be created, using charges set on the bill
+
+- Auto Process variances **
+    (requires Allow Variances enabled)
+    On: Automatically skips the variance error, 
+        creates the bill using charges set on the bill
+
+ - Ignore Charges 
+   On: Do not add charges, skip variance calculations
+   Off: Add the charges
+
+ - Auto process variances
+   On: Ignore variances
+   Off: 
+
+ - Allow adjustments
+   On: 
+   Off: 
+
+ - Threshold
+   On: 
+   Off
+
+
+Serv
+
+
+Test POs
+
+** Arrow ** 
 Order status
   * PO Field
     - vendor status

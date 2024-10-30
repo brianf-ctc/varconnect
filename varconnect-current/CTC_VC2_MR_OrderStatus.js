@@ -8,11 +8,11 @@
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
  *
- * @NApiVersion 2.1
+ * @NApiVersion 2.x
  * @NModuleScope Public
  * @NScriptType MapReduceScript
  */
-define((require) => {
+define(function (require) {
     let LogTitle = 'MR_OrderStatus',
         LOG_APPNAME = 'OrderStatus';
 
@@ -25,7 +25,6 @@ define((require) => {
     MAP_REDUCE.getInputData = () => {
         var logTitle = [LogTitle, 'getInputData'],
             returnValue;
-
         try {
         } catch (error) {}
 

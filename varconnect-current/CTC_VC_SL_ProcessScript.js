@@ -14,26 +14,24 @@
  */
 define([
     'N/record',
-    'N/task',
-    'N/url',
     'N/ui/serverWidget',
     'N/ui/message',
+    'N/task',
     './Services/ctc_svclib_process-v1.js',
     './CTC_VC_Lib_FormHelper',
     './CTC_VC2_Constants',
     './CTC_VC2_Lib_Utils'
 ], function (
     ns_record,
-    ns_task,
-    ns_url,
     ns_ui,
     ns_msg,
+    ns_task,
     vcs_processLib,
     vc_uihelper,
     vc2_constant,
     vc2_util
 ) {
-    var LogTitle = 'ViewData';
+    var LogTitle = 'ProcessScript';
 
     var ORDERLINE_REC = vc2_constant.RECORD.ORDER_LINE;
 
@@ -45,15 +43,16 @@ define([
                 label: 'HTML Content',
                 defaultValue: '<br />'
             },
-            TEXT: {
-                type: ns_ui.FieldType.TEXT,
-                label: 'Text F',
-                defaultValue: '<br />'
-            },
             HIDDEN_TEXT: {
                 type: ns_ui.FieldType.TEXT,
                 label: 'Text F',
                 displayType: ns_ui.FieldDisplayType.HIDDEN,
+                defaultValue: '<br />'
+            },
+
+            TEXT: {
+                type: ns_ui.FieldType.TEXT,
+                label: 'Text F',
                 defaultValue: '<br />'
             },
             DISABLED_TEXT: {
@@ -220,7 +219,7 @@ define([
         },
         orderLines: {
             onGET: function (scriptContext) {
-                var logTitle = [LogTitle, 'VendorData'].join('::'),
+                var logTitle = [LogTitle, 'orderLines'].join('::'),
                     returnValue;
 
                 var ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
@@ -388,149 +387,89 @@ define([
             },
             onPOST: function () {}
         },
-        processScripts: {
+        processScript: {
+            PROC_SCRIPT: {
+                OrderStatus: {
+                    label: 'Process Order Status',
+                    taskOption: {
+                        isMapReduce: true,
+                        scriptId: vc2_constant.SCRIPT.ORDERSTATUS_MR,
+                        scriptParams: {
+                            custscript_orderstatus_searchid: 'customsearch_ctc_open_po_search'
+                        }
+                    },
+                    mapping: {
+                        poId: 'custscript_orderstatus_orderid'
+                    }
+                },
+                BillProcess: {
+                    label: 'Process Bill Creation',
+                    taskOption: {
+                        isMapReduce: true,
+                        scriptId: vc2_constant.SCRIPT.BILLPROCESS_MR,
+                        scriptParams: {}
+                    },
+                    mapping: {
+                        billfileId: 'custscript_ctc_vc_bc_bill_fileid'
+                    }
+                }
+            },
+            current: {},
             initialize: function (scriptContext) {
                 var logTitle = [LogTitle, 'processScript.initialize'].join('::'),
                     returnValue;
 
-                var PROC_SCRIPT = {
-                    OrderStatus: {
-                        label: 'Process Order Status',
-                        taskOption: {
-                            isMapReduce: true,
-                            scriptId: vc2_constant.SCRIPT.ORDERSTATUS_MR,
-                            scriptParams: {
-                                custscript_orderstatus_searchid: 'customsearch_ctc_open_po_search'
-                            }
-                        },
-                        mapping: {
-                            poId: 'custscript_orderstatus_orderid'
-                        }
-                    },
-                    BillProcess: {
-                        label: 'Process Bill Creation',
-                        taskOption: {
-                            isMapReduce: true,
-                            scriptId: vc2_constant.SCRIPT.BILLPROCESS_MR,
-                            scriptParams: {}
-                        },
-                        mapping: {
-                            billfileId: 'custscript_ctc_vc_bc_bill_fileid'
-                        }
-                    }
+                var reqParam = scriptContext.request.parameters;
+                var reqParamVal = {
+                    procName: reqParam.procname,
+                    poId: reqParam.actpoid,
+                    recordType: reqParam.actrectype,
+                    recordId: reqParam.actrecid,
+                    billfileId: reqParam.actbillfile
                 };
-
-                var reqParam = scriptContext.request.parameters,
-                    reqParamVal = {
-                        procName: reqParam.procname,
-                        poId: reqParam.actpoid,
-                        recordType: reqParam.actrectype,
-                        recordId: reqParam.actrecid,
-                        billfileId: reqParam.actbillfile,
-                        actcmd: reqParam.actcmd
-                    },
-                    current = {};
                 if (!reqParamVal.procName || !PROC_SCRIPT[reqParamVal.procName])
                     throw 'Missing or invalid process name';
 
-                current.paramValues = reqParamVal;
+                var current = {
+                    paramValue: reqParamVal
+                };
 
-                var processInfo = PROC_SCRIPT[reqParamVal.procName],
-                    taskOption = processInfo.taskOption,
-                    cacheTaskKey = ['task=' + reqParamVal.procName];
+                var procInfo = PROC_SCRIPT[reqParamVal.procName],
+                    procTaskOption = procInfo.taskOption,
+                    taskKey = ['TASK-ID', reqParamVal.procName];
+                vc2_util.log(logTitle, '// current values: ', current);
 
-                // loop thru the mapping
                 var hasParamValues = false;
-                for (var paramFld in processInfo.mapping) {
-                    var paramVal = reqParamVal[paramFld];
-                    if (vc2_util.isEmpty(paramVal)) continue;
+                for (var fld in procInfo.mapping) {
+                    var paramValue = reqParamVal[fld];
+                    if (vc2_util.isEmpty(paramValue)) continue;
 
-                    taskOption.scriptParams[processInfo.mapping[paramFld]] = paramVal;
-
+                    procTaskOption.scriptParams[procInfo.mapping[fld]] = paramValue;
+                    taskKey.push(fld + '=' + paramValue);
                     hasParamValues = true;
-                    cacheTaskKey.push(paramFld + '=' + paramVal);
                 }
-                cacheTaskKey = cacheTaskKey.join('|');
-                var taskId = vc2_util.getNSCache({ name: cacheTaskKey });
+                taskKey = taskKey.join('&');
 
-                util.extend(current, {
-                    processInfo: processInfo,
-                    taskOption: taskOption,
-                    hasParamValues: hasParamValues,
-                    cacheTaskKey: cacheTaskKey,
-                    taskId: taskId,
-                    taskStatus: taskId ? ns_task.checkStatus({ taskId: taskId }) : null
-                });
+                var procTaskID = vc2_util.getNSCache({ cacheKey: taskKey });
+                vc2_util.log(logTitle, '// Task Option: ', [procTaskOption, taskKey, procTaskID]);
 
-                vc2_util.log(logTitle, '.. current: ', current);
+                util.extend(this.current, { taskId: procTaskID });
 
-                return current;
-            },
-            onGET: function (scriptContext) {
-                var logTitle = [LogTitle, 'processScripts:onGet'].join('::'),
-                    returnValue;
-
-                var current = PAGE.processScripts.initialize(scriptContext);
-
-                FORM_DEF.Form = ns_ui.createForm({
-                    title: 'Processing: ' + current.processInfo.label
-                });
-
-                var isTaskActive = vc2_util.inArray(current.taskStatus, ['PENDING', 'PROCESSING']),
-                    isTaskEnded = vc2_util.inArray(current.taskStatus, ['FAILED', 'COMPLETE']);
-
-                var formFields = {
-                        actview: vc2_util.extend(FORM_DEF.Fields.DISABLED_TEXT, {
-                            defaultValue: 'processScripts'
-                        })
-                    },
-                    fieldsList = ['actview'];
-
-                if (!current.taskId) {
-                    FORM_DEF.Form.addSubmitButton({ label: 'Trigger Scheduled Process' });
-                    util.extend(formFields, {
-                        msg: vc2_util.extend(FORM_DEF.Fields.HTMLDATA, {
-                            defaultValue: 'Something something message trigger the process'
-                        }),
-                        actcmd: vc2_util.extend(FORM_DEF.Fields.HIDDEN_TEXT, {
-                            defaultValue: 'trigger'
-                        })
-                    });
-                    fieldsList.push('msg', 'actcmd');
-                } else if (isTaskActive) {
-                    FORM_DEF.Form.addSubmitButton({ label: 'Refresh' });
-                    util.extend(formFields, {
-                        msg: vc2_util.extend(FORM_DEF.Fields.HTMLDATA, {
-                            defaultValue:
-                                'Something something something refresh the page, and show the status'
-                        }),
-                        actcmd: vc2_util.extend(FORM_DEF.Fields.HIDDEN_TEXT, {
-                            defaultValue: 'refresh'
-                        })
-                    });
-                    fieldsList.push('msg', 'actcmd');
-                } else if (isTaskEnded) {
-                    FORM_DEF.Form.addSubmitButton({ label: 'Close' });
-                    util.extend(formFields, {
-                        msg: vc2_util.extend(FORM_DEF.Fields.HTMLDATA, {
-                            defaultValue: 'Something something something empty the trash'
-                        }),
-                        actcmd: vc2_util.extend(FORM_DEF.Fields.HIDDEN_TEXT, {
-                            defaultValue: 'trigger'
-                        })
-                    });
-                    fieldsList.push('msg', 'actcmd');
-                }
-
-                vc_uihelper.setUI({ form: FORM_DEF.Form });
-                vc_uihelper.setUI({ fields: formFields });
-                vc_uihelper.renderFieldList(fieldsList);
-
-                scriptContext.response.writePage(FORM_DEF.Form);
                 return returnValue;
             },
-            onPOST: function (scriptContext) {
-                return PAGE.processScripts.onGET(scriptContext);
+            onGet: function (scriptContext) {
+                var logTitle = [LogTitle, 'processScript'].join('::'),
+                    returnValue;
+
+                this.initialize(scriptContext);
+
+                // build the params
+
+                if (hasParamValues) {
+                } else {
+                }
+
+                return returnValue;
             }
         },
         handleError: function (scriptContext, errorMsg) {
@@ -540,6 +479,13 @@ define([
                 returnValue;
 
             vc_uihelper.Form = ns_ui.createForm({ title: 'ERROR FOUND' });
+
+            // vc_uihelper.Fields = {
+            //     ERROR_MSG: util.extend(FORM_DEF.Fields.HTMLDATA, {
+            //         defaultValue: vc2_util.extractError(errorMessage)
+            //     })
+            // };
+            // vc_uihelper.renderFieldList(['ERROR_MSG']);
 
             vc_uihelper.Form.addPageInitMessage({
                 title: 'Error Found ', // + errorMessage,
@@ -559,12 +505,8 @@ define([
 
             try {
                 PAGE.Param = { actview: scriptContext.request.parameters.actview || 'vendorData' };
-
-                vc2_util.log(logTitle, '// params: ', scriptContext.request.parameters);
                 if (!PAGE[PAGE.Param.actview]) throw 'PAGE NOT FOUND';
                 var pageObj = PAGE[PAGE.Param.actview];
-                vc2_util.log(logTitle, '// PAGE: ', PAGE);
-                vc2_util.log(logTitle, '// pageObj: ', pageObj);
 
                 if (reqMethod == 'GET') {
                     (pageObj.onGET || pageObj).call(PAGE, scriptContext);
