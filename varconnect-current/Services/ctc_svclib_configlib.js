@@ -188,15 +188,16 @@ define(function (require) {
                 returnValue;
             option = option || {};
 
-            // generate the search
+            // RETURN cached valued
             var searchOption = this.buildSearchOption(option);
 
-            // vc2_util.log(logTitle, '// search option: ', searchOption);
-            if (!searchOption) return false;
-
-            // RETURN cached valued
             var cachedValue = this.getCache(option);
             if (!vc2_util.isEmpty(cachedValue)) return cachedValue;
+
+            // generate the search
+            // vc2_util.log(logTitle, '//  option: ', option);
+            // vc2_util.log(logTitle, '// search option: ', searchOption);
+            if (!searchOption) return false;
 
             // Else, try to fetch the config
             try {
@@ -216,17 +217,14 @@ define(function (require) {
                         configData[field] = !vc2_util.isEmpty(value) ? value.value || value : null;
                     }
 
-                    if (countryCodeField) {
-                        var rowValue = row.getValue({ name: 'country', join: countryCodeField });
-                        configData.country = rowValue;
-                    }
+                    configData.country = countryCodeField
+                        ? (rowValue = row.getValue({ name: 'country', join: countryCodeField }))
+                        : 'US';
 
-                    // check for country
                     return true;
                 });
 
                 // set the CountryCodeField
-                configData.country = configData.country || 'US'; // default is US
 
                 // vc2_util.log(logTitle, '## Config Data: ', configData);
 
@@ -235,6 +233,8 @@ define(function (require) {
             } catch (error) {
                 vc2_util.logError(logTitle, 'Error occurred during search', error);
                 throw error;
+            // } finally {
+            //     vc2_util.log(logTitle, '/// config data: ', returnValue);
             }
 
             return returnValue;
@@ -393,11 +393,12 @@ define(function (require) {
 
             var cacheKey = [
                 vc2_constant.CACHE_KEY[configType],
-                this.CacheParams.join('&')
-                // new Date().getTime()
+                this.CacheParams.join('&'),
+                vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
             ].join('__');
 
             this.CacheKey = cacheKey;
+
             return cacheKey;
         },
         getCache: function (option) {
@@ -440,7 +441,9 @@ define(function (require) {
                 poNum = option.poNum || option.tranid || option.tranId,
                 poId = option.poId;
 
-            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+            vc2_util.log(logTitle, '// option: ', [option, configId, vendorId, poNum, poId]);
+
+            var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.VENDOR });
 
             // ADD the COUNTRY from either the subsidiary or the VENDOR
             searchOption.columns.push(VENDOR_CFG.FIELD.SUBSIDIARY + '.country');
@@ -449,7 +452,7 @@ define(function (require) {
             if (configId) {
                 searchOption.filters.push('AND', ['internalid', 'anyof', configId]);
                 this.CacheParams.push('configId=' + configId);
-                return searchOption;
+                // return searchOption;
             }
 
             var recordData = {};
@@ -465,24 +468,26 @@ define(function (require) {
                         'internalid',
                         'vendor.internalid',
                         'vendor.entityid',
-                        'vendor.custentity_vc_bill_config'
+                        'vendor.custentity_vc_bill_config',
+                        vc2_util.isOneWorld() ? 'subsidiary' : null,
+                        vc2_util.isOneWorld() ? 'subsidiary.country' : null
                     ]
                 });
 
-                if (!recordData || vc2_util.isEmpty(recordData))
-                    throw (
-                        'Cannot find vendor info for PO: ' +
-                        JSON.stringify({ poNum: poNum, poId: poId })
-                    );
+                if (recordData && !vc2_util.isEmpty(recordData)) {
+                    this.CacheParams.push('poId=' + recordData.id);
+                    this.CacheParams.push('poNum=' + recordData.tranid);
 
-                this.CacheParams.push('poId=' + recordData.id);
-                this.CacheParams.push('poNum=' + recordData.tranid);
+                    vendorId = recordData.entity
+                        ? recordData.entity.value || recordData.entity
+                        : null;
+                    subsId = recordData.subsidiary
+                        ? recordData.subsidiary.value || recordData.subsidiary
+                        : null;
+                }
+            }
 
-                vendorId = recordData.entity ? recordData.entity.value || recordData.entity : null;
-                subsId = recordData.subsidiary
-                    ? recordData.subsidiary.value || recordData.subsidiary
-                    : null;
-            } else throw 'Please provide a vendor configuration or PO record';
+            // else throw 'Please provide a vendor configuration or PO record';
 
             if (vendorId) {
                 searchOption.filters.push('AND', [VENDOR_CFG.FIELD.VENDOR, 'anyof', vendorId]);
@@ -494,6 +499,8 @@ define(function (require) {
                 this.CacheParams.push('subsId=' + subsId);
             }
 
+            vc2_util.log(logTitle, '// params: ', this.CacheParams);
+
             if (!this.CacheParams.length)
                 throw 'Please provide a vendor configuration or PO record';
 
@@ -501,8 +508,6 @@ define(function (require) {
         },
         setCache: function (cacheValue) {
             if (vc2_util.isEmpty(cacheValue)) return;
-
-            vc2_util.log('OrderConfigLib.setCache', '// Cache Key: ', this.CacheKey);
             var cacheKey = this.CacheKey || this.generateCacheKey();
 
             // save it first
@@ -535,7 +540,7 @@ define(function (require) {
                 poNum = option.poNum || option.tranid || option.tranId,
                 poId = option.poId;
 
-            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+            var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.BILL });
 
             if (configId) {
                 searchOption.filters.push('AND', ['internalid', 'anyof', configId]);
@@ -560,17 +565,13 @@ define(function (require) {
                     ]
                 });
 
-                if (!recordData || vc2_util.isEmpty(recordData))
-                    throw (
-                        'Cannot find vendor info for PO: ' +
-                        JSON.stringify({ poNum: poNum, poId: poId })
-                    );
-
-                this.CacheParams.push('poId=' + recordData.id);
-                this.CacheParams.push('poNum=' + recordData.tranid);
-                configId = recordData.custentity_vc_bill_config;
-                subsId = recordData.subsidiary;
-            } else throw 'Please provide bill configuration or PO record';
+                if (recordData && !vc2_util.isEmpty(recordData)) {
+                    this.CacheParams.push('poId=' + recordData.id);
+                    this.CacheParams.push('poNum=' + recordData.tranid);
+                    configId = recordData.custentity_vc_bill_config;
+                    subsId = recordData.subsidiary;
+                }
+            }
 
             // if the configId is specified, exit the script immediately
             if (configId) {
@@ -580,12 +581,18 @@ define(function (require) {
             }
 
             if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
-                searchOption.filters.push('AND', [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
+                searchOption.filters.push('AND', [
+                    [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId],
+                    'OR',
+                    [BILL_CFG.FIELD.SUBSIDIARY, 'noneof', '@NONE@']
+                ]);
                 this.CacheParams.push('subsId=' + subsId);
             }
 
-            if (!this.CacheParams.length)
+            if (!this.CacheParams.length || !configId)
                 throw 'Please provide a vendor configuration or PO record';
+
+            // vc2_util.log(logTitle, '... search option: ', searchOption);
 
             return searchOption;
         },
@@ -621,7 +628,7 @@ define(function (require) {
                 poNum = option.poNum || option.tranid || option.tranId,
                 poId = option.poId;
 
-            var searchOption = ConfigLib.buildSearchOption({ configType: this.ConfigType });
+            var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.SENDPO });
 
             // if the configId is specified, exit the script immediately
             if (configId) {
@@ -647,20 +654,19 @@ define(function (require) {
                     ]
                 });
 
-                if (!recordData || vc2_util.isEmpty(recordData))
-                    throw (
-                        'Cannot find vendor info for PO: ' +
-                        JSON.stringify({ poNum: poNum, poId: poId })
-                    );
+                if (recordData && !vc2_util.isEmpty(recordData)) {
+                    this.CacheParams.push('poId=' + recordData.id);
+                    this.CacheParams.push('poNum=' + recordData.tranid);
 
-                this.CacheParams.push('poId=' + recordData.id);
-                this.CacheParams.push('poNum=' + recordData.tranid);
-
-                vendorId = recordData.entity ? recordData.entity.value || recordData.entity : null;
-                subsId = recordData.subsidiary
-                    ? recordData.subsidiary.value || recordData.subsidiary
-                    : null;
-            } else throw 'Please provide a vendor configuration or PO record';
+                    vendorId = recordData.entity
+                        ? recordData.entity.value || recordData.entity
+                        : null;
+                    subsId = recordData.subsidiary
+                        ? recordData.subsidiary.value || recordData.subsidiary
+                        : null;
+                }
+            }
+            // else throw 'Please provide a vendor configuration or PO record';
 
             if (vendorId) {
                 searchOption.filters.push('AND', [SENDPOVND_CFG.FIELD.VENDOR, 'anyof', vendorId]);
@@ -674,6 +680,9 @@ define(function (require) {
 
             if (!this.CacheParams.length)
                 throw 'Please provide a vendor configuration or PO record';
+
+            vc2_util.log(logTitle, '// searchoption: ', searchOption);
+            vc2_util.log(logTitle, '// CacheParams: ', this.CacheParams);
 
             return searchOption;
         },
@@ -700,24 +709,26 @@ define(function (require) {
         loadConfig: function (option) {
             var logTitle = [LogTitle, 'loadConfig'].join('::'),
                 returnValue;
-
             option = option || {};
 
             var configType = option.configType || this.ConfigType.MAIN;
+            try {
+                vc2_util.log(logTitle, '// option: ', option);
 
-            // load the config based on the type
-            switch (configType) {
-                case ListConfigType.MAIN:
-                    return MainConfigLib.search(option);
-                case ListConfigType.VENDOR:
-                    return OrderConfigLib.search(option);
-                case ListConfigType.BILL:
-                    return BillConfigLib.search(option);
-                case ListConfigType.SENDPO:
-                    return SendPOConfigLib.search(option);
-                default:
-                    throw 'Invalid config type';
-            }
+                // load the config based on the type
+                switch (configType) {
+                    case ListConfigType.MAIN:
+                        return MainConfigLib.search(option);
+                    case ListConfigType.VENDOR:
+                        return OrderConfigLib.search(option);
+                    case ListConfigType.BILL:
+                        return BillConfigLib.search(option);
+                    case ListConfigType.SENDPO:
+                        return SendPOConfigLib.search(option);
+                    default:
+                        throw 'Invalid config type';
+                }
+            } catch (error) {}
 
             return returnValue;
         },
@@ -762,25 +773,31 @@ define(function (require) {
                 option = option || {},
                 returnValue;
 
-            return MainConfigLib.search(option);
+            try {
+                return MainConfigLib.search(option);
+            } catch (error) {}
         },
         orderVendorConfig: function (option) {
             var logTitle = [LogTitle, 'orderVendorConfig'].join(':'),
                 returnValue;
-
-            return OrderConfigLib.search(option);
+            try {
+                return OrderConfigLib.search(option);
+            } catch (error) {}
         },
         billVendorConfig: function (option) {
             var logTitle = [LogTitle, 'billVendorConfig'].join(':'),
                 returnValue;
 
-            return BillConfigLib.search(option);
+            try {
+                return BillConfigLib.search(option);
+            } catch (error) {}
         },
         sendPOVendorConfig: function (option) {
             var logTitle = [LogTitle, 'sendPOVendorConfig'].join(':'),
                 returnValue;
-
-            return SendPOConfigLib.seach(option);
+            try {
+                return SendPOConfigLib.seach(option);
+            } catch (error) {}
         },
         validateLicense: function (option) {
             var logTitle = [LogTitle, 'validateLicense'].join(':'),

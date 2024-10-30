@@ -80,8 +80,9 @@ define(function (require) {
                 returnObj = {
                     status: 'error',
                     isError: true,
+                    logStatus: error ? error.logStatus : vc2_constant.LIST.VC_LOG_STATUS.ERROR,
                     message: vc2_util.extractError(error),
-                    details: error
+                    details: error.details || error
                 };
             } finally {
                 log.audit(logTitle, '/// returnObj:  ' + JSON.stringify(returnObj));
