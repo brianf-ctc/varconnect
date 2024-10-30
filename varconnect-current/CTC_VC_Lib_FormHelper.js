@@ -16,26 +16,50 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
     var showLogs = true;
 
     /// FORM HELPER ///////////////
+    var UI = {
+        FORM: null,
+        FIELDS: {
+            SPACER: {
+                type: ns_ui.FieldType.INLINEHTML,
+                label: 'Spacer',
+                defaultValue: '<br />'
+            },
+            HEADER: {
+                type: ns_ui.FieldType.INLINEHTML,
+                label: 'Header',
+                defaultValue: ' '
+            }
+        },
+        SUBLIST: {}
+    };
+
     var FormHelper = {
         Form: null,
         fieldCounter: 0,
         Fields: {},
         Sublists: {},
+        setUI: function (option) {
+            if (option.form) UI.FORM = option.form;
+            if (option.fields) util.extend(UI.FIELDS, option.fields);
+            if (option.sublist) UI.SUBLIST = option.sublist;
+        },
+
         renderField: function (fieldInfo, containerId) {
             var logTitle = [LogTitle, 'renderField'].join('::');
             this.fieldCounter++;
 
+            // vc2_util.log(logTitle, '// fieldInfo: ', [fieldInfo]);
             var fieldOption = {};
 
             if (util.isString(fieldInfo) && fieldInfo.match(/:/g)) {
                 var cmd = fieldInfo.split(/:/g);
 
                 if (cmd[0] == 'H1') {
-                    util.extend(fieldOption, FormHelper.Fields.HEADER);
+                    util.extend(fieldOption, UI.FIELDS.HEADER);
                     fieldOption.defaultValue =
                         '<div class="fgroup_title">' + cmd[1].toUpperCase() + '</div>';
                 } else if (cmd[0] == 'SPACER') {
-                    util.extend(fieldOption, FormHelper.Fields.SPACER);
+                    util.extend(fieldOption, UI.FIELDS.SPACER);
                     fieldOption.defaultValue = '&nbsp;';
                     fieldOption.breakType = ns_ui.FieldBreakType[cmd[1]];
                 }
@@ -49,12 +73,14 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
             }
 
             if (vc2_util.isEmpty(fieldOption)) return;
-            // vc2_util.log(logTitle, '// field options: ', fieldOption);
+
+            // vc2_util.log(logTitle, '// fieldOption: ', fieldOption);
+            // vc2_util.log(logTitle, '// UI.FORM: ', [UI.FORM]);
 
             if (containerId) fieldOption.container = containerId;
 
             /////////////////////////
-            var fld = FormHelper.Form.addField(fieldOption);
+            var fld = UI.FORM.addField(fieldOption);
             /////////////////////////
 
             fld.defaultValue = fieldOption.defaultValue;
@@ -89,13 +115,10 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
             for (var i = 0, j = fieldList.length; i < j; i++) {
                 var fieldName = fieldList[i];
 
-                var fieldInfo = FormHelper.Fields[fieldName];
+                var fieldInfo = UI.FIELDS[fieldName];
 
                 if (fieldInfo) {
-                    FormHelper.Fields[fieldName].fldObj = FormHelper.renderField(
-                        fieldInfo,
-                        containerId
-                    );
+                    UI.FIELDS[fieldName].fldObj = FormHelper.renderField(fieldInfo, containerId);
                 } else {
                     FormHelper.renderField(fieldName, containerId);
                 }
@@ -109,7 +132,7 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
             }
 
             // vc2_util.log(logTitle, groupInfo);
-            var fgObj = FormHelper.Form.addFieldGroup({
+            var fgObj = UI.FORM.addFieldGroup({
                 id: groupInfo.id,
                 label: groupInfo.label || '-'
             });
@@ -126,12 +149,12 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
 
             // for (var i = 0, j = groupInfo.fields.length; i < j; i++) {
             //     var fieldName = groupInfo.fields[i];
-            //     var fieldInfo = FormHelper.Fields[fieldName];
+            //     var fieldInfo = UI.FIELDS[fieldName];
 
             //     vc2_util.log(logTitle, '>> field: ', [fieldName, fieldInfo]);
 
             //     if (fieldInfo) {
-            //         FormHelper.Fields[fieldName].fldObj = FormHelper.renderField(
+            //         UI.FIELDS[fieldName].fldObj = FormHelper.renderField(
             //             fieldInfo,
             //             groupInfo.id
             //         );
@@ -146,7 +169,7 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
             var logTitle = [LogTitle, 'renderSublist'].join('::');
 
             /// ADD SUBLIST ////////////
-            var sublistObj = FormHelper.Form.addSublist(sublistInfo);
+            var sublistObj = UI.FORM.addSublist(sublistInfo);
             /////////////////////////////
 
             for (var fieldId in sublistInfo.fields) {
@@ -207,13 +230,11 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
         },
         updateFieldValue: function (option) {
             var fieldName = option.name;
-            var fieldObj = FormHelper.Fields[fieldName]
-                ? FormHelper.Fields[fieldName].fldObj
-                : false;
+            var fieldObj = UI.FIELDS[fieldName] ? UI.FIELDS[fieldName].fldObj : false;
 
             if (!fieldObj)
-                fieldObj = FormHelper.Form.getField({
-                    id: FormHelper.Fields[fieldName].id
+                fieldObj = UI.FORM.getField({
+                    id: UI.FIELDS[fieldName].id
                 });
 
             if (!fieldObj) return;

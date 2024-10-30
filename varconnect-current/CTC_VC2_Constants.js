@@ -16,6 +16,7 @@ define(function (require) {
     var ns_runtime = require('N/runtime');
 
     var VC2_CONSTANT = {
+        IS_DEBUG_MODE: false,
         LOG_APPLICATION: 'VAR Connect'
     };
 
@@ -250,6 +251,7 @@ define(function (require) {
         ORDER_LINE: {
             ID: 'customrecord_ctc_vc_orderlines',
             FIELD: {
+                RECKEY: 'custrecord_ctc_vc_orderline_reckey',
                 VENDOR: 'custrecord_ctc_vc_orderline_vendor',
                 TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
                 ORDER_NUM: 'custrecord_ctc_vc_orderline_vndordernum',
@@ -264,7 +266,7 @@ define(function (require) {
                 QTY: 'custrecord_ctc_vc_orderline_vndqty',
                 PO_QTY: 'custrecord_ctc_vc_orderline_poqty',
                 ORDER_DATE: 'custrecord_ctc_vc_orderline_orderdate',
-                ORDER_DATETXT: 'custrecord_ctc_vc_orderline_vndorderdate',
+                // ORDER_DATETXT: 'custrecord_ctc_vc_orderline_vndorderdate',
                 SHIPPED_DATE: 'custrecord_ctc_vc_orderline_shippeddate',
                 ETA_DATE: 'custrecord_ctc_vc_orderline_eta_date',
                 ETD_DATE: 'custrecord_ctc_vc_orderline_etd_date',
@@ -413,7 +415,7 @@ define(function (require) {
             itemMPNFieldIdToMatch: VendorCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
             matchMPNWithPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
         },
-        SENDPOVND_CONFIG: {
+        SENDPOVENDOR_CONFIG: {
             id: SendPOVndCFG.FIELD.ID,
             vendor: SendPOVndCFG.FIELD.VENDOR,
             subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY,
@@ -519,10 +521,26 @@ define(function (require) {
         COUNTRY: {
             US: '1',
             CANADA: '2'
+        },
+        ORDER_STATUS: {
+            PENDING: 1,
+            SHIPPED: 2,
+            INVOICED: 3,
+            PARTIALLY_SHIPPED: 4,
+            PARTIALLY_BILED: 5,
+            BACKORDERED: 6,
+            DELETED: 7,
+            NOT_FOUND: 8,
+            ON_HOLD: 9,
+            IN_PROGRESS: 10,
+            SCHEDULED: 11,
+            CLOSED: 12,
+            OPEN_ORDER: 13
         }
     };
     VC2_CONSTANT.SCRIPT = {
         ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2',
+        BILLPROCESS_MR: 'customscript_ctc_vc_process_bills',
         VIEW_SERIALS_SL: 'customscript_vc_view_serials',
         LICENSE_VALIDATOR_SL: 'customscript_ctc_vc_sl_licensevalidator',
         PRINT_SERIALS_SL: 'customscript_ctc_vc_sl_print_serial',
@@ -668,6 +686,25 @@ define(function (require) {
         INVALID_PODATE: {
             message: 'Invalid PO Date',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
+        /// ORDER STATUS ERROR //
+        INVALID_CREDENTIALS: {
+            message: 'Invalid credentials',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        INVALID_ACCESSPOINT: {
+            message: 'Invalid Access Endpoint',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        ENDPOINT_URL_ERROR: {
+            message: 'Unable to reach the webservice endpoint'
+        },
+        INVALID_ACCESS_TOKEN: {
+            message: 'Invalid or expired access token'
+        },
+        ORDER_NOT_FOUND: {
+            message: 'Order not found'
         }
     };
 
@@ -827,7 +864,7 @@ define(function (require) {
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({
             feature: 'pickpackship'
         }),
-        DATE_FORMAT: 'YYYY-MM-DD',
+        DATE_FORMAT: 'MM/DD/YYYY',
         COUNTRY: ns_runtime.country,
         SN_LINE_FIELD_LINK_ID: 'custcol_ctc_xml_serial_num_link',
         ITEM_ID_LOOKUP_COL: 'item',
@@ -840,7 +877,12 @@ define(function (require) {
         INCLUDE_ITEM_MAPPING_LOOKUP_KEY: 'ctc_includeItemMapping'
     };
 
-    VC2_CONSTANT.CACHE_NAME = 'VC_20240930';
+    VC2_CONSTANT.CACHE_NAME = [
+        'VC_CACHE_KEY',
+        '20241029.009',
+        VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null
+    ].join('_');
+
     VC2_CONSTANT.CACHE_KEY = {
         LICENSE: 'VC_LICENSE',
         MAIN_CONFIG: 'VC_MAIN_CONFIG',
@@ -854,7 +896,7 @@ define(function (require) {
         URL: 'https://nscatalystserver.azurewebsites.net/productauth.php',
         PRODUCT_CODE: 2,
         MAX_RETRY: 3,
-        KEY: 'LICENSE_KEY.20240626',
+        KEY: 'LICENSE_KEY.20241030.02',
         CACHE_NAME: VC2_CONSTANT.CACHE_NAME, //'VC_LICENSE',
         CACHE_TTL: 86400 // 24 hrs
     };
