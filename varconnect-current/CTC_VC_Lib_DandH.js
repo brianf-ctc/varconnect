@@ -11,14 +11,16 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
-    ns_xml,
-    vc2_util,
-    moment
-) {
+define([
+    'N/xml',
+    './CTC_VC2_Lib_Utils.js',
+    './CTC_VC2_Constants.js',
+    './Bill Creator/Libraries/moment'
+], function (ns_xml, vc2_util, vc2_constant, moment) {
     var LogTitle = 'WS:D&H';
 
-    var CURRENT = {};
+    var CURRENT = {},
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
     var Helper = {
         getNodeValue: function (node, xpath) {
@@ -39,16 +41,6 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             }
 
             return returnValue;
-        },
-        parseToNSDate: function (dateStr) {
-            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
-                dateObj;
-
-            try {
-                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr).toDate() : null;
-            } catch (err) {}
-
-            return dateObj;
         }
     };
 
@@ -83,7 +75,6 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                     isXML: true,
                     query: {
                         url: CURRENT.orderConfig.endPoint,
-
                         headers: {
                             'Content-Type': 'text/xml; charset=utf-8',
                             'Content-Length': 'length'
@@ -101,6 +92,8 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                             '</XMLFORMPOST>'
                     }
                 });
+                vc2_util.log(logTitle, 'reqOrderStatus: ', reqOrderStatus);
+                if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
 
                 vc2_util.handleXMLResponse(reqOrderStatus);
 
@@ -110,9 +103,35 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
 
                 returnValue = respOrderStatus;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw ['Order Search', this.evaluateErrors(errorMsg)].join('| ');
+                throw this.evalError(error);
             }
+
+            return returnValue;
+        },
+        evalError: function (errorMsg) {
+            var errorCodeList = {
+                INVALID_CREDENTIALS: [new RegExp(/The login was invalid/gi)],
+                ENDPOINT_URL_ERROR: [new RegExp(/Received invalid response code/gi)],
+                ORDER_NOT_FOUND: [new RegExp(/No Orders found for submitted values/gi)]
+            };
+
+            var matchedErrorCode = null;
+
+            for (var errorCode in errorCodeList) {
+                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
+                    var regStr = errorCodeList[errorCode][i];
+                    if (errorMsg.match(regStr)) {
+                        matchedErrorCode = errorCode;
+                        break;
+                    }
+                }
+                if (matchedErrorCode) break;
+            }
+
+            var returnValue = matchedErrorCode
+                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
+                : { message: 'Unexpected error', details: errorMsg };
+            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
 
             return returnValue;
         },
@@ -125,22 +144,47 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             var itemObj = {};
             try {
                 itemObj = {
-                    line_num: 'NA',
-                    item_num: Helper.getNodeValue(itemNode, 'ITEMNO') || 'NA',
-                    vendorSKU: 'NA',
                     order_num: Helper.getNodeValue(parentNode, 'ORDERNUM') || 'NA',
                     order_status: Helper.getNodeValue(parentNode, 'MESSAGE') || 'NA',
-                    line_status: 'NA',
                     order_date: Helper.getNodeValue(parentNode, 'DATE') || 'NA',
                     order_eta: Helper.getNodeValue(itemNode, 'ETA') || 'NA',
+                    eta_delivery_date: 'NA',
+                    deliv_date: 'NA',
+                    prom_date: 'NA',
+
+                    item_num: Helper.getNodeValue(itemNode, 'ITEMNO') || 'NA',
+                    item_num_alt: 'NA',
+                    vendorSKU: 'NA',
+                    item_sku: 'NA',
+                    item_altnum: 'NA',
+
+                    line_num: 'NA',
+                    line_status: 'NA',
+                    unitprice: vc2_util.parseFloat(Helper.getNodeValue(itemNode, 'PRICE') || ''),
+                    line_price: vc2_util.parseFloat(Helper.getNodeValue(itemNode, 'PRICE') || ''),
+
                     ship_date: 'NA',
                     ship_qty: Helper.getNodeValue(itemNode, 'QUANTITY') || 'NA',
                     carrier: 'NA',
-                    unitprice: vc2_util.parseFloat(Helper.getNodeValue(itemNode, 'PRICE') || ''),
                     tracking_num: 'NA',
                     serial_num: 'NA',
                     is_shipped: false
                 };
+                [
+                    'order_date',
+                    'order_eta',
+                    'order_delivery_eta',
+                    'deliv_date',
+                    'prom_date',
+                    'ship_date'
+                ].forEach(function (dateField) {
+                    if (itemObj[dateField] && itemObj[dateField] != 'NA') {
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'MM/DD/YYYY'
+                        );
+                    }
+                });
 
                 // validate order_status
                 if (
@@ -258,17 +302,6 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             }
 
             return packagesList;
-        },
-
-        parseToNSDate: function (dateStr) {
-            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
-                dateObj;
-
-            try {
-                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr, 'MM/DD/YY').toDate() : null;
-            } catch (err) {}
-
-            return dateObj;
         }
     };
 
@@ -295,12 +328,13 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
             try {
                 LibDnH.initialize(option);
                 var xmlResponse = this.processRequest(option),
-                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
-                    itemArray = [];
+                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });
+
                 if (!xmlDoc) throw 'Unable to parse XML';
 
                 var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
-                vc2_util.log(logTitle, '// Item Nodes: ', arrItemNodes);
+
+                // vc2_util.log(logTitle, '// Item Nodes: ', arrItemNodes);
                 if (!util.isArray(arrItemNodes) || vc2_util.isEmpty(arrItemNodes))
                     throw 'XML: Missing Item Details';
 
@@ -308,7 +342,7 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                 var arrPackageNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//PACKAGE' });
                 CURRENT.PackagesList = LibDnH.processPackages({ nodes: arrPackageNodes });
 
-                vc2_util.log(logTitle, '// Package List: ', CURRENT.PackagesList);
+                // vc2_util.log(logTitle, '// Package List: ', CURRENT.PackagesList);
 
                 var OrderList = {},
                     arrOrdersList = [],
@@ -319,11 +353,20 @@ define(['N/xml', './CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], f
                         parentNode = itemNode.parentNode.parentNode;
 
                     var orderData = {
-                        Status: Helper.getNodeValue(parentNode, 'MESSAGE'),
-                        OrderNum: Helper.getNodeValue(parentNode, 'ORDERNUM'),
-                        OrderDate: Helper.getNodeValue(parentNode, 'DATE'),
-                        Total: Helper.getNodeValue(parentNode, 'INVTOTAL')
+                        Status: Helper.getNodeValue(parentNode, 'MESSAGE') || 'NA',
+                        OrderNum: Helper.getNodeValue(parentNode, 'PONUM') || 'NA',
+                        VendorOrderNum: Helper.getNodeValue(parentNode, 'ORDERNUM') || 'NA',
+                        OrderDate: Helper.getNodeValue(parentNode, 'DATE') || 'NA',
+                        Total: Helper.getNodeValue(parentNode, 'INVTOTAL') || 'NA',
+                        InvoiceNo: Helper.getNodeValue(parentNode, 'INVOICE') || 'NA'
                     };
+
+                    if (orderData.OrderDate && orderData.OrderDate != 'NA') {
+                        orderData.OrderDate = vc2_util.parseFormatDate(
+                            orderData.OrderDate,
+                            'MM/DD/YY'
+                        );
+                    }
 
                     if (!OrderList[orderData.OrderNum]) {
                         OrderList[orderData.OrderNum] = orderData;

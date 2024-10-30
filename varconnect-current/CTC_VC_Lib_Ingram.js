@@ -37,27 +37,18 @@ define([
         RESULT: {}
     };
 
+    var DateFields = [
+        'ship_date',
+        'order_date',
+        'estdeliv_date',
+        'order_eta_ship',
+        'order_eta',
+        'eta_delivery_date'
+    ];
+
     var LibIngramAPI = {
-        ValidOrderStatus: [
-            'SHIPPED',
-            'PROCESSING',
-            'DELIVERED',
-            'BACKORDERED',
-            'PARTIALLY DELIVERED',
-            'PARTIALLY SHIPPED'
-        ],
-        ValidLineStatus: [
-            'SHIPPED',
-            'PROCESSING',
-            'IN PROGRESS',
-            'ON HOLD',
-            'DELIVERED',
-            'BACKORDERED',
-            'ORDER NOT PRINTED'
-        ],
         ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED', 'E-DELIVERED'],
         SkippedStatus: ['CANCELED', 'CANCELLED'],
-
         generateToken: function () {
             var logTitle = [LogTitle, 'LibIngramAPI::generateToken'].join('::'),
                 returnValue;
@@ -92,7 +83,6 @@ define([
 
             return returnValue;
         },
-
         orderSearch: function (option) {
             var logTitle = [LogTitle, 'LibIngramAPI::orderSearch'].join('::'),
                 returnValue;
@@ -135,7 +125,6 @@ define([
 
             return returnValue;
         },
-
         orderDetails: function (option) {
             var logTitle = [LogTitle, 'LibIngramAPI::orderDetails'].join('::'),
                 returnValue;
@@ -163,7 +152,10 @@ define([
                     },
                     recordId: CURRENT.recordId
                 });
-                if (respOrderDetails.isError) throw respOrderDetails.errorMsg;
+                vc2_util.log(logTitle, '>> response: ', respOrderDetails);
+                if (respOrderDetails.isError)
+                    if (!respOrderDetails.PARSED_RESPONSE) throw respOrderDetails.errorMsg;
+
                 vc2_util.handleJSONResponse(respOrderDetails);
                 if (!respOrderDetails.PARSED_RESPONSE) throw 'Unable to fetch server response';
 
@@ -175,40 +167,11 @@ define([
 
             return returnValue;
         },
-
         evaluateErrors: function (errorMsg) {
             if (errorMsg.match(/^Invalid client identifier/gi)) {
                 return 'Invalid credentials';
             } else return errorMsg;
         }
-
-        // evalErrors: function (errorMsg) {
-        //     var ErrorTypes = {
-        //         INVALID_CREDENTIALS: {
-        //             trigger: [
-        //                 function (errormsg) {
-        //                     return errormsg.match(/^Invalid client identifier/gi);
-        //                 }
-        //             ],
-        //             message: 'Invalid credentials'
-        //         }
-        //     };
-
-        //     for (var errorCode in ErrorTypes) {
-        //         var errType = ErrorTypes[errorCode];
-
-        //         if (errType && errType.trigger) {
-        //             var hasMatch = false;
-        //             errType.trigger.forEach(function (errTrigger) {
-        //                 if (!hasMatch && typeof errTrigger == 'function') {
-        //                     hasMatch = errTrigger.call(this, errorMsg);
-        //                 }
-        //                 return true;
-        //             });
-        //             if (hasMatch) return errType.message;
-        //         }
-        //     }
-        // }
     };
 
     var LibOrderStatus = {
@@ -243,7 +206,8 @@ define([
                 key: [
                     CURRENT.TokenName,
                     CURRENT.orderConfig.apiKey,
-                    CURRENT.orderConfig.apiSecret
+                    CURRENT.orderConfig.customerNo,
+                    vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')
             });
 
@@ -267,16 +231,15 @@ define([
             if (!util.isArray(orderResults) || vc2_util.isEmpty(orderResults)) return false;
             var arrValidOrders = [];
 
-            //loop through ingramOrders
-            for (var i = 0; i < orderResults.length; i++) {
-                var orderResult = orderResults[i],
-                    orderData = {
-                        OrderNum: orderResult.ingramOrderNumber,
-                        OrderDate: orderResult.ingramOrderDate,
-                        customerOrderNum: orderResult.customerOrderNumber,
-                        Status: orderResult.orderStatus,
-                        Total: orderResult.orderTotal
-                    };
+            (orderResults || []).forEach(function (orderResult) {
+                var orderData = {
+                    VendorOrderNum: orderResult.ingramOrderNumber,
+                    OrderDate: orderResult.ingramOrderDate,
+                    OrderNum: orderResult.customerOrderNumber,
+                    Status: orderResult.orderStatus,
+                    Total: orderResult.orderTotal
+                };
+
                 try {
                     if (!orderResult.orderStatus) throw 'MISSING OrderStatus';
 
@@ -288,27 +251,67 @@ define([
                     orderResult.subOrders.forEach(function (subOrderData) {
                         var subOrderNumber = subOrderData.subOrderNumber;
                         vc2_util.log(logTitle, '... added valid order: ', subOrderNumber);
+
+                        util.extend(orderData, { VendorOrderNum: subOrderNumber });
+
                         IngramOrders.ORDERS[subOrderNumber] = { info: orderResult };
+                        IngramOrders.LIST.push(vc2_util.clone(orderData));
                     });
 
                     arrValidOrders.push(orderResult);
-                } catch (e) {
+                } catch (error) {
                     vc2_util.log(logTitle, '*** SKIPPED ORDER: ', [
-                        vc2_util.extractError(e),
+                        vc2_util.extractError(error),
                         orderResult
                     ]);
-                    orderData.ERROR = vc2_util.extractError(e);
-                    continue;
-                } finally {
-                    IngramOrders.LIST.push(orderData);
+                    orderData.ERROR = vc2_util.extractError(error);
                 }
-            }
+            });
+
+            // //loop through ingramOrders
+            // for (var i = 0; i < orderResults.length; i++) {
+            //     var orderResult = orderResults[i],
+            //         orderData = {
+            //             OrderNum: orderResult.ingramOrderNumber,
+            //             OrderDate: orderResult.ingramOrderDate,
+            //             customerOrderNum: orderResult.customerOrderNumber,
+            //             Status: orderResult.orderStatus,
+            //             Total: orderResult.orderTotal
+            //         };
+            //     try {
+            //         if (!orderResult.orderStatus) throw 'MISSING OrderStatus';
+            //         // if (!orderResult.ingramOrderNumber) throw 'MISSING OrderStatus';
+
+            //         if (vc2_util.inArray(orderResult.orderStatus, LibIngramAPI.SkippedStatus))
+            //             throw 'SKIPPED OrderStatus - ' + orderResult.orderStatus;
+
+            //         if (vc2_util.isEmpty(orderResult.subOrders)) throw 'MISSING subOrders';
+
+            //         orderResult.subOrders.forEach(function (subOrderData) {
+            //             var subOrderNumber = subOrderData.subOrderNumber;
+            //             vc2_util.log(logTitle, '... added valid order: ', subOrderNumber);
+            //             IngramOrders.ORDERS[subOrderNumber] = { info: orderResult };
+            //         });
+
+            //         arrValidOrders.push(orderResult);
+            //     } catch (e) {
+            //         vc2_util.log(logTitle, '*** SKIPPED ORDER: ', [
+            //             vc2_util.extractError(e),
+            //             orderResult
+            //         ]);
+            //         orderData.ERROR = vc2_util.extractError(e);
+            //         continue;
+            //     } finally {
+            //         IngramOrders.LIST.push(orderData);
+            //     }
+            // }
 
             return arrValidOrders;
         },
         extractShipmentDetails: function (shipmentDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractShipmentDetails'].join('::');
-            if (!vc2_util.isEmpty(shipmentDetails)) return false;
+
+            if (vc2_util.isEmpty(shipmentDetails)) return false;
 
             var shipData = {
                 quantity: 0,
@@ -327,16 +330,15 @@ define([
                     order_eta_ship: shipmentDetail.estimatedDeliveryDate
                 });
 
-                if (!shipmentDetail.carrierDetails) continue;
+                if (vc2_util.isEmpty(shipmentDetail.carrierDetails)) continue;
 
                 shipData.carrier = shipmentDetail.carrierDetails.carrierName;
 
-                if (!shipmentDetail.carrierDetails.trackingDetails) continue;
+                if (vc2_util.isEmpty(shipmentDetail.carrierDetails.trackingDetails)) continue;
                 var trackingDetails = shipmentDetail.carrierDetails.trackingDetails;
 
                 var serialNos = this.extractSerialNos(trackingDetails),
                     trackingNos = this.extractTrackingNos(trackingDetails);
-
                 shipData.serialNos = shipData.serialNos.concat(serialNos);
                 shipData.trackingNos = shipData.trackingNos.concat(trackingNos);
             }
@@ -344,12 +346,14 @@ define([
             shipData.serialNos = vc2_util.uniqueArray(shipData.serialNos);
             shipData.trackingNos = vc2_util.uniqueArray(shipData.trackingNos);
 
+            vc2_util.log(logTitle, '// shipment details: ', shipData);
+
             return shipData;
         },
         extractTrackingNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractTrackingNos'].join('::');
 
-            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var trackingNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -367,7 +371,7 @@ define([
         extractSerialNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractSerialNos'].join('::');
 
-            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var serialNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -390,8 +394,8 @@ define([
         extractEstimatedDates: function (estDateDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractEstimatedDates'].join('::');
 
+            if (vc2_util.isEmpty(estDateDetails)) return;
             var estimatedDates = {};
-            if (!estDateDetails || !estDateDetails.length) return;
 
             for (var i = 0, j = estDateDetails.length; i < j; i++) {
                 var ship = estDateDetails[i].ship,
@@ -407,6 +411,8 @@ define([
                 if (delivery) util.extend(estimatedDates, { deliveryDate: delivery.deliveryDate });
             }
 
+            vc2_util.log(logTitle, '... estimated dates: ', estimatedDates);
+
             return estimatedDates;
         },
         extractLineData: function (ingramLine, orderDetails) {
@@ -415,14 +421,18 @@ define([
             vc2_util.log(logTitle, '** Ingram Line: ', ingramLine);
 
             var lineData = {
+                order_num: 'NA',
+                order_date: orderDetails.ingramOrderDate || 'NA',
+                order_status: orderDetails.orderStatus || 'NA',
+                order_date: 'NA',
+
                 line_num: ingramLine.customerLineNumber || ingramLine.ingramOrderLineNumber || 'NA',
+
                 item_num: ingramLine.vendorPartNumber || 'NA',
                 item_num_alt: ingramLine.ingramPartNumber || 'NA',
                 vendorSKU: ingramLine.ingramPartNumber || 'NA',
                 // order_num: ingramSubOrderNum || 'NA',
                 line_status: ingramLine.lineStatus || 'NA',
-                order_date: orderDetails.ingramOrderDate || 'NA',
-                order_status: orderDetails.orderStatus || 'NA',
                 ship_qty:
                     ingramLine.hasOwnProperty('quantityConfirmed') &&
                     !vc2_util.isEmpty(ingramLine.quantityConfirmed)
@@ -433,6 +443,7 @@ define([
                         : 'NA'
             };
             lineData.line_no = vc2_util.parseFloat(lineData.line_num);
+            vc2_util.log(logTitle, '** Ingram Line(2) : ', lineData);
 
             var shipment = LibOrderStatus.extractShipmentDetails(ingramLine.shipmentDetails);
             util.extend(lineData, {
@@ -519,6 +530,14 @@ define([
                             )
                         });
 
+                        //set the ddate fields to YYYY-MM-DD
+                        DateFields.forEach(function (dateField) {
+                            lineData[dateField] = vc2_util.parseFormatDate(
+                                lineData[dateField],
+                                'YYYY-MM-DD'
+                            );
+                        });
+
                         orderLines.push(lineData);
                     }
                 }
@@ -564,7 +583,6 @@ define([
 
                 // get all the order details
                 for (var orderNum in IngramOrders.ORDERS) {
-                    var logPrefix = '[' + orderNum + '] ';
                     var orderDetails = LibIngramAPI.orderDetails({ orderNum: orderNum });
                     // // extract line data
                     IngramOrders.ORDERS[orderNum].details = orderDetails;
