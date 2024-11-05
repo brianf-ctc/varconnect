@@ -236,7 +236,7 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             });
 
             if (!isActive) {
-                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax'].forEach(
+                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax','amountvar'].forEach(
                     function (fld) {
                         try {
                             currRecord.getSublistField({

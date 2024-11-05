@@ -762,6 +762,20 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
+
+        INSUFFICIENT_RECEIVABLES: {
+            code: 'INSUFFICIENT_RECEIVABLES',
+            msg: 'Receivable Qty is not enough for the bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        INSUFFICIENT_BILLABLE: {
+            code: 'INSUFFICIENT_BILLABLE',
+            msg: 'Insufficient quantity to bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
         ITEMS_ALREADY_BILLED: {
             code: 'ITEMS_ALREADY_BILLED',
             msg: 'Items are already billed',
@@ -769,9 +783,16 @@ define(function (require) {
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
 
+        ITEM_FULLY_BILLED: {
+            code: 'ITEM_FULLY_BILLED',
+            msg: 'Fully billed item/s',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+        },
+
         ITEM_NOT_BILLABLE: {
             code: 'ITEM_NOT_BILLABLE',
-            msg: 'Item is not billable',
+            msg: 'Not billable item/s',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
@@ -783,10 +804,17 @@ define(function (require) {
         },
         UNMATCHED_ITEMS: {
             code: 'UNMATCHED_ITEMS',
-            msg: 'Unmatched items on the bill',
+            msg: 'Unmatched item/s on the bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
+        MISMATCH_RATE:  {
+            code: 'MISMATCH_RATE',
+            msg: 'Mismatched rates on item(s) on the bill',
+            status: Bill_Creator.Status.ERROR,
+            logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
+
+        }, 
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -825,7 +853,7 @@ define(function (require) {
         },
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
-            msg: 'Variance Total exceeded threshold',
+            msg: 'Variance detected and exceeded threshold',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
