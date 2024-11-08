@@ -41,6 +41,16 @@ define([
             }
 
             return returnValue;
+        },
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr).toDate() : null;
+            } catch (err) {}
+
+            return dateObj;
         }
     };
 
@@ -75,6 +85,7 @@ define([
                     isXML: true,
                     query: {
                         url: CURRENT.orderConfig.endPoint,
+
                         headers: {
                             'Content-Type': 'text/xml; charset=utf-8',
                             'Content-Length': 'length'
@@ -83,7 +94,7 @@ define([
                             '<XMLFORMPOST>' +
                             '<REQUEST>orderStatus</REQUEST>' +
                             '<LOGIN>' +
-                            ('<USERID>' + CURRENT.orderConfig.user + '</USERID>') +
+                            ('<USERID>x' + CURRENT.orderConfig.user + '</USERID>') +
                             ('<PASSWORD>' + CURRENT.orderConfig.password + '</PASSWORD>') +
                             '</LOGIN>' +
                             '<STATUSREQUEST>' +
@@ -109,31 +120,9 @@ define([
             return returnValue;
         },
         evalError: function (errorMsg) {
-            var errorCodeList = {
-                INVALID_CREDENTIALS: [new RegExp(/The login was invalid/gi)],
-                ENDPOINT_URL_ERROR: [new RegExp(/Received invalid response code/gi)],
-                ORDER_NOT_FOUND: [new RegExp(/No Orders found for submitted values/gi)]
-            };
+            vc2_util.logError('evalError', errorMsg);
 
-            var matchedErrorCode = null;
-
-            for (var errorCode in errorCodeList) {
-                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
-                    var regStr = errorCodeList[errorCode][i];
-                    if (errorMsg.match(regStr)) {
-                        matchedErrorCode = errorCode;
-                        break;
-                    }
-                }
-                if (matchedErrorCode) break;
-            }
-
-            var returnValue = matchedErrorCode
-                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
-                : { message: 'Unexpected error', details: errorMsg };
-            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
-
-            return returnValue;
+            return errorMsg;
         },
 
         processItem: function (option) {
@@ -170,21 +159,6 @@ define([
                     serial_num: 'NA',
                     is_shipped: false
                 };
-                [
-                    'order_date',
-                    'order_eta',
-                    'order_delivery_eta',
-                    'deliv_date',
-                    'prom_date',
-                    'ship_date'
-                ].forEach(function (dateField) {
-                    if (itemObj[dateField] && itemObj[dateField] != 'NA') {
-                        itemObj[dateField] = vc2_util.parseFormatDate(
-                            itemObj[dateField],
-                            'MM/DD/YYYY'
-                        );
-                    }
-                });
 
                 // validate order_status
                 if (
@@ -302,6 +276,17 @@ define([
             }
 
             return packagesList;
+        },
+
+        parseToNSDate: function (dateStr) {
+            var logTitle = [LogTitle, 'parseToNSDate'].join('::'),
+                dateObj;
+
+            try {
+                dateObj = dateStr && dateStr !== 'NA' ? moment(dateStr, 'MM/DD/YY').toDate() : null;
+            } catch (err) {}
+
+            return dateObj;
         }
     };
 

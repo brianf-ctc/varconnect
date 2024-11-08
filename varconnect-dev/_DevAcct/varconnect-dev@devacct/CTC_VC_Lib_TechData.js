@@ -123,7 +123,7 @@ define([
     return {
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
@@ -137,18 +137,15 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
+                // vc2_util.logError(logTitle, error);
+                // throw error;
                 vc2_util.logError(logTitle, error);
-                throw error;
+                util.extend(returnValue, {
+                    HasError: true,
+                    ErrorMsg: vc2_util.extractError(error)
+                });
             } finally {
                 vc2_util.log(logTitle, '>> OrderValues: ', returnValue);
-                // vc2_util.vcLog({
-                //     title: [LogTitle + ' Lines'].join(' - '),
-                //     body: !vc2_util.isEmpty(returnValue)
-                //         ? JSON.stringify(returnValue)
-                //         : '-no lines to process-',
-                //     recordId: CURRENT.recordId,
-                //     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                // });
             }
 
             return returnValue;
@@ -176,7 +173,7 @@ define([
         },
         processResponse: function (option) {
             var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
@@ -267,7 +264,11 @@ define([
                     itemArray.push(orderItem);
                 }
 
-                returnValue = itemArray;
+                // returnValue = itemArray;
+                util.extend(returnValue, {
+                    Orders: IngramOrders.LIST,
+                    Lines: orderLines
+                });
             } catch (error) {
                 throw error;
             }

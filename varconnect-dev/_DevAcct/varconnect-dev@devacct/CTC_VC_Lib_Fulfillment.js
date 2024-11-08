@@ -161,7 +161,7 @@ define(function (require) {
                         arrVendorOrderNums.push(vendorOrderNum);
                     }
                 } catch (order_error) {
-                    vc2_util.logError(logTitle, order_error);
+                    vc2_util.log(logTitle, 'SKIPPED: ', order_error);
                     orderLine.RESULT = vc2_util.extractError(order_error);
 
                     vc2_util.vcLog({

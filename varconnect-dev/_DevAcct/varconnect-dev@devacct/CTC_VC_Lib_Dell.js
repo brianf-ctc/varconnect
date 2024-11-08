@@ -44,8 +44,6 @@ define([
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'POST',
                     recordId: CURRENT.recordId,
-                    doRetry: true,
-                    maxRetry: 3,
                     query: {
                         url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
@@ -75,7 +73,14 @@ define([
             return returnValue;
         },
         getTokenCache: function () {
-            var token = vc2_util.getNSCache({ key: 'VC_DELL_TOKEN' });
+            var token = vc2_util.getNSCache({
+                key: [
+                    'VC_DELL_TOKEN',
+                    CURRENT.orderConfig.apiKey,
+                    CURRENT.orderConfig.subsidiary,
+                    vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
+                ].join('|')
+            });
             if (vc2_util.isEmpty(token)) token = this.generateToken();
 
             if (!vc2_util.isEmpty(token)) {
@@ -149,13 +154,14 @@ define([
             }
 
             return returnValue;
-        }
+        },
+        extractOrderDetails: function (orderDetail) {}
     };
 
     return {
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
@@ -166,121 +172,150 @@ define([
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
-                var itemArray = [];
+                var itemArray = [],
+                    orderDataList = [];
 
                 var arrResponse = this.processRequest(option);
 
                 if (!arrResponse || !arrResponse.purchaseOrderDetails)
                     throw 'Missing purchase order details';
 
-                var orderDetail = arrResponse.purchaseOrderDetails.shift();
-                if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
+                arrResponse.purchaseOrderDetails.forEach(function (orderDetail) {
+                    if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
+                    var OrderData = {
+                        OrderNum: orderDetail.purchaseOrderNumber,
+                        OrderDate: orderDetail.purchaseOrderDate,
+                        Status: orderDetail.purchaseOrderStatus
+                    };
 
-                for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
-                    var dellOrder = orderDetail.dellOrders[i],
-                        orderItem = {
-                            ship_qty: 0
-                        };
+                    for (var i = 0, j = orderDetail.dellOrders.length; i < j; i++) {
+                        var dellOrder = orderDetail.dellOrders[i],
+                            orderItem = {
+                                ship_qty: 0
+                            };
 
-                    if (dellOrder.purchaseOrderLines) {
-                        dellOrder.purchaseOrderLines.forEach(function (lineData) {
-                            (orderItem.item_num = lineData.buyerPartNumber),
-                                (orderItem.vendorSKU = lineData.buyerPartNumber),
-                                (orderItem.ship_qty += parseFloat(lineData.quantityOrdered));
-                            orderItem.line_status = lineData.lineStatus;
-                        });
-                    }
-
-                    util.extend(orderItem, {
-                        order_num: dellOrder.orderNumber || 'NA',
-                        ship_date: dellOrder.actualShipmentDate || 'NA',
-                        order_date: orderDetail.orderDetail || 'NA',
-                        order_eta: dellOrder.estimatedDeliveryDate || 'NA',
-                        carrier: dellOrder.carrierName || 'NA',
-                        order_status: orderDetail.purchaseOrderStatus,
-                        serial_num: 'NA',
-                        tracking_num: 'NA'
-                    });
-
-                    if (dellOrder.productInfo && util.isArray(dellOrder.productInfo)) {
-                        var arrSerials = [];
-
-                        dellOrder.productInfo.forEach(function (productInfo) {
-                            if (util.isArray(productInfo.serviceTags))
-                                arrSerials = arrSerials.concat(productInfo.serviceTags);
-                            else arrSerials.push(productInfo.serviceTags);
-
-                            return true;
+                        util.extend(OrderData, {
+                            Status: dellOrder.orderStatus,
+                            VendorOrderNum: dellOrder.orderNumber,
+                            InvoiceNum: dellOrder.invoiceNumber
                         });
 
-                        if (!vc2_util.isEmpty(arrSerials)) {
-                            orderItem.serial_num = arrSerials.join(',');
+                        if (dellOrder.purchaseOrderLines) {
+                            dellOrder.purchaseOrderLines.forEach(function (lineData) {
+                                orderItem.item_num = lineData.buyerPartNumber;
+                                orderItem.vendorSKU = lineData.buyerPartNumber;
+                                orderItem.ship_qty += parseFloat(lineData.quantityOrdered);
+                                orderItem.line_status = lineData.lineStatus;
+                            });
                         }
-                    }
 
-                    if (
-                        dellOrder.trackingInformation &&
-                        util.isArray(dellOrder.trackingInformation)
-                    ) {
-                        var arrTracking = [];
+                        util.extend(orderItem, {
+                            order_num: dellOrder.orderNumber || 'NA',
+                            ship_date: dellOrder.actualShipmentDate || 'NA',
+                            order_date: orderDetail.orderDetail || 'NA',
+                            order_eta: dellOrder.estimatedDeliveryDate || 'NA',
+                            carrier: dellOrder.carrierName || 'NA',
+                            order_status: orderDetail.purchaseOrderStatus,
+                            serial_num: 'NA',
+                            tracking_num: 'NA'
+                        });
 
-                        dellOrder.trackingInformation.forEach(function (tracking) {
-                            if (vc2_util.isEmpty(tracking.waybill)) return false;
-                            if (!vc2_util.inArray(tracking.waybill, arrTracking))
-                                arrTracking.push(tracking.waybill);
+                        if (
+                            vc2_util.isEmpty(dellOrder.productInfo) &&
+                            util.isArray(dellOrder.productInfo)
+                        ) {
+                            var arrSerials = [];
 
-                            if (!orderItem.carrier || orderItem.carrier == 'NA') {
-                                orderItem.carrier = tracking.carrierName;
+                            dellOrder.productInfo.forEach(function (productInfo) {
+                                if (util.isArray(productInfo.serviceTags))
+                                    arrSerials = arrSerials.concat(productInfo.serviceTags);
+                                else arrSerials.push(productInfo.serviceTags);
+
+                                return true;
+                            });
+
+                            if (!vc2_util.isEmpty(arrSerials))
+                                orderItem.serial_num = arrSerials.join(',');
+                        }
+
+                        if (
+                            dellOrder.trackingInformation &&
+                            util.isArray(dellOrder.trackingInformation)
+                        ) {
+                            var arrTracking = [];
+
+                            dellOrder.trackingInformation.forEach(function (tracking) {
+                                if (vc2_util.isEmpty(tracking.waybill)) return false;
+                                if (!vc2_util.inArray(tracking.waybill, arrTracking))
+                                    arrTracking.push(tracking.waybill);
+
+                                if (!orderItem.carrier || orderItem.carrier == 'NA') {
+                                    orderItem.carrier = tracking.carrierName;
+                                }
+
+                                return true;
+                            });
+
+                            if (!vc2_util.isEmpty(arrTracking)) {
+                                orderItem.tracking_num = arrTracking.join(',');
                             }
-
-                            return true;
-                        });
-
-                        if (!vc2_util.isEmpty(arrTracking)) {
-                            orderItem.tracking_num = arrTracking.join(',');
                         }
+
+                        // check is_shipped from status
+                        orderItem.is_shipped = orderItem.line_status
+                            ? vc2_util.inArray(
+                                  orderItem.line_status.toUpperCase(),
+                                  LibDellAPI.ValidShippedStatus
+                              )
+                            : orderItem.order_status
+                            ? vc2_util.inArray(
+                                  orderItem.order_status.toUpperCase(),
+                                  LibDellAPI.ValidShippedStatus
+                              )
+                            : false;
+
+                        // check is_shipped from shipped date
+                        // if (
+                        //     !orderItem.is_shipped &&
+                        //     orderItem.ship_date &&
+                        //     orderItem.ship_date != 'NA' &&
+                        //     orderItem.ship_qty &&
+                        //     orderItem.ship_qty != 0
+                        // ) {
+                        //     var shippedDate = moment(orderItem.ship_date).toDate();
+                        //     vc2_util.log(logTitle, '**** shipped date: ****', [
+                        //         shippedDate,
+                        //         util.isDate(shippedDate),
+                        //         shippedDate <= new Date()
+                        //     ]);
+
+                        //     if (
+                        //         shippedDate &&
+                        //         util.isDate(shippedDate) &&
+                        //         shippedDate <= new Date()
+                        //     )
+                        //         orderItem.is_shipped = true;
+                        // }
+
+                        vc2_util.log(logTitle, '>> line data: ', orderItem);
+
+                        itemArray.push(orderItem);
+                        orderDataList.push(vc2_util.clone(OrderData));
                     }
+                });
 
-                    // check is_shipped from status
-                    orderItem.is_shipped = orderItem.line_status
-                        ? vc2_util.inArray(
-                              orderItem.line_status.toUpperCase(),
-                              LibDellAPI.ValidShippedStatus
-                          )
-                        : orderItem.order_status
-                        ? vc2_util.inArray(
-                              orderItem.order_status.toUpperCase(),
-                              LibDellAPI.ValidShippedStatus
-                          )
-                        : false;
-
-                    // check is_shipped from shipped date
-                    if (
-                        !orderItem.is_shipped &&
-                        orderItem.ship_date &&
-                        orderItem.ship_date != 'NA' &&
-                        orderItem.ship_qty &&
-                        orderItem.ship_qty != 0
-                    ) {
-                        var shippedDate = moment(orderItem.ship_date).toDate();
-                        vc2_util.log(logTitle, '**** shipped date: ****', [
-                            shippedDate,
-                            util.isDate(shippedDate),
-                            shippedDate <= new Date()
-                        ]);
-
-                        if (shippedDate && util.isDate(shippedDate) && shippedDate <= new Date())
-                            orderItem.is_shipped = true;
-                    }
-
-                    vc2_util.log(logTitle, '>> line data: ', orderItem);
-                    itemArray.push(orderItem);
-                }
-
-                returnValue = itemArray;
+                util.extend(returnValue, {
+                    OrderData: orderDataList,
+                    Lines: itemArray
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                throw error;
+
+                util.extend(returnValue, {
+                    HasError: true,
+                    ErrorMsg: vc2_util.extractError(error),
+                    Error: error
+                });
             }
             return returnValue;
         },
@@ -302,6 +337,7 @@ define([
 
                 returnValue = LibDellAPI.searchPO();
             } catch (error) {
+                vc2_util.logError(logTitle, error);
                 throw error;
             }
 

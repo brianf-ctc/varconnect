@@ -94,8 +94,10 @@ define(function (require) {
                 if (vc2_util.isEmpty(lineData.ship_qty) || lineData.ship_qty == 0)
                     throw 'No shipped quantity declared';
 
-                if (vc2_util.isEmpty(lineData.unitprice) || lineData.unitprice == 0)
-                    throw 'Skipped: Zero unit price';
+                if (lineData.hasOwnProperty('unitprice')) {
+                    if (vc2_util.isEmpty(lineData.unitprice) || lineData.unitprice == 0)
+                        throw 'Skipped: Zero unit price';
+                }
 
                 if (shippedDate > new Date()) throw 'Not yet shipped date';
 
@@ -122,13 +124,13 @@ define(function (require) {
             var poNum = option.poNum || option.tranid,
                 vendoCfgId = option.vendorConfigId;
 
-            vc2_util.log(logTitle, '>> input: ', option);
+            vc2_util.log(logTitle, '>> input: ', [option, poNum, option.poNum || option.tranid]);
 
             var MainCFG = vcs_configLib.mainConfig();
 
             // load the configuration
             var ConfigRec = vcs_configLib.loadConfig({
-                // poNum: poNum,
+                poNum: poNum,
                 configId: vendoCfgId,
                 configType: vcs_configLib.ConfigType.ORDER
             });
@@ -185,8 +187,8 @@ define(function (require) {
                     poId: poId,
                     orderConfig: ConfigRec
                 });
-
                 vc2_util.dumpLog(logTitle, outputResp, ' outputResp: ');
+                if (outputResp.HasError) throw outputResp.ErrorMsg;
 
                 // check for
                 (outputResp.Lines || []).forEach(function (lineData) {
@@ -205,7 +207,7 @@ define(function (require) {
                 returnValue.isError = true;
                 returnValue.errorMessage = errorMsg;
             } finally {
-                vc2_util.log(logTitle, '#####  Return: #####', returnValue);
+                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####', returnValue);
             }
 
             return returnValue;
@@ -931,3 +933,49 @@ define(function (require) {
         }
     };
 });
+/**
+ * Line Data:
+ 
+var OrderData = {
+    Status: '{ORDER STATUS}',
+    OrderNum: '{PO_NUM}',
+    VendorOrderNum: '{VENDORs Order ID}',
+    OrderDate: parseFormatDate('{ORDER DATE}'),
+    Total: 'Total amount',
+    InvoiceNo: ''
+};
+
+var itemObj = {
+    order_num: '',
+    order_status: '',
+    order_date: '',
+    order_eta: '',
+    eta_delivery_date: '',
+    deliv_date: '', // replacment: eta_delivery_date
+    prom_date: '', // ingram
+
+    item_num: '',
+    item_num_alt: '',
+    vendorSKU: '',
+    item_sku: '', // replacementvendorSKU
+    item_altnum: '', // replacement for item_num_alt
+
+    item: '',
+    line: '',
+    quantity: '',
+    unitprice: '',
+
+    line_num: '',
+    line_status: '',
+    line_price: '', // replace unitprice
+
+    ship_qty: '',
+    ship_date: '',
+    carrier: '',
+    tracking_num: '',
+    serial_num: '',
+    is_shipped: false,
+
+    vendorData: ''
+};
+*/

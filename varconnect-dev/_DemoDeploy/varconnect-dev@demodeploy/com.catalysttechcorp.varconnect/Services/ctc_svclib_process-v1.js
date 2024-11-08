@@ -34,10 +34,7 @@ define([
                 ORDLINE_FLD = ORDLINE_REC.FIELD;
 
             var poId = option.poId,
-                vendorLines = option.vendorLines,
-                orderNum = option.orderNum,
-                itemName = option.itemName,
-                lineNo = option.lineNo;
+                vendorLines = option.vendorLines;
 
             var OrdLineFields = ['internalid'];
             for (var fld in ORDLINE_FLD) OrdLineFields.push(ORDLINE_FLD[fld]);
@@ -45,15 +42,14 @@ define([
             try {
                 // prep the search option
                 var searchOption = {
-                        type: ORDLINE_REC.ID,
-                        columns: OrdLineFields,
-                        filters: [
-                            ['isinactive', 'is', 'F'],
-                            'AND',
-                            [ORDLINE_FLD.TXN_LINK, 'anyof', poId]
-                        ]
-                    },
-                    resultValues = {};
+                    type: ORDLINE_REC.ID,
+                    columns: OrdLineFields,
+                    filters: [
+                        ['isinactive', 'is', 'F'],
+                        'AND',
+                        [ORDLINE_FLD.TXN_LINK, 'anyof', poId]
+                    ]
+                };
 
                 // vc2_util.log(logTitle, ' # search Option: ', searchOption);
 
@@ -221,7 +217,7 @@ define([
 
             vendorLines.forEach(function (vendorLine) {
                 var orderLine = vendorLine.MATCHED_ORDERLINE || {};
-                var OrderlineValues = {
+                var OrderlineValue = {
                     VENDOR: xmlVendor,
                     TXN_LINK: poId,
                     ORDER_NUM: vendorLine.order_num,
@@ -244,6 +240,7 @@ define([
                     ORDER_DATA: '',
                     LINE_DATA: vendorLine.vendorData
                 };
+                OrderlineValue.RECKEY = [OrderlineValue.TXN_LINK, OrderlineValue.ORDER_NUM];
 
                 var fnOrderStatus = {
                     PENDING: function (orderStatus, lineStatus) {
@@ -271,30 +268,24 @@ define([
 
                 for (var status in fnOrderStatus) {
                     var statusResult = fnOrderStatus[status].call(
-                        OrderlineValues,
-                        OrderlineValues.ORDER_STATUS,
-                        OrderlineValues.LINE_STATUS
+                        OrderlineValue,
+                        OrderlineValue.ORDER_STATUS,
+                        OrderlineValue.LINE_STATUS
                     );
 
-                    vc2_util.log(logTitle, '// choose status: ', [
-                        status,
-                        fnOrderStatus[status],
-                        OrderlineValues.ORDER_STATUS,
-                        OrderlineValues.LINE_STATUS
-                    ]);
                     if (statusResult) {
-                        OrderlineValues.STATUS = ORDLINE_STATUS[status];
+                        OrderlineValue.STATUS = ORDLINE_STATUS[status];
                         break;
                     }
                 }
 
                 var OrdLineFieldValues = {};
-                for (var fld in OrderlineValues) {
-                    if (!vc2_util.isEmpty(OrderlineValues[fld]))
-                        OrdLineFieldValues[ORDLINE_FLD[fld]] = OrderlineValues[fld];
+                for (var fld in OrderlineValue) {
+                    if (!vc2_util.isEmpty(OrderlineValue[fld]))
+                        OrdLineFieldValues[ORDLINE_FLD[fld]] = OrderlineValue[fld];
                 }
                 vc2_util.log(logTitle, '---  order line values: ', [
-                    OrderlineValues,
+                    OrderlineValue,
                     OrdLineFieldValues
                 ]);
 
@@ -322,6 +313,60 @@ define([
 
                 return true;
             });
+
+            return returnValue;
+        },
+        searchOrderLines: function (option) {
+            var logTitle = [LogTitle, 'searchOrderLine'].join(':'),
+                returnValue,
+                ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
+                ORDLINE_FLD = ORDLINE_REC.FIELD;
+
+            var poId = option.poId,
+                orderNum = option.orderNum,
+                orderKey = option.orderKey;
+
+            try {
+                var OrdLineFields = ['internalid'];
+                for (var fld in ORDLINE_FLD) OrdLineFields.push(ORDLINE_FLD[fld]);
+
+                var searchOption = {
+                        type: ORDLINE_REC.ID,
+                        columns: OrdLineFields,
+                        filters: [
+                            ['isinactive', 'is', 'F']
+                            // 'AND',
+                            // [ORDLINE_FLD.TXN_LINK, 'anyof', poId]
+                        ]
+                    },
+                    OrderLineResults = [];
+
+                if (poId) searchOption.filters.push('AND', [ORDLINE_FLD.TXN_LINK, 'anyof', poId]);
+                if (orderNum)
+                    searchOption.filters.push('AND', [ORDLINE_FLD.ORDER_NUM, 'is', orderNum]);
+                if (orderKey)
+                    searchOption.filters.push('AND', [ORDLINE_FLD.RECKEY, 'is', orderKey]);
+
+                vc2_util.log(logTitle, '// search Option: ', searchOption);
+
+                var ordLineSearch = ns_search.create(searchOption);
+                if (!ordLineSearch.runPaged().count) throw 'No Orderlines for PO ID: ' + poId;
+                vc2_util.log(logTitle, '// total count: : ', ordLineSearch.runPaged().count);
+
+                ordLineSearch.run().each(function (searchRow) {
+                    var ordLineData = { ID: searchRow.id };
+                    for (var fld in ORDLINE_FLD)
+                        ordLineData[fld] = searchRow.getValue({ name: ORDLINE_FLD[fld] });
+
+                    OrderLineResults.push(ordLineData);
+                    return true;
+                });
+
+                returnValue = OrderLineResults;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
 
             return returnValue;
         }

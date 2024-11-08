@@ -16,10 +16,11 @@ define([
     'N/record',
     'N/ui/serverWidget',
     'N/ui/message',
+    './Services/ctc_svclib_process-v1.js',
     './CTC_VC_Lib_FormHelper',
     './CTC_VC2_Constants',
     './CTC_VC2_Lib_Utils'
-], function (ns_record, ns_ui, ns_msg, vc_uihelper, vc2_constant, vc2_util) {
+], function (ns_record, ns_ui, ns_msg, vcs_processLib, vc_uihelper, vc2_constant, vc2_util) {
     var LogTitle = 'ViewData';
 
     var ORDERLINE_REC = vc2_constant.RECORD.ORDER_LINE;
@@ -200,7 +201,173 @@ define([
             onPOST: function () {}
         },
         orderLines: {
-            onGET: function () {},
+            onGET: function (scriptContext) {
+                var logTitle = [LogTitle, 'VendorData'].join('::'),
+                    returnValue;
+
+                var ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
+                    ORDLINE_FLD = ORDLINE_REC.FIELD;
+
+                var poId = scriptContext.request.parameters.actpoid,
+                    orderNum = scriptContext.request.parameters.ordernum,
+                    orderKey = scriptContext.request.parameters.orderkey;
+
+                var formFields = {},
+                    fieldsList = [];
+
+                var orderLinesArr = vcs_processLib.searchOrderLines({
+                        poId: poId,
+                        orderNum: orderNum,
+                        orderKey: orderKey
+                    }),
+                    orderNumList = [],
+                    orderLinesByOrderNum = {};
+
+                orderLinesArr.forEach(function (orderLine) {
+                    var orderNum = orderLine.ORDER_NUM;
+
+                    // vc2_util.log(logTitle, '..', [orderNum, orderLine]);
+                    if (!orderLinesByOrderNum[orderNum]) {
+                        orderLinesByOrderNum[orderNum] = [orderLine];
+                        orderNumList.push(orderNum);
+                    } else {
+                        orderLinesByOrderNum[orderNum].push(orderLine);
+                    }
+                    return true;
+                });
+
+                vc2_util.log(logTitle, '.. ordNumLIst: ', orderNumList);
+
+                var curOrderNum = orderNum || orderNumList[0],
+                    curOrderList = orderLinesByOrderNum[curOrderNum];
+                vc2_util.log(logTitle, '.. curOrderNum: ', [curOrderNum, curOrderList]);
+
+                if (!curOrderList || !curOrderList[0]) {
+                    curOrderNum = orderNumList[0];
+                    curOrderList = orderLinesByOrderNum[curOrderNum];
+                }
+                curOrderData = curOrderList[0];
+
+                FORM_DEF.Form = ns_ui.createForm({
+                    title: 'Order Information: ' + curOrderData.ORDER_NUM,
+                    hideNavBar: true
+                });
+                vc_uihelper.setUI({ form: FORM_DEF.Form });
+
+                ['ORDER_NUM', 'ORDER_STATUS', 'ORDER_DATE', 'SHIPPED_DATE'].forEach(function (
+                    orderField
+                ) {
+                    formFields[orderField] = {
+                        type: ns_ui.FieldType.TEXT,
+                        label: orderField,
+                        displayType: ns_ui.FieldDisplayType.INLINE,
+                        defaultValue: curOrderData[orderField]
+                    };
+                    fieldsList.push(orderField);
+                });
+
+                vc_uihelper.setUI({ fields: formFields });
+                vc_uihelper.renderFieldList(fieldsList);
+
+                var formSublist = {
+                    id: 'orderlines',
+                    label: 'Order lines',
+                    type: ns_ui.SublistType.LIST,
+                    fields: {
+                        txnlink: {
+                            label: 'PO Num',
+                            type: ns_ui.FieldType.SELECT,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
+                            source: 'transaction'
+                        },
+                        ordernum: {
+                            label: 'OrderNum',
+                            type: ns_ui.FieldType.TEXT
+                        },
+
+                        lineno: {
+                            label: 'Line No',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        itemname: {
+                            label: 'Item Name',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        sku: {
+                            label: 'SKU',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        itemlink: {
+                            label: 'Item Link',
+                            type: ns_ui.FieldType.SELECT,
+                            source: 'item',
+                            displayType: ns_ui.FieldDisplayType.INLINE
+                        },
+                        quantity: {
+                            label: 'Quantity',
+                            type: ns_ui.FieldType.INTEGER
+                        },
+                        linestatus: {
+                            label: 'Line Status',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        orderdate: {
+                            label: 'OrdDate',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        etadate: {
+                            label: 'ETA',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        etddate: {
+                            label: 'ETD',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        carrier: {
+                            label: 'Carrier',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        tracking: {
+                            label: 'Tracking',
+                            type: ns_ui.FieldType.TEXT
+                        },
+                        serial: {
+                            label: 'Serial',
+                            type: ns_ui.FieldType.TEXT
+                        }
+                    }
+                };
+                vc_uihelper.setUI({ sublist: formSublist });
+                var itemSublist = vc_uihelper.renderSublist(formSublist);
+
+                curOrderList.forEach(function (orderLine, line) {
+                    var lineData = {
+                        lineno: orderLine.LINE_NO,
+                        txnlink: orderLine.TXN_LINK,
+                        ordernum: orderLine.ORDER_NUM,
+                        itemname: orderLine.ITEM,
+                        sku: orderLine.SKU,
+                        itemlink: orderLine.ITEM_LINK,
+                        quantity: orderLine.QTY,
+                        linestatus: orderLine.LINE_STATUS,
+                        orderdate: orderLine.ORDER_DATE,
+                        etadate: orderLine.ETA_DATE,
+                        etddate: orderLine.ETD_DATE,
+                        carrier: orderLine.CARRIER,
+                        tracking: orderLine.TRACKING,
+                        serial: orderLine.SERIALNUM
+                    };
+
+                    vc_uihelper.setSublistValues({
+                        sublist: itemSublist,
+                        line: line,
+                        lineData: lineData
+                    });
+                });
+
+                scriptContext.response.writePage(FORM_DEF.Form);
+                return returnValue;
+            },
             onPOST: function () {}
         },
         handleError: function (scriptContext, errorMsg) {

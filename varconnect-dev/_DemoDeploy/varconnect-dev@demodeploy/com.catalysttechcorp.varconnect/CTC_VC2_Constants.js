@@ -250,6 +250,7 @@ define(function (require) {
         ORDER_LINE: {
             ID: 'customrecord_ctc_vc_orderlines',
             FIELD: {
+                RECKEY: 'custrecord_ctc_vc_orderline_reckey',
                 VENDOR: 'custrecord_ctc_vc_orderline_vendor',
                 TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
                 ORDER_NUM: 'custrecord_ctc_vc_orderline_vndordernum',

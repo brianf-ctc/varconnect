@@ -113,7 +113,7 @@ define(function (require) {
                 returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
                 if (option.isJSON && returnValue) returnValue = vc2_util.safeParse(returnValue);
 
-                vc2_util.log('## NS CACHE ##', '// CACHE fetch: ', [cacheName, cacheKey, cacheTTL]);
+                vc2_util.log('## NS CACHE (FETCH) ##', '//', [cacheKey]);
             } catch (error) {
                 vc2_util.logError('getNSCache', error);
                 returnValue = null;
@@ -138,12 +138,7 @@ define(function (require) {
                     scope: ns_cache.Scope.PROTECTED
                 });
                 cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
-
-                // vc2_util.log('## NS CACHE ##', '// CACHE stored: ', [
-                //     cacheName,
-                //     cacheKey,
-                //     cacheTTL
-                // ]);
+                vc2_util.log('## NS CACHE (STORED) ##', '// ', [cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('setNSCache', error);
             }
@@ -162,11 +157,7 @@ define(function (require) {
                 });
                 cacheObj.remove({ key: cacheKey });
 
-                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
-                    cacheName,
-                    cacheKey,
-                    cacheTTL
-                ]);
+                vc2_util.log('## NS CACHE (REM) ##', '// ', [cacheName, cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('removeNSCache', error);
             }
@@ -368,6 +359,10 @@ define(function (require) {
             if (!dateStr || dateStr == 'NA') return 'NA';
             // if (!parseformat) parseformat = 'YYYY-MM-DD';
             if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT;
+
+            // var dateFormat = this.getDateFormat();
+            // vc2_util.log('parseFormatDate', '// date format: ', dateFormat);
+
             return parseformat
                 ? momentLib(dateStr, parseformat).format(outFormat)
                 : momentLib(dateStr).format(outFormat);
@@ -1239,7 +1234,7 @@ define(function (require) {
         },
         dumpLog: function (logTitle, dumpObj, prefix) {
             for (var fld in dumpObj) {
-                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
+                vc2_util.log(logTitle, [prefix || '', ':', fld].join('') + ' ', dumpObj[fld]);
             }
             return;
         }

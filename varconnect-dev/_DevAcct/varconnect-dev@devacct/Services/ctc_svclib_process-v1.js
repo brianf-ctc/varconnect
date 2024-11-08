@@ -240,7 +240,9 @@ define([
                     ORDER_DATA: '',
                     LINE_DATA: vendorLine.vendorData
                 };
-                OrderlineValue.RECKEY = [OrderlineValue.TXN_LINK, OrderlineValue.ORDER_NUM];
+                OrderlineValue.RECKEY = [OrderlineValue.TXN_LINK, OrderlineValue.ORDER_NUM].join(
+                    '_'
+                );
 
                 var fnOrderStatus = {
                     PENDING: function (orderStatus, lineStatus) {

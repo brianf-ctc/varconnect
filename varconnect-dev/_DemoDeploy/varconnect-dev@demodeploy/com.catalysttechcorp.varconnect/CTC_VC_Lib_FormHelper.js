@@ -48,7 +48,7 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
             var logTitle = [LogTitle, 'renderField'].join('::');
             this.fieldCounter++;
 
-            vc2_util.log(logTitle, '// fieldInfo: ', [fieldInfo]);
+            // vc2_util.log(logTitle, '// fieldInfo: ', [fieldInfo]);
             var fieldOption = {};
 
             if (util.isString(fieldInfo) && fieldInfo.match(/:/g)) {
@@ -74,8 +74,8 @@ define(['N/ui/serverWidget', './CTC_VC2_Lib_Utils'], function (ns_ui, vc2_util) 
 
             if (vc2_util.isEmpty(fieldOption)) return;
 
-            vc2_util.log(logTitle, '// fieldOption: ', fieldOption);
-            vc2_util.log(logTitle, '// UI.FORM: ', [UI.FORM]);
+            // vc2_util.log(logTitle, '// fieldOption: ', fieldOption);
+            // vc2_util.log(logTitle, '// UI.FORM: ', [UI.FORM]);
 
             if (containerId) fieldOption.container = containerId;
 

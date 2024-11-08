@@ -103,6 +103,8 @@ define(function (require) {
                         ? mainConfig.overridePONum
                         : option.overridePO;
 
+            var paramFltrs = [];
+
             try {
                 if (!poNum && !poId) throw 'Missing parameter: PO Num/ PO Id';
 
@@ -126,7 +128,10 @@ define(function (require) {
                         ]
                     };
 
-                if (vc2_util.isOneWorld()) searchOption.columns.push('subsidiary');
+                if (vc2_util.isOneWorld()) {
+                    searchOption.columns.push('subsidiary');
+                    searchOption.columns.push('subsidiary.country');
+                }
 
                 // if the searchFields is not empty, concatenate it with searchOption.columns
                 if (!vc2_util.isEmpty(searchFields))
@@ -134,24 +139,28 @@ define(function (require) {
 
                 if (poId) {
                     searchOption.filters.push('AND', ['internalid', 'anyof', poId]);
+                    paramFltrs.push('id=' + poId);
                 } else if (poNum) {
-                    searchOption.filters.push('AND');
                     if (overridePO) {
-                        searchOption.filters.push(['custbody_ctc_vc_override_ponum', 'is', poNum]);
+                        searchOption.filters.push('AND', [
+                            'custbody_ctc_vc_override_ponum',
+                            'is',
+                            poNum
+                        ]);
+                        paramFltrs.push('overridepo=' + poNum);
                     } else {
-                        searchOption.filters.push(['numbertext', 'is', poNum]);
+                        searchOption.filters.push('AND', ['numbertext', 'is', poNum]);
+                        paramFltrs.push('tranid=' + poNum);
                     }
                 } else if (!vc2_util.isEmpty(searchFilters)) {
                     searchOption.filters.push('AND', searchFilters);
+                    paramFltrs.push('__AND=' + searchOption.filters.join('||'));
                 }
 
                 // vc2_util.log(logTitle, '>> search option', searchOption);
 
                 //// RETRIEVE CACHED DATA
-                var cacheKey = [
-                    vc2_constant.CACHE_KEY.PO_DATA,
-                    JSON.stringify(searchOption.filters)
-                ].join('__');
+                var cacheKey = [vc2_constant.CACHE_KEY.PO_DATA, paramFltrs.join('&')].join('__');
 
                 // retrive the cache
                 var cachedData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
@@ -159,10 +168,7 @@ define(function (require) {
 
                 var searchObj = ns_search.create(searchOption);
                 if (!searchObj.runPaged().count)
-                    throw (
-                        'Unable to find the record : filters=' +
-                        JSON.stringify(searchOption.filters)
-                    );
+                    throw 'Unable to find the record : filters=' + paramFltrs.join('&');
 
                 searchObj.run().each(function (row) {
                     recordData.id = row.id;
@@ -172,12 +178,6 @@ define(function (require) {
                         var colName = searchOption.columns[i].name || searchOption.columns[i],
                             colValue = row.getValue(searchOption.columns[i]),
                             colText = row.getText(searchOption.columns[i]);
-
-                        // vc2_util.log(logTitle, '>> values: ', {
-                        //     name: colName,
-                        //     value: colValue,
-                        //     text: colText
-                        // });
 
                         recordData[colName] = colValue;
 

@@ -15,6 +15,7 @@
 define([
     'N/record',
     'N/task',
+    'N/url',
     'N/ui/serverWidget',
     'N/ui/message',
     './Services/ctc_svclib_process-v1.js',
@@ -24,6 +25,7 @@ define([
 ], function (
     ns_record,
     ns_task,
+    ns_url,
     ns_ui,
     ns_msg,
     vcs_processLib,

@@ -12,9 +12,7 @@
  * @NModuleScope Public
  */
 
-define(function (require) {
-    let ns_runtime = require('N/runtime');
-
+define(['N/runtime'], function (ns_runtime) {
     let VC_GLOBAL = {
         ENABLE_SUBSIDIARIES: ns_runtime.isFeatureInEffect({ feature: 'subsidiaries' }),
         PICK_PACK_SHIP: ns_runtime.isFeatureInEffect({ feature: 'pickpackship' }),

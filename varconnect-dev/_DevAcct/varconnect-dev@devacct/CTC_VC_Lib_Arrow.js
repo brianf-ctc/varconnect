@@ -17,13 +17,22 @@
  * Script Name: CTC_VC_Lib_Arrow
  * Author: john.ramonel
  */
-define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (vc2_util, moment) {
+define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util, vc2_constant) {
     'use strict';
 
     var LogTitle = 'WS:Arrow',
         LogPrefix;
 
-    var CURRENT = {};
+    var CURRENT = {},
+        ERROR_MSG = vc2_constant.ERRORMSG,
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ];
 
     var LibArrowAPI = {
         ValidShippedStatus: ['SHIPPED'],
@@ -41,19 +50,16 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
             return returnValue;
         },
-
         generateToken: function (option) {
             var logTitle = [LogTitle, 'generateToken'].join('::'),
                 returnValue;
             option = option || {};
 
             try {
-                var tokenReq = vc2_util.sendRequest({
+                var tokenResp = vc2_util.sendRequest({
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
-                    doRetry: true,
-                    maxRetry: 3,
                     query: {
                         url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
@@ -67,32 +73,34 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                         }
                     }
                 });
+                if (tokenResp.isError) if (!tokenResp.PARSED_RESPONSE) throw tokenResp.errorMsg;
 
-                vc2_util.handleJSONResponse(tokenReq);
-                var tokenResp = tokenReq.PARSED_RESPONSE;
+                vc2_util.handleJSONResponse(tokenResp);
+                var tokenResp = tokenResp.PARSED_RESPONSE;
                 if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
 
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
             } catch (error) {
-                throw error;
+                throw this.evalError(error);
             }
 
             return returnValue;
         },
         getTokenCache: function () {
-            var token = vc2_util.getNSCache({
-                key: [
-                    'VC_ARROW_TOKEN',
-                    CURRENT.orderConfig.apiKey,
-                    CURRENT.orderConfig.apiSecret
-                ].join('|')
-            });
+            var tokenKey = [
+                'VC_ARROW_TOKEN',
+                CURRENT.orderConfig.apiKey,
+                CURRENT.orderConfig.apiSecret,
+                vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
+            ].join('|');
+
+            var token = vc2_util.getNSCache({ key: tokenKey });
             if (vc2_util.isEmpty(token)) token = this.generateToken();
 
             if (!vc2_util.isEmpty(token)) {
                 vc2_util.setNSCache({
-                    key: 'VC_ARROW_TOKEN',
+                    key: tokenKey,
                     cacheTTL: 3500,
                     value: token
                 });
@@ -151,6 +159,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                         }
                     }
                 });
+                // vc2_util.dumpLog(logTitle, reqOrderStatus);
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
 
                 vc2_util.handleJSONResponse(reqOrderStatus);
@@ -158,7 +167,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
                 returnValue = reqOrderStatus.PARSED_RESPONSE;
             } catch (error) {
-                throw error;
+                throw this.evalError(error);
             }
 
             return returnValue;
@@ -182,87 +191,41 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
             if (hasErrors && errorMsgs.length) throw errorMsgs.join(', ');
             return true;
         },
+        evalError: function (errorMsg) {
+            var errorCodeList = {
+                INVALID_CREDENTIALS: [
+                    new RegExp(/Application with identifier .+? was not found in the directory/gi),
+                    new RegExp(/Invalid client secret provided/gi),
+                    new RegExp(/The resource principal named .+? was not found in the tenant/gi),
+                    new RegExp(/Access denied due to invalid subscription key/gi)
+                ],
+                INVALID_ACCESSPOINT: [new RegExp(/Tenant .+? not found/gi)],
+                ENDPOINT_URL_ERROR: [
+                    new RegExp(/Resource not found/gi),
+                    new RegExp(/The host you requested .+? is unknown or cannot be found/gi)
+                ],
+                INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
+            };
 
-        extractLineData: function (lineData, orderData) {
-            var logTitle = [LogTitle, 'LibOrderStatus::extractLineData'].join('::'),
-                itemObj = {};
+            var matchedErrorCode = null;
 
-            try {
-                itemObj = {
-                    order_date: orderData.OrderDate || 'NA',
-                    line_num: lineData.ResellerPOLineNumber || 'NA',
-                    item_num: lineData.MFGPartNumber || 'NA',
-                    vendorSKU: lineData.VendorPartNumber || 'NA',
-                    order_num: lineData.InvoiceNumber || arrowSONum || 'NA',
-                    ship_qty: parseInt(lineData.ShippedQty || '0'),
-                    carrier: lineData.OracleShipViaCode || 'NA',
-                    order_status: lineData.ItemStatusOracle || 'NA',
-                    order_eta: 'NA',
-                    ship_date: 'NA',
-                    tracking_num: 'NA',
-                    serial_num: 'NA'
-                };
-                itemObj.is_shipped = vc2_util.inArray(
-                    itemObj.order_status,
-                    LibArrowAPI.ValidShippedStatus
-                );
-
-                // shipping details
-                if (lineData.StatusInfoList && lineData.StatusInfoList.StatusInfo) {
-                    var statusInfo = lineData.StatusInfoList.StatusInfo,
-                        shipmentInfo = { eta: [], ship: [], tracking: [] };
-
-                    vc2_util.log(logTitle, '... status info:', statusInfo);
-
-                    if (util.isArray(statusInfo) && !vc2_util.isEmpty(statusInfo)) {
-                        for (var i = 0, j = statusInfo.length; i < j; i++) {
-                            var statusInfoObj = statusInfo[i]; // only contains 1
-
-                            if (statusInfoObj.EstimatedShipDate)
-                                shipmentInfo.eta.push(statusInfoObj.EstimatedShipDate);
-
-                            if (statusInfoObj.ActualShipDate)
-                                shipmentInfo.ship.push(statusInfoObj.ActualShipDate);
-
-                            if (statusInfoObj.TrackingNumber)
-                                shipmentInfo.tracking.push(statusInfoObj.TrackingNumber);
-                        }
-
-                        shipmentInfo.eta = vc2_util.uniqueArray(shipmentInfo.eta || []);
-                        shipmentInfo.ship = vc2_util.uniqueArray(shipmentInfo.ship || []);
-                        shipmentInfo.tracking = vc2_util.uniqueArray(shipmentInfo.tracking || []);
-
-                        itemObj.order_eta = shipmentInfo.eta.shift() || itemObj.order_eta;
-                        itemObj.ship_date = shipmentInfo.ship.shift() || itemObj.ship_date;
-                        itemObj.tracking_num = shipmentInfo.tracking.length
-                            ? shipmentInfo.tracking.join(',')
-                            : itemObj.tracking_num;
+            for (var errorCode in errorCodeList) {
+                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
+                    var regStr = errorCodeList[errorCode][i];
+                    if (errorMsg.match(regStr)) {
+                        matchedErrorCode = errorCode;
+                        break;
                     }
                 }
-
-                /// serials
-                if (lineData.SerialNumberList) {
-                    var serialNumObj = lineData.SerialNumberList.SerialNumber,
-                        arrSerials = [];
-
-                    if (util.isArray(serialNumObj) && !vc2_util.isEmpty(serialNumObj)) {
-                        for (var ii = 0; ii < serialNumObj.length; ii++) {
-                            if (serialNumObj[ii].hasOwnProperty('ID'))
-                                arrSerials.push(serialNumObj[ii].ID);
-                            else arrSerials.push(JSON.stringify(serialNumObj[ii]));
-                        }
-                    }
-                    arrSerials = vc2_util.uniqueArray(arrSerials);
-
-                    itemObj.serial_num = arrSerials.length
-                        ? arrSerials.join(',')
-                        : itemObj.serial_num;
-                }
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
+                if (matchedErrorCode) break;
             }
 
-            return itemObj;
+            var returnValue = matchedErrorCode
+                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
+                : { message: 'Unexpected error', details: errorMsg };
+            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
+
+            return returnValue;
         }
     };
 
@@ -284,127 +247,6 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
 
             return returnValue;
         },
-        processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = [];
-            option = option || {};
-
-            try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix = LogPrefix;
-
-                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
-
-                var response = option.response,
-                    itemArray = [];
-
-                // validate the response)
-
-                if (orderResp.hasOwnProperty('ArrowSONumber')) arrowSONum = orderResp.ArrowSONumber;
-                if (orderResp.hasOwnProperty('Reseller')) {
-                    orderDate = orderResp.Reseller.PODate;
-                }
-
-                if (orderResp.hasOwnProperty('OrderLinesList')) {
-                    var orderLines = orderResp.OrderLinesList.OrderLines;
-
-                    if (orderLines.length) {
-                        for (var i = 0; i < orderLines.length; i++) {
-                            var lineData = orderLines[i];
-                            // map here...
-                            var itemObj = {
-                                order_date: orderDate || 'NA',
-                                line_num: lineData.ResellerPOLineNumber || 'NA',
-                                item_num: lineData.MFGPartNumber || 'NA',
-                                vendorSKU: lineData.VendorPartNumber || 'NA',
-                                order_num: lineData.InvoiceNumber || arrowSONum || 'NA',
-                                ship_qty: parseInt(lineData.ShippedQty || '0'),
-                                carrier: lineData.OracleShipViaCode || 'NA',
-                                order_status: lineData.ItemStatusOracle || 'NA',
-                                order_eta: 'NA',
-                                ship_date: 'NA',
-                                tracking_num: 'NA',
-                                serial_num: 'NA'
-                            };
-                            // check for is shipped based on status
-                            itemObj.is_shipped = vc2_util.inArray(
-                                itemObj.order_status.toUpperCase(),
-                                LibArrowAPI.ValidShippedStatus
-                            );
-
-                            // shipping details
-                            if (lineData.hasOwnProperty('StatusInfoList')) {
-                                var statusInfo = lineData.StatusInfoList.StatusInfo;
-                                if (statusInfo.length) {
-                                    var statusInfoObj = statusInfo[0]; // only contains 1
-                                    if (statusInfoObj.hasOwnProperty('EstimatedShipDate')) {
-                                        itemObj.order_eta = statusInfoObj.EstimatedShipDate;
-                                    }
-                                    if (statusInfoObj.hasOwnProperty('ActualShipDate')) {
-                                        itemObj.ship_date = statusInfoObj.ActualShipDate;
-                                    }
-                                    if (statusInfoObj.hasOwnProperty('TrackingNumber')) {
-                                        itemObj.tracking_num = statusInfoObj.TrackingNumber;
-                                    }
-                                }
-                            }
-
-                            // serial number list
-                            if (lineData.hasOwnProperty('SerialNumberList')) {
-                                var serialNumbers = [];
-                                var serialNumObj = lineData.SerialNumberList.SerialNumber;
-                                log.debug('serialNumObj', serialNumObj);
-                                if (serialNumObj.length) {
-                                    for (var j = 0; j < serialNumObj.length; j++) {
-                                        if (serialNumObj[j].hasOwnProperty('ID'))
-                                            serialNumbers.push(serialNumObj[j].ID);
-                                        else serialNumbers.push(JSON.stringify(serialNumObj[j]));
-                                    }
-                                    itemObj.serial_num = serialNumbers.join(',');
-                                }
-                            }
-
-                            // check for is_shipped, based on ship_date
-                            if (
-                                !itemObj.is_shipped &&
-                                itemObj.ship_date &&
-                                itemObj.ship_date != 'NA' &&
-                                itemObj.ship_qty &&
-                                itemObj.ship_qty != 0
-                            ) {
-                                var shippedDate = moment(itemObj.ship_date).toDate();
-                                vc2_util.log(logTitle, '**** shipped date: ****', [
-                                    shippedDate,
-                                    util.isDate(shippedDate),
-                                    shippedDate <= new Date()
-                                ]);
-
-                                if (
-                                    shippedDate &&
-                                    util.isDate(shippedDate) &&
-                                    shippedDate <= new Date()
-                                )
-                                    itemObj.is_shipped = true;
-                            }
-
-                            vc2_util.log(logTitle, '>> line data: ', itemObj);
-
-                            itemArray.push(itemObj);
-                        }
-                    }
-                }
-
-                returnValue = itemArray;
-            } catch (error) {
-                throw error;
-            }
-
-            return returnValue;
-        },
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
                 returnValue = {};
@@ -417,7 +259,7 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                 if (!response) throw 'Unable to get response';
 
                 var itemArray = [],
-                    orderArray = [];
+                    orderList = [];
 
                 var objOrderResponse = response.OrderResponse;
                 if (
@@ -427,55 +269,153 @@ define(['./CTC_VC2_Lib_Utils.js', './Bill Creator/Libraries/moment'], function (
                 )
                     throw 'Missing order details';
 
-                for (var i = 0, j = objOrderResponse.OrderDetails.length; i < j; i++) {
-                    var orderDetails = objOrderResponse.OrderDetails[i];
-                    var orderData = {},
-                        orderDate,
-                        arrowSONum;
+                // for (var i = 0, j = objOrderResponse.OrderDetails.length; i < j; i++) {
+                (objOrderResponse.OrderDetails || []).forEach(function (OrderDetail) {
+                    // var OrderDetail = objOrderResponse.OrderDetails[i];
 
                     try {
-                        orderData = {
-                            Status: orderDetails.OrderStatusDescription,
-                            OrderNum: orderDetails.ArrowSONumber,
-                            OrderDate: orderDetails.ArrowSODate,
-                            Total: orderDetails.OrderTotalAmount
-                        };
-
-                        orderArray.push(orderData);
-
                         if (
-                            !orderDetails ||
-                            !orderDetails.Status ||
-                            orderDetails.Status !== 'SUCCESS'
+                            !OrderDetail ||
+                            !OrderDetail.Status ||
+                            OrderDetail.Status !== 'SUCCESS'
                         ) {
-                            throw orderDetails && orderDetails.Message
-                                ? orderDetails.Message
+                            throw OrderDetail && OrderDetail.Message
+                                ? OrderDetail.Message
                                 : 'Order Not Found';
                         }
 
-                        var orderLines = orderDetails.OrderLinesList.OrderLines;
+                        /// ORDER DATA /////
+                        var orderData = {
+                            Status: OrderDetail.OrderStatusDescription,
+                            OrderNum: OrderDetail.Reseller ? OrderDetail.Reseller.PONumber : null,
+                            VendorOrderNum: OrderDetail.ArrowSONumber,
+                            OrderDate: vc2_util.parseFormatDate(
+                                OrderDetail.ArrowSODate,
+                                'MM/DD/YYYY'
+                            ),
+                            Total: OrderDetail.OrderTotalAmount,
+                            InvoiceNo: 'NA'
+                        };
+                        orderList.push(orderData);
+                        /////////////
+
+                        var orderLines = OrderDetail.OrderLinesList
+                            ? OrderDetail.OrderLinesList.OrderLines
+                            : null;
 
                         if (!util.isArray(orderLines) || vc2_util.isEmpty(orderLines))
                             throw 'Missing item lines';
 
-                        for (var ii = 0, jj = orderLines.length; ii < jj; ii++) {
-                            var orderLineData = orderLines[ii];
-                            var itemObj = LibArrowAPI.extractLineData(orderLineData, orderData);
+                        // for (var ii = 0, jj = orderLines.length; ii < jj; ii++) {
+                        (orderLines || []).forEach(function (lineInfo) {
+                            // var itemObj = LibArrowAPI.extractLineData(lineDetail, OrderDetail);
+
+                            var itemObj = {
+                                order_num: orderData.VendorOrderNum || 'NA',
+                                order_status: orderData.Status || 'NA',
+                                order_date: orderData.OrderDate || 'NA',
+                                order_eta: 'NA',
+                                deliv_date: 'NA',
+                                prom_date: 'NA',
+
+                                item_num: lineInfo.MFGPartNumber || 'NA',
+                                item_sku: lineInfo.VendorPartNumber || 'NA',
+                                vendorSKU: lineInfo.VendorPartNumber || 'NA',
+                                item_altnum: 'NA',
+
+                                line_num: lineInfo.ResellerPOLineNumber || 'NA',
+                                line_status: lineInfo.ItemStatusOracle || 'NA',
+                                line_price: lineInfo.UnitPrice || 'NA',
+
+                                ship_qty: parseInt(lineInfo.ShippedQty || '0'),
+                                ship_date: 'NA',
+                                carrier: lineInfo.OracleShipViaCode || 'NA',
+                                tracking_num: 'NA',
+                                serial_num: 'NA',
+                                is_shipped: false
+                            };
+                            itemObj.is_shipped = vc2_util.inArray(
+                                itemObj.line_status,
+                                LibArrowAPI.ValidShippedStatus
+                            );
+
+                            /// Process Serials
+                            var serialsList = [],
+                                serialNumList = lineInfo.SerialNumberList
+                                    ? lineInfo.SerialNumberList.SerialNumber
+                                    : null;
+                            (serialNumList || []).forEach(function (serialNum) {
+                                if (
+                                    !vc2_util.isEmpty(serialNum.ID) &&
+                                    !vc2_util.inArray(serialNum.ID, serialsList)
+                                )
+                                    serialsList.push(serialNum.ID);
+
+                                return true;
+                            });
+                            if (!vc2_util.isEmpty(serialsList))
+                                itemObj.serial_num = serialsList.join(',');
+
+                            //// PROCESS Tracking, ETA,
+                            var shipInfo = {
+                                    eta: [],
+                                    shipped: [],
+                                    tracking: [],
+                                    carrier: []
+                                },
+                                statusInfoList = lineInfo.StatusInfoList
+                                    ? lineInfo.StatusInfoList.StatusInfo
+                                    : null;
+                            (statusInfoList || []).forEach(function (statusInfo) {
+                                if (
+                                    statusInfo.EstimatedShipDate &&
+                                    !vc2_util.inArray(statusInfo.EstimatedShipDate, shipInfo.eta)
+                                )
+                                    shipInfo.eta.push(statusInfo.EstimatedShipDate);
+
+                                if (
+                                    statusInfo.ActualShipDate &&
+                                    !vc2_util.inArray(statusInfo.ActualShipDate, shipInfo.shipped)
+                                )
+                                    shipInfo.shipped.push(statusInfo.ActualShipDate);
+
+                                if (
+                                    statusInfo.TrackingNumber &&
+                                    !vc2_util.inArray(statusInfo.TrackingNumber, shipInfo.tracking)
+                                )
+                                    shipInfo.tracking.push(statusInfo.TrackingNumber);
+
+                                if (
+                                    statusInfo.CarrierName &&
+                                    !vc2_util.inArray(statusInfo.CarrierName, shipInfo.carrier)
+                                )
+                                    shipInfo.carrier.push(statusInfo.CarrierName);
+                                return true;
+                            });
+
+                            if (!vc2_util.isEmpty(shipInfo.eta))
+                                itemObj.order_eta = shipInfo.eta.shift();
+                            if (!vc2_util.isEmpty(shipInfo.shipped))
+                                itemObj.ship_date = shipInfo.shipped.shift();
+                            if (!vc2_util.isEmpty(shipInfo.tracking))
+                                itemObj.tracking_num = shipInfo.tracking.join(',');
+                            if (!vc2_util.isEmpty(shipInfo.carrier))
+                                itemObj.carrier = shipInfo.carrier.shift();
 
                             itemArray.push(itemObj);
-                        }
+                        });
                     } catch (order_error) {
                         vc2_util.logError(logTitle, order_error);
+                        throw order_error;
                     }
-                }
+                });
 
                 returnValue = {
-                    Orders: orderArray,
+                    Orders: orderList,
                     Lines: itemArray
                 };
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-
                 util.extend(returnValue, {
                     HasError: true,
                     ErrorMsg: vc2_util.extractError(error)
