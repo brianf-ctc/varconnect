@@ -211,6 +211,9 @@ define([
         var searchResult = JSON.parse(mapContext.value);
         LogPrefix = '[purchaseorder:' + searchResult.id + '] MAP | ';
         vc2_util.LogPrefix = LogPrefix;
+
+        var poUpdateValue = {};
+
         try {
             vc2_util.logDebug(logTitle, '###### START: MAP ######');
 
@@ -242,20 +245,32 @@ define([
             }
 
             /// ORDER STATUS ///
-            outputObj = vcs_websvcLib.orderStatus({ poNum: Current.poNum, poId: Current.poId });
-            // if there are no lines.. just exit the script
-            if (
-                !outputObj.itemArray ||
-                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-            ) {
-                throw outputObj.isError && outputObj.errorMessage
-                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
-                    : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
-                          details: outputObj
-                      });
+            outputObj = vcs_websvcLib.OrderStatus({ poNum: Current.poNum, poId: Current.poId });
+
+            vc2_util.vcLog({
+                title: 'MR Order Status | Output ',
+                recordId: Current.poId,
+                message: vc2_util.extractError(outputObj)
+            });
+
+            // check for errors
+            if (outputObj.hasError) throw outputObj;
+            else if (!outputObj.itemArray || !outputObj.itemArray.length)
+                throw util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
+                    details: outputObj.message || outputObj
+                });
+            else {
+                poUpdateValue['custbody_ctc_vc_order_status'] = (outputObj.orderInfo || [])
+                    .map(function (order) {
+                        return [
+                            order.VendorOrderNum,
+                            order.Status || 'NA',
+                            order.OrderDate || 'NA'
+                        ].join('|');
+                    })
+                    .join(', ');
             }
 
-            // vc2_util.log(logTitle, '** CURRENT **', Current);
             mapContext.write(Current.poId, util.extend(Current, { outputItems: outputObj }));
         } catch (error) {
             vc2_util.vcLog({
@@ -265,8 +280,19 @@ define([
                 details: error.details,
                 status: error.status || error.logStatus || LOG_STATUS.ERROR
             });
+
+            poUpdateValue['custbody_ctc_vc_order_status'] = vc2_util
+                .getValuesFromKeys({ source: error, keys: ['code', 'message', 'details'] })
+                .join(' | ');
+
             vc2_util.logError(logTitle, error);
         } finally {
+            ns_record.submitFields({
+                type: 'purchaseorder',
+                id: searchResult.id,
+                values: poUpdateValue
+            });
+
             vc2_util.logDebug(logTitle, '###### END: MAP ###### ');
         }
     };

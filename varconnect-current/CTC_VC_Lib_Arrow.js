@@ -82,7 +82,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
             } catch (error) {
-                throw this.evalError(error);
+                throw error;
             }
 
             return returnValue;
@@ -159,7 +159,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                         }
                     }
                 });
-                // vc2_util.dumpLog(logTitle, reqOrderStatus);
+                vc2_util.dumpLog(logTitle, reqOrderStatus);
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
 
                 vc2_util.handleJSONResponse(reqOrderStatus);
@@ -167,65 +167,38 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
 
                 returnValue = reqOrderStatus.PARSED_RESPONSE;
             } catch (error) {
-                throw this.evalError(error);
+                throw error;
             }
 
             return returnValue;
         },
         validateResponse: function (parsedResponse) {
             if (!parsedResponse) throw 'Unable to read the response';
-            var respHeader = parsedResponse.ResponseHeader;
+            var respHeader = parsedResponse.ResponseHeader,
+                orderResponse = parsedResponse.OrderResponse;
 
             if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
             var hasErrors,
                 errorMsgs = [];
 
             respHeader.forEach(function (header) {
+                // check for general error
                 if (!header.TransactionStatus || header.TransactionStatus == 'ERROR') {
                     hasErrors = true;
                     errorMsgs.push(header.TransactionMessage);
                 }
-                return true;
             });
 
+            // check for query error
+            (orderResponse.OrderDetails || []).forEach(function (orderDetail) {
+                if (!orderDetail || !orderDetail.Status || orderDetail.Status !== 'SUCCESS') {
+                    hasErrors = true;
+                    errorMsgs.push(orderDetail.Message);
+                }
+            });
+            vc2_util.log('validateResponse', 'hasErrors: ', [hasErrors, errorMsgs]);
             if (hasErrors && errorMsgs.length) throw errorMsgs.join(', ');
             return true;
-        },
-        evalError: function (errorMsg) {
-            var errorCodeList = {
-                INVALID_CREDENTIALS: [
-                    new RegExp(/Application with identifier .+? was not found in the directory/gi),
-                    new RegExp(/Invalid client secret provided/gi),
-                    new RegExp(/The resource principal named .+? was not found in the tenant/gi),
-                    new RegExp(/Access denied due to invalid subscription key/gi)
-                ],
-                INVALID_ACCESSPOINT: [new RegExp(/Tenant .+? not found/gi)],
-                ENDPOINT_URL_ERROR: [
-                    new RegExp(/Resource not found/gi),
-                    new RegExp(/The host you requested .+? is unknown or cannot be found/gi)
-                ],
-                INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
-            };
-
-            var matchedErrorCode = null;
-
-            for (var errorCode in errorCodeList) {
-                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
-                    var regStr = errorCodeList[errorCode][i];
-                    if (errorMsg.match(regStr)) {
-                        matchedErrorCode = errorCode;
-                        break;
-                    }
-                }
-                if (matchedErrorCode) break;
-            }
-
-            var returnValue = matchedErrorCode
-                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
-                : { message: 'Unexpected error', details: errorMsg };
-            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
-
-            return returnValue;
         }
     };
 
@@ -416,10 +389,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 };
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
 
             return returnValue;

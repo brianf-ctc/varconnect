@@ -36,7 +36,8 @@ define(function (require) {
     var moment = require('./lib/moment');
 
     var CACHE_TTL = 300; // store the data for 1mins
-    var VendorList = vc2_constant.LIST.XML_VENDOR;
+    var VendorList = vc2_constant.LIST.XML_VENDOR,
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
     var Helper = {
         getVendorLibrary: function (OrderCFG) {
@@ -82,7 +83,7 @@ define(function (require) {
             var lineShipped = { is_shipped: true };
 
             try {
-                vc2_util.log(logTitle, '// line data: ', lineData);
+                // vc2_util.log(logTitle, '// line data: ', lineData);
                 if (lineData.is_shipped) return true; // its already shipped, based on status
 
                 if (!lineData.ship_date || lineData.ship_date == 'NA') throw 'Missing ship_date';
@@ -103,80 +104,182 @@ define(function (require) {
 
                 isShipped = true;
             } catch (error) {
-                vc2_util.logError(logTitle, 'NOT SHIPPED: ' + error);
+                // vc2_util.logError(logTitle, 'NOT SHIPPED: ' + error);
 
                 lineShipped.is_shipped = false;
                 lineShipped.NOTSHIPPED = vc2_util.extractError(error);
             } finally {
                 util.extend(lineData, lineShipped);
-                vc2_util.log(logTitle, '/// SHIPPED? ', [lineShipped, lineData]);
+                // vc2_util.log(logTitle, '/// SHIPPED? ', [lineShipped, lineData]);
             }
 
             return isShipped;
+        },
+        evaluateError: function (errorObj) {
+            var logTitle = [LogTitle, 'Helper.evaluateError'].join('::'),
+                returnError = {
+                    code: null,
+                    hasError: true,
+                    message: null,
+                    details: null
+                };
+
+            var errorCodeList = {
+                INVALID_CREDENTIALS: [
+                    new RegExp(/Application with identifier .+? was not found in the directory/gi),
+                    new RegExp(/The realm .+? is not a configured realm of the tenant/gi),
+                    new RegExp(/Invalid client secret provided/gi),
+                    new RegExp(/Invalid client identifier/gi),
+                    new RegExp(/Invalid client or Invalid client credentials/gi),
+                    new RegExp(/The resource principal named .+? was not found in the tenant/gi),
+                    new RegExp(/Access denied due to invalid subscription key/gi),
+                    new RegExp(/The login was invalid/gi),
+                    new RegExp(/.+?: customer validation failed/gi),
+                    new RegExp(/Login failed/gi),
+                    new RegExp(/The customer# .+? you provided does not exist in our system/gi),
+                    new RegExp(/X-Account is not a valid account/gi),
+                    new RegExp(/X-Account header not found or unable to parse as guid/gi),
+                    new RegExp(/The given client credentials were not valid/gi),
+                    new RegExp(/Username or password not valid/gi),
+                    new RegExp(
+                        /The customer number provided on the API call does not match the registered customer number/gi
+                    )
+                ],
+                ORDER_NOT_FOUND: [
+                    new RegExp(/Order not found/gi),
+                    new RegExp(/Record Not Found/gi),
+                    new RegExp(/No Orders found for submitted values/gi),
+                    new RegExp(/<Code>notFound<\/Code>/gi),
+                    new RegExp(/No data meeting the selection criteria was found/gi),
+                    new RegExp(/Not Found/gi)
+                ],
+                INVALID_ACCESSPOINT: [
+                    new RegExp(/Tenant .+? not found/gi),
+                    new RegExp(/Received invalid response code/gi),
+                    new RegExp(/ERROR: No Handler Defined for request type/gi)
+                ],
+                ENDPOINT_URL_ERROR: [
+                    new RegExp(/Resource not found/gi),
+                    new RegExp(/The host you requested .+? is unknown or cannot be found/gi),
+                    new RegExp(/Received invalid response code/gi)
+                ],
+                INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
+            };
+            vc2_util.logError(logTitle, errorObj);
+
+            var matchedErrorCode = null,
+                message = vc2_util.extractError(errorObj),
+                detail = util.isString(errorObj)
+                    ? errorObj
+                    : errorObj.message || errorObj.detail || errorObj.details;
+
+            for (var errorCode in errorCodeList) {
+                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
+                    var regStr = errorCodeList[errorCode][i];
+                    if (message.match(regStr) || detail.match(regStr)) {
+                        matchedErrorCode = errorCode;
+                        break;
+                    }
+                }
+                if (matchedErrorCode) break;
+            }
+
+            // vc2_util.log(logTitle, '// error msgs: ', [
+            //     returnError,
+            //     errorObj,
+            //     { msg: message, det: detail },
+            //     matchedErrorCode,
+            //     ERROR_MSG[matchedErrorCode]
+            // ]);
+
+            util.extend(
+                returnError,
+                util.extend(
+                    util.extend(returnError, {
+                        code: matchedErrorCode,
+                        details: detail || message
+                    }),
+                    matchedErrorCode && ERROR_MSG[matchedErrorCode]
+                        ? ERROR_MSG[matchedErrorCode]
+                        : { message: util.isString(errorObj) ? errorObj : 'Unexpected Error' }
+                )
+            );
+
+            vc2_util.log(logTitle, '// return error: ', returnError);
+
+            return returnError;
         }
     };
 
     return {
         OrderStatusDebug: function (option) {
             var logTitle = [LogTitle, 'OrderStatusDebug'].join(':'),
-                returnValue;
+                returnValue = {};
 
-            var poNum = option.poNum || option.tranid,
-                vendoCfgId = option.vendorConfigId;
+            vc2_util.log(logTitle, '###### WEBSERVICE: OrderStatus Debug: ######', option);
 
-            vc2_util.log(logTitle, '>> input: ', [option, poNum, option.poNum || option.tranid]);
+            try {
+                var poNum = option.poNum || option.tranid,
+                    vendoCfgId = option.vendorConfigId;
 
-            var MainCFG = vcs_configLib.mainConfig();
-
-            // load the configuration
-            var ConfigRec = vcs_configLib.loadConfig({
-                poNum: poNum,
-                configId: vendoCfgId,
-                configType: vcs_configLib.ConfigType.ORDER
-            });
-            vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
-
-            // get the Vendor Library
-            var vendorLib = Helper.getVendorLibrary(ConfigRec);
-
-            var response = option.showLines
-                ? vendorLib.process({
-                      poNum: poNum,
-                      orderConfig: ConfigRec
-                  })
-                : vendorLib.processRequest({
-                      poNum: poNum,
-                      orderConfig: ConfigRec
-                  });
-
-            if (option.showLines && !vc2_util.isEmpty(response.Lines)) {
-                response.Lines.forEach(function (lineData, lineIdx) {
-                    vc2_util.log(logTitle, '....', lineData);
-                    lineData = Helper.validateShipped(lineData);
+                // load the configuration
+                var ConfigRec = vcs_configLib.loadConfig({
+                    poNum: poNum,
+                    configId: vendoCfgId,
+                    configType: vcs_configLib.ConfigType.ORDER
                 });
+                vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
+
+                // get the Vendor Library
+                var vendorLib = Helper.getVendorLibrary(ConfigRec);
+
+                var response = option.showLines
+                    ? vendorLib.process({
+                          poNum: poNum,
+                          orderConfig: ConfigRec
+                      })
+                    : vendorLib.processRequest({
+                          poNum: poNum,
+                          orderConfig: ConfigRec
+                      });
+
+                if (option.showLines && !vc2_util.isEmpty(response.Lines)) {
+                    response.Lines.forEach(function (lineData, lineIdx) {
+                        lineData = Helper.validateShipped(lineData);
+                    });
+                }
+
+                returnValue = response;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+
+                util.extend(
+                    util.extend(returnValue, { hasError: true }),
+                    Helper.evaluateError(error) || {}
+                );
+            } finally {
+                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####', returnValue);
             }
 
-            vc2_util.log(logTitle, '/// response: ', response);
-
-            return response;
+            return returnValue;
         },
-        orderStatus: function (option) {
+        OrderStatus: function (option) {
             var logTitle = [LogTitle, 'orderStatus'].join(':'),
                 returnValue = {};
 
-            var poNum = option.poNum || option.tranid,
-                poId = option.poId,
-                vendoCfgId = option.vendorConfigId;
-
             vc2_util.log(logTitle, '###### WEBSERVICE: OrderStatus: ######', option);
+
             try {
+                var poNum = option.poNum || option.tranid,
+                    poId = option.poId,
+                    vendoCfgId = option.vendorConfigId;
+
                 // load the configuration
                 var ConfigRec = vcs_configLib.loadConfig({
                     poId: poId,
                     configId: vendoCfgId,
                     configType: vcs_configLib.ConfigType.ORDER
                 });
-
                 returnValue.prefix = ConfigRec.fulfillmentPrefix;
 
                 // get the Vendor Library
@@ -188,7 +291,6 @@ define(function (require) {
                     orderConfig: ConfigRec
                 });
                 vc2_util.dumpLog(logTitle, outputResp, ' outputResp: ');
-                if (outputResp.HasError) throw outputResp.ErrorMsg;
 
                 // check for
                 (outputResp.Lines || []).forEach(function (lineData) {
@@ -202,10 +304,11 @@ define(function (require) {
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                var errorMsg = vc2_util.extractError(error);
 
-                returnValue.isError = true;
-                returnValue.errorMessage = errorMsg;
+                util.extend(
+                    util.extend(returnValue, { hasError: true }),
+                    Helper.evaluateError(error) || {}
+                );
             } finally {
                 vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####', returnValue);
             }

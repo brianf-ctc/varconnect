@@ -221,7 +221,9 @@ define([
                     recordId: CURRENT.recordId,
                     method: 'post',
                     query: {
-                        url: option.orderConfig.endPoint,
+                        // url: option.orderConfig.endPoint,
+                              url: "https://webservice.jenne.com/JenneWebService.asmx",
+
                         headers: {
                             SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
                             'Content-Type': 'text/xml'
@@ -244,6 +246,7 @@ define([
                     }
                 });
                 vc2_util.handleXMLResponse(reqOrderStatus);
+                vc2_util.log(logTitle, 'response: ', reqOrderStatus);
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
@@ -365,78 +368,6 @@ define([
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
                 returnValue = libJenneAPI.AdvanceShipNoticeGet(option);
-            } catch (error) {
-                throw error;
-            }
-
-            return returnValue;
-        },
-        processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = {};
-            option = option || {};
-
-            try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-
-                LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
-                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-
-                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
-
-                var xmlResponse = option.xmlResponse,
-                    xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
-                    jsonResp = Helper.xml2json(xmlDoc) || 'no-value',
-                    itemArray = [];
-
-                if (!xmlDoc) throw 'Unable to parse XML response';
-                if (!jsonResp) throw 'Unable to parse XML to JSON';
-
-                vcLog.recordLog({
-                    header: 'Jenne RESULTS',
-                    body: JSON.stringify(jsonResp),
-                    transaction: CURRENT.recordId
-                });
-
-                CURRENT.results =
-                    jsonResp['soap:Envelope'][
-                        'soap:Body'
-                    ].AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result.AdvanceShipNotices;
-
-                if (!CURRENT.results) throw 'Missing API results';
-
-                vcLog.recordLog({
-                    header: 'Jenne ASN RESULTS',
-                    body: JSON.stringify(CURRENT.results),
-                    transaction: CURRENT.recordId
-                });
-
-                var itemArray = [];
-
-                // check for any errors
-                if (CURRENT.results.Error && CURRENT.results.Error.ErrorDescription) {
-                    throw CURRENT.results || 'Undetermined error on results';
-                }
-
-                var arrResultOrders = CURRENT.results.AdvanceShipNotice_v2;
-                if (!arrResultOrders) throw 'Missing order details';
-
-                // if not array, force into an array
-                if (!util.isArray(arrResultOrders)) arrResultOrders = [arrResultOrders];
-
-                vc2_util.log(logTitle, 'Total orders: ', arrResultOrders.length);
-
-                for (var i = 0, j = arrResultOrders.length; i < j; i++) {
-                    vc2_util.log(logTitle, '>> order: ', arrResultOrders[i]);
-                    var orderData = libJenneAPI.extractOrder(arrResultOrders[i], itemArray);
-                }
-
-                util.extend(returnValue, {
-                    Orders: null,
-                    Lines: itemArray
-                });
             } catch (error) {
                 throw error;
             }
@@ -576,11 +507,7 @@ define([
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    Error: error,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
 
             return returnValue;

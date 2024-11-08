@@ -186,6 +186,8 @@ define(function (require) {
                     return true; // return false to break the loop when a record is found.
                 });
                 returnValue = recordData;
+                
+                vc2_util.log(logTitle, '## RecordData: ', [recordData, cacheKey]);
 
                 // set the cachedData
                 vc2_util.setNSCache({ name: cacheKey, value: recordData, cacheTTL: CACHE_TTL });
@@ -194,7 +196,6 @@ define(function (require) {
                     cacheKey: cacheKey
                 });
 
-                vc2_util.log(logTitle, '## RecordData: ', recordData);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = false;

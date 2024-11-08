@@ -26,9 +26,10 @@ define([
     var LogTitle = 'WS:IngramAPI';
 
     var CURRENT = {
-        TokenName: 'VC_INGRAM_TOKEN',
-        CacheTTL: 43200 // 12 hrs cache
-    };
+            TokenName: 'VC_INGRAM_TOKEN',
+            CacheTTL: 43200 // 12 hrs cache
+        },
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
     var IngramOrders = {
         EndPoint: {},
@@ -58,8 +59,6 @@ define([
                     header: [LogTitle, 'Generate Token'].join(' '),
                     method: 'post',
                     recordId: CURRENT.recordId,
-                    // doRetry: true,
-                    // maxRetry: 3,
                     query: {
                         url: CURRENT.orderConfig.accessEndPoint,
                         body: vc2_util.convertToQuery({
@@ -77,8 +76,7 @@ define([
                 if (!respToken.PARSED_RESPONSE) throw 'Unable to generate token';
                 returnValue = respToken.PARSED_RESPONSE.access_token;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw ['Generate Token', this.evaluateErrors(errorMsg)].join('| ');
+                throw error;
             }
 
             return returnValue;
@@ -119,8 +117,7 @@ define([
 
                 returnValue = parsedOrders;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw ['Order Search', this.evaluateErrors(errorMsg)].join('| ');
+                throw error;
             }
 
             return returnValue;
@@ -161,17 +158,54 @@ define([
 
                 returnValue = respOrderDetails.PARSED_RESPONSE;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw ['Order Details', this.evaluateErrors(errorMsg)].join('| ');
+                throw error;
             }
 
             return returnValue;
         },
-        evaluateErrors: function (errorMsg) {
-            if (errorMsg.match(/^Invalid client identifier/gi)) {
-                return 'Invalid credentials';
-            } else return errorMsg;
-        }
+        // evaluateErrors: function (errorMsg) {
+        //     var errorCodeList = {
+        //         INVALID_CREDENTIALS: [
+        //             new RegExp(/Invalid client identifier/gi),
+        //             new RegExp(/.+?: customer validation failed/gi)
+        //         ],
+        //         ORDER_NOT_FOUND: [new RegExp(/Order not found/gi)],
+        //         INVALID_ACCESSPOINT: [],
+        //         ENDPOINT_URL_ERROR: [],
+        //         INVALID_ACCESS_TOKEN: []
+        //     };
+        //     vc2_util.logError([LogTitle, 'evalError'].join('::'), errorMsg);
+        //     var matchedErrorCode = null;
+
+        //     for (var errorCode in errorCodeList) {
+        //         for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
+        //             var regStr = errorCodeList[errorCode][i];
+        //             if (errorMsg.match(regStr)) {
+        //                 matchedErrorCode = errorCode;
+        //                 break;
+        //             }
+        //         }
+        //         if (matchedErrorCode) break;
+        //     }
+
+        //     var errorDetails =
+        //         (function () {
+        //             var parsedError = vc2_util.safeParse(errorMsg);
+        //             return parsedError
+        //                 ? !vc2_util.isEmpty(parsedError.detail)
+        //                     ? parsedError.detail
+        //                     : !vc2_util.isEmpty(parsedError.message)
+        //                     ? parsedError.message
+        //                     : false
+        //                 : parsedError;
+        //         })() || errorMsg;
+
+        //     var returnValue = matchedErrorCode
+        //         ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorDetails })
+        //         : { message: 'Unexpected error', details: errorDetails };
+
+        //     return returnValue;
+        // }
     };
 
     var LibOrderStatus = {
@@ -548,10 +582,7 @@ define([
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             } finally {
                 vc2_util.log(logTitle, '// Return', returnValue);
             }

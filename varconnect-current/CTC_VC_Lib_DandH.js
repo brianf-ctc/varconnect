@@ -103,35 +103,8 @@ define([
 
                 returnValue = respOrderStatus;
             } catch (error) {
-                throw this.evalError(error);
+                throw error;
             }
-
-            return returnValue;
-        },
-        evalError: function (errorMsg) {
-            var errorCodeList = {
-                INVALID_CREDENTIALS: [new RegExp(/The login was invalid/gi)],
-                ENDPOINT_URL_ERROR: [new RegExp(/Received invalid response code/gi)],
-                ORDER_NOT_FOUND: [new RegExp(/No Orders found for submitted values/gi)]
-            };
-
-            var matchedErrorCode = null;
-
-            for (var errorCode in errorCodeList) {
-                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
-                    var regStr = errorCodeList[errorCode][i];
-                    if (errorMsg.match(regStr)) {
-                        matchedErrorCode = errorCode;
-                        break;
-                    }
-                }
-                if (matchedErrorCode) break;
-            }
-
-            var returnValue = matchedErrorCode
-                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
-                : { message: 'Unexpected error', details: errorMsg };
-            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
 
             return returnValue;
         },
@@ -387,12 +360,6 @@ define([
                 };
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
-
                 throw error;
             }
 

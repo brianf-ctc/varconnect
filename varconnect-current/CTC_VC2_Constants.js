@@ -92,6 +92,7 @@ define(function (require) {
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
+                SUBSCRIPTION_KEY: 'custrecord_ctc_vc_subscription_key',
                 USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
                 CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld',
@@ -404,6 +405,7 @@ define(function (require) {
             apiSecret: VendorCFG.FIELD.API_SECRET,
             oauthScope: VendorCFG.FIELD.OATH_SCOPE,
             useShipDate: VendorCFG.FIELD.USE_SHIPDATE,
+            subscriptionKey: VendorCFG.FIELD.SUBSCRIPTION_KEY,
             // country: row.getValue({
             //     name: 'country',
             //     join: VendorCFG.FIELD.SUBSIDIARY
@@ -693,6 +695,10 @@ define(function (require) {
             message: 'Invalid credentials',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
+        INVALID_REQUEST: {
+            message: 'Invalid request query',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
         INVALID_ACCESSPOINT: {
             message: 'Invalid Access Endpoint',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
@@ -808,13 +814,12 @@ define(function (require) {
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
-        MISMATCH_RATE:  {
+        MISMATCH_RATE: {
             code: 'MISMATCH_RATE',
             msg: 'Mismatched rates on item(s) on the bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
-
-        }, 
+        },
         EXISTING_BILLS: {
             code: 'EXISTING_BILLS',
             msg: 'Linked to existing Bill.',
@@ -907,7 +912,7 @@ define(function (require) {
 
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
-        '20241029.009',
+        '20241107.0253',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null
     ].join('_');
 

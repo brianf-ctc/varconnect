@@ -136,7 +136,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                 returnValue = respOrderStatus.RESPONSE.body;
                 if (!returnValue) throw 'Unable to fetch server response';
             } catch (error) {
-                throw this.evaluateErrors(error);
+                throw error;
             }
 
             return returnValue;
@@ -282,40 +282,6 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                 tracking_num: trackingList && trackingList.length ? trackingList.join(',') : 'NA',
                 serial_num: serialNumList && serialNumList.length ? serialNumList.join(',') : 'NA'
             };
-        },
-        evaluateErrors: function (errorMsg) {
-            var errorCodeList = {
-                INVALID_CREDENTIALS: [
-                    new RegExp(/Login failed/gi),
-                    new RegExp(/The customer# .+? you provided does not exist in our system/gi)
-                ],
-                INVALID_ACCESSPOINT: [],
-                ENDPOINT_URL_ERROR: [
-                    new RegExp(/Resource not found/gi),
-                    new RegExp(/The host you requested .+? is unknown or cannot be found/gi)
-                ],
-                INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
-            };
-
-            var matchedErrorCode = null;
-
-            for (var errorCode in errorCodeList) {
-                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
-                    var regStr = errorCodeList[errorCode][i];
-                    if (errorMsg.match(regStr)) {
-                        matchedErrorCode = errorCode;
-                        break;
-                    }
-                }
-                if (matchedErrorCode) break;
-            }
-
-            var returnValue = matchedErrorCode
-                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
-                : { message: 'Unexpected error', details: errorMsg };
-            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
-
-            return returnValue;
         }
     };
 
@@ -364,7 +330,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 
                 // Check for Order Not Fou
                 if (!orderInfo.Status) throw 'Missing order status';
-                if (orderInfo.Status.toUpperCase() == 'NOTFOUND') throw 'Order is not found';
+                if (orderInfo.Status.toUpperCase() == 'NOTFOUND') throw 'Order not found';
                 if (vc2_util.inArray(orderInfo.Status.toUpperCase(), LibSynnexAPI.SkippedStatus))
                     throw 'SKIPPED Order Status: ' + orderInfo.Status;
 
@@ -416,10 +382,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
 
             return returnValue;

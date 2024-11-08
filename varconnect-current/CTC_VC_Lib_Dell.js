@@ -147,7 +147,9 @@ define([
                     recordId: CURRENT.recordId
                 });
 
-                this.handleResponse(reqSearchPO);
+                vc2_util.log(logTitle, '>> Search PO: ', reqSearchPO);
+
+                vc2_util.handleJSONResponse(reqSearchPO);
                 returnValue = reqSearchPO.PARSED_RESPONSE;
             } catch (error) {
                 throw error;
@@ -184,7 +186,7 @@ define([
                     if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
                     var OrderData = {
                         OrderNum: orderDetail.purchaseOrderNumber,
-                        OrderDate: orderDetail.purchaseOrderDate,
+                        OrderDate: vc2_util.parseFormatDate(orderDetail.purchaseOrderDate),
                         Status: orderDetail.purchaseOrderStatus
                     };
 
@@ -211,9 +213,13 @@ define([
 
                         util.extend(orderItem, {
                             order_num: dellOrder.orderNumber || 'NA',
-                            ship_date: dellOrder.actualShipmentDate || 'NA',
-                            order_date: orderDetail.orderDetail || 'NA',
-                            order_eta: dellOrder.estimatedDeliveryDate || 'NA',
+                            ship_date: vc2_util.parseFormatDate(
+                                dellOrder.actualShipmentDate || 'NA'
+                            ),
+                            order_date: vc2_util.parseFormatDate(orderDetail.orderDetail || 'NA'),
+                            order_eta: vc2_util.parseFormatDate(
+                                dellOrder.estimatedDeliveryDate || 'NA'
+                            ),
                             carrier: dellOrder.carrierName || 'NA',
                             order_status: orderDetail.purchaseOrderStatus,
                             serial_num: 'NA',
@@ -310,12 +316,7 @@ define([
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error),
-                    Error: error
-                });
+                throw error;
             }
             return returnValue;
         },

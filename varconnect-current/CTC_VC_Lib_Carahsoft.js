@@ -22,8 +22,9 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
     var LogTitle = 'WS:CarasoftAPI';
 
     var CURRENT = {
-        TokenName: 'VC_CARAHSOFT_TOKEN'
-    };
+            TokenName: 'VC_CARAHSOFT_TOKEN'
+        },
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
     var LibCarasoft = {
         generateToken: function (option) {
@@ -53,8 +54,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 if (!respToken.PARSED_RESPONSE) throw 'Unable to generate token';
                 returnValue = respToken.PARSED_RESPONSE.access_token;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw errorMsg;
+                throw error;
             }
 
             return returnValue;
@@ -97,7 +97,6 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                             CURRENT.orderConfig.endPoint +
                             '?' +
                             ("$filter=CustomerPO eq '" + CURRENT.recordNum + "'"),
-
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
@@ -117,28 +116,11 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
 
                 returnValue = parsedOrders;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw this.evaluateError(error, errorMsg);
+                throw error;
             }
 
             return returnValue;
         },
-        evaluateError: function (responseBody, errorMsg) {
-            var logTitle = [LogTitle, 'evaluateError'].join('::'),
-                returnValue;
-            try {
-                vc2_util.log(logTitle, '// response: ', responseBody);
-
-                var parsedResponse = vc2_util.safeParse(responseBody);
-                if (parsedResponse.status && parsedResponse.status !== 200)
-                    returnValue = parsedResponse.detail;
-            } catch (error) {
-                returnValue = errorMsg;
-            }
-
-            return returnValue;
-        },
-
         extractOrderDetails: function (option) {
             var logTitle = [LogTitle, 'extractOrderDetails'].join('::'),
                 returnValue;
@@ -175,13 +157,11 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
 
                 returnValue = parsedOrders;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw this.evaluateError(error, errorMsg);
+                throw error;
             }
 
             return returnValue;
-        },
-        handleResponse: function (response) {}
+        }
     };
 
     return {
@@ -270,10 +250,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
             return returnValue;
         },

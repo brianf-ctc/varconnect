@@ -949,44 +949,81 @@ define(function (require) {
         },
 
         // handleResponse
-        handleJSONResponse: function (request) {
+        handleJSONResponse: function (requestObj) {
             var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
-                returnValue = request;
+                returnValue = requestObj,
+                errorResponse = {
+                    code: requestObj.RESPONSE.code
+                };
 
-            var parsedResp = request.PARSED_RESPONSE;
-            if (request.isError && !parsedResp)
-                throw request.errorMsg || 'Unable to parse response';
+            var parsedResp = requestObj.PARSED_RESPONSE;
+            if (!requestObj.isError) return;
+            util.extend(errorResponse, {
+                details: requestObj.error,
+                message: (function () {
+                    return !parsedResp
+                        ? 'Unable to parse the response'
+                        : parsedResp.fault && parsedResp.fault.faultstring
+                        ? parsedResp.fault.faultstring
+                        : parsedResp.error && parsedResp.error_description
+                        ? parsedResp.error_description
+                        : parsedResp.message;
+                })()
+            });
 
-            // detect the error
-            if (!parsedResp) throw 'Unable to parse response';
-
-            // check for faultstring
-            if (parsedResp.fault && parsedResp.fault.faultstring)
-                throw parsedResp.fault.faultstring;
-
-            // check response.errors
-            if (
-                parsedResp.errors &&
-                util.isArray(parsedResp.errors) &&
-                !vc2_util.isEmpty(parsedResp.errors)
-            ) {
-                var respErrors = parsedResp.errors
-                    .map(function (err) {
-                        return [err.id, err.message].join(': ');
-                    })
-                    .join(', ');
-                throw respErrors;
+            // check if we can parse the details
+            if (util.isObject(requestObj.details)) {
+                if (requestObj.details.errors && util.isArray(requestObj.details.errors)) {
+                    errorResponse.details = requestObj.details.errors
+                        .map(function (err) {
+                            if (err.fields && util.isArray(err.fields)) {
+                                return err.fields
+                                    .map(function (field) {
+                                        return [field.id, field.message].join(': ');
+                                    })
+                                    .join(', ');
+                            }
+                        })
+                        .join(', ');
+                } else if (requestObj.details.status && requestObj.details.title) {
+                    errorResponse.details = requestObj.details.title;
+                }
             }
 
-            // chek for error_description
-            if (parsedResp.error && parsedResp.error_description)
-                throw parsedResp.error_description;
+            throw errorResponse;
 
-            // ARROW: ResponseHeader
+            // // throw requestObj.errorMsg || 'Unable to parse response';
 
-            if (request.isError || request.RESPONSE.code != '200') {
-                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
-            }
+            // // detect the error
+            // if (!parsedResp) throw 'Unable to parse response';
+
+            // // check for faultstring
+            // if (parsedResp.fault && parsedResp.fault.faultstring)
+            //     throw parsedResp.fault.faultstring;
+
+            // // check response.errors
+            // if (
+            //     parsedResp.errors &&
+            //     util.isArray(parsedResp.errors) &&
+            //     !vc2_util.isEmpty(parsedResp.errors)
+            // ) {
+            //     var respErrors = parsedResp.errors
+            //         .map(function (err) {
+            //             return [err.id, err.message].join(': ');
+            //         })
+            //         .join(', ');
+            //     throw respErrors;
+            // }
+
+            // // chek for error_description
+            // if (parsedResp.error && parsedResp.error_description)
+            //     throw parsedResp.error_description;
+
+            // // ARROW: ResponseHeader
+
+            // if (requestObj.isError || requestObj.RESPONSE.code != '200') {
+            //     throw 'Unexpected Error - ' + JSON.stringify(requestObj.PARSED_RESPONSE);
+            // }
 
             return returnValue;
         },
