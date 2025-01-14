@@ -54,6 +54,20 @@ define([
 
     var CURRENT = {};
     var LibTechDataXML = {
+        initialize: function (option) {
+            var logTitle = [LogTitle, 'initialize'].join('::'),
+                returnValue;
+
+            CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
+
+            vc2_util.LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
+
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
+
+            return returnValue;
+        },
         getInvoiceDetail: function (option) {
             var logTitle = [LogTitle, 'getInvoiceDetail'].join('::'),
                 returnValue = [];
@@ -137,13 +151,8 @@ define([
                 var respOrderStatus = this.processRequest(option);
                 returnValue = this.processResponse({ xmlResponse: respOrderStatus });
             } catch (error) {
-                // vc2_util.logError(logTitle, error);
-                // throw error;
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             } finally {
                 vc2_util.log(logTitle, '>> OrderValues: ', returnValue);
             }

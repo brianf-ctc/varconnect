@@ -412,8 +412,15 @@ define(function (require) {
                 var altItemNames = VC2_RecordLib.extractAlternativeItemName({
                     item: uniqueItemIds
                 });
+                // vc2_util.log(logTitle, '... altItemNames: ', altItemNames);
+                // vc2_util.log(logTitle, '... returnValue: ', returnValue);
 
-                (returnValue || []).forEach(function (lineData) {
+                (returnValue
+                    ? util.isArray(returnValue)
+                        ? returnValue
+                        : [returnValue]
+                    : []
+                ).forEach(function (lineData) {
                     if (lineData && lineData.item) {
                         lineData = VC2_RecordLib.getAltPartNumValues({
                             source: altItemNames,
@@ -761,6 +768,7 @@ define(function (require) {
 
             var matchedValue;
             try {
+                // Check if vendor line item number or vendor SKU matches the forced values
                 if (
                     vendorLine.item_num &&
                     vendorLine.vendorSKU &&
@@ -776,18 +784,21 @@ define(function (require) {
                             ])))
                 ) {
                     matchedValue = 'AltItemName';
+                // Check if vendor line item number matches the forced MPN
                 } else if (
                     vendorLine.item_num &&
                     item.forcedMPN &&
                     vendorLine.item_num == item.forcedMPN
                 ) {
                     matchedValue = 'AltMPN';
+                // Check if vendor SKU matches the forced SKU
                 } else if (
                     vendorLine.vendorSKU &&
                     item.forcedSKU &&
                     vendorLine.vendorSKU == item.forcedSKU
                 ) {
                     matchedValue = 'AltVendorSKU';
+                // Check if vendor line item number matches any of the item names or alternative values
                 } else if (
                     vc2_util.inArray(vendorLine.item_num, [
                         item.text,
@@ -797,18 +808,21 @@ define(function (require) {
                     ])
                 ) {
                     matchedValue = 'ItemName';
+                // Check if vendor SKU matches the SKU value
                 } else if (
                     vendorLine.vendorSKU &&
                     item.skuValue &&
                     vendorLine.vendorSKU == item.skuValue
                 ) {
                     matchedValue = 'VendorSKU';
+                // Check if the vendor is D&H and the item matches the D&H value
                 } else if (
                     settings.isDandH &&
                     item.dnhValue &&
                     vc2_util.inArray(item.dnhValue, [vendorLine.item_num, vendorLine.vendorSKU])
                 ) {
                     matchedValue = 'D&H item';
+                // Check if the vendor is Ingram and the item matches the Ingram hash space
                 } else if (settings.isIngram && settings.ingramHashSpace) {
                     var hashValue = {};
                     for (var typ in item) {
@@ -829,8 +843,10 @@ define(function (require) {
                         vendorLine.vendorSKU == hashValue.skuValue
                     )
                         matchedValue = 'Ingram-SKU';
+                // Check if the vendor is Dell and the vendor SKU matches the Dell quote number
                 } else if (settings.isDell && vendorLine.vendorSKU == item.dellQuoteNo) {
                     matchedValue = 'DellQuoteNo';
+                // Check if the vendor item names contain the vendor line item number
                 } else if (
                     item.vendorItemNames &&
                     vc2_util.inArray(vendorLine.item_num, item.vendorItemNames.split('\n'))

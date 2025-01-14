@@ -412,8 +412,15 @@ define(function (require) {
                 var altItemNames = VC2_RecordLib.extractAlternativeItemName({
                     item: uniqueItemIds
                 });
+                // vc2_util.log(logTitle, '... altItemNames: ', altItemNames);
+                // vc2_util.log(logTitle, '... returnValue: ', returnValue);
 
-                (returnValue || []).forEach(function (lineData) {
+                (returnValue
+                    ? util.isArray(returnValue)
+                        ? returnValue
+                        : [returnValue]
+                    : []
+                ).forEach(function (lineData) {
                     if (lineData && lineData.item) {
                         lineData = VC2_RecordLib.getAltPartNumValues({
                             source: altItemNames,

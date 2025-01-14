@@ -134,12 +134,12 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
         for (let i = 0, itemCount = poObj.items.length; i < itemCount; i += 1) {
             let item = poObj.items[i];
             let objLine = {};
-            objLine.customerLineNumber = CTC_Util.leftPadString(i + 1, '0', 3); // unable to assign lineuniquekey
+            objLine.customerLineNumber = i + 1 + ''; // unable to assign lineuniquekey
             objLine.quantity = item.quantity;
-            objLine.endUserPrice = item.rate;
+            objLine.unitPrice = item.rate;
             // objLine.specialBidNumber = 'NA';
             // objLine.notes = 'NA';
-            // objLine.unitPrice = 'NA';
+            // objLine.endUserPrice = 'NA';
             // objLine.additionalAttributes = [{}]; // SAP field
             // objLine.warrantyInfo = [];
             // objLine.endUserInfo = [{}]; // SAP field
@@ -173,7 +173,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                 state: poObj.billState,
                 postalCode: poObj.billZip,
                 countryCode: poObj.billCountry,
-                phoneNumber: poObj.billPhone,
+                phoneNumber: CTC_Util.parsePhoneNumber(poObj.billPhone) + '',
                 email: poObj.billEmail
             },
             // vmf: {
@@ -228,7 +228,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
             ]
         };
         if (poObj.shipComplete) {
-            ingramTemplate.shipComplete = true;
+            ingramTemplate.shipmentDetails.shipComplete = true;
         }
         if (vendorConfig.Bill.id) {
             ingramTemplate.billToAddressId = vendorConfig.Bill.id;
@@ -284,7 +284,27 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                                 }
                             }
                         } else if (!CTC_Util.isEmpty(additionalVendorDetails[fieldId])) {
-                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                            // end user
+                            if (fieldIdComponent == 'phoneNumber') {
+                                switch (fieldId) {
+                                    case 'resellerInfo.phoneNumber':
+                                    case 'endUserInfo.phoneNumber':
+                                        // send as integer-only string
+                                        fieldContainer[fieldIdComponent] =
+                                            CTC_Util.parsePhoneNumber(
+                                                additionalVendorDetails[fieldId]
+                                            ) + '';
+                                        break;
+                                    case 'shipToInfo.phoneNumber':
+                                    default:
+                                        // send as string, as is
+                                        fieldContainer[fieldIdComponent] =
+                                            additionalVendorDetails[fieldId];
+                                        break;
+                                }
+                            } else {
+                                fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                            }
                         }
                     } else {
                         // container is an array, reference as is
@@ -322,6 +342,9 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                 // log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
         }
+        if (vendorConfig.testRequest) {
+            ingramTemplate.notes = 'TEST:' + (ingramTemplate.notes || '');
+        }
         let cleanUpJSON = function (option) {
             let objConstructor = option.objConstructor || {}.constructor,
                 obj = option.obj;
@@ -339,6 +362,9 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                 }
             }
         };
+        if (ingramTemplate.shipmentDetails.shipComplete) {
+            delete ingramTemplate.acceptBackOrder;
+        }
         cleanUpJSON({ obj: ingramTemplate });
         log.debug(logTitle, '>> Ingram Template Object: ' + JSON.stringify(ingramTemplate));
         CTC_Util.vcLog({
@@ -434,6 +460,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                 orderStatus.quotenumber = responseBody.quoteNumber;
                 orderStatus.confirmationNumber = responseBody.confirmationNumber;
                 orderStatus.notes = responseBody.message;
+                returnValue.isAsync = true;
             }
             returnValue.message = 'Send PO successful';
             if (responseBody.errors && responseBody.errors.length) {
@@ -460,7 +487,7 @@ define(['N/format', '../Library/CTC_Lib_Utils'], function (NS_Format, CTC_Util) 
                     ' failed line(s):<br />' +
                     lineNotes.join('<br />');
             } else if (vendorConfig.isAsync) {
-                returnValue.message = 'Send PO successful';
+                returnValue.message = 'Send PO accepted';
             } else {
                 returnValue.message =
                     'Send PO successful with ' + orderStatus.numSuccessfulLines + ' line item(s).';

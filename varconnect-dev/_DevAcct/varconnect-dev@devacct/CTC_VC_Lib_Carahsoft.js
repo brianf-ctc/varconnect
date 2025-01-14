@@ -22,8 +22,17 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
     var LogTitle = 'WS:CarasoftAPI';
 
     var CURRENT = {
-        TokenName: 'VC_CARAHSOFT_TOKEN'
-    };
+            TokenName: 'VC_CARAHSOFT_TOKEN'
+        },
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ],
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
     var LibCarasoft = {
         generateToken: function (option) {
@@ -53,8 +62,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 if (!respToken.PARSED_RESPONSE) throw 'Unable to generate token';
                 returnValue = respToken.PARSED_RESPONSE.access_token;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw errorMsg;
+                throw error;
             }
 
             return returnValue;
@@ -97,7 +105,6 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                             CURRENT.orderConfig.endPoint +
                             '?' +
                             ("$filter=CustomerPO eq '" + CURRENT.recordNum + "'"),
-
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             Accept: 'application/json',
@@ -117,28 +124,11 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
 
                 returnValue = parsedOrders;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw this.evaluateError(error, errorMsg);
+                throw error;
             }
 
             return returnValue;
         },
-        evaluateError: function (responseBody, errorMsg) {
-            var logTitle = [LogTitle, 'evaluateError'].join('::'),
-                returnValue;
-            try {
-                vc2_util.log(logTitle, '// response: ', responseBody);
-
-                var parsedResponse = vc2_util.safeParse(responseBody);
-                if (parsedResponse.status && parsedResponse.status !== 200)
-                    returnValue = parsedResponse.detail;
-            } catch (error) {
-                returnValue = errorMsg;
-            }
-
-            return returnValue;
-        },
-
         extractOrderDetails: function (option) {
             var logTitle = [LogTitle, 'extractOrderDetails'].join('::'),
                 returnValue;
@@ -175,13 +165,11 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
 
                 returnValue = parsedOrders;
             } catch (error) {
-                var errorMsg = vc2_util.extractError(error);
-                throw this.evaluateError(error, errorMsg);
+                throw error;
             }
 
             return returnValue;
-        },
-        handleResponse: function (response) {}
+        }
     };
 
     return {
@@ -200,8 +188,11 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
 
                 var arrOrders = this.processRequest(option);
+                if (vc2_util.isEmpty(arrOrders)) throw 'Order not found';
 
-                if (vc2_util.isEmpty(arrOrders)) throw 'Empty Orders';
+                if (option.debugMode) {
+                    if (!option.showLines) return arrOrders;
+                }
 
                 var itemArray = [],
                     orderList = [];
@@ -209,10 +200,12 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 arrOrders.forEach(function (orderInfo) {
                     var orderData = {
                         OrderNum: orderInfo.CustomerPO,
-                        OrderDate: orderInfo.DateBooked,
+                        OrderDate: vc2_util.parseFormatDate(orderInfo.DateBooked),
                         Status: orderInfo.Status,
                         Total: orderInfo.TotalOrder,
                         VendorOrderNum: orderInfo.Order_ID
+                        // Source: orderInfo,
+                        // Lines: []
                     };
 
                     (orderInfo.Details || []).forEach(function (orderDetail) {
@@ -227,9 +220,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                                 order_num: lineInfo.OrderDetail_ID || 'NA',
                                 order_status: orderInfo.Status || 'NA',
 
-                                order_date: orderInfo.DateBooked
-                                    ? vc2_util.parseFormatDate(orderInfo.DateBooked)
-                                    : 'NA',
+                                order_date: orderInfo.DateBooked || 'NA',
                                 order_eta: 'NA',
                                 deliv_date: 'NA',
                                 prom_date: 'NA',
@@ -264,16 +255,24 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                     return true;
                 });
 
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(itemObj[dateField]);
+                    });
+                });
+
                 util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
+                    Lines: itemArray,
+                    Source: arrOrders
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
             return returnValue;
         },

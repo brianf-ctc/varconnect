@@ -94,6 +94,12 @@ define([
                 info: []
             }
         },
+        VARIANCE_TYPE = {
+            PRICE: 'Price',
+            TAX: 'Tax',
+            SHIP: 'Shipping',
+            OTHER: 'Other Charges'
+        },
         BILLPROC = {};
 
     var ACTIVE_STATUS = [
@@ -122,21 +128,50 @@ define([
         LINE_ERROR_MSG = {
             UNMATCHED_ITEMS: {
                 col: 'erroritem',
-                msg: 'Unmatched Item'
+                msg: BILL_CREATOR.Code.UNMATCHED_ITEMS.msg
             },
+
             ITEMS_ALREADY_BILLED: {
                 col: 'errorbilled',
-                msg: 'Already billed'
+                msg: BILL_CREATOR.Code.ITEMS_ALREADY_BILLED.msg
             },
+
+            INSUFFICIENT_RECEIVABLES: {
+                col: 'errorrecived',
+                msg: BILL_CREATOR.Code.INSUFFICIENT_RECEIVABLES.msg
+            },
+
             NOT_BILLABLE: {
-                col: 'errorbillable',
-                msg: 'Not billable'
+                col: 'errorqty',
+                msg: BILL_CREATOR.Code.NOT_BILLABLE.msg
             },
+
+            INSUFFICIENT_BILLABLE: {
+                col: 'errorqty',
+                msg: BILL_CREATOR.Code.INSUFFICIENT_BILLABLE.msg
+            },
+
+            ITEM_NOT_BILLABLE: {
+                col: 'errorqty',
+                msg: BILL_CREATOR.Code.ITEM_NOT_BILLABLE.msg
+            },
+
+            ITEM_FULLY_BILLED: {
+                col: 'errorbilled',
+                msg: BILL_CREATOR.Code.ITEM_FULLY_BILLED.msg
+            },
+
             INSUFFICIENT_QUANTITY: {
                 col: 'errorqty',
-                msg: 'Insufficient quantity'
+                msg: BILL_CREATOR.Code.INSUFFICIENT_QUANTITY.msg
             },
-            Price: {
+
+            MISMATCH_RATE: {
+                col: 'errorprice',
+                msg: BILL_CREATOR.Code.MISMATCH_RATE.msg
+            },
+
+            PRICE: {
                 col: 'errorprice',
                 msg: 'Mismatched rates'
             }
@@ -146,7 +181,6 @@ define([
         FORM: null,
         FIELDS: {},
         SUBLIST: {},
-
         initialize: function () {
             var logTitle = [LogTitle, 'FORM_DEF::initialize'].join('::'),
                 returnValue;
@@ -154,20 +188,17 @@ define([
             var ChargesDEF = BILLPROC.CFG.ChargesDEF,
                 Charges = BILLPROC.CHARGES,
                 IsBillable = BILLPROC.PO.DATA && BILLPROC.PO.DATA.isBillable,
-                Status = BILLPROC.STATUS,
                 Total = BILLPROC.TOTAL,
                 arrLineErrors = [];
 
             try {
                 // Collect all the errors
                 (BILLPROC.BILLFILE.LINES || []).forEach(function (billfile) {
-                    arrLineErrors = arrLineErrors.concat(billfile.Errors || []);
-                    arrLineErrors = arrLineErrors.concat(billfile.Variance || []);
+                    arrLineErrors = arrLineErrors.concat(billfile.ErrorList || []);
+                    arrLineErrors = arrLineErrors.concat(billfile.VarianceList || []);
                 });
-                arrLineErrors = vc2_util.uniqueArray(arrLineErrors);
 
                 // get the line errors
-
                 // INITIALIZE OUR FIELDS ///
                 FORM_DEF.FIELDS = {
                     SUITELET_URL: {
@@ -208,21 +239,50 @@ define([
                         selectOptions: (function (billStatus) {
                             var selectElems = [FLEXFORM_ACTION.SAVE];
 
-                            if (billStatus == BILL_CREATOR.Status.CLOSED) {
-                                selectElems.push(FLEXFORM_ACTION.RENEW);
-
-                                if (BILLPROC.STATUS.IsReceivable || BILLPROC.STATUS.IsBillable)
-                                    selectElems.push(FLEXFORM_ACTION.MANUAL);
-                            } else if (BILLPROC.STATUS.IsFullyBilled) {
+                            // bill file is already processed or closed,
+                            if (
+                                BILLPROC.STATUS.BILLFILE.IsProcessed ||
+                                BILLPROC.STATUS.BILLFILE.IsClosed
+                            ) {
+                                // Offer the reprocess, if:
+                                //  - bill link is empty
+                                //  - po is not fully billed
+                                //  - items are
+                                if (
+                                    !BILLPROC.BILLFILE.DATA.BILL_LINK ||
+                                    !BILLPROC.STATUS.PO.IsFullyBilled ||
+                                    !BILLPROC.STATUS.BILLFILE.ItemsAllBilled
+                                )
+                                    selectElems.push(FLEXFORM_ACTION.RENEW);
+                            }
+                            // the PO is already fully billed, or all items are billed
+                            else if (
+                                BILLPROC.STATUS.PO.IsFullyBilled ||
+                                BILLPROC.STATUS.BILLFILE.ItemsAllBilled
+                            ) {
                                 selectElems.push(FLEXFORM_ACTION.CLOSE);
-                            } else if (BILLPROC.STATUS.HasVariance) {
+                            }
+
+                            // the Bill has errors
+                            else if (BILLPROC.STATUS.HasErrors) {
+                                selectElems.push(FLEXFORM_ACTION.CLOSE);
+
+                                if (
+                                    !vc2_util.inArray(billStatus, [
+                                        BILL_CREATOR.Status.PENDING,
+                                        BILL_CREATOR.Status.REPROCESS
+                                    ])
+                                ) {
+                                    selectElems.push(FLEXFORM_ACTION.REPROCESS);
+                                }
+                            }
+                            // bill has variance
+                            else if (BILLPROC.STATUS.HasVariance) {
                                 selectElems.push(
                                     FLEXFORM_ACTION.REPROCESS_HASVAR,
                                     FLEXFORM_ACTION.REPROCESS_NOVAR,
                                     FLEXFORM_ACTION.CLOSE
                                 );
-                            } else {
-                                selectElems.push(FLEXFORM_ACTION.CLOSE, FLEXFORM_ACTION.REPROCESS);
                             }
 
                             return selectElems;
@@ -536,7 +596,7 @@ define([
                     CALC_TOTAL: {
                         id: 'custpage_calctotal',
                         type: ns_ui.FieldType.CURRENCY,
-                        label: 'Calc. Bill Amount',
+                        label: 'Bill Amount',
                         displayType: IsBillable
                             ? ns_ui.FieldDisplayType.INLINE
                             : ns_ui.FieldDisplayType.DISABLED,
@@ -545,7 +605,7 @@ define([
                     CALC_TAXTOTAL: {
                         id: 'custpage_polinetaxtotal',
                         type: ns_ui.FieldType.CURRENCY,
-                        label: 'Calc. Tax',
+                        label: 'Tax',
                         displayType: IsBillable
                             ? ns_ui.FieldDisplayType.INLINE
                             : ns_ui.FieldDisplayType.DISABLED,
@@ -554,7 +614,7 @@ define([
                     CALC_SHIPTOTAL: {
                         id: 'custpage_poshiptotal',
                         type: ns_ui.FieldType.CURRENCY,
-                        label: 'Calc. Shipping ',
+                        label: 'Shipping ',
                         displayType: IsBillable
                             ? ns_ui.FieldDisplayType.INLINE
                             : ns_ui.FieldDisplayType.DISABLED,
@@ -563,7 +623,7 @@ define([
                     CALC_VARIANCETOTAL: {
                         id: 'custpage_variancetotal',
                         type: ns_ui.FieldType.CURRENCY,
-                        label: 'Calc. Variance',
+                        label: 'Variance',
                         displayType: IsBillable
                             ? ns_ui.FieldDisplayType.INLINE
                             : ns_ui.FieldDisplayType.DISABLED,
@@ -577,6 +637,7 @@ define([
                     label: 'Bill Lines',
                     type: ns_ui.SublistType.LIST,
                     fields: {
+                        erroritem: null,
                         item: { type: ns_ui.FieldType.TEXT, label: 'Item' },
                         nsitem: {
                             type: ns_ui.FieldType.SELECT,
@@ -603,21 +664,6 @@ define([
                                 return arrOptions;
                             })(BILLPROC.PO.LINES)
                         },
-                        erroritem: vc2_util.inArray('UNMATCHED_ITEMS', arrLineErrors)
-                            ? {
-                                  type: ns_ui.FieldType.TEXT,
-                                  size: { w: 3, h: 100 },
-                                  label: ' '
-                              }
-                            : null,
-                        quantity: {
-                            label: 'Bill Qty',
-                            type: ns_ui.FieldType.CURRENCY,
-                            displayType: Current.UI.IsActiveEdit
-                                ? ns_ui.FieldDisplayType.ENTRY
-                                : ns_ui.FieldDisplayType.INLINE,
-                            size: { w: 5, h: 100 }
-                        },
                         nsqty: {
                             label: 'NS Qty',
                             type: ns_ui.FieldType.CURRENCY,
@@ -628,25 +674,13 @@ define([
                             // displayType: ns_ui.FieldDisplayType.HIDDEN,
                             type: ns_ui.FieldType.CURRENCY
                         },
-                        errorbillable: vc2_util.inArray('NOT_BILLABLE', arrLineErrors)
-                            ? {
-                                  type: ns_ui.FieldType.TEXT,
-                                  size: { w: 3, h: 100 },
-                                  label: ' '
-                              }
-                            : null,
+                        errorrecived: null,
                         nsbilled: {
                             label: 'Billed',
                             // displayType: ns_ui.FieldDisplayType.HIDDEN,
                             type: ns_ui.FieldType.CURRENCY
                         },
-                        errorbilled: vc2_util.inArray('ITEMS_ALREADY_BILLED', arrLineErrors)
-                            ? {
-                                  type: ns_ui.FieldType.TEXT,
-                                  size: { w: 3, h: 100 },
-                                  label: ' '
-                              }
-                            : null,
+                        errorbilled: null,
                         remainingqty: {
                             label: 'Avail Qty',
                             displayType: Current.UI.IsActiveEdit
@@ -654,13 +688,19 @@ define([
                                 : ns_ui.FieldDisplayType.HIDDEN,
                             type: ns_ui.FieldType.CURRENCY
                         },
-                        errorqty: vc2_util.inArray('INSUFFICIENT_QUANTITY', arrLineErrors)
-                            ? {
-                                  type: ns_ui.FieldType.TEXT,
-                                  size: { w: 3, h: 100 },
-                                  label: ' '
-                              }
-                            : null,
+                        quantity: {
+                            label: 'Bill Qty',
+                            type: ns_ui.FieldType.CURRENCY,
+                            displayType: Current.UI.IsActiveEdit
+                                ? ns_ui.FieldDisplayType.ENTRY
+                                : ns_ui.FieldDisplayType.INLINE,
+                            size: { w: 5, h: 100 }
+                        },
+                        errorqty: null,
+                        nsrate: {
+                            label: 'NS Rate',
+                            type: ns_ui.FieldType.CURRENCY
+                        },
                         rate: {
                             label: 'Bill Rate',
                             type: ns_ui.FieldType.CURRENCY,
@@ -669,19 +709,15 @@ define([
                                 ? ns_ui.FieldDisplayType.ENTRY
                                 : ns_ui.FieldDisplayType.INLINE
                         },
-                        nsrate: {
-                            label: 'NS Rate',
+                        errorprice: null,
+                        diffamount: {
+                            label: 'Diff',
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             type: ns_ui.FieldType.CURRENCY
                         },
-                        errorprice: vc2_util.inArray('Price', arrLineErrors)
-                            ? {
-                                  type: ns_ui.FieldType.TEXT,
-                                  size: { w: 3, h: 100 },
-                                  label: ' '
-                              }
-                            : null,
                         amount: {
                             label: 'Bill Amount',
+                            totallingField: true,
                             type: ns_ui.FieldType.CURRENCY
                         },
                         calcamount: {
@@ -691,7 +727,7 @@ define([
                         },
                         nstaxamt: {
                             label: 'Calc. Tax',
-                            displayType: ns_ui.FieldDisplayType.HIDDEN,
+                            displayType: ns_ui.FieldDisplayType.INLINE,
                             type: ns_ui.FieldType.CURRENCY
                         },
                         description: {
@@ -714,6 +750,34 @@ define([
                         }
                     }
                 };
+
+                arrLineErrors = vc2_util.uniqueArray(arrLineErrors);
+
+                vc2_util.log(logTitle, '// line errors (1): ', arrLineErrors);
+                arrLineErrors.forEach(function (errorCode) {
+                    if (!BILLPROC.STATUS.BILLFILE.IsActiveEdit) return;
+                    var lineErrorDef = LINE_ERROR_MSG[errorCode],
+                        sublistField =
+                            lineErrorDef && lineErrorDef.col
+                                ? FORM_DEF.SUBLIST.ITEM.fields.hasOwnProperty(lineErrorDef.col)
+                                : null;
+
+                    // vc2_util.log(logTitle, '..error: ', [
+                    //     errorCode,
+                    //     LINE_ERROR_MSG,
+                    //     lineErrorDef,
+                    //     sublistField
+                    // ]);
+                    if (!lineErrorDef || !sublistField) return;
+                    //set the field def
+
+                    FORM_DEF.SUBLIST.ITEM.fields[lineErrorDef.col] = {
+                        type: ns_ui.FieldType.TEXT,
+                        size: { w: 3, h: 100 },
+                        label: ' '
+                    };
+                    return true;
+                });
 
                 // INTIIALIZE SUBLSIT-VARIANCE LINES ////
                 FORM_DEF.SUBLIST.CHARGES = {
@@ -799,9 +863,20 @@ define([
                             displayType: ns_ui.FieldDisplayType.INLINE
                         },
                         amount: {
-                            label: 'Amount',
+                            label: 'Charge Amount',
                             type: ns_ui.FieldType.CURRENCY,
                             totallingField: true,
+                            displayType: ns_ui.FieldDisplayType.INLINE
+                        },
+                        calcamount: {
+                            label: 'Calc Amount',
+                            type: ns_ui.FieldType.CURRENCY,
+                            displayType: ns_ui.FieldDisplayType.INLINE
+                        },
+                        amountvar: {
+                            label: 'Variance',
+                            type: ns_ui.FieldType.CURRENCY,
+                            // totallingField: true,
                             displayType:
                                 Current.UI.IsActiveEdit ||
                                 BILLPROC.BILLFILE.DATA.STATUS == BILL_CREATOR.Status.VARIANCE
@@ -811,15 +886,15 @@ define([
                         amounttax: {
                             label: 'Applied Tax',
                             type: ns_ui.FieldType.CURRENCY,
-                            displayType: ns_ui.FieldDisplayType.HIDDEN
+                            displayType: ns_ui.FieldDisplayType.INLINE
                         }
                     }
                 };
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-            } finally {
-                vc2_util.log(logTitle, ' //Initalized Fields: ', FORM_DEF.FIELDS);
-                vc2_util.log(logTitle, ' //Initalized SUBLIST: ', FORM_DEF.SUBLIST);
+                // } finally {
+                //     vc2_util.log(logTitle, ' //Initalized Fields: ', FORM_DEF.FIELDS);
+                //     vc2_util.log(logTitle, ' //Initalized SUBLIST: ', FORM_DEF.SUBLIST);
             }
 
             return FORM_DEF.FIELDS;
@@ -855,8 +930,6 @@ define([
                 vc2_util.logError(logTitle, error);
                 FlexScreen_UI.handleError(error);
             } finally {
-                vc2_util.dumpLog(logTitle, Current.MSG);
-
                 scriptContext.response.writePage(FORM_DEF.FORM);
             }
 
@@ -921,67 +994,56 @@ define([
             }
 
             // SKip everythinkg if its already processed or fully billed
-            if (BILLPROC.STATUS.IsProcessed || BILLPROC.STATUS.IsClosed) {
+            if (BILLPROC.STATUS.BILLFILE.IsProcessed || BILLPROC.STATUS.BILLFILE.IsClosed) {
                 Current.UI.IsActiveEdit = false;
-                Current.MSG.info.push('This Bill is already processed or closed');
+                Current.MSG.info.push(
+                    BILLPROC.STATUS.BILLFILE.IsProcessed
+                        ? 'Bill File is already processed'
+                        : 'Bill File is already closed'
+                );
                 return;
             }
 
-            if (BILLPROC.IsFullyBilled) {
+            if (BILLPROC.STATUS.BILLFILE.ItemsAllBilled || BILLPROC.STATUS.PO.IsFullyBilled) {
                 Current.UI.IsActiveEdit = false;
-                Current.MSG.warning.push('All the items are fully billed');
+                Current.MSG.warning.push('Items on this bill are already fully billed');
+                return;
+            }
+
+            if (BILLPROC.STATUS.PO.IsClosed) {
+                Current.UI.IsActiveEdit = false;
+                Current.MSG.warning.push('Purchase Order is already closed.');
                 return;
             }
 
             /// CHECK for the Errors
-            if (BILLPROC.STATUS.HasErrors) {
-                var arrErrorMsg = [];
+            if (BILLPROC.STATUS.HasErrors || BILLPROC.STATUS.HasVariance) {
+                var arrErrorReport = vc_billprocess.reportError();
 
-                for (var errorCode in BILLPROC.Error) {
-                    var errorMsg = BILL_CREATOR.Code[errorCode]
-                        ? BILL_CREATOR.Code[errorCode].msg
-                        : errorCode;
-                    if (!vc2_util.isEmpty(BILLPROC.Error[errorCode]))
-                        errorMsg +=
-                            ' -- ' +
-                            (util.isArray(BILLPROC.Error[errorCode])
-                                ? BILLPROC.Error[errorCode].join(', ')
-                                : BILLPROC.Error[errorCode]);
-                    arrErrorMsg.push(errorMsg);
+                // if there are errors, all of them goes to the error,
+                // if its just variances, just a warning
+                if (!vc2_util.isEmpty(arrErrorReport.errors)) {
+                    Current.MSG.error.push(arrErrorReport.errors.join('<br/>'));
+                    // Current.MSG.error.push(arrErrorReport.variances.join('<br/>'));
+                } else {
+                    Current.MSG.warning.push(arrErrorReport.variances.join('<br/>'));
                 }
 
-                Current.MSG.error.push(arrErrorMsg.join('<br/>'));
-            }
-            if (BILLPROC.STATUS.HasVariance) {
-                var varianceMsg = [],
-                    exceedTHR = false,
-                    withinTHR = false;
-
-                BILLPROC.VarianceList.forEach(function (varCode) {
-                    if (varCode == 'EXCEED_THRESHOLD') exceedTHR = true;
-                    else if (varCode == 'WITHIN_THRESHOLD') withinTHR = true;
-                    else varianceMsg.push(varCode);
-                });
-                Current.MSG.warning.push('Variance Detected - ' + varianceMsg.join(', '));
-                if (exceedTHR || withinTHR) {
-                    Current.MSG.warning.push(
-                        BILL_CREATOR.Code[exceedTHR ? 'EXCEED_THRESHOLD' : 'WITHIN_THRESHOLD'].msg +
-                            ' -- ' +
-                            ns_format.format({
-                                value: BILLPROC.CFG.MainCFG.allowedVarianceAmountThreshold,
-                                type: ns_format.Type.CURRENCY
-                            })
-                    );
+                if (BILLPROC.STATUS.AllowToBill) {
+                    if (BILLPROC.STATUS.BILLFILE.AllowVariance) {
+                        Current.MSG.warning.push('Bill will be created with variances.');
+                    } else if (BILLPROC.STATUS.BILLFILE.IgnoreVariance) {
+                        Current.MSG.warning.push('Bill will be created ignoring the variances.');
+                    } else if (!vc2_util.isEmpty(BILLPROC.STATUS.ALLOWED_TO_BILL)) {
+                        Current.MSG.warning.push(
+                            'Bill will be created - ' + BILLPROC.STATUS.ALLOWED_TO_BILL.join(', ')
+                        );
+                    } else {
+                        Current.MSG.warning.push('Bill will be created');
+                    }
                 }
-
-                if (BILLPROC.STATUS.AllowVariance)
-                    Current.MSG.error.push('Bill will be created, with the variances applied');
-                if (BILLPROC.STATUS.IgnoreVariance)
-                    Current.MSG.error.push('Bill will be created, *without* the variances');
-            } else if (BILLPROC.STATUS.AllowToBill) {
-                Current.MSG.info.push('PO is Ready for Billing');
-            } else if (BILLPROC.STATUS.AllowToReceive) {
-                Current.MSG.info.push('PO will be received before creating the bill');
+            } else {
+                Current.MSG.info.push('Bill will be created');
             }
         },
         loadingPage: function (scriptContext) {
@@ -1012,27 +1074,6 @@ define([
                 }
             ]);
 
-            // vc_uihelper.renderField({
-            //     type: ns_ui.FieldType.INLINEHTML,
-            //     label: 'Loading',
-            //     defaultValue: '<h2> Loading bill file...</h2>'
-            // });
-
-            // vc_uihelper.renderField({
-            //     id: 'custpage_redir_url',
-            //     type: ns_ui.FieldType.TEXT,
-            //     displayType: ns_ui.FieldDisplayType.HIDDEN,
-            //     label: 'Redir URL',
-            //     defaultValue: ns_url.resolveScript({
-            //         scriptId: ns_runtime.getCurrentScript().id,
-            //         deploymentId: ns_runtime.getCurrentScript().deploymentId,
-            //         params: {
-            //             record_id: Current.BILLFILE.ID,
-            //             taskact: 'viewForm'
-            //         }
-            //     })
-            // });
-
             return true;
         },
         viewForm: function (scriptContext) {
@@ -1051,11 +1092,14 @@ define([
             Form.addSubmitButton({ label: 'Submit' });
             Form.addResetButton({ label: 'Reset' });
 
-            Form.addButton({
+            var btnProcessBill = Form.addButton({
                 id: 'btnProcessBill',
                 label: 'Process Bill File',
                 functionName: 'goToProcessBill'
-            }).isDisabled = !Current.UI.IsActiveEdit;
+            });
+
+            if (!Current.UI.IsActiveEdit) btnProcessBill.isDisabled = true;
+            if (!BILLPROC.STATUS.AllowToBill) btnProcessBill.isDisabled = true;
 
             // create the tabs
             Form.addTab({ id: 'tab_items', label: 'Bill Lines' });
@@ -1107,9 +1151,9 @@ define([
 
             // CALC TOTALS
             if (
-                (BILLPROC.STATUS.IsProcessed ||
-                    BILLPROC.STATUS.IsFullyBilled ||
-                    BILLPROC.STATUS.IsClosed) &&
+                (BILLPROC.STATUS.BILLFILE.IsProcessed ||
+                    BILLPROC.STATUS.PO.IsFullyBilled ||
+                    BILLPROC.STATUS.BILLFILE.IsClosed) &&
                 BILLPROC.BILL &&
                 BILLPROC.BILL.REC
             ) {
@@ -1159,6 +1203,7 @@ define([
                     amount: billLine.amount,
                     description: billLine.description,
                     line_idx: billLine.lineIdx,
+                    nstaxamt: billLine.TotalLineTax,
                     calcamount: vc2_util.roundOff(billLine.quantity * billLine.rate)
                 };
 
@@ -1170,24 +1215,21 @@ define([
                         nsrate: billLine.OrderLine.rate,
                         remainingqty: billLine.OrderLine.BILLABLE
                             ? billLine.OrderLine.BILLABLE
-                            : billLine.OrderLine.RECEIVABLE || ''
+                            : billLine.OrderLine.RECEIVABLE || '',
+                        nstaxamt: billLine.OrderLine.TaxAmount
                     });
+                    lineData.diffamount =
+                        lineData.calcamount -
+                        vc2_util.roundOff(lineData.nsrate * billLine.quantity);
                 }
 
-                vc2_util.log(logTitle, '// bill line: ', billLine);
+                // vc2_util.log(logTitle, '// bill line: ', billLine);
+
                 var arrLineErrors = [];
-                if (!vc2_util.isEmpty(billLine.Errors))
-                    arrLineErrors = arrLineErrors.concat(billLine.Errors);
-
-                if (!vc2_util.isEmpty(billLine.Variance))
-                    arrLineErrors = arrLineErrors.concat(billLine.Variance);
-
-                vc2_util.log(logTitle, '... line errors: ', arrLineErrors);
+                arrLineErrors = arrLineErrors.concat(billLine.ErrorList || []);
+                arrLineErrors = arrLineErrors.concat(billLine.VarianceList || []);
 
                 arrLineErrors.forEach(function (errorCode) {
-                    if (!Current.UI.IsActiveEdit) return false;
-
-                    // if (!LINE_ERROR_MSG[errorCode]) return;
                     var lineError = LINE_ERROR_MSG[errorCode];
                     if (!lineError) return false;
 
@@ -1210,6 +1252,7 @@ define([
                     return true;
                 });
 
+                // vc2_util.log(logTitle, '// set sublist line', lineData);
                 vc_uihelper.setSublistValues({
                     sublist: itemSublist,
                     line: lineIdx,
@@ -1222,7 +1265,7 @@ define([
             );
 
             (BILLPROC.VARLINES || []).forEach(function (chargeLine, idx) {
-                util.extend(chargeLine, {
+                var chargeLineValues = {
                     is_active: chargeLine.enabled ? 'T' : 'F',
                     applied: chargeLine.applied,
                     type: chargeLine.name,
@@ -1232,52 +1275,43 @@ define([
                         chargeLine.amount && chargeLine.autoProc
                             ? '<span style="color: red;font-size:1em;"> ** Auto Processed ** </span>'
                             : '',
-                    amount: chargeLine.amount || '0.00'
-                });
+                    amount: chargeLine.amount || '0.00',
+                    calcamount: chargeLine.calcAmount || '0.00',
+                    amountvar: chargeLine.varianceAmount || '0.00',
+                    amounttax: chargeLine.amounttax || '0.00'
+                };
 
                 vc_uihelper.setSublistValues({
                     sublist: chargesSublist,
                     line: idx,
-                    lineData: chargeLine
+                    lineData: chargeLineValues
                 });
 
                 return true;
             });
 
             // combine the errors and warnings
-            var arrWarnError = (Current.MSG.warning || []).concat(Current.MSG.error || []);
-            if (!vc2_util.isEmpty(arrWarnError)) {
+            if (!vc2_util.isEmpty(Current.MSG.error))
                 FORM_DEF.FORM.addPageInitMessage({
-                    title: 'Error detected',
+                    title: 'Error',
                     message:
                         '<br />' +
-                        (util.isArray(arrWarnError) ? arrWarnError.join('<br />') : arrWarnError),
+                        (util.isArray(Current.MSG.error)
+                            ? Current.MSG.error.join('<br />')
+                            : Current.MSG.error),
                     type: ns_msg.Type.ERROR
                 });
+            else if (!vc2_util.isEmpty(Current.MSG.warning)) {
+                FORM_DEF.FORM.addPageInitMessage({
+                    title: 'Warning',
+                    message:
+                        '<br />' +
+                        (util.isArray(Current.MSG.warning)
+                            ? Current.MSG.warning.join('<br />')
+                            : Current.MSG.warning),
+                    type: ns_msg.Type.WARNING
+                });
             }
-
-            // if (!vc2_util.isEmpty(Current.MSG.error))
-            //     FORM_DEF.FORM.addPageInitMessage({
-            //         title: 'Error',
-            //         message:
-            //             '<br />' +
-            //             (util.isArray(Current.MSG.error)
-            //                 ? Current.MSG.error.join('<br />')
-            //                 : Current.MSG.error),
-            //         type: ns_msg.Type.ERROR
-            //     });
-
-            // if (!vc2_util.isEmpty(Current.MSG.warning)) {
-            //     FORM_DEF.FORM.addPageInitMessage({
-            //         title: 'Warning',
-            //         message:
-            //             '<br />' +
-            //             (util.isArray(Current.MSG.warning)
-            //                 ? Current.MSG.warning.join('<br />')
-            //                 : Current.MSG.warning),
-            //         type: ns_msg.Type.WARNING
-            //     });
-            // }
             if (!vc2_util.isEmpty(Current.MSG.info)) {
                 FORM_DEF.FORM.addPageInitMessage({
                     title: 'Information',
@@ -1316,9 +1350,13 @@ define([
                     itemLineCount: requestObj.getLineCount(FSublist.ITEM.id),
                     varianceLineCount: requestObj.getLineCount(FSublist.CHARGES.id)
                 },
-                updateValues = {};
-            paramValues.processVariance = paramValues.action == 'reprocess_hasvar';
-            paramValues.ignoreVariance = paramValues.action == 'reprocess_novar';
+                updateValues = {},
+                allowVariance = BILLPROC.BILLFILE.AllowVariance,
+                ignoreVariance = BILLPROC.BILLFILE.IgnoreVariance;
+
+            if (paramValues.action == 'reprocess_hasvar') allowVariance = true;
+            if (paramValues.action == 'reprocess_novar') ignoreVariance = true;
+
             vc2_util.log(logTitle, '// Param Values: ', paramValues);
 
             var JSON_DATA = vc2_util.safeParse(BILLPROC.BILLFILE.DATA.JSON);
@@ -1331,16 +1369,16 @@ define([
                     line: line
                 });
                 vc2_util.log(logTitle, '... lineData: ', [lineData, line]);
-
                 util.extend(JSON_DATA.lines[line], {
                     NSITEM: lineData.nsitem,
-                    PRICE: paramValues.ignoreVariance ? lineData.nsrate : lineData.rate,
-                    BILLRATE: paramValues.ignoreVariance ? lineData.nsrate : lineData.rate
+                    // if ignoreVariance is true, then use the nsrate, otherwise use the rate from the bill
+                    PRICE: ignoreVariance ? lineData.nsrate : lineData.rate,
+                    BILLRATE: ignoreVariance ? lineData.nsrate : lineData.rate
                 });
             }
 
             // update the variance lines
-            JSON_DATA.variance_lines = [];
+            JSON_DATA.variance = [];
             for (var line = 0; line < paramValues.varianceLineCount; line++) {
                 var lineData = vc_uihelper.extractLineValues({
                     record: requestObj,
@@ -1360,7 +1398,7 @@ define([
                 vc2_util.log(logTitle, '... lineData: ', lineData);
                 if (lineData.rate == 0 || lineData.amount == 0) continue;
 
-                JSON_DATA.variance_lines.push({
+                JSON_DATA.variance.push({
                     applied: paramValues.ignoreVariance ? 'F' : lineData.applied,
                     type: lineData.type,
                     item: lineData.nsitem,

@@ -20,6 +20,14 @@ define([
     var LogTitle = 'WS:D&H';
 
     var CURRENT = {},
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ],
         ERROR_MSG = vc2_constant.ERRORMSG;
 
     var Helper = {
@@ -143,21 +151,6 @@ define([
                     serial_num: 'NA',
                     is_shipped: false
                 };
-                [
-                    'order_date',
-                    'order_eta',
-                    'order_delivery_eta',
-                    'deliv_date',
-                    'prom_date',
-                    'ship_date'
-                ].forEach(function (dateField) {
-                    if (itemObj[dateField] && itemObj[dateField] != 'NA') {
-                        itemObj[dateField] = vc2_util.parseFormatDate(
-                            itemObj[dateField],
-                            'MM/DD/YYYY'
-                        );
-                    }
-                });
 
                 // validate order_status
                 if (
@@ -266,7 +259,7 @@ define([
                             dateshipped: []
                         };
 
-                    packagesList[pkgIndex].serials.push(shipSerialNo);
+                    if (shipSerialNo) packagesList[pkgIndex].serials.push(shipSerialNo);
                     packagesList[pkgIndex].carriers.push(packageObj.carrier);
                     packagesList[pkgIndex].carrierServices.push(packageObj.service);
                     packagesList[pkgIndex].trackingNums.push(packageObj.trackNum);
@@ -301,9 +294,15 @@ define([
             try {
                 LibDnH.initialize(option);
                 var xmlResponse = this.processRequest(option),
+                    xmlResponseStr = xmlResponse,
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });
 
                 if (!xmlDoc) throw 'Unable to parse XML';
+
+                if (option.debugMode) {
+                    if (!option.showLines) return xmlResponse;
+                }
+                // returnValue.Source = xmlResponseStr;
 
                 var arrItemNodes = ns_xml.XPath.select({ node: xmlDoc, xpath: '//DETAILITEM' });
 
@@ -329,17 +328,14 @@ define([
                         Status: Helper.getNodeValue(parentNode, 'MESSAGE') || 'NA',
                         OrderNum: Helper.getNodeValue(parentNode, 'PONUM') || 'NA',
                         VendorOrderNum: Helper.getNodeValue(parentNode, 'ORDERNUM') || 'NA',
-                        OrderDate: Helper.getNodeValue(parentNode, 'DATE') || 'NA',
-                        Total: Helper.getNodeValue(parentNode, 'INVTOTAL') || 'NA',
-                        InvoiceNo: Helper.getNodeValue(parentNode, 'INVOICE') || 'NA'
-                    };
-
-                    if (orderData.OrderDate && orderData.OrderDate != 'NA') {
-                        orderData.OrderDate = vc2_util.parseFormatDate(
-                            orderData.OrderDate,
+                        OrderDate: vc2_util.parseFormatDate(
+                            Helper.getNodeValue(parentNode, 'DATE') || 'NA',
                             'MM/DD/YY'
-                        );
-                    }
+                        ),
+                        Total: Helper.getNodeValue(parentNode, 'INVTOTAL') || 'NA',
+                        InvoiceNo: Helper.getNodeValue(parentNode, 'INVOICE') || 'NA',
+                        Source: itemNode.parentNode
+                    };
 
                     if (!OrderList[orderData.OrderNum]) {
                         OrderList[orderData.OrderNum] = orderData;
@@ -354,10 +350,23 @@ define([
                     itemArray.push(itemObj);
                 }
 
-                returnValue = {
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'MM/DD/YYYY'
+                        );
+                    });
+                });
+
+                util.extend(returnValue, {
                     Orders: arrOrdersList,
-                    Lines: itemArray
-                };
+                    Lines: itemArray,
+                    Source: xmlResponseStr
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

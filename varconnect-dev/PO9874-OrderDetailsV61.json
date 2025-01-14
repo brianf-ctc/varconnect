@@ -1,0 +1,563 @@
+{
+    "ingramOrderNumber": "41-25133",
+    "ingramOrderDate": "2024-11-05T06:42:55",
+    "orderType": "D",
+    "customerOrderNumber": "PO9874",
+    "endCustomerOrderNumber": "P241690",
+    "vendorSalesOrderNumber": "98064910",
+    "ingramPurchaseOrderNumber": "4125133",
+    "orderStatus": "Partially Shipped",
+    "orderTotal": 29891.04,
+    "orderSubTotal": 29891.04,
+    "freightCharges": 0,
+    "currencyCode": "USD",
+    "totalWeight": 69.92,
+    "totalTax": 0,
+    "totalFees": 0,
+    "paymentTerms": "GE CDF GOVERNMENT",
+    "notes": "********* DIRECT SHIP INFO ******** || ////ORDER COMMENTS || //DN-COMPUTER SERVICES - EDUCATIONA || L SERVICES CAMPUS JEFF SMITH - P241 || 690 || COLIN.PREGIBON@TPS.ORG",
+    "billToInfo": {
+        "contact": null,
+        "companyName": "PEOPLE DRIVEN TECHNOLOGY INC",
+        "addressLine1": "GE COMMERCIAL DIST FINANCE",
+        "addressLine2": "DO NOT MAIL - EDI ONLY",
+        "addressLine3": null,
+        "city": "WILLIAMSVILLE",
+        "state": "NY",
+        "postalCode": "142210000",
+        "countryCode": "US",
+        "phoneNumber": null,
+        "email": null
+    },
+    "shipToInfo": {
+        "contact": "JEFF SMITH - P241690",
+        "companyName": "TOLEDO PUBLIC SCHOOLS",
+        "addressLine1": "1609 N SUMMIT ST FL 2",
+        "addressLine2": "COMPUTER SERVICES - EDUCATIONAL SER",
+        "addressLine3": null,
+        "city": "TOLEDO",
+        "state": "OH",
+        "postalCode": "436041806",
+        "countryCode": "US",
+        "phoneNumber": "4196718476",
+        "email": null
+    },
+    "endUserInfo": {
+        "contact": null,
+        "companyName": "TOLEDO PUBLIC SCHOOLS",
+        "addressLine1": "1609 N. SUMMIT STREET, 2ND FLOOR",
+        "addressLine2": null,
+        "addressLine3": null,
+        "city": "TOLEDO",
+        "state": "OH",
+        "postalCode": "436040000",
+        "countryCode": "US",
+        "phoneNumber": null,
+        "email": null
+    },
+    "lines": [
+        {
+            "subOrderNumber": "41-25133-14",
+            "ingramOrderLineNumber": "006",
+            "vendorSalesOrderLineNumber": "1.0",
+            "customerLineNumber": "001",
+            "lineStatus": "Closed",
+            "ingramPartNumber": "8WF040",
+            "vendorPartNumber": "N9K-C93180YC-FX3",
+            "vendorName": "CISCO - HW NEXUS",
+            "partDescription": "CISCO  Nexus 9300 48p 1/10/25G, 6p 40/100G, MACsec,SyncE",
+            "unitWeight": 30.58,
+            "weightUom": "EA",
+            "unitPrice": 8592.75,
+            "upcCode": "0889728175692",
+            "extendedPrice": 17185.5,
+            "taxAmount": 0,
+            "currencyCode": "USD",
+            "quantityOrdered": 2,
+            "quantityConfirmed": 2,
+            "quantityBackOrdered": 0,
+            "specialBidNumber": null,
+            "requestedDeliverydate": null,
+            "promisedDeliveryDate": null,
+            "backOrderETADate": null,
+            "lineNotes": "EU#- 005375370 TOLEDO PUBLIC SCHOOLS || MC#K || EUSR NAME:TOLEDO PUBLIC SCHOOLS || EUSR ADD1:1609 N SUMMIT ST FL 2 || EUSR CITY:TOLEDO || ST: OH  ZIP: 436041806   CTRY: US || EUSR CONT:JEFF SMITH || EUSR PHON:14196718476 || EUSR EMAL:colin.pregibon@tps.org || VIA:  CISCO || VIA:  FDEN-PARCEL-GROUND || TRK#: 420910766090 || TRK#: 420910771099 || TRK#: 420910795144 || TRK#: 429934243803 || TRK#: 429934243799 || RE 04 41-25133 005      2 1202 3122",
+            "shipmentDetails": [
+                {
+                    "quantity": 2,
+                    "estimatedShipDate": "2024-12-02",
+                    "shippedDate": "2024-11-26",
+                    "estimatedDeliveryDate": "2024-12-05",
+                    "shipFromWarehouseId": "41",
+                    "shipFromLocation": null,
+                    "invoiceNumber": "41-25133-14",
+                    "invoiceDate": "2024-12-02",
+                    "carrierDetails": [
+                        {
+                            "carrierCode": "FDEG",
+                            "carrierName": "FEDEX GROUND",
+                            "quantity": 1,
+                            "shippedDate": "2024-11-26",
+                            "estimatedDeliveryDate": "2024-12-05",
+                            "deliveredDate": "2024-12-05",
+                            "carrierPickupDate": "2024-11-26",
+                            "trackingDetails": [
+                                {
+                                    "trackingNumber": "429934243803",
+                                    "trackingUrl": "https://www.fedex.com/fedextrack/?trknbr=429934243803",
+                                    "packageWeight": null,
+                                    "quantityInBox": "1",
+                                    "serialNumbers": [
+                                        {
+                                            "serialNumber": "FDO28410JYT"
+                                        },
+                                        {
+                                            "serialNumber": "FDO284115YH"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "carrierCode": "FDEG",
+                            "carrierName": "FEDEX GROUND",
+                            "quantity": 1,
+                            "shippedDate": "2024-11-26",
+                            "estimatedDeliveryDate": "2024-12-05",
+                            "deliveredDate": "2024-12-05",
+                            "carrierPickupDate": "2024-11-26",
+                            "trackingDetails": [
+                                {
+                                    "trackingNumber": "429934243799",
+                                    "trackingUrl": "https://www.fedex.com/fedextrack/?trknbr=429934243799",
+                                    "packageWeight": null,
+                                    "quantityInBox": "1",
+                                    "serialNumbers": null
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "serviceContractInfo": {},
+            "additionalAttributes": [
+                {
+                    "attributeName": "additional description",
+                    "attributeValue": "40/100G MACSEC UP SYNCE"
+                }
+            ],
+            "links": [
+                {
+                    "topic": "invoices",
+                    "href": "/resellers/v6.1/invoices/41-25133-14",
+                    "type": "GET"
+                }
+            ],
+            "estimatedDates": [],
+            "scheduleLines": [],
+            "multipleShipments": [
+                {
+                    "lineNumber": null,
+                    "requestedQuantity": 0,
+                    "confirmedQuantity": 2,
+                    "dateType": "Single",
+                    "dateRange": null,
+                    "source": null,
+                    "description": null,
+                    "date": "12/5/2024 12:00:00 AM",
+                    "deliveryDate": "12/5/2024 12:00:00 AM"
+                }
+            ],
+            "defaultCarrierName": "RGRTNG"
+        },
+        {
+            "subOrderNumber": "41-25133-13",
+            "ingramOrderLineNumber": "009",
+            "vendorSalesOrderLineNumber": "2.0",
+            "customerLineNumber": "012",
+            "lineStatus": "Closed",
+            "ingramPartNumber": "4L8441",
+            "vendorPartNumber": "QSFP-100G-CU1M=",
+            "vendorName": "CISCO - HW CABLES AND TRANSCEIVERS",
+            "partDescription": "CISCO  100GBASE-CR4 Passive Copper Cable, 1m",
+            "unitWeight": 0.3,
+            "weightUom": "EA",
+            "unitPrice": 182.99,
+            "upcCode": "0882658836602",
+            "extendedPrice": 365.98,
+            "taxAmount": 0,
+            "currencyCode": "USD",
+            "quantityOrdered": 2,
+            "quantityConfirmed": 2,
+            "quantityBackOrdered": 0,
+            "specialBidNumber": null,
+            "requestedDeliverydate": null,
+            "promisedDeliveryDate": null,
+            "backOrderETADate": null,
+            "lineNotes": "EU#- 005375370 TOLEDO PUBLIC SCHOOLS || MC#K || EUSR NAME:TOLEDO PUBLIC SCHOOLS || EUSR ADD1:1609 N SUMMIT ST FL 2 || EUSR CITY:TOLEDO || ST: OH  ZIP: 436041806   CTRY: US || EUSR CONT:JEFF SMITH || EUSR PHON:14196718476 || EUSR EMAL:colin.pregibon@tps.org || VIA:  CISCO || VIA:  FDEN-PARCEL-GROUND || TRK#: 420910795144 || RE 03 41-25133 008      2 1123 3122",
+            "shipmentDetails": [
+                {
+                    "quantity": 2,
+                    "estimatedShipDate": "2024-11-20",
+                    "shippedDate": "2024-11-20",
+                    "estimatedDeliveryDate": "2024-12-02",
+                    "shipFromWarehouseId": "41",
+                    "shipFromLocation": null,
+                    "invoiceNumber": "41-25133-13",
+                    "invoiceDate": "2024-11-23",
+                    "carrierDetails": [
+                        {
+                            "carrierCode": "FDEG",
+                            "carrierName": "FEDEX GROUND",
+                            "quantity": 2,
+                            "shippedDate": "2024-11-20",
+                            "estimatedDeliveryDate": "2024-12-02",
+                            "deliveredDate": "2024-12-02",
+                            "carrierPickupDate": "2024-11-20",
+                            "trackingDetails": [
+                                {
+                                    "trackingNumber": "420910795144",
+                                    "trackingUrl": "https://www.fedex.com/fedextrack/?trknbr=420910795144",
+                                    "packageWeight": null,
+                                    "quantityInBox": "2",
+                                    "serialNumbers": [
+                                        {
+                                            "serialNumber": "LCC2842GMVT"
+                                        },
+                                        {
+                                            "serialNumber": "LCC2842GMW8"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "serviceContractInfo": {},
+            "additionalAttributes": [
+                {
+                    "attributeName": "additional description",
+                    "attributeValue": "CABLE"
+                }
+            ],
+            "links": [
+                {
+                    "topic": "invoices",
+                    "href": "/resellers/v6.1/invoices/41-25133-13",
+                    "type": "GET"
+                }
+            ],
+            "estimatedDates": [],
+            "scheduleLines": [],
+            "multipleShipments": [
+                {
+                    "lineNumber": null,
+                    "requestedQuantity": 0,
+                    "confirmedQuantity": 2,
+                    "dateType": "Single",
+                    "dateRange": null,
+                    "source": null,
+                    "description": null,
+                    "date": "12/2/2024 12:00:00 AM",
+                    "deliveryDate": "12/2/2024 12:00:00 AM"
+                }
+            ],
+            "defaultCarrierName": "RGRTNG"
+        },
+        {
+            "subOrderNumber": "41-25133-11",
+            "ingramOrderLineNumber": "010",
+            "vendorSalesOrderLineNumber": "3.0",
+            "customerLineNumber": "013",
+            "lineStatus": "Closed",
+            "ingramPartNumber": "3BC084",
+            "vendorPartNumber": "SFP-25G-AOC7M=",
+            "vendorName": "CISCO - HW CABLES AND TRANSCEIVERS",
+            "partDescription": "CISCO  25GBASE Active Optical SFP28 Cable, 7M",
+            "unitWeight": 0.44,
+            "weightUom": "EA",
+            "unitPrice": 293.37,
+            "upcCode": "0882658973345",
+            "extendedPrice": 1173.48,
+            "taxAmount": 0,
+            "currencyCode": "USD",
+            "quantityOrdered": 4,
+            "quantityConfirmed": 4,
+            "quantityBackOrdered": 0,
+            "specialBidNumber": null,
+            "requestedDeliverydate": null,
+            "promisedDeliveryDate": null,
+            "backOrderETADate": null,
+            "lineNotes": "EU#- 005375370 TOLEDO PUBLIC SCHOOLS || MC#K || EUSR NAME:TOLEDO PUBLIC SCHOOLS || EUSR ADD1:1609 N SUMMIT ST FL 2 || EUSR CITY:TOLEDO || ST: OH  ZIP: 436041806   CTRY: US || EUSR CONT:JEFF SMITH || EUSR PHON:14196718476 || EUSR EMAL:colin.pregibon@tps.org || VIA:  CISCO || VIA:  FDEN-PARCEL-GROUND || TRK#: 420910766090 || RE 01 41-25133 009      4 1116 3122",
+            "shipmentDetails": [
+                {
+                    "quantity": 4,
+                    "estimatedShipDate": "2024-11-15",
+                    "shippedDate": "2024-11-13",
+                    "estimatedDeliveryDate": "2024-11-19",
+                    "shipFromWarehouseId": "41",
+                    "shipFromLocation": null,
+                    "invoiceNumber": "41-25133-11",
+                    "invoiceDate": "2024-11-16",
+                    "carrierDetails": [
+                        {
+                            "carrierCode": "FDEG",
+                            "carrierName": "FEDEX GROUND",
+                            "quantity": 4,
+                            "shippedDate": "2024-11-13",
+                            "estimatedDeliveryDate": "2024-11-19",
+                            "deliveredDate": "2024-11-19",
+                            "carrierPickupDate": "2024-11-13",
+                            "trackingDetails": [
+                                {
+                                    "trackingNumber": "420910766090",
+                                    "trackingUrl": "https://www.fedex.com/fedextrack/?trknbr=420910766090",
+                                    "packageWeight": null,
+                                    "quantityInBox": "4",
+                                    "serialNumbers": [
+                                        {
+                                            "serialNumber": "INL28320954"
+                                        },
+                                        {
+                                            "serialNumber": "INL2832097Z"
+                                        },
+                                        {
+                                            "serialNumber": "INL28320988"
+                                        },
+                                        {
+                                            "serialNumber": "INL2832098J"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "serviceContractInfo": {},
+            "additionalAttributes": [
+                {
+                    "attributeName": "additional description",
+                    "attributeValue": "CABLE"
+                }
+            ],
+            "links": [
+                {
+                    "topic": "invoices",
+                    "href": "/resellers/v6.1/invoices/41-25133-11",
+                    "type": "GET"
+                }
+            ],
+            "estimatedDates": [],
+            "scheduleLines": [],
+            "multipleShipments": [
+                {
+                    "lineNumber": null,
+                    "requestedQuantity": 0,
+                    "confirmedQuantity": 4,
+                    "dateType": "Single",
+                    "dateRange": null,
+                    "source": null,
+                    "description": null,
+                    "date": "11/19/2024 12:00:00 AM",
+                    "deliveryDate": "11/19/2024 12:00:00 AM"
+                }
+            ],
+            "defaultCarrierName": "GRRTNG"
+        },
+        {
+            "subOrderNumber": "41-25133-15",
+            "ingramOrderLineNumber": "011",
+            "vendorSalesOrderLineNumber": "4.0",
+            "customerLineNumber": "014",
+            "lineStatus": "Scheduled",
+            "ingramPartNumber": "2DF600",
+            "vendorPartNumber": "N9K-C9348GC-FXP",
+            "vendorName": "CISCO - HW NEXUS",
+            "partDescription": "CISCO  Nexus 9300 with 48p 100M/1GT, 4p 10/25G & 2p 40/100G QSFP28",
+            "unitWeight": 32.8,
+            "weightUom": "EA",
+            "unitPrice": 5351.13,
+            "upcCode": null,
+            "extendedPrice": 0,
+            "taxAmount": 0,
+            "currencyCode": "USD",
+            "quantityOrdered": 1,
+            "quantityConfirmed": 0,
+            "quantityBackOrdered": 1,
+            "specialBidNumber": null,
+            "requestedDeliverydate": null,
+            "promisedDeliveryDate": null,
+            "backOrderETADate": null,
+            "lineNotes": "EU#- 005375370 TOLEDO PUBLIC SCHOOLS || MC#K || EUSR NAME:TOLEDO PUBLIC SCHOOLS || EUSR ADD1:1609 N SUMMIT ST FL 2 || EUSR CITY:TOLEDO || ST: OH  ZIP: 436041806   CTRY: US || EUSR CONT:JEFF SMITH || EUSR PHON:14196718476 || EUSR EMAL:colin.pregibon@tps.org || VIA:  CISCO",
+            "shipmentDetails": [
+                {
+                    "quantity": 1,
+                    "estimatedShipDate": "2025-01-16",
+                    "shippedDate": null,
+                    "estimatedDeliveryDate": "2025-01-29",
+                    "shipFromWarehouseId": "41",
+                    "shipFromLocation": null,
+                    "invoiceNumber": null,
+                    "invoiceDate": null,
+                    "carrierDetails": []
+                }
+            ],
+            "serviceContractInfo": {},
+            "additionalAttributes": [
+                {
+                    "attributeName": "additional description",
+                    "attributeValue": "10/25G SFP+ AND 2P 100G QSFP"
+                }
+            ],
+            "links": [],
+            "estimatedDates": [
+                {
+                    "ship": {
+                        "shipDateType": "Single",
+                        "shipDateRange": {
+                            "startDate": null,
+                            "endDate": null
+                        },
+                        "shipSource": "D_VENDOR",
+                        "shipDescription": "Estimate provided by Manufacturer",
+                        "shipDate": "2025-01-16"
+                    },
+                    "delivery": null
+                },
+                {
+                    "ship": null,
+                    "delivery": {
+                        "deliveryDateType": "Single",
+                        "deliveryDateRange": {
+                            "startDate": null,
+                            "endDate": null
+                        },
+                        "deliverySource": null,
+                        "deliveryDescription": null,
+                        "deliveryDate": "2025-01-29"
+                    }
+                }
+            ],
+            "scheduleLines": [],
+            "multipleShipments": [
+                {
+                    "lineNumber": null,
+                    "requestedQuantity": 0,
+                    "confirmedQuantity": 1,
+                    "dateType": "Single",
+                    "dateRange": {
+                        "startDate": null,
+                        "endDate": null
+                    },
+                    "source": "D_VENDOR",
+                    "description": "Estimate provided by Manufacturer",
+                    "date": "2025-01-16",
+                    "deliveryDate": "2025-01-29"
+                }
+            ],
+            "defaultCarrierName": "FEDEX GROUND"
+        },
+        {
+            "subOrderNumber": "41-25133-12",
+            "ingramOrderLineNumber": "013",
+            "vendorSalesOrderLineNumber": "5.0",
+            "customerLineNumber": "024",
+            "lineStatus": "Closed",
+            "ingramPartNumber": "4T8432",
+            "vendorPartNumber": "SFP-H25G-CU1M=",
+            "vendorName": "CISCO - HW CABLES AND TRANSCEIVERS",
+            "partDescription": "CISCO  25GBASE-CU SFP28 Cable 1 Meter",
+            "unitWeight": 3.2,
+            "weightUom": "EA",
+            "unitPrice": 44.82,
+            "upcCode": null,
+            "extendedPrice": 89.64,
+            "taxAmount": 0,
+            "currencyCode": "USD",
+            "quantityOrdered": 2,
+            "quantityConfirmed": 2,
+            "quantityBackOrdered": 0,
+            "specialBidNumber": null,
+            "requestedDeliverydate": null,
+            "promisedDeliveryDate": null,
+            "backOrderETADate": null,
+            "lineNotes": "EU#- 005375370 TOLEDO PUBLIC SCHOOLS || MC#K || EUSR NAME:TOLEDO PUBLIC SCHOOLS || EUSR ADD1:1609 N SUMMIT ST FL 2 || EUSR CITY:TOLEDO || ST: OH  ZIP: 436041806   CTRY: US || EUSR CONT:JEFF SMITH || EUSR PHON:14196718476 || EUSR EMAL:colin.pregibon@tps.org || VIA:  CISCO || VIA:  FDEN-PARCEL-GROUND || TRK#: 420910771099 || RE 02 41-25133 012      2 1118 3122",
+            "shipmentDetails": [
+                {
+                    "quantity": 2,
+                    "estimatedShipDate": "2024-11-19",
+                    "shippedDate": "2024-11-14",
+                    "estimatedDeliveryDate": "2024-11-22",
+                    "shipFromWarehouseId": "41",
+                    "shipFromLocation": null,
+                    "invoiceNumber": "41-25133-12",
+                    "invoiceDate": "2024-11-18",
+                    "carrierDetails": [
+                        {
+                            "carrierCode": "FDEG",
+                            "carrierName": "FEDEX GROUND",
+                            "quantity": 2,
+                            "shippedDate": "2024-11-14",
+                            "estimatedDeliveryDate": "2024-11-22",
+                            "deliveredDate": "2024-11-22",
+                            "carrierPickupDate": "2024-11-14",
+                            "trackingDetails": [
+                                {
+                                    "trackingNumber": "420910771099",
+                                    "trackingUrl": "https://www.fedex.com/fedextrack/?trknbr=420910771099",
+                                    "packageWeight": null,
+                                    "quantityInBox": "2",
+                                    "serialNumbers": [
+                                        {
+                                            "serialNumber": "APF28391H1V"
+                                        },
+                                        {
+                                            "serialNumber": "APF28391H2U"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "serviceContractInfo": {},
+            "additionalAttributes": [],
+            "links": [
+                {
+                    "topic": "invoices",
+                    "href": "/resellers/v6.1/invoices/41-25133-12",
+                    "type": "GET"
+                }
+            ],
+            "estimatedDates": [],
+            "scheduleLines": [],
+            "multipleShipments": [
+                {
+                    "lineNumber": null,
+                    "requestedQuantity": 0,
+                    "confirmedQuantity": 2,
+                    "dateType": "Single",
+                    "dateRange": null,
+                    "source": null,
+                    "description": null,
+                    "date": "11/22/2024 12:00:00 AM",
+                    "deliveryDate": "11/22/2024 12:00:00 AM"
+                }
+            ],
+            "defaultCarrierName": "RGRTNG"
+        }
+    ],
+    "miscellaneousCharges": [],
+    "additionalAttributes": [
+        {
+            "attributeName": "endUserSmartAccount",
+            "attributeValue": null
+        },
+        {
+            "attributeName": "resellerHoldingAccount",
+            "attributeValue": null
+        }
+    ]
+}

@@ -658,7 +658,7 @@ define([
         parsePhoneNumber: function (str) {
             let phoneNumber = str;
             if (phoneNumber && util.isString(phoneNumber)) {
-                phoneNumber = parseInt(str.replace(/[()+ ]/g, ''));
+                phoneNumber = parseInt(str.replace(/[^0-9]/g, ''));
             }
             return phoneNumber;
         },
@@ -848,13 +848,12 @@ define([
             }
             return poObj;
         },
-
         // removes properties with values that are blank, null, or undefined
         cleanUpJSON: function (option) {
             let objConstructor = option.objConstructor || {}.constructor,
-                obj = option.obj;
+                obj = option.obj || option || {};
             for (let key in obj) {
-                if (CTC_Util.isEmpty(obj[key])) {
+                if (CTC_Util.isEmpty(obj[key]) || obj[key] == 'null') {
                     delete obj[key];
                 } else if (obj[key].constructor === objConstructor) {
                     CTC_Util.cleanUpJSON({
@@ -862,7 +861,7 @@ define([
                         objConstructor: objConstructor
                     });
                     // recheck if emptied and delete if so
-                    if (CTC_Util.isEmpty(obj[key])) {
+                    if (CTC_Util.isEmpty(obj[key]) || obj[key] == 'null') {
                         delete obj[key];
                     }
                 }

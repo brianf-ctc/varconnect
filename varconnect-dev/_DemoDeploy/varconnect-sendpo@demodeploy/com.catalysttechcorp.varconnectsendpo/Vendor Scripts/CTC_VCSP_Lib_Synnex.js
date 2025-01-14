@@ -490,7 +490,14 @@ define([
                 ) {
                     let fieldIdComponent = fieldHierarchy[i];
                     if (i == fieldIdIndex) {
-                        fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        let fieldValue = additionalVendorDetails[fieldId];
+                        if (fieldValue === true) {
+                            fieldContainer[fieldIdComponent] = 'Y';
+                        } else if (fieldValue === false) {
+                            fieldContainer[fieldIdComponent] = 'N';
+                        } else {
+                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                        }
                     } else {
                         if (!fieldContainer[fieldIdComponent]) {
                             fieldContainer[fieldIdComponent] = {};
@@ -513,6 +520,10 @@ define([
                     delete requestDetails.OrderRequest.SoftWareLicense;
                 }
             }
+        }
+        if (vendorConfig.testRequest) {
+            requestDetails.OrderRequest.Comment =
+                'TEST:' + (requestDetails.OrderRequest.Comment || '');
         }
         CTC_Util.cleanUpJSON(requestDetails.OrderRequest);
         log.audit(logTitle, 'Order Request: ' + JSON.stringify(requestDetails.OrderRequest));

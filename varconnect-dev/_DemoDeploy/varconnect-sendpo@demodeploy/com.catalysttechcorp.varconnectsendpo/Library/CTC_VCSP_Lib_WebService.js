@@ -41,6 +41,12 @@ define([
     PO
 ) {
     let LogTitle = 'LibWS';
+    let CURRENT = {
+        transaction: null,
+        purchaseOrder: null,
+        vendorConfig: null,
+        vendorLibrary: null
+    };
 
     function _validateVendorConfig(option) {
         let logTitle = [LogTitle, 'validateVendorConfig'].join('::');
@@ -86,11 +92,11 @@ define([
                 if (vendorConfig.testRequest) {
                     requiredWebserviceInfo.apiKey = vendorConfig.qaApiKey;
                     requiredWebserviceInfo.apiSecret = vendorConfig.qaApiSecret;
-                    requiredWebserviceInfo.oauthScope = vendorConfig.qaSubscriptionKey;
+                    requiredWebserviceInfo.subscriptionKey = vendorConfig.qaSubscriptionKey;
                 } else {
                     requiredWebserviceInfo.apiKey = vendorConfig.apiKey;
                     requiredWebserviceInfo.apiSecret = vendorConfig.apiSecret;
-                    requiredWebserviceInfo.oauthScope = vendorConfig.oauthScope;
+                    requiredWebserviceInfo.subscriptionKey = vendorConfig.subscriptionKey;
                 }
                 break;
             case vendorList.DELL:
@@ -166,7 +172,7 @@ define([
             poObj = option.purchaseOrder,
             record = option.transaction;
 
-        log.audit('_updatePurchaseOrder', '/// vendor config: ' + JSON.stringify(vendorConfig));
+        // CTC_Util.log('AUDIT', '_updatePurchaseOrder', '/// complete vendor config: ' + JSON.stringify(vendorConfig));
 
         poObj.setValuesFromVendorConfig({
             vendorConfig: vendorConfig,
@@ -176,56 +182,56 @@ define([
 
     function process(option) {
         let logTitle = [LogTitle, 'process'].join('::'),
-            record = option.transaction,
-            poObj = new PO(record),
             resp;
+        CURRENT.transaction = option.transaction;
         try {
-            let vendorConfig = libVendorConfig.getVendorConfiguration({
-                vendor: poObj.entity,
-                subsidiary: poObj.subsidiary,
-                transaction: record
-            });
+            (CURRENT.purchaseOrder = new PO(CURRENT.transaction)),
+                (CURRENT.vendorConfig = libVendorConfig.getVendorConfiguration({
+                    vendor: CURRENT.purchaseOrder.entity,
+                    subsidiary: CURRENT.purchaseOrder.subsidiary,
+                    transaction: CURRENT.transaction
+                }));
 
-            log.audit(logTitle, '/// Vendor Config: ' + JSON.stringify(vendorConfig));
+            log.audit(logTitle, '/// Vendor Config: ' + JSON.stringify(CURRENT.vendorConfig));
 
-            if (vendorConfig) {
-                poObj = CTC_Util.extendPO({
-                    purchaseOrder: poObj,
-                    vendorConfig: vendorConfig,
-                    transaction: record
+            if (CURRENT.vendorConfig) {
+                CURRENT.purchaseOrder = CTC_Util.extendPO({
+                    purchaseOrder: CURRENT.purchaseOrder,
+                    vendorConfig: CURRENT.vendorConfig,
+                    transaction: CURRENT.transaction
                 });
-                if (vendorConfig.additionalPOFields) {
-                    vendorConfig.additionalPOFields = CTC_SSUtil.renderTemplate({
-                        body: vendorConfig.additionalPOFields,
-                        purchaseOrder: poObj
+                _updatePurchaseOrder({
+                    purchaseOrder: CURRENT.purchaseOrder,
+                    transaction: CURRENT.transaction,
+                    vendorConfig: CURRENT.vendorConfig
+                });
+                if (CURRENT.vendorConfig.additionalPOFields) {
+                    CURRENT.vendorConfig.additionalPOFields = CTC_SSUtil.renderTemplate({
+                        body: CURRENT.vendorConfig.additionalPOFields,
+                        purchaseOrder: CURRENT.purchaseOrder
                     });
                 }
-                _updatePurchaseOrder({
-                    purchaseOrder: poObj,
-                    transaction: record,
-                    vendorConfig: vendorConfig
+
+                CURRENT.vendorLibrary = _getVendorLibrary({
+                    vendorConfig: CURRENT.vendorConfig
                 });
 
-                let libVendor = _getVendorLibrary({
-                    vendorConfig: vendorConfig
-                });
-
-                if (!libVendor) throw 'Missing or invalid vendor configuration';
+                if (!CURRENT.vendorLibrary) throw 'Missing or invalid vendor configuration';
 
                 _validateVendorConfig({
-                    vendorConfig: vendorConfig
+                    vendorConfig: CURRENT.vendorConfig
                 });
 
                 resp = new response(
-                    libVendor.process({
-                        vendorConfig: vendorConfig,
-                        purchaseOrder: poObj,
-                        transaction: record
+                    CURRENT.vendorLibrary.process({
+                        vendorConfig: CURRENT.vendorConfig,
+                        purchaseOrder: CURRENT.purchaseOrder,
+                        transaction: CURRENT.transaction
                     })
                 );
             }
         } catch (error) {
-            var errorMsg = CTC_Util.extractError(error);
+            let errorMsg = CTC_Util.extractError(error);
             CTC_Util.logError(logTitle, JSON.stringify(error));
 
             resp = new response({
@@ -237,7 +243,37 @@ define([
         return resp;
     }
 
+    function getOrderStatus() {
+        let logTitle = [LogTitle, 'getOrderStatus'].join('::'),
+            returnValue;
+        try {
+            let taskOption = {
+                isMapReduce: true,
+                scriptId: VCSP_Global.Scripts.Script.ORDERSTATUS_MR,
+                scriptParams: {}
+            };
+            if (
+                CURRENT.vendorConfig &&
+                CURRENT.vendorConfig.runOrderStatus &&
+                CURRENT.purchaseOrder &&
+                CURRENT.purchaseOrder.id
+            ) {
+                taskOption.scriptParams['custscript_orderstatus_searchid'] =
+                    'customsearch_ctc_open_po_search';
+                taskOption.scriptParams['custscript_orderstatus_orderid'] =
+                    CURRENT.purchaseOrder.id;
+                CTC_Util.log(logTitle, '>> order status params: ' + JSON.stringify(taskOption));
+                taskOption.deployId = CTC_SSUtil.forceDeploy(taskOption);
+            }
+        } catch (error) {
+            let errorMsg = CTC_Util.extractError(error);
+            CTC_Util.logError(logTitle, JSON.stringify(error));
+        }
+        return true;
+    }
+
     return {
-        process: process
+        process: process,
+        getOrderStatus: getOrderStatus
     };
 });

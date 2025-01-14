@@ -31,7 +31,17 @@ define([
     'use strict';
     var LogTitle = 'WS:Dellv2';
 
-    var CURRENT = {};
+    var CURRENT = {
+            TokeName: 'VC_DELL_TOKEN'
+        },
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ];
     var LibDellAPI = {
         ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED'],
         generateToken: function (option) {
@@ -75,7 +85,7 @@ define([
         getTokenCache: function () {
             var token = vc2_util.getNSCache({
                 key: [
-                    'VC_DELL_TOKEN',
+                    CURRENT.TokeName,
                     CURRENT.orderConfig.apiKey,
                     CURRENT.orderConfig.subsidiary,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
@@ -147,7 +157,9 @@ define([
                     recordId: CURRENT.recordId
                 });
 
-                this.handleResponse(reqSearchPO);
+                vc2_util.log(logTitle, '>> Search PO: ', reqSearchPO);
+
+                vc2_util.handleJSONResponse(reqSearchPO);
                 returnValue = reqSearchPO.PARSED_RESPONSE;
             } catch (error) {
                 throw error;
@@ -180,11 +192,15 @@ define([
                 if (!arrResponse || !arrResponse.purchaseOrderDetails)
                     throw 'Missing purchase order details';
 
+                if (option.debugMode) {
+                    if (!option.showLines) return arrResponse;
+                }
+
                 arrResponse.purchaseOrderDetails.forEach(function (orderDetail) {
                     if (!orderDetail || !orderDetail.dellOrders) throw 'Missing Dell Order info';
                     var OrderData = {
                         OrderNum: orderDetail.purchaseOrderNumber,
-                        OrderDate: orderDetail.purchaseOrderDate,
+                        OrderDate: vc2_util.parseFormatDate(orderDetail.purchaseOrderDate),
                         Status: orderDetail.purchaseOrderStatus
                     };
 
@@ -197,7 +213,8 @@ define([
                         util.extend(OrderData, {
                             Status: dellOrder.orderStatus,
                             VendorOrderNum: dellOrder.orderNumber,
-                            InvoiceNum: dellOrder.invoiceNumber
+                            InvoiceNum: dellOrder.invoiceNumber,
+                            Source: dellOrder
                         });
 
                         if (dellOrder.purchaseOrderLines) {
@@ -304,18 +321,22 @@ define([
                     }
                 });
 
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+                        itemObj[dateField] = vc2_util.parseFormatDate(itemObj[dateField]);
+                    });
+                });
+
                 util.extend(returnValue, {
-                    OrderData: orderDataList,
-                    Lines: itemArray
+                    Orders: orderDataList,
+                    Lines: itemArray,
+                    Source: arrResponse
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error),
-                    Error: error
-                });
+                throw error;
             }
             return returnValue;
         },

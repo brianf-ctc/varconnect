@@ -12,7 +12,7 @@
  * @NModuleScope Public
  */
 
-define(['N/xml', 'N/search', 'N/https', 'N/record', './../CTC_VC2_Constants.js'], function (
+define(['N/xml', 'N/search', 'N/https', 'N/record', '../CTC_VC2_Constants.js'], function (
     ns_xml,
     ns_search,
     ns_https,

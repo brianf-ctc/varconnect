@@ -23,7 +23,9 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
     var LogTitle = 'WS:Arrow',
         LogPrefix;
 
-    var CURRENT = {},
+    var CURRENT = {
+            TokenName: 'VC_ARROW_TOKEN'
+        },
         ERROR_MSG = vc2_constant.ERRORMSG,
         DATE_FIELDS = [
             'order_date',
@@ -82,14 +84,14 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 returnValue = tokenResp.access_token;
                 CURRENT.accessToken = tokenResp.access_token;
             } catch (error) {
-                throw this.evalError(error);
+                throw error;
             }
 
             return returnValue;
         },
         getTokenCache: function () {
             var tokenKey = [
-                'VC_ARROW_TOKEN',
+                CURRENT.TokenName,
                 CURRENT.orderConfig.apiKey,
                 CURRENT.orderConfig.apiSecret,
                 vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
@@ -159,7 +161,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                         }
                     }
                 });
-                // vc2_util.dumpLog(logTitle, reqOrderStatus);
+                vc2_util.dumpLog(logTitle, reqOrderStatus);
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
 
                 vc2_util.handleJSONResponse(reqOrderStatus);
@@ -167,65 +169,42 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
 
                 returnValue = reqOrderStatus.PARSED_RESPONSE;
             } catch (error) {
-                throw this.evalError(error);
+                throw error;
             }
 
             return returnValue;
         },
         validateResponse: function (parsedResponse) {
             if (!parsedResponse) throw 'Unable to read the response';
-            var respHeader = parsedResponse.ResponseHeader;
+            var respHeader = parsedResponse.ResponseHeader,
+                orderResponse = parsedResponse.OrderResponse;
 
-            if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
+            // if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
+            if (!respHeader) throw 'Missing or Invalid ResponseHeader';
+            if (!util.isArray(respHeader)) respHeader = [respHeader];
             var hasErrors,
                 errorMsgs = [];
 
             respHeader.forEach(function (header) {
+                // check for general error
                 if (!header.TransactionStatus || header.TransactionStatus == 'ERROR') {
                     hasErrors = true;
                     errorMsgs.push(header.TransactionMessage);
                 }
-                return true;
             });
 
+            if (orderResponse && orderResponse.OrderDetails) {
+                // check for query error
+                (orderResponse.OrderDetails || []).forEach(function (orderDetail) {
+                    if (!orderDetail || !orderDetail.Status || orderDetail.Status !== 'SUCCESS') {
+                        hasErrors = true;
+                        errorMsgs.push(orderDetail.Message);
+                    }
+                });
+            }
+            vc2_util.log('validateResponse', 'hasErrors: ', [hasErrors, errorMsgs]);
             if (hasErrors && errorMsgs.length) throw errorMsgs.join(', ');
             return true;
-        },
-        evalError: function (errorMsg) {
-            var errorCodeList = {
-                INVALID_CREDENTIALS: [
-                    new RegExp(/Application with identifier .+? was not found in the directory/gi),
-                    new RegExp(/Invalid client secret provided/gi),
-                    new RegExp(/The resource principal named .+? was not found in the tenant/gi),
-                    new RegExp(/Access denied due to invalid subscription key/gi)
-                ],
-                INVALID_ACCESSPOINT: [new RegExp(/Tenant .+? not found/gi)],
-                ENDPOINT_URL_ERROR: [
-                    new RegExp(/Resource not found/gi),
-                    new RegExp(/The host you requested .+? is unknown or cannot be found/gi)
-                ],
-                INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
-            };
-
-            var matchedErrorCode = null;
-
-            for (var errorCode in errorCodeList) {
-                for (var i = 0, j = errorCodeList[errorCode].length; i < j; i++) {
-                    var regStr = errorCodeList[errorCode][i];
-                    if (errorMsg.match(regStr)) {
-                        matchedErrorCode = errorCode;
-                        break;
-                    }
-                }
-                if (matchedErrorCode) break;
-            }
-
-            var returnValue = matchedErrorCode
-                ? vc2_util.extend(ERROR_MSG[matchedErrorCode], { details: errorMsg })
-                : { message: 'Unexpected error', details: errorMsg };
-            // vc2_util.logError('evalError', [matchedErrorCode, returnValue, errorMsg]);
-
-            return returnValue;
         }
     };
 
@@ -252,11 +231,17 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 returnValue = {};
             option = option || {};
 
+            vc2_util.log(logTitle, '>> option: ', option);
+
             try {
                 LibArrowAPI.initialize(option);
 
                 var response = this.processRequest();
                 if (!response) throw 'Unable to get response';
+
+                if (option.debugMode) {
+                    if (!option.showLines) return response;
+                }
 
                 var itemArray = [],
                     orderList = [];
@@ -296,6 +281,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                             Total: OrderDetail.OrderTotalAmount,
                             InvoiceNo: 'NA'
                         };
+
                         orderList.push(orderData);
                         /////////////
 
@@ -409,17 +395,27 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                         throw order_error;
                     }
                 });
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
 
-                returnValue = {
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'MM/DD/YYYY'
+                        );
+                    });
+                });
+
+                util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
-                };
+                    Lines: itemArray,
+                    Source: response
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-                util.extend(returnValue, {
-                    HasError: true,
-                    ErrorMsg: vc2_util.extractError(error)
-                });
+                throw error;
             }
 
             return returnValue;

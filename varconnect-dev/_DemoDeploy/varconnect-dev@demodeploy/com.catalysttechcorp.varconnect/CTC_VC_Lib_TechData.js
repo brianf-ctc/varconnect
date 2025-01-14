@@ -54,6 +54,20 @@ define([
 
     var CURRENT = {};
     var LibTechDataXML = {
+        initialize: function (option) {
+            var logTitle = [LogTitle, 'initialize'].join('::'),
+                returnValue;
+
+            CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
+            CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
+            CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
+
+            vc2_util.LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
+
+            if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
+
+            return returnValue;
+        },
         getInvoiceDetail: function (option) {
             var logTitle = [LogTitle, 'getInvoiceDetail'].join('::'),
                 returnValue = [];
@@ -123,7 +137,7 @@ define([
     return {
         process: function (option) {
             var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
@@ -141,14 +155,6 @@ define([
                 throw error;
             } finally {
                 vc2_util.log(logTitle, '>> OrderValues: ', returnValue);
-                // vc2_util.vcLog({
-                //     title: [LogTitle + ' Lines'].join(' - '),
-                //     body: !vc2_util.isEmpty(returnValue)
-                //         ? JSON.stringify(returnValue)
-                //         : '-no lines to process-',
-                //     recordId: CURRENT.recordId,
-                //     status: vc2_constant.LIST.VC_LOG_STATUS.INFO
-                // });
             }
 
             return returnValue;
@@ -176,7 +182,7 @@ define([
         },
         processResponse: function (option) {
             var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = [];
+                returnValue = {};
             option = option || {};
 
             try {
@@ -267,7 +273,11 @@ define([
                     itemArray.push(orderItem);
                 }
 
-                returnValue = itemArray;
+                // returnValue = itemArray;
+                util.extend(returnValue, {
+                    Orders: IngramOrders.LIST,
+                    Lines: orderLines
+                });
             } catch (error) {
                 throw error;
             }

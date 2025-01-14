@@ -27,11 +27,6 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 ) {
     var LogTitle = 'WS:Synnex';
 
-    var LOG_LEVEL = 0;
-    // 0 - main input / output
-    // 1 - function level
-    // 2 - verbose / debug level
-
     var Helper = {
         getNodeValue: function (node, xpath) {
             var logTitle = [LogTitle, 'getNodeValue'].join('::'),
@@ -200,15 +195,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                     deliv_date: itemObj.order_delivery_eta,
                     line_price: itemObj.unitprice
                 });
-                DATE_FIELDS.forEach(function (dateField) {
-                    if (itemObj[dateField] && itemObj[dateField] != 'NA') {
-                        itemObj[dateField] = vc2_util.parseFormatDate(
-                            itemObj[dateField],
-                            'YYYY-MM-DD'
-                        );
-                    }
-                });
-                vc2_util.log(logTitle, '/// itemObj: ', itemObj);
+                // vc2_util.log(logTitle, '/// itemObj: ', itemObj);
 
                 //// Filter: Order Status
                 if (
@@ -226,7 +213,8 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 
                 //// Extract SerialNums/Tracking Nums
                 var packageNodeValue = this.extractPackageContent(option);
-                vc2_util.log(logTitle, '.... (tracking/serials) ', packageNodeValue);
+
+                // vc2_util.log(logTitle, '.... (tracking/serials) ', packageNodeValue);
                 if (packageNodeValue) {
                     itemObj.tracking_num = packageNodeValue.tracking_num;
                     itemObj.serial_num = packageNodeValue.serial_num;
@@ -235,6 +223,8 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                 itemObj.SKIPPED = vc2_util.extractError(err);
                 vc2_util.logError(logTitle, err);
             }
+
+            vc2_util.log(logTitle, ' ## itemObj: ', itemObj);
 
             return itemObj;
         },
@@ -250,7 +240,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                 xpath: 'Packages/Package'
             });
 
-            vc2_util.log(logTitle, '.... packagesNode: ', packagesNode.length);
+            // vc2_util.log(logTitle, '.... packagesNode: ', packagesNode.length);
 
             var trackingList = [],
                 serialNumList = [];
@@ -301,6 +291,10 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 
                 if (!xmlDoc) throw 'Unable to parse XML';
 
+                if (option.debugMode) {
+                    if (!option.showLines) return response;
+                }
+
                 var orderInfo = {
                     Status:
                         vc2_util.getNodeContent(
@@ -343,6 +337,7 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 
                     var itemObj = LibSynnexAPI.processItem({ node: itemNode });
 
+
                     // check if there's a duplicate item already
                     var dupLine = vc2_util.findMatching({
                         list: itemArray,
@@ -360,13 +355,14 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                         }
                     });
 
-                    vc2_util.log(logTitle, '... has dup?', [dupLine]);
+                    vc2_util.log(logTitle, '... Duplicate Line? ', [dupLine]);
                     if (dupLine) continue;
 
                     itemArray.push(itemObj);
 
                     var orderData = util.extend(vc2_util.clone(orderInfo), {
-                        VendorOrderNum: itemObj.order_num
+                        VendorOrderNum: itemObj.order_num,
+                        Source: itemNode
                     });
 
                     var duplOrderData = vc2_util.findMatching({
@@ -376,9 +372,24 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
                     if (!duplOrderData) orderList.push(orderData);
                 }
 
+                // run through itemArray and check for DATE_FIELDS
+                // vc2_util.log(logTitle, 'itemArray: ', itemArray);
+
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'YYYY-MM-DD'
+                        );
+                    });
+                });
+
                 util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
+                    Lines: itemArray,
+                    Source: response
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);

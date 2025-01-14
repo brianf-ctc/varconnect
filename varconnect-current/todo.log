@@ -1,3 +1,50 @@
+Services
+ - item matching
+
+VAR Connect Menu
+ - Reports
+  - OrderNums list
+  - OrderLines list  
+  - Fulfilments/Receipts created
+  - 
+
+
+ORDER STATUS_ 
+ - create OrderNum record for each PO
+   - OrderNum, VendorOrderNum
+   - Status
+   - Order Date
+   - LInk to ItemFF, Item Recpt
+   - OrderNum payload
+   - OrderNum lines
+   - Link to process fulfillment
+
+
+New Order Status process
+  GetInputData
+    - line up the POs to process
+      - POs from vendors with VC Order status config
+      - POs within the valid date
+      - POs with status not in the ignore list
+  Map
+    - load the vendor config of the PO
+    - run the order status of the PO
+    - lookup for order num record (using vendor order number)
+    - create/edit the OrderNum record
+    - create/edit the OrderLines record
+    - store the payload content (JSON/XML)
+    - store the payload lines (JSON)
+    - send the po number to reduceContext
+    - if there's an error, update the PO
+    - if there's an error regarding credentials
+
+
+  Reduce
+    - 
+// in suitescript, how many usage limit for a map/reduce script
+
+
+
 BIll CREATOR_
 
  - Allow Variance

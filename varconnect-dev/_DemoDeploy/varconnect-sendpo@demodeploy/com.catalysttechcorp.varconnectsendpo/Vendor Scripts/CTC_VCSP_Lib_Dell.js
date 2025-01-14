@@ -18,7 +18,7 @@ define([
     '../Library/CTC_VCSP_Constants',
     '../Library/CTC_VCSP_Lib_Log',
     '../Library/CTC_Lib_Utils'
-], function (ns_encode, ns_search, ns_error, constants, vcLog, ctc_util) {
+], function (ns_encode, ns_search, ns_error, vcsp_global, vcLog, ctc_util) {
     let LogTitle = 'WS:Dell';
 
     function generateToken(option) {
@@ -316,9 +316,6 @@ define([
                 for (let i = 0, j = itemLength; i < j; i++) {
                     let itemData = poObj.items[i];
 
-                    // skip closed line items
-                    if (itemData.isclosed) continue;
-
                     let itemDetails = {
                         lineItemNum: (i + 1).toString(),
                         lineItemDescription: itemData.description,
@@ -327,7 +324,6 @@ define([
                         quantity: itemData.quantity.toString(),
                         unitPrice: itemData.rate.toString(),
                         currency: poObj.currency
-
                         // ,
                         // finalRecipient: {
                         //     company: vendorConfig.Bill.addressee,
@@ -435,15 +431,15 @@ define([
                 if (!shipMethod) return {};
 
                 var searchShipMethodMap = ns_search.create({
-                    type: constants.Records.VENDOR_SHIPMETHOD,
+                    type: vcsp_global.Records.VENDOR_SHIPMETHOD,
                     filters: [
-                        [constants.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]
+                        [vcsp_global.Fields.VendorShipMethod.SHIP_METHOD_MAP, 'anyof', shipMethod]
                     ],
                     columns: [
                         'name',
-                        { name: constants.Fields.VendorShipMethod.VENDOR_CONFIG },
-                        { name: constants.Fields.VendorShipMethod.SHIP_VALUE },
-                        { name: constants.Fields.VendorShipMethod.SHIP_METHOD_MAP }
+                        { name: vcsp_global.Fields.VendorShipMethod.VENDOR_CONFIG },
+                        { name: vcsp_global.Fields.VendorShipMethod.SHIP_VALUE },
+                        { name: vcsp_global.Fields.VendorShipMethod.SHIP_METHOD_MAP }
                     ]
                 });
 
@@ -457,7 +453,7 @@ define([
                     var mappedShipMethod;
                     searchShipMethodMap.run().each(function (result) {
                         mappedShipMethod = result.getValue({
-                            name: constants.Fields.VendorShipMethod.SHIP_VALUE
+                            name: vcsp_global.Fields.VendorShipMethod.SHIP_VALUE
                         });
                         return true;
                     });
@@ -512,7 +508,8 @@ define([
             returnValue.errorId = poObj.id;
             returnValue.isError = true;
         } else {
-            returnValue.message = 'Send PO successful';
+            returnValue.message = 'Send PO accepted';
+            returnValue.isAsync = true;
             returnValue.orderStatus = {};
         }
         return returnValue;

@@ -150,7 +150,7 @@ define([
 
         let arrLines = poObj.items.map(function (item) {
             let objLine = {
-                // unitPrice: item.rate,
+                unitPrice: item.rate,
                 item: item.vendorSKU || item.dandhPartNumber || item.item,
                 externalLineNumber: item.lineuniquekey,
                 orderQuantity: item.quantity
@@ -236,7 +236,10 @@ define([
         };
         if (poObj.additionalVendorDetails) {
             additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
-        } else if (vendorConfig.additionalPOFields) {
+        } else if (
+            vendorConfig.additionalPOFields &&
+            vendorConfig.includeAdditionalDetailsOnSubmit
+        ) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                 fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
             });
@@ -274,7 +277,14 @@ define([
                                 }
                             }
                         } else if (!CTC_Util.isEmpty(additionalVendorDetails[fieldId])) {
-                            fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                            if (fieldIdComponent == 'phone') {
+                                // send as integer-only string
+                                fieldContainer[fieldIdComponent] =
+                                    CTC_Util.parsePhoneNumber(additionalVendorDetails[fieldId]) +
+                                    '';
+                            } else {
+                                fieldContainer[fieldIdComponent] = additionalVendorDetails[fieldId];
+                            }
                         }
                     } else {
                         // container is an array, reference as is
@@ -311,6 +321,9 @@ define([
                 }
                 log.audit(logTitle, 'Order Request: ' + JSON.stringify(fieldContainer));
             }
+        }
+        if (vendorConfig.testRequest) {
+            dnhTemplate.specialInstructions = 'TEST:' + (dnhTemplate.specialInstructions || '');
         }
         if (poObj.custPO) {
             dnhTemplate.endUserData = dnhTemplate.endUserData || {};

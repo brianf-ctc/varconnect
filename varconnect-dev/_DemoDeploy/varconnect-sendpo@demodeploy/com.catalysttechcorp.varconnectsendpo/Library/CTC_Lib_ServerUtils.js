@@ -18,9 +18,22 @@ define([
     'N/render',
     'N/runtime',
     'N/cache',
+    'N/task',
+    'N/search',
+    'N/record',
     './CTC_Lib_Utils',
     './CTC_VCSP_Constants'
-], function (NS_File, NS_Render, NS_Runtime, NS_Cache, CTC_Util, VCSP_Global) {
+], function (
+    NS_File,
+    NS_Render,
+    NS_Runtime,
+    NS_Cache,
+    NS_Task,
+    NS_Search,
+    NS_Record,
+    CTC_Util,
+    VCSP_Global
+) {
     let LogTitle = 'CTC_ServerSideUtil',
         LogPrefix;
 
@@ -38,16 +51,16 @@ define([
         NSCACHE_KEY: 'VCSP_202406',
         NSCACHE_TTL: 86400, // 1 whole day
         getNSCache: function (option) {
-            var logTitle = [LogTitle, 'getNSCache'].join('::'),
+            let logTitle = [LogTitle, 'getNSCache'].join('::'),
                 returnValue;
             try {
-                var cacheName = this.NSCACHE_NAME,
+                let cacheName = this.NSCACHE_NAME,
                     cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
 
-                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                let cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
                 if (!cacheKey) throw 'Missing cacheKey!';
 
-                var cacheObj = NS_Cache.getCache({
+                let cacheObj = NS_Cache.getCache({
                     name: cacheName,
                     scope: NS_Cache.Scope.PUBLIC
                 });
@@ -68,21 +81,21 @@ define([
             return returnValue;
         },
         setNSCache: function (option) {
-            var logTitle = [LogTitle, 'setNSCache'].join('::'),
+            let logTitle = [LogTitle, 'setNSCache'].join('::'),
                 returnValue;
 
             try {
-                var cacheName = this.NSCACHE_NAME,
+                let cacheName = this.NSCACHE_NAME,
                     cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
 
-                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                let cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
                 if (!cacheKey) throw 'Missing cacheKey!';
 
-                var cacheValue = option.value || option.cacheValue;
+                let cacheValue = option.value || option.cacheValue;
                 if (this.isEmpty(cacheValue)) throw 'Missing cache value!';
                 if (!util.isString(cacheValue)) cacheValue = JSON.stringify(cacheValue);
 
-                var cacheObj = NS_Cache.getCache({
+                let cacheObj = NS_Cache.getCache({
                     name: cacheName,
                     scope: NS_Cache.Scope.PUBLIC
                 });
@@ -92,17 +105,17 @@ define([
             }
         },
         removeCache: function (option) {
-            var logTitle = [LogTitle, 'removeCache'].join('::'),
+            let logTitle = [LogTitle, 'removeCache'].join('::'),
                 returnValue;
 
             try {
-                var cacheName = this.NSCACHE_NAME,
+                let cacheName = this.NSCACHE_NAME,
                     cacheTTL = option.cacheTTL || this.NSCACHE_TTL;
 
-                var cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
+                let cacheKey = option.cacheKey || option.key || option.name || this.NSCACHE_KEY;
                 if (!cacheKey) throw 'Missing cacheKey!';
 
-                var cacheObj = NS_Cache.getCache({
+                let cacheObj = NS_Cache.getCache({
                     name: cacheName,
                     scope: NS_Cache.Scope.PUBLIC
                 });
@@ -221,6 +234,180 @@ define([
             });
             returnValue = templateRenderer.renderAsString();
             // CTC_Util.log('DEBUG', 'renderTemplate.renderedBody', returnValue);
+            return returnValue;
+        },
+        cleanUpDeployment: function (option) {
+            let logTitle = [LogTitle, 'cleanUpDeployment'].join('::');
+
+            let searchDeploy = NS_Search.create({
+                type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+                filters: [
+                    ['script.scriptid', 'is', option.scriptId],
+                    'AND',
+                    ['status', 'is', 'NOTSCHEDULED'],
+                    'AND',
+                    ['isdeployed', 'is', 'T']
+                ],
+                columns: ['scriptid']
+            });
+
+            let maxAllowed = option.max || 100; // only allow 100
+            let arrResults = CTC_Util.searchAllPaged({ searchObj: searchDeploy });
+
+            CTC_Util.log(logTitle, '>> cleanup : ', {
+                maxAllowed: maxAllowed,
+                totalResults: arrResults.length
+            });
+            if (maxAllowed > arrResults.length) return;
+
+            let currentScript = NS_Runtime.getCurrentScript();
+            let countDelete = arrResults.length - maxAllowed;
+            let idx = 0;
+
+            while (countDelete-- && currentScript.getRemainingUsage() > 100) {
+                try {
+                    NS_Record.delete({
+                        type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+                        id: arrResults[idx++].id
+                    });
+                } catch (del_err) {}
+            }
+            CTC_Util.log(logTitle, '// Total deleted: ', idx);
+
+            return true;
+        },
+        forceDeploy: function (option) {
+            let logTitle = [LogTitle, 'forceDeploy'].join('::');
+            let returnValue = null;
+            let FN = {
+                randomStr: function (len) {
+                    len = len || 5;
+                    let str = new Date().getTime().toString();
+                    return str.substring(str.length - len, str.length);
+                },
+                deploy: function (scriptId, deployId, scriptParams, taskType) {
+                    let logTitle = [LogTitle, 'forceDeploy:deploy'].join('::');
+                    let returnValue = false;
+
+                    try {
+                        let taskInfo = {
+                            taskType: taskType,
+                            scriptId: scriptId
+                        };
+                        if (deployId) taskInfo.deploymentId = deployId;
+                        if (scriptParams) taskInfo.params = scriptParams;
+
+                        let objTask = NS_Task.create(taskInfo);
+
+                        let taskId = objTask.submit();
+                        let taskStatus = NS_Task.checkStatus({
+                            taskId: taskId
+                        });
+
+                        // check the status
+                        CTC_Util.log(logTitle, '## DEPLOY status: ', {
+                            id: taskId,
+                            status: taskStatus
+                        });
+                        returnValue = taskId;
+                    } catch (e) {
+                        CTC_Util.log(logTitle, '## ERROR ## ', CTC_Util.extractError(e));
+                    }
+
+                    return returnValue;
+                },
+                copyDeploy: function (scriptId) {
+                    let logTitle = [LogTitle, 'forceDeploy:copyDeploy'].join('::');
+                    let returnValue = false;
+                    try {
+                        let searchDeploy = NS_Search.create({
+                            type: NS_Search.Type.SCRIPT_DEPLOYMENT,
+                            filters: [
+                                ['script.scriptid', 'is', scriptId],
+                                'AND',
+                                ['status', 'is', 'NOTSCHEDULED'],
+                                'AND',
+                                ['isdeployed', 'is', 'T']
+                            ],
+                            columns: ['scriptid']
+                        });
+                        let newDeploy = null;
+
+                        searchDeploy.run().each(function (result) {
+                            if (!result.id) return false;
+                            newDeploy = NS_Record.copy({
+                                type: NS_Record.Type.SCRIPT_DEPLOYMENT,
+                                id: result.id
+                            });
+
+                            let newScriptId = result.getValue({ name: 'scriptid' });
+                            newScriptId = newScriptId.toUpperCase().split('CUSTOMDEPLOY')[1];
+                            newScriptId = [newScriptId.substring(0, 20), FN.randomStr()].join('_');
+
+                            newDeploy.setValue({ fieldId: 'status', value: 'NOTSCHEDULED' });
+                            newDeploy.setValue({ fieldId: 'isdeployed', value: true });
+                            newDeploy.setValue({
+                                fieldId: 'scriptid',
+                                value: newScriptId.toLowerCase().trim()
+                            });
+                        });
+
+                        return newDeploy
+                            ? newDeploy.save({
+                                  enableSourcing: false,
+                                  ignoreMandatoryFields: true
+                              })
+                            : false;
+                    } catch (e) {
+                        log.error(logTitle, e.name + ': ' + e.message);
+                        throw e;
+                    }
+                },
+                copyAndDeploy: function (scriptId, params, taskType) {
+                    FN.copyDeploy(scriptId);
+                    FN.deploy(scriptId, null, params, taskType);
+                }
+            };
+            ////////////////////////////////////////
+            try {
+                if (!option.scriptId)
+                    throw error.create({
+                        name: 'MISSING_REQD_PARAM',
+                        message: 'missing script id',
+                        notifyOff: true
+                    });
+
+                if (!option.taskType) {
+                    option.taskType = NS_Task.TaskType.SCHEDULED_SCRIPT;
+                    option.taskType = option.isMapReduce
+                        ? NS_Task.TaskType.MAP_REDUCE
+                        : option.isSchedScript
+                        ? NS_Task.TaskType.SCHEDULED_SCRIPT
+                        : option.taskType;
+                }
+
+                CTC_Util.log(logTitle, '// params', option);
+
+                returnValue =
+                    FN.deploy(
+                        option.scriptId,
+                        option.deployId,
+                        option.scriptParams,
+                        option.taskType
+                    ) ||
+                    FN.deploy(option.scriptId, null, option.scriptParams, option.taskType) ||
+                    FN.copyAndDeploy(option.scriptId, option.scriptParams, option.taskType);
+
+                CTC_Util.log(logTitle, '// deploy: ', returnValue);
+            } catch (e) {
+                CTC_Util.log(logTitle, '## ERROR ## ', CTC_Util.extractError(e));
+                throw e;
+            }
+            ////////////////////////////////////////
+
+            // initiate the cleanup
+            this.cleanUpDeployment(option);
+
             return returnValue;
         }
     };

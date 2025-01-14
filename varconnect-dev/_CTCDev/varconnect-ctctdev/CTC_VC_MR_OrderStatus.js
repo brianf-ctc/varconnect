@@ -17,13 +17,13 @@ define([
     'N/search',
     'N/runtime',
     'N/record',
-    'N/https',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
     './CTC_VC2_Lib_Record',
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
+    './CTC_VC2_Lib_Record',
     './Services/ctc_svclib_configlib.js',
     './Services/ctc_svclib_process-v1.js',
     './Services/ctc_svclib_webservice-v1'
@@ -31,13 +31,13 @@ define([
     ns_search,
     ns_runtime,
     ns_record,
-    ns_https,
     vc2_util,
     vc2_constant,
     vc2_record,
     vc_itemfflib,
     vc_itemrcpt,
     vc_nslib,
+    vc2_record,
     vcs_configLib,
     vcs_processLib,
     vcs_websvcLib
@@ -174,6 +174,11 @@ define([
                         formula: vendorFormula
                     })
                 );
+
+                // searchNew.isPublic = true;
+                // searchNew.title = 'CTC VC Reports | Open POs for Order Status';
+                // // searchNew.id = searchRec.id;
+                // searchNew.save();
             }
 
             vc2_util.log(logTitle, '// search params: ', searchNew.filters);
@@ -207,11 +212,14 @@ define([
         var logTitle = [LogTitle, 'map', mapContext.key].join('::');
         vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
 
-        var outputObj;
-        var searchResult = JSON.parse(mapContext.value);
-        LogPrefix = '[purchaseorder:' + searchResult.id + '] MAP | ';
-        vc2_util.LogPrefix = LogPrefix;
         try {
+            var outputObj;
+            var searchResult = JSON.parse(mapContext.value);
+            LogPrefix = '[purchaseorder:' + searchResult.id + '] MAP | ';
+            vc2_util.LogPrefix = LogPrefix;
+
+            var poUpdateValue = {};
+
             vc2_util.logDebug(logTitle, '###### START: MAP ######');
 
             Helper.getParameters();
@@ -230,7 +238,6 @@ define([
                 configType: vcs_configLib.ConfigType.ORDER
             });
             if (!Current.OrderCFG) throw ERROR_MSG.MISSING_VENDORCFG;
-            vc2_util.log(logTitle, '// vendor config: ', Current.OrderCFG);
 
             /// OVERRIDE ///
             if (Current.MainCFG.overridePONum) {
@@ -242,23 +249,71 @@ define([
             }
 
             /// ORDER STATUS ///
-            outputObj = vcs_websvcLib.orderStatus({ poNum: Current.poNum, poId: Current.poId });
+            outputObj = vcs_websvcLib.OrderStatus({ poNum: Current.poNum, poId: Current.poId });
 
-            // if there are no lines.. just exit the script
-            if (
-                !outputObj.itemArray ||
-                (!outputObj.itemArray.length && !outputObj.itemArray.header_info)
-            ) {
-                throw outputObj.isError && outputObj.errorMessage
-                    ? { message: outputObj.errorMessage, logStatus: LOG_STATUS.WS_ERROR }
-                    : util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
-                          details: outputObj
-                      });
+            // check for errors
+            if (outputObj.hasError) throw outputObj;
+            else if (vc2_util.isEmpty(outputObj.Orders) || vc2_util.isEmpty(outputObj.Lines))
+                throw util.extend(ERROR_MSG.NO_LINES_TO_PROCESS, {
+                    details: outputObj.message || 'No lines to process'
+                });
+            else {
+                poUpdateValue['custbody_ctc_vc_order_status'] = (outputObj.Orders || [])
+                    .map(function (order) {
+                        return [
+                            order.VendorOrderNum,
+                            order.Status || 'NA',
+                            order.OrderDate || 'NA'
+                        ].join(',');
+                    })
+                    .join('||');
             }
 
-            // vc2_util.log(logTitle, '** CURRENT **', Current);
-            mapContext.write(Current.poId, util.extend(Current, { outputItems: outputObj }));
+            vc2_util.vcLog({
+                title: 'MR Order Status | Output ',
+                recordId: Current.poId,
+                message: vc2_util.extractError(outputObj.Lines)
+            });
+
+            // send them in one go
+            vc2_util.log(logTitle, '/// Order Data: ', outputObj.Orders);
+            vc2_util.serviceRequest({
+                moduleName: 'processV1',
+                action: 'bulkProcessOrderStatusLines',
+                parameters: {
+                    Orders: outputObj.Orders || [],
+                    ConfigRec: outputObj.ConfigRec,
+                    poId: Current.poId,
+                    poNum: Current.poNum
+                }
+            });
+
+            // send the orders one by one
+            // (outputObj.Orders || []).forEach(function (orderNumData) {
+            //     vc2_util.log(logTitle, '/// Order Data: ', orderNumData);
+            //     vc2_util.serviceRequest({
+            //         moduleName: 'processV1',
+            //         action: 'processOrderStatusLines',
+            //         parameters: util.extend(orderNumData, {
+            //             ConfigRec: outputObj.ConfigRec,
+            //             poId: Current.poId,
+            //             poNum: Current.poNum
+            //         })
+            //     });
+            //     // vcs_processLib.processOrderStatusLines(
+            //     //     util.extend(orderNumData, {
+            //     //         ConfigRec: outputObj.ConfigRec,
+            //     //         poId: Current.poId,
+            //     //         poNum: Current.poNum
+            //     //     })
+            //     // );
+
+            //     return true;
+            // });
+
+            mapContext.write(Current.poId, util.extend(Current, { OrderData: outputObj }));
         } catch (error) {
+            vc2_util.logError(logTitle, error);
             vc2_util.vcLog({
                 title: 'MR Order Status | Unsuccessful',
                 recordId: Current.poId,
@@ -266,8 +321,18 @@ define([
                 details: error.details,
                 status: error.status || error.logStatus || LOG_STATUS.ERROR
             });
-            vc2_util.logError(logTitle, error);
+
+            poUpdateValue['custbody_ctc_vc_order_status'] =
+                'ERROR: ' +
+                error.message +
+                (error.message != error.details ? ' - ' + error.details : '');
         } finally {
+            ns_record.submitFields({
+                type: 'purchaseorder',
+                id: searchResult.id,
+                values: poUpdateValue
+            });
+
             vc2_util.logDebug(logTitle, '###### END: MAP ###### ');
         }
     };
@@ -286,19 +351,28 @@ define([
             Current.poId = context.key;
             util.extend(Current, JSON.parse(context.values[0]));
 
-            vc2_util.log(logTitle, '///  Vendor Lines: ', Current.outputItems);
-            var PO_REC = ns_record.load({
+            vc2_util.dumpLog(logTitle, Current.OrderData, '// Order Data');
+
+            var PO_REC = vc2_record.load({
                 type: 'purchaseorder',
                 id: Current.poId,
                 isDynamic: true
             });
+
+            Current.isDropPO =
+                PO_REC.getValue({ fieldId: 'dropshipso' }) ||
+                PO_REC.getValue({
+                    fieldId: 'custbody_ctc_po_link_type'
+                }) == 'Drop Shipment' ||
+                PO_REC.getValue({ fieldId: 'custbody_isdropshippo' });
 
             var updateStatus = vc_nslib.updatepo({
                 mainConfig: Current.MainCFG,
                 orderConfig: Current.OrderCFG,
                 po_record: PO_REC,
                 poNum: Current.poId,
-                lineData: vc2_util.clone(Current.outputItems.itemArray),
+                lineData: vc2_util.clone(Current.OrderData.Lines),
+                orderData: Current.OrderData.Orders,
                 isDropPO: Current.isDropPO
             });
             vc2_util.log(logTitle, '... result: ', updateStatus);
@@ -324,15 +398,17 @@ define([
             }
             vc2_util.log(logTitle, '... SO_DATA: ', SO_DATA);
 
+            var fulfillmentResponse = {};
+
             if (Current.isDropPO) {
-                Helper.processItemFulfillment({
-                    orderLines: Current.outputItems.itemArray,
+                fulfillmentResponse = Helper.processItemFulfillment({
+                    orderLines: Current.OrderData.Lines,
                     poRec: PO_REC,
                     soRec: SO_REC
                 });
             } else {
-                Helper.processItemReceipt({
-                    orderLines: Current.outputItems.itemArray,
+                fulfillmentResponse = Helper.processItemReceipt({
+                    orderLines: Current.OrderData.Lines,
                     poRec: PO_REC,
                     soRec: SO_REC
                 });
@@ -354,7 +430,7 @@ define([
 
                 // look for serial nums for all the order num
                 var orderNumSerials = Helper.serialNumsPerOrderNum({
-                    vendorLines: Current.outputItems.itemArray
+                    vendorLines: Current.OrderData.Lines
                 });
 
                 vc2_util.log(logTitle, '>> serial nums: ', orderNumSerials);
@@ -387,7 +463,8 @@ define([
                 // vc2_util.log(logTitle, '>> arrOrderLines: ', arrOrderLines);
 
                 // get matched order line for each
-                Current.outputItems.itemArray.forEach(function (vendorLine) {
+
+                Current.OrderData.Lines.forEach(function (vendorLine) {
                     var matchedOrderLine = vc2_record.findMatchingOrderLine({
                         mainConfig: Current.MainCFG,
                         orderConfig: Current.OrderCFG,
@@ -671,8 +748,8 @@ define([
                 arrSerials = vc2_util.uniqueArray(arrSerials);
                 vc2_util.log(logTitle, '// Total serials: ', arrSerials.length);
 
-                if (arrSerials.length > 500) {
-                    var arrSerialsChunks = Helper.sliceArrayIntoChunks(arrSerials, 300);
+                if (arrSerials.length > 250) {
+                    var arrSerialsChunks = Helper.sliceArrayIntoChunks(arrSerials, 250);
 
                     arrSerialsChunks.forEach(function (chunkSerials) {
                         var chunkOption = option;
@@ -777,8 +854,71 @@ define([
             }
             return returnValue;
         },
+        processPOLines: function (option) {
+            var logTitle = [LogTitle, 'processPOLines'].join('::'),
+                returnValue;
 
-        processPOLines: function (option) {}
+            var poRec = option.record,
+                vendorLines = option.vendorLines,
+                orderData = option.orderData;
+
+            if (vc2_util.isEmpty(poRec)) throw 'Record is required';
+            if (vc2_util.isEmpty(vendorLines)) throw 'Vendor Lines is required';
+            if (vc2_util.isEmpty(orderData)) throw 'Missing Order Data';
+
+            var PO_LINES = vc2_record.extractRecordLines({
+                record: poRec,
+                findAll: true,
+                columns: [
+                    'line',
+                    'linenumber',
+                    'item',
+                    'rate',
+                    'quantity',
+                    'amount',
+                    'quantityreceived',
+                    'quantitybilled'
+                ],
+                orderConfig: Current.OrderCFG,
+                mainConfig: Current.MainCFG
+            });
+
+            (vendorLines || []).forEach(function (vendorLine) {
+                util.extend(billfileLine, {
+                    quantity: billfileLine.QUANTITY,
+                    itemId: (billfileLine.NSITEM || '').toString(),
+                    rate: billfileLine.BILLRATE || billfileLine.PRICE,
+
+                    item: (billfileLine.NSITEM || '').toString(),
+                    itemName: billfileLine.ITEMNO,
+                    description: billfileLine.DESCRIPTION,
+                    quantity: billfileLine.QUANTITY
+                });
+            });
+
+            // {
+            //     line_num: "001",
+            //     item_num: "SFP-10G-LR=",
+            //     item_num_alt: "06UR72",
+            //     vendorSKU: "06UR72",
+            //     line_status: "Shipped",
+            //     order_date: "NA",
+            //     order_status: "Shipped",
+            //     ship_qty: 1,
+            //     line_no: 1,
+            //     ship_date: "NA",
+            //     order_eta: "NA",
+            //     carrier: "NA",
+            //     order_eta_ship: "NA",
+            //     eta_delivery_date: "NA",
+            //     serial_num: "NA",
+            //     tracking_num: "NA",
+            //     order_num: "60-FJY15-31",
+            //     is_shipped: true
+            //  }
+
+            vc2_util.dumpLog(logTitle, PO_LINES, '// PO Lines');
+        }
     };
 
     return MAP_REDUCE;

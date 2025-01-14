@@ -95,11 +95,17 @@ define(function (require) {
                 returnValue = {};
 
             try {
+                // loop thru the modules
+                for (var mod in SERVICES_MAP) {
+                    if (SERVICES_MAP[mod].lib) {
+                        returnValue[mod] = Object.keys(SERVICES_MAP[mod].lib);
+                    }
+                }
             } catch (error) {
-            } finally {
+                log.error(logTitle, error);
             }
 
-            return returnValue;
+            return JSON.stringify(returnValue);
         }
     };
 });

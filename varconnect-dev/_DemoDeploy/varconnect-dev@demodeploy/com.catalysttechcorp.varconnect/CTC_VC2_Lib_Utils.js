@@ -48,6 +48,7 @@ define(function (require) {
                     })(stValue))
             );
         },
+
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
             for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
@@ -113,7 +114,7 @@ define(function (require) {
                 returnValue = cacheObj.get({ key: cacheKey, ttl: cacheTTL });
                 if (option.isJSON && returnValue) returnValue = vc2_util.safeParse(returnValue);
 
-                vc2_util.log('## NS CACHE ##', '// CACHE fetch: ', [cacheName, cacheKey, cacheTTL]);
+                vc2_util.log('## NS CACHE (FETCH) ##', '//', [cacheKey]);
             } catch (error) {
                 vc2_util.logError('getNSCache', error);
                 returnValue = null;
@@ -138,12 +139,7 @@ define(function (require) {
                     scope: ns_cache.Scope.PROTECTED
                 });
                 cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
-
-                // vc2_util.log('## NS CACHE ##', '// CACHE stored: ', [
-                //     cacheName,
-                //     cacheKey,
-                //     cacheTTL
-                // ]);
+                vc2_util.log('## NS CACHE (STORED) ##', '// ', [cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('setNSCache', error);
             }
@@ -162,11 +158,7 @@ define(function (require) {
                 });
                 cacheObj.remove({ key: cacheKey });
 
-                vc2_util.log('## NS CACHE ##', '// CACHE removed : ', [
-                    cacheName,
-                    cacheKey,
-                    cacheTTL
-                ]);
+                vc2_util.log('## NS CACHE (REM) ##', '// ', [cacheName, cacheKey, cacheTTL]);
             } catch (error) {
                 vc2_util.logError('removeNSCache', error);
             }
@@ -367,18 +359,26 @@ define(function (require) {
         parseFormatDate: function (dateStr, parseformat, outFormat) {
             if (!dateStr || dateStr == 'NA') return 'NA';
             // if (!parseformat) parseformat = 'YYYY-MM-DD';
-            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT;
+            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT || this.getDateFormat();
+
+            // vc2_util.log('parseFormatDate', '// outFormat: ', outFormat);
+
             return parseformat
                 ? momentLib(dateStr, parseformat).format(outFormat)
                 : momentLib(dateStr).format(outFormat);
         },
         momentParse: function (dateStr, format) {
-            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT;
-
-            var returnDate =
-                dateStr || dateStr != 'NA' ? momentLib(dateStr, format).toDate() : null;
-
-            return returnDate;
+            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT || this.getDateFormat();
+            var returnVal;
+            try {
+                if (!dateStr || dateStr == 'NA') return null;
+                returnVal = momentLib(dateStr, format).toDate();
+            } catch (e) {
+                vc2_util.log('momentParse', '#error : ', e);
+                // } finally {
+                //     vc2_util.log('momentParse', '// ', [dateStr, format, returnVal]);
+            }
+            return returnVal;
         },
         momentParseToNSDate: function (dateStr, format) {
             if (!dateStr || dateStr == 'NA') return null;
@@ -566,7 +566,6 @@ define(function (require) {
 
             return arrResults;
         },
-
         tryThese: function (arrTasks) {
             if (!arrTasks) return false;
 
@@ -928,8 +927,6 @@ define(function (require) {
                 body: JSON.stringify(serviceQuery)
             };
 
-            vc2_util.log('serviceRequest', 'request: ', requestOption);
-
             return vc2_util.sendRequestRestlet(requestOption);
         },
 
@@ -954,44 +951,81 @@ define(function (require) {
         },
 
         // handleResponse
-        handleJSONResponse: function (request) {
+        handleJSONResponse: function (requestObj) {
             var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
-                returnValue = request;
+                returnValue = requestObj,
+                errorResponse = {
+                    code: requestObj.RESPONSE.code
+                };
 
-            var parsedResp = request.PARSED_RESPONSE;
-            if (request.isError && !parsedResp)
-                throw request.errorMsg || 'Unable to parse response';
+            var parsedResp = requestObj.PARSED_RESPONSE;
+            if (!requestObj.isError) return;
+            util.extend(errorResponse, {
+                details: requestObj.error,
+                message: (function () {
+                    return !parsedResp
+                        ? 'Unable to parse the response'
+                        : parsedResp.fault && parsedResp.fault.faultstring
+                        ? parsedResp.fault.faultstring
+                        : parsedResp.error && parsedResp.error_description
+                        ? parsedResp.error_description
+                        : parsedResp.message;
+                })()
+            });
 
-            // detect the error
-            if (!parsedResp) throw 'Unable to parse response';
-
-            // check for faultstring
-            if (parsedResp.fault && parsedResp.fault.faultstring)
-                throw parsedResp.fault.faultstring;
-
-            // check response.errors
-            if (
-                parsedResp.errors &&
-                util.isArray(parsedResp.errors) &&
-                !vc2_util.isEmpty(parsedResp.errors)
-            ) {
-                var respErrors = parsedResp.errors
-                    .map(function (err) {
-                        return [err.id, err.message].join(': ');
-                    })
-                    .join(', ');
-                throw respErrors;
+            // check if we can parse the details
+            if (util.isObject(requestObj.details)) {
+                if (requestObj.details.errors && util.isArray(requestObj.details.errors)) {
+                    errorResponse.details = requestObj.details.errors
+                        .map(function (err) {
+                            if (err.fields && util.isArray(err.fields)) {
+                                return err.fields
+                                    .map(function (field) {
+                                        return [field.id, field.message].join(': ');
+                                    })
+                                    .join(', ');
+                            }
+                        })
+                        .join(', ');
+                } else if (requestObj.details.status && requestObj.details.title) {
+                    errorResponse.details = requestObj.details.title;
+                }
             }
 
-            // chek for error_description
-            if (parsedResp.error && parsedResp.error_description)
-                throw parsedResp.error_description;
+            throw errorResponse;
 
-            // ARROW: ResponseHeader
+            // // throw requestObj.errorMsg || 'Unable to parse response';
 
-            if (request.isError || request.RESPONSE.code != '200') {
-                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
-            }
+            // // detect the error
+            // if (!parsedResp) throw 'Unable to parse response';
+
+            // // check for faultstring
+            // if (parsedResp.fault && parsedResp.fault.faultstring)
+            //     throw parsedResp.fault.faultstring;
+
+            // // check response.errors
+            // if (
+            //     parsedResp.errors &&
+            //     util.isArray(parsedResp.errors) &&
+            //     !vc2_util.isEmpty(parsedResp.errors)
+            // ) {
+            //     var respErrors = parsedResp.errors
+            //         .map(function (err) {
+            //             return [err.id, err.message].join(': ');
+            //         })
+            //         .join(', ');
+            //     throw respErrors;
+            // }
+
+            // // chek for error_description
+            // if (parsedResp.error && parsedResp.error_description)
+            //     throw parsedResp.error_description;
+
+            // // ARROW: ResponseHeader
+
+            // if (requestObj.isError || requestObj.RESPONSE.code != '200') {
+            //     throw 'Unexpected Error - ' + JSON.stringify(requestObj.PARSED_RESPONSE);
+            // }
 
             return returnValue;
         },
@@ -1239,7 +1273,7 @@ define(function (require) {
         },
         dumpLog: function (logTitle, dumpObj, prefix) {
             for (var fld in dumpObj) {
-                vc2_util.log(logTitle, [prefix || '', '::', fld].join('') + ' ', dumpObj[fld]);
+                vc2_util.log(logTitle, [prefix || '', ':', fld].join('') + ' ', dumpObj[fld]);
             }
             return;
         }
@@ -1497,6 +1531,14 @@ define(function (require) {
             }
 
             return returnValue;
+        },
+        sliceArrayIntoChunks: function (array, chunkSize) {
+            var chunks = [];
+            for (var i = 0; i < array.length; i += chunkSize) {
+                var chunk = array.slice(i, i + chunkSize);
+                chunks.push(chunk);
+            }
+            return chunks;
         }
     });
 

@@ -728,7 +728,7 @@ define([
 
                     var invoiceDetail = {};
                     invoiceDetail = this.processInvoiceDetails({ link: invoiceLink });
-                    
+
                     // if (!invoiceDetail || !invoiceDetail.data || !invoiceDetail.data.lines) {
                     // invoiceDetail = this.processInvoiceDetailsV6({ link: invoiceLink });
                     // }

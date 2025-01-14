@@ -25,6 +25,7 @@ define(function (require) {
             ID: 'customrecord_ctc_vc_main_config',
             FIELD: {
                 ID: 'internalid',
+                NAME: 'name',
                 SCHEDULED_FULFILLMENT_TEMPLATE: 'custrecord_ctc_vc_sch_if_email_template',
                 SCHEDULED_FULFILLMENT_SENDER: 'custrecord_ctc_vc_sch_if_email_sender',
                 SCHEDULED_FULFILLMENT_SEARCH: 'custrecord_ctc_vc_sch_if_search',
@@ -76,6 +77,7 @@ define(function (require) {
             ID: 'customrecord_ctc_vc_vendor_config',
             FIELD: {
                 ID: 'internalid',
+                NAME: 'name',
                 SUBSIDIARY: 'custrecord_ctc_vc_vendor_subsidiary',
                 XML_VENDOR: 'custrecord_ctc_vc_xml_vendor',
                 VENDOR: 'custrecord_ctc_vc_vendor',
@@ -92,6 +94,7 @@ define(function (require) {
                 API_KEY: 'custrecord_ctc_vc_api_key',
                 API_SECRET: 'custrecord_ctc_vc_api_secret',
                 OATH_SCOPE: 'custrecord_ctc_vc_oath_scope',
+                SUBSCRIPTION_KEY: 'custrecord_ctc_vc_subscription_key',
                 USE_SHIPDATE: 'custrecord_ctc_vc_use_shipdate',
                 CUSTOM_ITEM_COLUMN_TO_MATCH: 'custrecord_ctc_vc_item_match_col',
                 CUSTOM_ITEM_FIELD_TO_MATCH: 'custrecord_ctc_vc_item_match_fld',
@@ -145,6 +148,7 @@ define(function (require) {
             ID: 'customrecord_vc_bill_vendor_config',
             FIELD: {
                 ID: 'internalid',
+                NAME: 'name',
                 ENTRY_FUNC: 'custrecord_vc_bc_entry',
                 ACK_FUNC: 'custrecord_vc_bc_ack',
                 USER: 'custrecord_vc_bc_user',
@@ -191,6 +195,7 @@ define(function (require) {
             ID: 'customrecord_ctc_vcsp_vendor_config',
             FIELD: {
                 ID: 'internalid',
+                NAME: 'name',
                 SUBSIDIARY: 'custrecord_ctc_vcsp_vendor_subsidiary',
                 XML_VENDOR: 'custrecord_ctc_vcsp_api_vendor',
                 VENDOR: 'custrecord_ctc_vcsp_vendor',
@@ -251,6 +256,7 @@ define(function (require) {
         ORDER_LINE: {
             ID: 'customrecord_ctc_vc_orderlines',
             FIELD: {
+                ORDNUM_LINK: 'custrecord_ctc_vc_orderline_ordernum',
                 RECKEY: 'custrecord_ctc_vc_orderline_reckey',
                 VENDOR: 'custrecord_ctc_vc_orderline_vendor',
                 TXN_LINK: 'custrecord_ctc_vc_orderline_txnlink',
@@ -279,7 +285,26 @@ define(function (require) {
                 LINE_DATA: 'custrecord_ctc_vc_orderline_vndlinedata',
                 ITEMFF_LINK: 'custrecord_ctc_vc_orderline_itemfflink',
                 VB_LINK: 'custrecord_ctc_vc_orderline_vblink',
-                BILLFILE_LINK: 'custrecord_ctc_vc_orderline_billfile'
+                BILLFILE_LINK: 'custrecord_ctc_vc_orderline_billfile',
+                SHIP_STATUS: 'custrecord_ctc_vc_orderline_shipstatus'
+            }
+        },
+        ORDER_NUM: {
+            ID: 'customrecord_ctc_vc_ordernums',
+            FIELD: {
+                TXN_LINK: 'custrecord_ctc_vc_ordernum_txnlink',
+                ORDER_NUM: 'custrecord_ctc_vc_ordernum_ponum',
+                VENDOR_NUM: 'custrecord_ctc_vc_ordernum_vendorpo',
+                ORDER_STATUS: 'custrecord_ctc_vc_ordernum_status',
+                ORDER_DATE: 'custrecord_ctc_vc_ordernum_orderdate',
+                TOTAL: 'custrecord_ctc_vc_ordernum_total',
+                ITEMFF_LINK: 'custrecord_ctc_vc_ordernum_itemff',
+                SOURCE: 'custrecord_ctc_vc_ordernum_sourcedata',
+                LINES: 'custrecord_ctc_vc_ordernum_vendorlines',
+                VENDOR: 'custrecord_ctc_vc_ordernum_vendor',
+                VENDOR_CFG: 'custrecord_ctc_vc_ordernum_config',
+                NOTE: 'custrecord_ctc_vc_ordernum_procnote',
+                DETAILS: 'custrecord_ctc_vc_ordernum_procdetails'
             }
         },
         VAR_CONNECT_PO_LINE: {
@@ -323,6 +348,7 @@ define(function (require) {
     VC2_CONSTANT.MAPPING = {
         MAIN_CONFIG: {
             id: MainCFG.FIELD.ID,
+            name: MainCFG.FIELD.NAME,
             emailTemplate: MainCFG.FIELD.SCHEDULED_FULFILLMENT_TEMPLATE,
             emailSender: MainCFG.FIELD.SCHEDULED_FULFILLMENT_SENDER,
             serialNoFolder: MainCFG.FIELD.SERIAL_NO_FOLDER_ID,
@@ -369,6 +395,7 @@ define(function (require) {
         },
         BILLCREATE_CONFIG: {
             id: BillCFG.FIELD.ID,
+            name: BillCFG.FIELD.NAME,
             entry_function: BillCFG.FIELD.ENTRY_FUNC,
             ack_path: BillCFG.FIELD.ACK_FUNC,
             user_id: BillCFG.FIELD.USER,
@@ -387,9 +414,9 @@ define(function (require) {
         },
         VENDOR_CONFIG: {
             id: VendorCFG.FIELD.ID,
+            name: VendorCFG.FIELD.NAME,
             subsidiary: VendorCFG.FIELD.SUBSIDIARY,
             xmlVendor: VendorCFG.FIELD.XML_VENDOR,
-            // xmlVendorText: row.getText({ name: VendorCFG.FIELD.XML_VENDOR }),
             vendor: VendorCFG.FIELD.VENDOR,
             endPoint: VendorCFG.FIELD.WEBSERVICE_ENDPOINT,
             startDate: VendorCFG.FIELD.START_DATE,
@@ -404,10 +431,7 @@ define(function (require) {
             apiSecret: VendorCFG.FIELD.API_SECRET,
             oauthScope: VendorCFG.FIELD.OATH_SCOPE,
             useShipDate: VendorCFG.FIELD.USE_SHIPDATE,
-            // country: row.getValue({
-            //     name: 'country',
-            //     join: VendorCFG.FIELD.SUBSIDIARY
-            // }),
+            subscriptionKey: VendorCFG.FIELD.SUBSCRIPTION_KEY,
             itemColumnIdToMatch: VendorCFG.FIELD.CUSTOM_ITEM_COLUMN_TO_MATCH,
             itemFieldIdToMatch: VendorCFG.FIELD.CUSTOM_ITEM_FIELD_TO_MATCH,
             matchItemToPartNumber: VendorCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
@@ -417,6 +441,7 @@ define(function (require) {
         },
         SENDPOVENDOR_CONFIG: {
             id: SendPOVndCFG.FIELD.ID,
+            name: SendPOVndCFG.FIELD.NAME,
             vendor: SendPOVndCFG.FIELD.VENDOR,
             subsidiary: SendPOVndCFG.FIELD.SUBSIDIARY,
             xmlVendor: SendPOVndCFG.FIELD.XML_VENDOR,
@@ -642,7 +667,7 @@ define(function (require) {
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         UNABLE_TO_FULFILL: {
-            message: 'Unable to fulfill the following items',
+            message: 'Unable to fulfill all items',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
         NO_SHIP_QTY: {
@@ -655,6 +680,15 @@ define(function (require) {
         },
         NO_ORDERS_TO_FULFILL: {
             message: 'No orders to fulfill.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
+        PO_FULLYFULFILLED: {
+            message: 'PO is fully fulfilled',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        PO_CLOSED: {
+            message: 'PO is closed',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
 
@@ -691,6 +725,10 @@ define(function (require) {
         /// ORDER STATUS ERROR //
         INVALID_CREDENTIALS: {
             message: 'Invalid credentials',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
+        },
+        INVALID_REQUEST: {
+            message: 'Invalid request query',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.CONFIG_ERROR
         },
         INVALID_ACCESSPOINT: {
@@ -771,7 +809,7 @@ define(function (require) {
         },
         INSUFFICIENT_BILLABLE: {
             code: 'INSUFFICIENT_BILLABLE',
-            msg: 'Billable Qty is not enough for the bill',
+            msg: 'Insufficient quantity to bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
@@ -810,7 +848,7 @@ define(function (require) {
         },
         MISMATCH_RATE: {
             code: 'MISMATCH_RATE',
-            msg: 'Mismatched price item/s on the bill',
+            msg: 'Mismatched rates on item(s) on the bill',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
@@ -852,7 +890,7 @@ define(function (require) {
         },
         EXCEED_THRESHOLD: {
             code: 'EXCEED_THRESHOLD',
-            msg: 'Variance Total exceeded threshold',
+            msg: 'Variance detected and exceeded threshold',
             status: Bill_Creator.Status.ERROR,
             logstatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
@@ -906,8 +944,8 @@ define(function (require) {
 
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
-        '20241029.009',
-        VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null
+        VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
+        '20241111.0447'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

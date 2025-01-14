@@ -10,245 +10,317 @@
  *
  * @NApiVersion 2.x
  * @NModuleScope Public
+ *
+ *
  */
 
-define(['N/url', './CTC_VC2_Lib_Utils.js', 'N/search'], function (ns_url, vc2_util, ns_search) {
-    var EntryPoint = {};
-    EntryPoint.process = function (option) {
-        var LogTitle = ['CTC_VC_Lib_Carahsoft', 'process'].join('::');
+define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], function (
+    vc2_util,
+    vc2_constant,
+    ns_search
+) {
+    var LogTitle = 'WS:CarasoftAPI';
 
-        try {
-            option.recordId = option.poId || option.recordId;
-            option.recordNum = option.poNum || option.transactionNum;
+    var CURRENT = {
+            TokenName: 'VC_CARAHSOFT_TOKEN'
+        },
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ],
+        ERROR_MSG = vc2_constant.ERRORMSG;
 
-            log.debug('process | option', option);
+    var LibCarasoft = {
+        generateToken: function (option) {
+            var logTitle = [LogTitle, 'generateToken'].join('::'),
+                returnValue;
 
-            var responseBody = this.processRequest(option);
-            var returnValue = this.processResponse(responseBody);
+            try {
+                var respToken = vc2_util.sendRequest({
+                    header: [LogTitle, 'Generate Token'].join(' '),
+                    method: 'post',
+                    recordId: CURRENT.recordId,
+                    query: {
+                        url: CURRENT.orderConfig.accessEndPoint,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: {
+                            client_id: CURRENT.orderConfig.apiKey,
+                            client_secret: CURRENT.orderConfig.apiSecret,
+                            audience: CURRENT.orderConfig.oauthScope,
+                            grant_type: 'client_credentials'
+                        }
+                    }
+                });
+                vc2_util.handleJSONResponse(respToken);
 
-            log.debug(LogTitle + ' | returnValue', returnValue);
+                if (!respToken.PARSED_RESPONSE) throw 'Unable to generate token';
+                returnValue = respToken.PARSED_RESPONSE.access_token;
+            } catch (error) {
+                throw error;
+            }
+
             return returnValue;
-        } catch (ex) {
-            vc2_util.logError(LogTitle, ex);
-            throw ex;
+        },
+        getTokenCache: function (option) {
+            var logTitle = [LogTitle, 'getTokenCache'].join('::'),
+                returnValue;
+
+            var tokenKey = [
+                CURRENT.TokenName,
+                CURRENT.orderConfig.customerNo,
+                CURRENT.orderConfig.apiKey,
+                vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
+            ].join('|');
+
+            var accessToken = vc2_util.getNSCache({ key: tokenKey });
+
+            if (vc2_util.isEmpty(accessToken)) {
+                accessToken = LibCarasoft.generateToken();
+            }
+
+            if (!vc2_util.isEmpty(accessToken)) {
+                CURRENT.accessToken = accessToken;
+                vc2_util.setNSCache({ key: tokenKey, value: accessToken, cacheTTL: 3600 });
+            }
+
+            returnValue = accessToken;
+
+            return returnValue;
+        },
+        extractOrders: function (option) {
+            var logTitle = [LogTitle, 'extractOrders'].join('::'),
+                returnValue;
+
+            try {
+                var respOrderSearch = vc2_util.sendRequest({
+                    header: [LogTitle, 'Order Search'].join(' '),
+                    query: {
+                        url:
+                            CURRENT.orderConfig.endPoint +
+                            '?' +
+                            ("$filter=CustomerPO eq '" + CURRENT.recordNum + "'"),
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Account': CURRENT.orderConfig.customerNo
+                        }
+                    }
+                });
+                vc2_util.log(logTitle, '// resp obj: ', respOrderSearch);
+                if (respOrderSearch.isError) throw respOrderSearch.errorMsg;
+
+                vc2_util.handleJSONResponse(respOrderSearch);
+                if (!respOrderSearch.PARSED_RESPONSE) throw 'Unable to fetch server response';
+
+                var parsedOrders = respOrderSearch.PARSED_RESPONSE.value;
+                if (vc2_util.isEmpty(parsedOrders)) throw 'Order not found';
+
+                returnValue = parsedOrders;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+        extractOrderDetails: function (option) {
+            var logTitle = [LogTitle, 'extractOrderDetails'].join('::'),
+                returnValue;
+
+            vc2_util.log(logTitle, '... // option: ', option);
+
+            try {
+                var orderId = option.orderId;
+
+                var respOrderSearch = vc2_util.sendRequest({
+                    header: [LogTitle, 'Order Detail'].join(' '),
+                    query: {
+                        url:
+                            CURRENT.orderConfig.endPoint.replace(/\/$/, '') +
+                            ('(' + orderId + ')?') +
+                            '$expand=Details($expand=LineItems)',
+                        headers: {
+                            Authorization: 'Bearer ' + CURRENT.accessToken,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Account': CURRENT.orderConfig.customerNo
+                        }
+                    }
+                });
+                if (respOrderSearch.isError) throw respOrderSearch.errorMsg;
+
+                vc2_util.handleJSONResponse(respOrderSearch);
+                if (!respOrderSearch.PARSED_RESPONSE) throw 'Unable to fetch server response';
+
+                var parsedOrders = respOrderSearch.PARSED_RESPONSE;
+                vc2_util.log(logTitle, '// PARSED content: ', parsedOrders);
+
+                if (vc2_util.isEmpty(parsedOrders)) throw 'Order not found';
+
+                returnValue = parsedOrders;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
         }
     };
 
-    EntryPoint.processRequest = function (option) {
-        var LogTitle = ['CTC_VC_Lib_Carahsoft', 'processRequest'].join('::');
+    return {
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = {};
+            option = option || {};
 
-        if (vc2_util.isEmpty(option.recordId)) {
-            option.recordId = option.poId;
-        }
-        if (vc2_util.isEmpty(option.recordNum)) {
-            option.recordNum = option.poNum || option.transactionNum;
-        }
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum;
+                CURRENT.orderConfig = option.orderConfig;
+                vc2_util.LogPrefix =
+                    '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
 
-        log.debug('processRequest | option', option);
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
 
-        try {
-            var objHeaders = {
-                Authorization: getTokenCache(option),
-                'Content-Type': 'application/json',
-                'X-Account': option.orderConfig.customerNo
-            };
+                var arrOrders = this.processRequest(option);
+                if (vc2_util.isEmpty(arrOrders)) throw 'Order not found';
 
-            //if record ID is empty, manually grab it from tranid
-            if (vc2_util.isEmpty(option.recordId) && !vc2_util.isEmpty(option.recordNum)) {
-                option.recordId = getRecIdFromTranId(option.recordNum);
-            }
-
-            //if record number is empty, manually get it from record ID
-            if (vc2_util.isEmpty(option.recordNum)) {
-                option.recordNum = getTranId(option.recordId);
-            }
-
-            var orderListUrl =
-                option.orderConfig.endPoint +
-                '' +
-                option.recordNum +
-                '?$expand=Details($expand=LineItems)';
-            // var orderListUrl = config.orderConfig.endPoint+'/Order';
-
-            var objResponse = vc2_util.sendRequest({
-                header: LogTitle,
-                method: 'get',
-                recordId: option.recordId,
-                query: {
-                    url: orderListUrl,
-                    headers: objHeaders
+                if (option.debugMode) {
+                    if (!option.showLines) return arrOrders;
                 }
-            });
 
-            if (objResponse.isError) {
-                throw objResponse.errorMsg;
+                var itemArray = [],
+                    orderList = [];
+
+                arrOrders.forEach(function (orderInfo) {
+                    var orderData = {
+                        OrderNum: orderInfo.CustomerPO,
+                        OrderDate: vc2_util.parseFormatDate(orderInfo.DateBooked),
+                        Status: orderInfo.Status,
+                        Total: orderInfo.TotalOrder,
+                        VendorOrderNum: orderInfo.Order_ID
+                        // Source: orderInfo,
+                        // Lines: []
+                    };
+
+                    (orderInfo.Details || []).forEach(function (orderDetail) {
+                        util.extend(orderData, {
+                            VendorOrderNum: orderDetail.OrderDetail_ID
+                        });
+
+                        orderList.push(vc2_util.clone(orderData));
+
+                        (orderDetail.LineItems || []).forEach(function (lineInfo) {
+                            var lineData = {
+                                order_num: lineInfo.OrderDetail_ID || 'NA',
+                                order_status: orderInfo.Status || 'NA',
+
+                                order_date: orderInfo.DateBooked || 'NA',
+                                order_eta: 'NA',
+                                deliv_date: 'NA',
+                                prom_date: 'NA',
+
+                                item_num: lineInfo.Item || 'NA',
+                                item_sku: 'NA',
+
+                                line_num: lineInfo.LineNumber || 'NA',
+                                line_status: 'NA',
+                                unitprice: lineInfo.Price
+                                    ? vc2_util.parseFloat(lineInfo.Price)
+                                    : 'NA',
+
+                                ship_qty: lineInfo.Quantity
+                                    ? vc2_util.forceInt(lineInfo.Quantity)
+                                    : 'NA',
+                                ship_date: 'NA',
+                                carrier: 'NA',
+                                tracking_num: lineInfo.TrackingNumber || 'NA',
+                                serial_num: 'NA',
+                                is_shipped: false
+                            };
+
+                            itemArray.push(lineData);
+
+                            return true;
+                        });
+
+                        return true;
+                    });
+
+                    return true;
+                });
+
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(itemObj[dateField]);
+                    });
+                });
+
+                util.extend(returnValue, {
+                    Orders: orderList,
+                    Lines: itemArray,
+                    Source: arrOrders
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
             }
+            return returnValue;
+        },
+        processRequest: function (option) {
+            var logTitle = [LogTitle, 'processRequest'].join('::'),
+                returnValue;
+            option = option || {};
+            try {
+                CURRENT.recordId = option.poId || option.recordId;
+                CURRENT.recordNum = option.poNum || option.transactionNum;
+                CURRENT.orderConfig = option.orderConfig;
+                vc2_util.LogPrefix =
+                    '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
 
-            log.debug(LogTitle + ' | objResponse.RESPONSE.body', objResponse.RESPONSE.body);
-            return objResponse.RESPONSE.body;
-        } catch (ex) {
-            vc2_util.logError(LogTitle, ex);
-            throw ex;
+                if (!CURRENT.orderConfig) throw 'Missing vendor configuration';
+
+                // get token cache
+                LibCarasoft.getTokenCache(option);
+                if (!CURRENT.accessToken) throw 'Unable to generate access token';
+
+                // search for the Order First
+                var orderResult = LibCarasoft.extractOrders();
+                if (vc2_util.isEmpty(orderResult)) throw 'Order not found';
+
+                var arrOrders = [];
+                if (!util.isArray(orderResult)) orderResult = [orderResult];
+
+                orderResult.forEach(function (result) {
+                    var orderId = result.Order_ID ? vc2_util.forceInt(result.Order_ID) : null;
+
+                    vc2_util.log(logTitle, '.. order Id: ', orderId);
+                    if (!orderId) return;
+
+                    var orderDetails = LibCarasoft.extractOrderDetails({ orderId: orderId });
+                    arrOrders.push(orderDetails);
+                    vc2_util.log(logTitle, '.. arrOrders(length): ', arrOrders.length);
+
+                    return true;
+                });
+
+                returnValue = arrOrders;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
+            return returnValue;
         }
     };
-
-    EntryPoint.processResponse = function (responseBody) {
-        var LogTitle = ['CTC_VC_Lib_Carahsoft', 'processResponse'].join('::');
-
-        if (!responseBody) {
-            return;
-        }
-        responseBody = JSON.parse(responseBody);
-
-        if (!vc2_util.isEmpty(responseBody.Queryable)) {
-            responseBody = responseBody.Queryable;
-        }
-
-        var itemArray = [];
-        if (Array.isArray(responseBody)) {
-            for (var i = 0; i < responseBody.length; i++) {
-                var objOrder = responseBody[i];
-                getItemArray(itemArray, objOrder);
-            }
-        } else {
-            getItemArray(itemArray, responseBody);
-        }
-        return itemArray;
-    };
-
-    function getItemArray(itemArray, objOrder) {
-        //get order lines from order response
-        var arrDetails = objOrder.Details;
-        for (var d = 0; d < arrDetails.length; d++) {
-            //get line items
-            var arrItems = arrDetails[d].LineItems;
-            for (var n = 0; n < arrItems.length; n++) {
-                var orderItem = {};
-
-                //set values to order item
-                orderItem.order_id = objOrder.Order_ID;
-                orderItem.customer_name = objOrder.CustomerName;
-                // orderItem.order_num = objOrder.CustomerPO;
-                orderItem.order_num = objOrder.Order_ID;
-                orderItem.order_date = objOrder.DateBooked; //need to confirm
-                orderItem.order_status = objOrder.Status;
-
-                orderItem.line_num = 'NA';
-                orderItem.item_num = 'NA';
-                orderItem.item_id = 'NA';
-                orderItem.vendor_id = 'NA';
-                orderItem.ship_qty = 'NA';
-                orderItem.vendorSKU = 'NA';
-                orderItem.serial_num = 'NA';
-                orderItem.order_eta = 'NA';
-                orderItem.ship_date = 'NA';
-                orderItem.tracking_num = 'NA';
-                orderItem.carrier = 'NA';
-
-                orderItem.line_num = arrItems[n].LineNumber;
-                orderItem.item_id = arrItems[n].Item;
-                orderItem.item_num = arrItems[n].Item;
-                orderItem.item_description = arrItems[n].Description;
-                orderItem.tracking_num = arrItems[n].TrackingNumber;
-                orderItem.order_qty = arrItems[n].Quantity;
-                orderItem.rate = arrItems[n].Price;
-
-                orderItem.ship_qty = arrItems[n].Quantity;
-
-                orderItem.extended_price = arrItems[n].ExtendedPrice;
-                orderItem.license_keys = arrItems[n].LicenseKeys;
-
-                itemArray.push(orderItem);
-            }
-        }
-    }
-
-    function getTranId(stRecId) {
-        if (vc2_util.isEmpty(stRecId)) {
-            throw 'Record ID is empty!';
-        }
-        var lookUp = ns_search.lookupFields({
-            type: 'purchaseorder',
-            id: stRecId,
-            columns: ['tranid']
-        });
-        return lookUp.tranid;
-    }
-
-    function getRecIdFromTranId(tranId) {
-        var objSearch = ns_search.create({
-            type: 'purchaseorder',
-            filters: [
-                ['type', 'anyof', 'PurchOrd'],
-                'AND',
-                ['number', 'equalto', tranId],
-                'AND',
-                ['mainline', 'is', 'T']
-            ],
-            columns: ['tranid', 'internalid']
-        });
-
-        //range search
-        var resultSet = objSearch.run();
-        var arrResult = resultSet.getRange({ start: 0, end: 1 });
-
-        if (Array.isArray(arrResult) && typeof arrResult[0] !== 'undefined') {
-            return arrResult[0].getValue('internalid');
-        }
-    }
-
-    function generateToken(config) {
-        var LogTitle = ['CTC_VC_Lib_Carahsoft', 'generateToken'].join('::');
-
-        var objHeaders = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
-        var objBody = {
-            grant_type: 'client_credentials',
-            client_id: config.orderConfig.apiKey,
-            client_secret: config.orderConfig.apiSecret,
-            audience: config.orderConfig.oauthScope
-        };
-
-        var tokenReq = vc2_util.sendRequest({
-            header: LogTitle,
-            method: 'post',
-            recordId: config.recordId,
-            query: {
-                body: objBody,
-                headers: objHeaders,
-                url: config.orderConfig.accessEndPoint
-            }
-        });
-        if (tokenReq.isError) {
-            // try to parse anything
-            var errorMessage = tokenReq.errorMsg;
-            if (tokenReq.PARSED_RESPONSE && tokenReq.PARSED_RESPONSE.error_description) {
-                errorMessage = tokenReq.PARSED_RESPONSE.error_description;
-            }
-            throw 'Generate Token Error - ' + errorMessage;
-        }
-        var tokenResp = vc2_util.safeParse(tokenReq.RESPONSE);
-        if (!tokenResp || !tokenResp.access_token) throw 'Unable to generate token';
-        log.audit(LogTitle, '>> tokenResp: ' + JSON.stringify(tokenResp));
-
-        var bearerToken = [tokenResp.token_type, tokenResp.access_token].join(' ');
-        return bearerToken;
-    }
-
-    function getTokenCache(config) {
-        var token = vc2_util.getNSCache({ key: 'VC_CARAHSOFT_TOKEN' });
-        if (vc2_util.isEmpty(token)) token = generateToken(config);
-
-        if (!vc2_util.isEmpty(token)) {
-            vc2_util.setNSCache({
-                key: 'VC_CARAHSOFT_TOKEN',
-                cacheTTL: 300,
-                value: token
-            });
-        }
-        return token;
-    }
 
     return EntryPoint;
 });

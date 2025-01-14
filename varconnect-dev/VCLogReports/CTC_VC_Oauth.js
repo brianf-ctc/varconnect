@@ -1,28 +1,28 @@
-define(['N/util', './cryptojs'], function(util, cryptojs) {
+define(['N/util', './cryptojs'], function (util, cryptojs) {
     /**
      * Constructor
      * @param {Object} opts consumer key and secret
      */
     function OAuth(opts) {
-        if(!(this instanceof OAuth)) {
+        if (!(this instanceof OAuth)) {
             return new OAuth(opts);
         }
 
-        if(!opts) {
+        if (!opts) {
             opts = {};
         }
 
-        if(!opts.consumer) {
+        if (!opts.consumer) {
             throw new Error('consumer option is required');
         }
 
-        this.consumer            = opts.consumer;
-        this.nonce_length        = opts.nonce_length || 11;
-        this.version             = opts.version || '1.0';
-        this.realm               = opts.realm || '';
+        this.consumer = opts.consumer;
+        this.nonce_length = opts.nonce_length || 11;
+        this.version = opts.version || '1.0';
+        this.realm = opts.realm || '';
         this.parameter_seperator = opts.parameter_seperator || ', ';
 
-        if(typeof opts.last_ampersand === 'undefined') {
+        if (typeof opts.last_ampersand === 'undefined') {
             this.last_ampersand = true;
         } else {
             this.last_ampersand = opts.last_ampersand;
@@ -31,13 +31,13 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
         // default signature_method is 'PLAINTEXT'
         this.signature_method = opts.signature_method || 'PLAINTEXT';
 
-        if(this.signature_method == 'PLAINTEXT' && !opts.hash_function) {
-            opts.hash_function = function(base_string, key) {
+        if (this.signature_method == 'PLAINTEXT' && !opts.hash_function) {
+            opts.hash_function = function (base_string, key) {
                 return key;
-            }
+            };
         }
 
-        if(!opts.hash_function) {
+        if (!opts.hash_function) {
             throw new Error('hash_function option is required');
         }
 
@@ -55,7 +55,7 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} key and secret token
      * @return {Object} OAuth Authorized data
      */
-    OAuth.prototype.authorize = function(request, token) {
+    OAuth.prototype.authorize = function (request, token) {
         var oauth_data = {
             oauth_consumer_key: this.consumer.key,
             oauth_nonce: this.getNonce(),
@@ -64,15 +64,15 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
             oauth_version: this.version
         };
 
-        if(!token) {
+        if (!token) {
             token = {};
         }
 
-        if(token.key) {
+        if (token.key) {
             oauth_data.oauth_token = token.key;
         }
 
-        if(!request.data) {
+        if (!request.data) {
             request.data = {};
         }
 
@@ -88,8 +88,11 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} oauth_data   OAuth data
      * @return {String} Signature
      */
-    OAuth.prototype.getSignature = function(request, token_secret, oauth_data) {
-        return this.hash_function(this.getBaseString(request, oauth_data), this.getSigningKey(token_secret));
+    OAuth.prototype.getSignature = function (request, token_secret, oauth_data) {
+        return this.hash_function(
+            this.getBaseString(request, oauth_data),
+            this.getSigningKey(token_secret)
+        );
     };
 
     /**
@@ -98,8 +101,14 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} OAuth data
      * @return {String} Base String
      */
-    OAuth.prototype.getBaseString = function(request, oauth_data) {
-        return request.method.toUpperCase() + '&' + this.percentEncode(this.getBaseUrl(request.url)) + '&' + this.percentEncode(this.getParameterString(request, oauth_data));
+    OAuth.prototype.getBaseString = function (request, oauth_data) {
+        return (
+            request.method.toUpperCase() +
+            '&' +
+            this.percentEncode(this.getBaseUrl(request.url)) +
+            '&' +
+            this.percentEncode(this.getParameterString(request, oauth_data))
+        );
     };
 
     /**
@@ -112,28 +121,37 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} OAuth data
      * @return {Object} Parameter string data
      */
-    OAuth.prototype.getParameterString = function(request, oauth_data) {
-        var base_string_data = this.sortObject(this.percentEncodeData(this.mergeObject(oauth_data, this.mergeObject(request.data, this.deParamUrl(request.url)))));
+    OAuth.prototype.getParameterString = function (request, oauth_data) {
+        var base_string_data = this.sortObject(
+            this.percentEncodeData(
+                this.mergeObject(
+                    oauth_data,
+                    this.mergeObject(request.data, this.deParamUrl(request.url))
+                )
+            )
+        );
 
         var data_str = '';
 
         //base_string_data to string
-        for(var key in base_string_data) {
+        for (var key in base_string_data) {
             var value = base_string_data[key];
             // check if the value is an array
             // this means that this key has multiple values
-            if (value && Array.isArray(value)){
+            if (value && Array.isArray(value)) {
                 // sort the array first
                 value.sort();
 
-                var valString = "";
+                var valString = '';
                 // serialize all values for this key: e.g. formkey=formvalue1&formkey=formvalue2
-                value.forEach((function(item, i){
-                    valString += key + '=' + item;
-                    if (i < value.length){
-                        valString += "&";
-                    }
-                }).bind(this));
+                value.forEach(
+                    function (item, i) {
+                        valString += key + '=' + item;
+                        if (i < value.length) {
+                            valString += '&';
+                        }
+                    }.bind(this)
+                );
                 data_str += valString;
             } else {
                 data_str += key + '=' + value + '&';
@@ -150,10 +168,10 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {String} token_secret Secret Token
      * @return {String} Signing Key
      */
-    OAuth.prototype.getSigningKey = function(token_secret) {
+    OAuth.prototype.getSigningKey = function (token_secret) {
         token_secret = token_secret || '';
 
-        if(!this.last_ampersand && !token_secret) {
+        if (!this.last_ampersand && !token_secret) {
             return this.percentEncode(this.consumer.secret);
         }
 
@@ -165,7 +183,7 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {String} url
      * @return {String}
      */
-    OAuth.prototype.getBaseUrl = function(url) {
+    OAuth.prototype.getBaseUrl = function (url) {
         return url.split('?')[0];
     };
 
@@ -174,11 +192,11 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {String} string
      * @return {Object}
      */
-    OAuth.prototype.deParam = function(string) {
+    OAuth.prototype.deParam = function (string) {
         var arr = string.split('&');
         var data = {};
 
-        for(var i = 0; i < arr.length; i++) {
+        for (var i = 0; i < arr.length; i++) {
             var item = arr[i].split('=');
 
             // '' value
@@ -195,11 +213,10 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {String} url
      * @return {Object}
      */
-    OAuth.prototype.deParamUrl = function(url) {
+    OAuth.prototype.deParamUrl = function (url) {
         var tmp = url.split('?');
 
-        if (tmp.length === 1)
-            return {};
+        if (tmp.length === 1) return {};
 
         return this.deParam(tmp[1]);
     };
@@ -209,13 +226,13 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {String} str
      * @return {String} percent encoded string
      */
-    OAuth.prototype.percentEncode = function(str) {
+    OAuth.prototype.percentEncode = function (str) {
         return encodeURIComponent(str)
-            .replace(/\!/g, "%21")
-            .replace(/\*/g, "%2A")
-            .replace(/\'/g, "%27")
-            .replace(/\(/g, "%28")
-            .replace(/\)/g, "%29");
+            .replace(/\!/g, '%21')
+            .replace(/\*/g, '%2A')
+            .replace(/\'/g, '%27')
+            .replace(/\(/g, '%28')
+            .replace(/\)/g, '%29');
     };
 
     /**
@@ -223,18 +240,20 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} data
      * @return {Object} percent encoded data
      */
-    OAuth.prototype.percentEncodeData = function(data) {
+    OAuth.prototype.percentEncodeData = function (data) {
         var result = {};
 
-        for(var key in data) {
+        for (var key in data) {
             var value = data[key];
             // check if the value is an array
-            if (value && Array.isArray(value)){
+            if (value && Array.isArray(value)) {
                 var newValue = [];
                 // percentEncode every value
-                value.forEach((function(val){
-                    newValue.push(this.percentEncode(val));
-                }).bind(this));
+                value.forEach(
+                    function (val) {
+                        newValue.push(this.percentEncode(val));
+                    }.bind(this)
+                );
                 value = newValue;
             } else {
                 value = this.percentEncode(value);
@@ -250,23 +269,35 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} oauth_data
      * @return {String} Header data key - value
      */
-    OAuth.prototype.toHeader = function(oauth_data) {
+    OAuth.prototype.toHeader = function (oauth_data) {
         oauth_data = this.sortObject(oauth_data);
 
         var header_value = 'OAuth ';
 
         if (this.realm) {
-            header_value += this.percentEncode('realm') + '="' + this.percentEncode(this.realm) + '"' + this.parameter_seperator;
+            header_value +=
+                this.percentEncode('realm') +
+                '="' +
+                this.percentEncode(this.realm) +
+                '"' +
+                this.parameter_seperator;
         }
 
-        for(var key in oauth_data) {
-            if (key.indexOf('oauth_') === -1)
-                continue;
-            header_value += this.percentEncode(key) + '="' + this.percentEncode(oauth_data[key]) + '"' + this.parameter_seperator;
+        for (var key in oauth_data) {
+            if (key.indexOf('oauth_') === -1) continue;
+            header_value +=
+                this.percentEncode(key) +
+                '="' +
+                this.percentEncode(oauth_data[key]) +
+                '"' +
+                this.parameter_seperator;
         }
 
         return {
-            Authorization: header_value.substr(0, header_value.length - this.parameter_seperator.length) //cut the last chars
+            Authorization: header_value.substr(
+                0,
+                header_value.length - this.parameter_seperator.length
+            ) //cut the last chars
         };
     };
 
@@ -274,11 +305,11 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * Create a random word characters string with input length
      * @return {String} a random word characters string
      */
-    OAuth.prototype.getNonce = function() {
+    OAuth.prototype.getNonce = function () {
         var word_characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         var result = '';
 
-        for(var i = 0; i < this.nonce_length; i++) {
+        for (var i = 0; i < this.nonce_length; i++) {
             result += word_characters[parseInt(Math.random() * word_characters.length, 10)];
         }
 
@@ -289,8 +320,8 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * Get Current Unix TimeStamp
      * @return {Int} current unix timestamp
      */
-    OAuth.prototype.getTimeStamp = function() {
-        return parseInt(new Date().getTime()/1000, 10);
+    OAuth.prototype.getTimeStamp = function () {
+        return parseInt(new Date().getTime() / 1000, 10);
     };
 
     ////////////////////// HELPER FUNCTIONS //////////////////////
@@ -301,12 +332,12 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} obj2
      * @return {Object}
      */
-    OAuth.prototype.mergeObject = function(obj1, obj2) {
+    OAuth.prototype.mergeObject = function (obj1, obj2) {
         obj1 = obj1 || {};
         obj2 = obj2 || {};
 
         var merged_obj = obj1;
-        for(var key in obj2) {
+        for (var key in obj2) {
             merged_obj[key] = obj2[key];
         }
         return merged_obj;
@@ -317,13 +348,13 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
      * @param  {Object} data
      * @return {Object} sorted object
      */
-    OAuth.prototype.sortObject = function(data) {
+    OAuth.prototype.sortObject = function (data) {
         var keys = Object.keys(data);
         var result = {};
 
         keys.sort();
 
-        for(var i = 0; i < keys.length; i++) {
+        for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
             result[key] = data[key];
         }
@@ -333,7 +364,7 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
 
     function getQueryParams(url) {
         if (typeof url !== 'string') {
-            throw TypeError("getQueryParams requires a String argument.")
+            throw TypeError('getQueryParams requires a String argument.');
         }
 
         var paramObj = {};
@@ -355,7 +386,7 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
 
             if (key in paramObj) {
                 if (typeof paramObj[key] === 'string') {
-                    paramObj[key] = [paramObj[key]]
+                    paramObj[key] = [paramObj[key]];
                 }
                 paramObj[key].push(value);
             } else {
@@ -365,53 +396,52 @@ define(['N/util', './cryptojs'], function(util, cryptojs) {
         return paramObj;
     }
 
-function hash_function_sha1(base_string, key) {
-    return cryptojs.HmacSHA1(base_string, key).toString(cryptojs.enc.Base64);
-}
+    function hash_function_sha1(base_string, key) {
+        return cryptojs.HmacSHA1(base_string, key).toString(cryptojs.enc.Base64);
+    }
 
-function hash_function_sha256(base_string, key) {
-    return cryptojs.HmacSHA256(base_string, key).toString(cryptojs.enc.Base64);
-}
+    function hash_function_sha256(base_string, key) {
+        return cryptojs.HmacSHA256(base_string, key).toString(cryptojs.enc.Base64);
+    }
 
-var auth = OAuth({
-    realm: '',
-    consumer: {
-        key: '',
-        secret: ''
-    },
-    signature_method: 'HMAC-SHA256',
-    hash_function: hash_function_sha256
-});
+    var auth = OAuth({
+        realm: '',
+        consumer: {
+            key: '',
+            secret: ''
+        },
+        signature_method: 'HMAC-SHA256',
+        hash_function: hash_function_sha256
+    });
 
-function getHeaders(options) {
-    // if (options.method.toUpperCase() === 'GET') {
-    //     var data = getQueryParams(options.url);
-    // }
-    var data = getQueryParams(options.url);
+    function getHeaders(options) {
+        // if (options.method.toUpperCase() === 'GET') {
+        //     var data = getQueryParams(options.url);
+        // }
+        var data = getQueryParams(options.url);
 
-    var requestData = {
-        url: options.url,
-        method: options.method,
-        data: data
+        var requestData = {
+            url: options.url,
+            method: options.method,
+            data: data
+        };
+        var token = {
+            key: options.tokenKey,
+            secret: options.tokenSecret
+        };
+        auth.setCred(options);
+        return auth.toHeader(auth.authorize(requestData, token));
+    }
+
+    OAuth.prototype.setCred = function (options) {
+        this.realm = options.realm;
+        this.consumer = options.consumer;
     };
-    var token = {
-        key: options.tokenKey,
-        secret: options.tokenSecret
-    };
-    auth.setCred(options);
-    return auth.toHeader(auth.authorize(requestData, token));
-}
-
-OAuth.prototype.setCred = function(options) {
-    this.realm = options.realm;
-    this.consumer = options.consumer;
-};
 
     return {
         getHeaders: getHeaders,
         OAuth: OAuth,
         sha1: hash_function_sha1,
         sha256: hash_function_sha256
-    }
-
+    };
 });

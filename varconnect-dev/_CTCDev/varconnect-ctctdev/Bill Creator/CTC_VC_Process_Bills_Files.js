@@ -229,6 +229,9 @@ define([
                     // load the config
                     var BillCFG = vcs_configLib.billVendorConfig({ poId: CurrentData.PO_ID });
 
+                    vc2_util.dumpLog(logTitle, BillFileData, '// BillFileData: ');
+                    vc2_util.dumpLog(logTitle, BILLPROC, '// BILLPROC: ');
+
                     /// Send to Log
                     // add it to the VC Logs
                     vc2_util.vcLog({
@@ -250,7 +253,7 @@ define([
                     ) {
                         respItemff = Helper.createItemFulfillment({
                             currentData: currentValues,
-                            billFileData: CurrentData.billFile
+                            billFileData: BillFileData
                         });
 
                         vc2_util.log(logTitle, '... itemff response: ', respItemff);
@@ -471,8 +474,8 @@ define([
 
                 vc2_util.log(logTitle, '**** ITEM FF Request ***');
 
-                // vc2_util.log(logTitle, '// record data: ', recordData);
-                // vc2_util.log(logTitle, '... bill file data: ', billFileData);
+                vc2_util.log(logTitle, '// record data: ', recordData);
+                vc2_util.log(logTitle, '... bill file data: ', billFileData);
 
                 var itemFFReqBody = vc2_util.extractValues({
                     source: billFileData,
@@ -512,44 +515,44 @@ define([
                     });
                 }
 
-                /// SERIALS PROCESSING ///
-                if (itemFFResponse.serialData && itemFFResponse.serialData.lines) {
-                    vc2_util.log(logTitle, '// Processing serials...', itemFFResponse.serialData);
-                    var serialsToProcess = itemFFResponse.serialData;
+                // /// SERIALS PROCESSING ///
+                // if (itemFFResponse.serialData && itemFFResponse.serialData.lines) {
+                //     vc2_util.log(logTitle, '// Processing serials...', itemFFResponse.serialData);
+                //     var serialsToProcess = itemFFResponse.serialData;
 
-                    /// SERIALS PROCESSING ///
-                    for (var i = 0; i < serialsToProcess.lines.length; i++) {
-                        // skip line with no serials
-                        if (vc2_util.isEmpty(serialsToProcess.lines[i].serials)) continue;
+                //     /// SERIALS PROCESSING ///
+                //     for (var i = 0; i < serialsToProcess.lines.length; i++) {
+                //         // skip line with no serials
+                //         if (vc2_util.isEmpty(serialsToProcess.lines[i].serials)) continue;
 
-                        var serialsAddReq = vc2_util.sendRequestRestlet({
-                            header: LogTitle + '| Serials Process',
-                            method: 'POST',
-                            recordId: billFileData.PO_LINK,
-                            isJSON: true,
-                            query: {
-                                headers: { 'Content-Type': 'application/json' },
-                                scriptId: SCRIPT.RL_SERIALS.ID,
-                                deploymentId: SCRIPT.RL_SERIALS.DEPLOY,
-                                body: JSON.stringify({
-                                    lineToProcess: i,
-                                    serialObj: serialsToProcess
-                                })
-                            }
-                        });
+                //         var serialsAddReq = vc2_util.sendRequestRestlet({
+                //             header: LogTitle + '| Serials Process',
+                //             method: 'POST',
+                //             recordId: billFileData.PO_LINK,
+                //             isJSON: true,
+                //             query: {
+                //                 headers: { 'Content-Type': 'application/json' },
+                //                 scriptId: SCRIPT.RL_SERIALS.ID,
+                //                 deploymentId: SCRIPT.RL_SERIALS.DEPLOY,
+                //                 body: JSON.stringify({
+                //                     lineToProcess: i,
+                //                     serialObj: serialsToProcess
+                //                 })
+                //             }
+                //         });
 
-                        vc2_util.handleJSONResponse(serialsAddReq);
-                        var itemFFResponse = itemFFReq.PARSED_RESPONSE;
-                        if (!itemFFResponse) throw 'Unable to parse response body';
+                //         vc2_util.handleJSONResponse(serialsAddReq);
+                //         var itemFFResponse = itemFFReq.PARSED_RESPONSE;
+                //         if (!itemFFResponse) throw 'Unable to parse response body';
 
-                        vc2_util.log(
-                            logTitle,
-                            '... (serials) response: ',
-                            serialsAddReq.PARSED_RESPONSE
-                        );
-                    }
-                }
-                /// SERIALS PROCESSING ///
+                //         vc2_util.log(
+                //             logTitle,
+                //             '... (serials) response: ',
+                //             serialsAddReq.PARSED_RESPONSE
+                //         );
+                //     }
+                // }
+                // /// SERIALS PROCESSING ///
 
                 // ////////////////////////////
             } catch (error) {

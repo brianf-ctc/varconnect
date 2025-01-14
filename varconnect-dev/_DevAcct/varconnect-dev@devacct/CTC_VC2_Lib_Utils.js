@@ -48,6 +48,7 @@ define(function (require) {
                     })(stValue))
             );
         },
+
         inArray: function (stValue, arrValue) {
             if (!stValue || !arrValue) return false;
             for (var i = arrValue.length - 1; i >= 0; i--) if (stValue == arrValue[i]) break;
@@ -358,22 +359,26 @@ define(function (require) {
         parseFormatDate: function (dateStr, parseformat, outFormat) {
             if (!dateStr || dateStr == 'NA') return 'NA';
             // if (!parseformat) parseformat = 'YYYY-MM-DD';
-            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT;
+            if (!outFormat) outFormat = vc2_constant.GLOBAL.DATE_FORMAT || this.getDateFormat();
 
-            // var dateFormat = this.getDateFormat();
-            // vc2_util.log('parseFormatDate', '// date format: ', dateFormat);
+            // vc2_util.log('parseFormatDate', '// outFormat: ', outFormat);
 
             return parseformat
                 ? momentLib(dateStr, parseformat).format(outFormat)
                 : momentLib(dateStr).format(outFormat);
         },
         momentParse: function (dateStr, format) {
-            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT;
-
-            var returnDate =
-                dateStr || dateStr != 'NA' ? momentLib(dateStr, format).toDate() : null;
-
-            return returnDate;
+            if (!format) format = vc2_constant.GLOBAL.DATE_FORMAT || this.getDateFormat();
+            var returnVal;
+            try {
+                if (!dateStr || dateStr == 'NA') return null;
+                returnVal = momentLib(dateStr, format).toDate();
+            } catch (e) {
+                vc2_util.log('momentParse', '#error : ', e);
+                // } finally {
+                //     vc2_util.log('momentParse', '// ', [dateStr, format, returnVal]);
+            }
+            return returnVal;
         },
         momentParseToNSDate: function (dateStr, format) {
             if (!dateStr || dateStr == 'NA') return null;
@@ -561,7 +566,6 @@ define(function (require) {
 
             return arrResults;
         },
-
         tryThese: function (arrTasks) {
             if (!arrTasks) return false;
 
@@ -923,8 +927,6 @@ define(function (require) {
                 body: JSON.stringify(serviceQuery)
             };
 
-            vc2_util.log('serviceRequest', 'request: ', requestOption);
-
             return vc2_util.sendRequestRestlet(requestOption);
         },
 
@@ -949,44 +951,81 @@ define(function (require) {
         },
 
         // handleResponse
-        handleJSONResponse: function (request) {
+        handleJSONResponse: function (requestObj) {
             var logTitle = [LogTitle, 'handleJSONResponse'].join(':'),
-                returnValue = request;
+                returnValue = requestObj,
+                errorResponse = {
+                    code: requestObj.RESPONSE.code
+                };
 
-            var parsedResp = request.PARSED_RESPONSE;
-            if (request.isError && !parsedResp)
-                throw request.errorMsg || 'Unable to parse response';
+            var parsedResp = requestObj.PARSED_RESPONSE;
+            if (!requestObj.isError) return;
+            util.extend(errorResponse, {
+                details: requestObj.error,
+                message: (function () {
+                    return !parsedResp
+                        ? 'Unable to parse the response'
+                        : parsedResp.fault && parsedResp.fault.faultstring
+                        ? parsedResp.fault.faultstring
+                        : parsedResp.error && parsedResp.error_description
+                        ? parsedResp.error_description
+                        : parsedResp.message;
+                })()
+            });
 
-            // detect the error
-            if (!parsedResp) throw 'Unable to parse response';
-
-            // check for faultstring
-            if (parsedResp.fault && parsedResp.fault.faultstring)
-                throw parsedResp.fault.faultstring;
-
-            // check response.errors
-            if (
-                parsedResp.errors &&
-                util.isArray(parsedResp.errors) &&
-                !vc2_util.isEmpty(parsedResp.errors)
-            ) {
-                var respErrors = parsedResp.errors
-                    .map(function (err) {
-                        return [err.id, err.message].join(': ');
-                    })
-                    .join(', ');
-                throw respErrors;
+            // check if we can parse the details
+            if (util.isObject(requestObj.details)) {
+                if (requestObj.details.errors && util.isArray(requestObj.details.errors)) {
+                    errorResponse.details = requestObj.details.errors
+                        .map(function (err) {
+                            if (err.fields && util.isArray(err.fields)) {
+                                return err.fields
+                                    .map(function (field) {
+                                        return [field.id, field.message].join(': ');
+                                    })
+                                    .join(', ');
+                            }
+                        })
+                        .join(', ');
+                } else if (requestObj.details.status && requestObj.details.title) {
+                    errorResponse.details = requestObj.details.title;
+                }
             }
 
-            // chek for error_description
-            if (parsedResp.error && parsedResp.error_description)
-                throw parsedResp.error_description;
+            throw errorResponse;
 
-            // ARROW: ResponseHeader
+            // // throw requestObj.errorMsg || 'Unable to parse response';
 
-            if (request.isError || request.RESPONSE.code != '200') {
-                throw 'Unexpected Error - ' + JSON.stringify(request.PARSED_RESPONSE);
-            }
+            // // detect the error
+            // if (!parsedResp) throw 'Unable to parse response';
+
+            // // check for faultstring
+            // if (parsedResp.fault && parsedResp.fault.faultstring)
+            //     throw parsedResp.fault.faultstring;
+
+            // // check response.errors
+            // if (
+            //     parsedResp.errors &&
+            //     util.isArray(parsedResp.errors) &&
+            //     !vc2_util.isEmpty(parsedResp.errors)
+            // ) {
+            //     var respErrors = parsedResp.errors
+            //         .map(function (err) {
+            //             return [err.id, err.message].join(': ');
+            //         })
+            //         .join(', ');
+            //     throw respErrors;
+            // }
+
+            // // chek for error_description
+            // if (parsedResp.error && parsedResp.error_description)
+            //     throw parsedResp.error_description;
+
+            // // ARROW: ResponseHeader
+
+            // if (requestObj.isError || requestObj.RESPONSE.code != '200') {
+            //     throw 'Unexpected Error - ' + JSON.stringify(requestObj.PARSED_RESPONSE);
+            // }
 
             return returnValue;
         },
@@ -1492,6 +1531,14 @@ define(function (require) {
             }
 
             return returnValue;
+        },
+        sliceArrayIntoChunks: function (array, chunkSize) {
+            var chunks = [];
+            for (var i = 0; i < array.length; i += chunkSize) {
+                var chunk = array.slice(i, i + chunkSize);
+                chunks.push(chunk);
+            }
+            return chunks;
         }
     });
 

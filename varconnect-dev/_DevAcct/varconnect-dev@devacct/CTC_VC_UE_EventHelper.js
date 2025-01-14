@@ -816,7 +816,7 @@ define(function (require) {
     };
 
     // EVENT ACTIONS: SALES ORDER
-    EventRouter.Action[ns_record.Type.INVOICE] = {
+    EventRouter.Action[ns_record.Type.SALES_ORDER] = {
         onBeforeLoad: function (scriptContext, Current) {
             var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
             if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
@@ -1106,6 +1106,27 @@ define(function (require) {
                 //         EventRouter.addActionURL('reloadBillFile') +
                 //         '")'
                 // });
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                return;
+            }
+        }
+    };
+
+    EventRouter.Action[vc2_constant.RECORD.ORDER_NUM.ID] = {
+        onBeforeLoad: function (scriptContext, Current) {
+            var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
+
+            try {
+                vc2_util.log(logTitle, '>> Current: ' + JSON.stringify(Current));
+
+                if (Current.eventType !== scriptContext.UserEventType.VIEW) return;
+                if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
+
+                Helper.displayAsInlineTextarea(scriptContext.form, [
+                    'custrecord_ctc_vc_ordernum_sourcedata',
+                    'custrecord_ctc_vc_ordernum_vendorlines'
+                ]);
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

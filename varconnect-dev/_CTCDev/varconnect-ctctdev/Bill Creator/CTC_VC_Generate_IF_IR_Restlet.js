@@ -1,4 +1,5 @@
 /**
+ *
  * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
@@ -31,7 +32,7 @@ define([
     vc_billprocess,
     vc2_constant,
     vc2_util,
-    vc_recordlib,
+    vc2_recordlib,
     vc_nslib,
     vcs_configLib,
     moment
@@ -100,7 +101,7 @@ define([
                     isDynamic: true
                 });
 
-                Current.PO_DATA = vc_recordlib.extractValues({
+                Current.PO_DATA = vc2_recordlib.extractValues({
                     record: Current.PO_REC,
                     fields: [
                         'tranid',
@@ -169,7 +170,7 @@ define([
                 var recItemFF;
 
                 try {
-                    recItemFF = vc_recordlib.transform({
+                    recItemFF = vc2_recordlib.transform({
                         fromType: ns_record.Type.SALES_ORDER,
                         fromId: Current.PO_DATA.createdfrom,
                         toType: 'itemfulfillment',
@@ -252,7 +253,9 @@ define([
 
                 var lineCount = recItemFF.getLineCount({ sublistId: 'item' });
 
-                var arrAppliedSerials = [];
+                var arrAppliedSerials = [],
+                    arrItemSerials = {};
+
                 //loop backwards from the line
                 for (var line = lineCount - 1; line >= 0; line--) {
                     try {
@@ -280,7 +283,7 @@ define([
                         vc2_util.log(logTitle, '... line data: ', lineData);
 
                         // get the po line data
-                        var poLineData = vc_recordlib.extractRecordLines({
+                        var poLineData = vc2_recordlib.extractRecordLines({
                             record: Current.PO_REC,
                             columns: orderLineFields,
                             filter: {
@@ -396,40 +399,46 @@ define([
                             });
                         }
 
+                        vc2_util.log(logTitle, '...serials:', [arrLineSerials]);
+
                         if (
                             arrLineSerials &&
-                            arrLineSerials.length &&
-                            (lineData.inventorydetailreq == 'T' || lineData.isserial == 'T')
+                            arrLineSerials.length
+                            // && (lineData.inventorydetailreq == 'T' || lineData.isserial == 'T')
                         ) {
-                            arrLineSerials.forEach(function (serial) {
-                                if (totalAppliedQty <= 0) return;
-                                if (vc2_util.inArray(serial, arrAppliedSerials)) return;
+                            if (vc2_util.isEmpty(arrItemSerials[poLineData.item])) {
+                                arrItemSerials[poLineData.item] = arrLineSerials;
+                            } else {
+                                arrItemSerials[poLineData.item] = vc2_util.uniqueArray(
+                                    arrItemSerials[poLineData.item].concat(arrLineSerials)
+                                );
+                            }
 
-                                vc2_util.log(logTitle, '...serial:', [
-                                    serial,
-                                    totalAppliedQty,
-                                    arrAppliedSerials
-                                ]);
+                            if (lineData.inventorydetailreq == 'T' || lineData.isserial == 'T') {
+                                arrLineSerials.forEach(function (serial) {
+                                    if (totalAppliedQty <= 0) return;
+                                    if (vc2_util.inArray(serial, arrAppliedSerials)) return;
 
-                                subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
-                                    sublistId: 'item',
-                                    fieldId: 'inventorydetail'
-                                });
-                                subrecordInvDetail.selectNewLine({
-                                    sublistId: 'inventoryassignment'
-                                });
-                                subrecordInvDetail.setCurrentSublistValue({
-                                    sublistId: 'inventoryassignment',
-                                    fieldId: 'receiptinventorynumber',
-                                    value: serial
-                                });
-                                subrecordInvDetail.commitLine({
-                                    sublistId: 'inventoryassignment'
-                                });
+                                    subrecordInvDetail = recItemFF.getCurrentSublistSubrecord({
+                                        sublistId: 'item',
+                                        fieldId: 'inventorydetail'
+                                    });
+                                    subrecordInvDetail.selectNewLine({
+                                        sublistId: 'inventoryassignment'
+                                    });
+                                    subrecordInvDetail.setCurrentSublistValue({
+                                        sublistId: 'inventoryassignment',
+                                        fieldId: 'receiptinventorynumber',
+                                        value: serial
+                                    });
+                                    subrecordInvDetail.commitLine({
+                                        sublistId: 'inventoryassignment'
+                                    });
 
-                                arrAppliedSerials.push(serial);
-                                totalAppliedQty--;
-                            });
+                                    arrAppliedSerials.push(serial);
+                                    totalAppliedQty--;
+                                });
+                            }
                         }
 
                         recItemFF.commitLine({ sublistId: 'item' });
@@ -458,7 +467,7 @@ define([
                 vc2_util.log(
                     logTitle,
                     '>> Fulfillment lines: ',
-                    vc_recordlib.extractRecordLines({
+                    vc2_recordlib.extractRecordLines({
                         record: recItemFF,
                         findAll: true,
                         columns: [
@@ -495,6 +504,21 @@ define([
                     logTitle,
                     '/// Item Fulfillment created... [itemfulfillment:' + newRecordId + ']'
                 );
+
+                vc2_util.log(logTitle, '... applied serials: ', arrItemSerials);
+                if (!vc2_util.isEmpty(arrItemSerials)) {
+                    for (var itemSerial in arrItemSerials) {
+                        vc2_util.serviceRequest({
+                            moduleName: 'processV1',
+                            action: 'processSerials',
+                            parameters: {
+                                serials: arrItemSerials[itemSerial],
+                                ITEM: itemSerial,
+                                ITEM_FULFILLMENT: newRecordId
+                            }
+                        });
+                    }
+                }
 
                 util.extend(returnObj, {
                     id: newRecordId,
@@ -642,7 +666,10 @@ define([
                     'inventorydetailreq',
                     'isserial',
                     'poline',
-                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
+                    'custcol_ctc_xml_carrier',
+                    'custcol_ctc_xml_tracking_num',
+                    'custcol_ctc_xml_serial_num'
                 ];
             if (itemAltNameColId) {
                 poColumns.push(itemAltNameColId);
@@ -650,7 +677,7 @@ define([
             if (itemMPNColId) {
                 poColumns.push(itemMPNColId);
             }
-            var arrFulfillLines = vc_recordlib.extractRecordLines({
+            var arrFulfillLines = vc2_recordlib.extractRecordLines({
                 record: option.record,
                 findAll: true,
                 columns: poColumns,
@@ -661,7 +688,7 @@ define([
             arrFulfillLines = arrFulfillLines.sort(function (a, b) {
                 return a.quantity - b.quantity;
             });
-            // vc2_util.log(logTitle, '// arrFulfillLines: ', arrFulfillLines);
+            vc2_util.log(logTitle, '// arrFulfillLines: ', arrFulfillLines);
 
             Current.billPayload.lines.forEach(function (billLine) {
                 billLine.QUANTITY = vc2_util.forceInt(billLine.QUANTITY);
@@ -841,7 +868,7 @@ define([
                 logPrefix = '';
 
             // CURRENT.billPayload.lines
-            var arrFulfillLines = vc_recordlib.extractRecordLines({
+            var arrFulfillLines = vc2_recordlib.extractRecordLines({
                 record: option.record,
                 findAll: true,
                 columns: ['item', 'quantity', 'quantityremaining', 'inventorydetailreq', 'isserial']

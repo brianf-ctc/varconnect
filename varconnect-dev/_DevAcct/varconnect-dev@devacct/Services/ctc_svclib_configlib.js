@@ -19,6 +19,8 @@ define(function (require) {
         vc2_constant = require('../CTC_VC2_Constants'),
         vcs_recordsLib = require('./ctc_svclib_records.js');
 
+    var ENABLE_LOG = false;
+
     var ns_search = require('N/search'),
         ns_record = require('N/record'),
         ns_runtime = require('N/runtime'),
@@ -64,9 +66,10 @@ define(function (require) {
                         ('producttypeid=' + VC_LICENSE.PRODUCT_CODE) +
                         ('&nsaccountid=' + ns_runtime.accountId)
                 };
-                vc2_util.log(logTitle, logPrefix + 'Send Request query: ', queryOption);
+                if (ENABLE_LOG)
+                    vc2_util.log(logTitle, logPrefix + 'Send Request query: ', queryOption);
                 response = ns_https.request(queryOption);
-                vc2_util.log(logTitle, logPrefix + 'Response: ', response);
+                if (ENABLE_LOG) vc2_util.log(logTitle, logPrefix + 'Response: ', response);
 
                 if (!response || !response.body) throw 'Unable to get response';
                 if (!response.code || response.code !== 200)
@@ -84,14 +87,16 @@ define(function (require) {
                 returnValue.errorMsg = vc2_util.extractError(error);
 
                 if (doRetry && maxRetry > retryCount) {
-                    vc2_util.log(logTitle, logPrefix + '... retry count : ' + retryCount);
+                    if (ENABLE_LOG)
+                        vc2_util.log(logTitle, logPrefix + '... retry count : ' + retryCount);
                     option.retryCount = retryCount + 1;
                     vc2_util.waitMs(retryWaitMS); // wait before re-sending
                     LibLicense.fetchLicense(option);
                 }
             } finally {
                 var durationSec = vc2_util.roundOff((new Date() - startTime) / 1000);
-                vc2_util.log(logTitle, logPrefix + '# response time: ' + durationSec + 's');
+                if (ENABLE_LOG)
+                    vc2_util.log(logTitle, logPrefix + '# response time: ' + durationSec + 's');
             }
 
             return returnValue;
@@ -106,7 +111,8 @@ define(function (require) {
                 var licenseInfo = vc2_util.getNSCache({ name: VC_LICENSE.KEY });
                 licenseInfo = vc2_util.safeParse(licenseInfo);
 
-                vc2_util.log(logTitle, logPrefix + '...license data: ', licenseInfo);
+                if (ENABLE_LOG)
+                    vc2_util.log(logTitle, logPrefix + '...license data: ', licenseInfo);
 
                 var checkLicenseBad = function (licenseData) {
                     return (
@@ -159,7 +165,7 @@ define(function (require) {
         SENDPO: 'SENDPOVENDOR_CONFIG'
     };
 
-    //// CONFIG LIB ////
+    // CONFIG LIB ////
     var ConfigLib = {
         ConfigType: ListConfigType.MAIN,
         CacheKey: null,
@@ -177,66 +183,96 @@ define(function (require) {
                 type: configRecord.ID,
                 filters: [['isinactive', 'is', 'F']],
                 columns: (function () {
-                    var flds = [];
+                    var flds = ['name'];
                     for (var fld in configMap) flds.push(configMap[fld]);
                     return flds;
                 })()
             };
         },
-        search: function (option) {
-            var logTitle = [LogTitle, 'ConfigLib.search'].join('::'),
+        load: function (option) {
+            var logTitle = [LogTitle, 'ConfigLib.load'].join('::'),
                 returnValue;
             option = option || {};
 
-            // RETURN cached valued
-            var searchOption = this.buildSearchOption(option);
+            vc2_util.LogPrefix = '[' + this.ConfigNameValue + '] ';
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// option [CONFIG]: ', option);
 
-            var cachedValue = this.getCache(option);
-            if (!vc2_util.isEmpty(cachedValue)) return cachedValue;
-
-            // generate the search
-            // vc2_util.log(logTitle, '//  option: ', option);
-            // vc2_util.log(logTitle, '// search option: ', searchOption);
-            if (!searchOption) return false;
-
-            // Else, try to fetch the config
             try {
                 var configMap = vc2_constant.MAPPING[this.ConfigType],
-                    configData = {};
+                    configData = {},
+                    recordData = {};
 
+                // load the current record
+                if (option.poId || option.poNum) {
+                    recordData = vcs_recordsLib.searchTransaction({
+                        name: option.poNum,
+                        id: option.poId,
+                        type: ns_record.Type.PURCHASE_ORDER,
+                        columns: [
+                            'entity',
+                            'internalid',
+                            'vendor.internalid',
+                            'vendor.entityid',
+                            'vendor.custentity_vc_bill_config'
+                        ]
+                    });
+
+                    option.recordData = recordData;
+                }
+
+                /// build the search option
+                var searchOption = this.buildSearchOption(option);
+
+                // check for the cache
+                var cachedValue = this.getCache(option);
+                if (!vc2_util.isEmpty(cachedValue)) {
+                    returnValue = cachedValue;
+                    return cachedValue;
+                }
+                if (ENABLE_LOG) vc2_util.log(logTitle, '**** LOADING CONFIG: START ****');
+
+                //if (ENABLE_LOG) vc2_util.log(logTitle, '// searchOption: ', searchOption);
                 var searchObj = ns_search.create(searchOption);
+                if (!searchObj) return false;
 
-                // total results
                 var numResults = searchObj.runPaged().count;
-                var countryCodeField = this.CountryCodeField;
-                vc2_util.log(logTitle, '// total results: ', numResults);
+                if (ENABLE_LOG) vc2_util.log(logTitle, '###  Total Results: ', numResults);
 
+                // run the search values
                 searchObj.run().each(function (row) {
+                    configData.name = row.getValue({ name: 'name' });
                     for (var field in configMap) {
                         var value = row.getValue({ name: configMap[field] });
                         configData[field] = !vc2_util.isEmpty(value) ? value.value || value : null;
                     }
-
-                    configData.country = countryCodeField
-                        ? (rowValue = row.getValue({ name: 'country', join: countryCodeField }))
-                        : 'US';
-
                     return true;
                 });
+                // add the country code
+                if (
+                    !vc2_util.isEmpty(configData) &&
+                    !vc2_util.isEmpty(recordData) &&
+                    recordData.country
+                )
+                    configData.country = recordData.country.value || recordData.country;
 
-                // set the CountryCodeField
-
-                // vc2_util.log(logTitle, '## Config Data: ', configData);
+                // set the default country code to US
+                if (!configData.country) configData.country = 'US';
 
                 if (!vc2_util.isEmpty(configData)) this.setCache(configData);
+
                 returnValue = configData;
             } catch (error) {
-                vc2_util.logError(logTitle, 'Error occurred during search', error);
+                vc2_util.logError(logTitle, error);
                 throw error;
-                // } finally {
-                //     vc2_util.log(logTitle, '/// config data: ', returnValue);
+            } finally {
+                if (ENABLE_LOG)
+                    vc2_util.log(logTitle, '### CONFIG:', [
+                        returnValue,
+                        this.CacheParams,
+                        this.CacheKey
+                    ]);
+                vc2_util.LogPrefix = ''; // reset the log prefix
             }
-
             return returnValue;
         },
         buildPayload: function (option) {
@@ -271,13 +307,6 @@ define(function (require) {
                 id: configId,
                 columns: configFields
             });
-            // vc2_util.log(logTitle, '>>> configData: ', configData);
-
-            // vc2_util.log(logTitle, '>>> configData: ', [
-            //     configNameField,
-            //     configData[configNameField],
-            //     configNameValue
-            // ]);
 
             // TRY to update CONFIG.name ////////
             if (
@@ -289,7 +318,8 @@ define(function (require) {
                         ? configData[configNameField].text || configData[configNameField]
                         : configNameValue;
 
-                vc2_util.log(logTitle, ' **** FIX CONFIG NAME ***** ', configData.name);
+                if (ENABLE_LOG)
+                    vc2_util.log(logTitle, ' **** FIX CONFIG NAME ***** ', configData.name);
 
                 ns_record.submitFields({
                     type: configRecordDef.ID,
@@ -351,10 +381,10 @@ define(function (require) {
                 }) +
                 ns_url.resolveRecord({ recordType: configRecord.ID, recordId: configId });
 
-            vc2_util.log(logTitle, '// configURL: ', configURL);
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// configURL: ', configURL);
 
             var payloadData = this.buildPayload(option);
-            // vc2_util.log(logTitle, '// payloadData: ', payloadData);
+            //if (ENABLE_LOG) vc2_util.log(logTitle, '// payloadData: ', payloadData);
 
             // prepare the payload
             var queryOption = {
@@ -371,9 +401,9 @@ define(function (require) {
             };
 
             //// SEND THE REQUEST ////
-            vc2_util.log(logTitle, '### Send Request query: ', queryOption.url);
+            if (ENABLE_LOG) vc2_util.log(logTitle, '### Send Request query: ', queryOption.url);
             response = ns_https.request(queryOption);
-            vc2_util.log(logTitle, '### Response: ', response);
+            if (ENABLE_LOG) vc2_util.log(logTitle, '### Response: ', response);
             /////////////////////////
 
             if (!response || !response.body) throw 'Unable to get response';
@@ -421,7 +451,58 @@ define(function (require) {
         ConfigType: ListConfigType.MAIN,
         SkippedFields: ['custrecord_ctc_vc_license_text'],
         ConfigNameValue: 'MAIN CONFIG',
-        configNameField: 'custrecord_ctc_vc_xml_vendor'
+        configNameField: 'custrecord_ctc_vc_xml_vendor',
+        load: function (option) {
+            var logTitle = [LogTitle, 'MainConfigLib.load'].join('::'),
+                returnValue;
+            option = option || {};
+
+            vc2_util.LogPrefix = '[' + this.ConfigNameValue + '] ';
+
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// main option: ', option);
+
+            try {
+                var configMap = vc2_constant.MAPPING[this.ConfigType],
+                    configData = {};
+
+                /// build the search option
+                var searchOption = this.buildSearchOption(option);
+
+                var cachedValue = this.getCache(option);
+                if (!vc2_util.isEmpty(cachedValue)) {
+                    returnValue = cachedValue;
+                    return cachedValue;
+                }
+                if (ENABLE_LOG) vc2_util.log(logTitle, '**** LOADING CONFIG: START ****');
+
+                var searchObj = ns_search.create(searchOption);
+                if (!searchObj) return false;
+
+                searchObj.run().each(function (row) {
+                    for (var field in configMap) {
+                        var value = row.getValue({ name: configMap[field] });
+                        configData[field] = !vc2_util.isEmpty(value) ? value.value || value : null;
+                    }
+                    return true;
+                });
+
+                if (!vc2_util.isEmpty(configData)) this.setCache(configData);
+
+                returnValue = configData;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            } finally {
+                //if (ENABLE_LOG) vc2_util.log(logTitle, '## CONFIG: ', [
+                //     returnValue,
+                //     this.CacheParams,
+                //     this.CacheKey
+                // ]);
+
+                vc2_util.LogPrefix = ''; // reset the log
+            }
+            return returnValue;
+        }
     });
 
     var OrderConfigLib = vc2_util.extend(ConfigLib, {
@@ -439,9 +520,14 @@ define(function (require) {
                 vendorId = option.vendor || option.vendorId,
                 subsId = option.subsidiary || option.subsidiaryId,
                 poNum = option.poNum || option.tranid || option.tranId,
-                poId = option.poId;
+                poId = option.poId,
+                recordData = option.recordData;
 
-            vc2_util.log(logTitle, '// option: ', [option, configId, vendorId, poNum, poId]);
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// option [ORDER CFG]: ', option);
+
+            // reset the params
+            this.CacheParams = [];
+            this.CacheKey = null;
 
             var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.VENDOR });
 
@@ -455,38 +541,38 @@ define(function (require) {
                 // return searchOption;
             }
 
-            var recordData = {};
             if (!vendorId && (poId || poNum)) {
                 var MainCFG = EndPoint.mainConfig();
 
-                recordData = vcs_recordsLib.searchTransaction({
-                    name: poNum,
-                    id: poId,
-                    overridePO: MainCFG.overridePONum,
-                    columns: [
-                        'entity',
-                        'internalid',
-                        'vendor.internalid',
-                        'vendor.entityid',
-                        'vendor.custentity_vc_bill_config',
-                        vc2_util.isOneWorld() ? 'subsidiary' : null,
-                        vc2_util.isOneWorld() ? 'subsidiary.country' : null
-                    ]
-                });
+                if (!recordData) {
+                    recordData = vcs_recordsLib.searchTransaction({
+                        name: poNum,
+                        id: poId,
+                        type: ns_record.Type.PURCHASE_ORDER,
+                        overridePO: MainCFG.overridePONum,
+                        columns: [
+                            'entity',
+                            'internalid',
+                            'vendor.internalid',
+                            'vendor.entityid',
+                            'vendor.custentity_vc_bill_config',
+                            vc2_util.isOneWorld() ? 'subsidiary' : null,
+                            vc2_util.isOneWorld() ? 'subsidiary.country' : null
+                        ]
+                    });
+                }
 
                 if (recordData && !vc2_util.isEmpty(recordData)) {
-                    this.CacheParams.push('poId=' + recordData.id);
-                    this.CacheParams.push('poNum=' + recordData.tranid);
-
                     vendorId = recordData.entity
                         ? recordData.entity.value || recordData.entity
                         : null;
-                    subsId = recordData.subsidiary
+                    subsidiaryId = recordData.subsidiary
                         ? recordData.subsidiary.value || recordData.subsidiary
                         : null;
+                    this.CacheParams.push('poId=' + recordData.id);
+                    this.CacheParams.push('poNum=' + recordData.tranid);
                 }
             }
-
             // else throw 'Please provide a vendor configuration or PO record';
 
             if (vendorId) {
@@ -498,8 +584,6 @@ define(function (require) {
                 searchOption.filters.push('AND', [VENDOR_CFG.FIELD.SUBSIDIARY, 'anyof', subsId]);
                 this.CacheParams.push('subsId=' + subsId);
             }
-
-            vc2_util.log(logTitle, '// params: ', this.CacheParams);
 
             if (!this.CacheParams.length)
                 throw 'Please provide a vendor configuration or PO record';
@@ -538,7 +622,13 @@ define(function (require) {
             var configId = option.configId || option.id,
                 subsId = option.subsidiary || option.subsidiaryId,
                 poNum = option.poNum || option.tranid || option.tranId,
-                poId = option.poId;
+                poId = option.poId,
+                recordData = option.recordData;
+
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// option [BILL CFG]: ', option);
+
+            this.CacheParams = [];
+            this.CacheKey = null;
 
             var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.BILL });
 
@@ -548,28 +638,38 @@ define(function (require) {
                 return searchOption;
             }
 
-            var recordData = {};
-
             if (!configId && (poId || poNum)) {
-                var MainCFG = EndPoint.mainConfig();
-                recordData = vcs_recordsLib.searchTransaction({
-                    name: poNum,
-                    id: poId,
-                    overridePO: MainCFG.overridePONum,
-                    columns: [
-                        'entity',
-                        'internalid',
-                        'vendor.internalid',
-                        'vendor.entityid',
-                        'vendor.custentity_vc_bill_config'
-                    ]
-                });
-
+                if (!recordData) {
+                    var MainCFG = EndPoint.mainConfig();
+                    recordData = vcs_recordsLib.searchTransaction({
+                        name: poNum,
+                        id: poId,
+                        type: ns_record.Type.PURCHASE_ORDER,
+                        overridePO: MainCFG.overridePONum,
+                        columns: [
+                            'entity',
+                            'internalid',
+                            'vendor.internalid',
+                            'vendor.entityid',
+                            'vendor.custentity_vc_bill_config',
+                            vc2_util.isOneWorld() ? 'subsidiary' : null
+                        ]
+                    });
+                }
                 if (recordData && !vc2_util.isEmpty(recordData)) {
                     this.CacheParams.push('poId=' + recordData.id);
                     this.CacheParams.push('poNum=' + recordData.tranid);
-                    configId = recordData.custentity_vc_bill_config;
-                    subsId = recordData.subsidiary;
+
+                    configId = recordData.custentity_vc_bill_config
+                        ? recordData.custentity_vc_bill_config.value ||
+                          recordData.custentity_vc_bill_config
+                        : null;
+                    vendorId = recordData.entity
+                        ? recordData.entity.value || recordData.entity
+                        : null;
+                    subsidiaryId = recordData.subsidiary
+                        ? recordData.subsidiary.value || recordData.subsidiary
+                        : null;
                 }
             }
 
@@ -580,21 +680,87 @@ define(function (require) {
                 this.CacheParams.push('configId=' + configId);
             }
 
-            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsId) {
+            if (vc2_constant.GLOBAL.ENABLE_SUBSIDIARIES && subsidiaryId) {
                 searchOption.filters.push('AND', [
-                    [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsId],
+                    [BILL_CFG.FIELD.SUBSIDIARY, 'anyof', subsidiaryId],
                     'OR',
                     [BILL_CFG.FIELD.SUBSIDIARY, 'noneof', '@NONE@']
                 ]);
-                this.CacheParams.push('subsId=' + subsId);
+                this.CacheParams.push('subsId=' + subsidiaryId);
             }
+
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// params: ', this.CacheParams);
 
             if (!this.CacheParams.length || !configId)
                 throw 'Please provide a vendor configuration or PO record';
 
-            // vc2_util.log(logTitle, '... search option: ', searchOption);
-
             return searchOption;
+        },
+        load: function (option) {
+            var logTitle = [LogTitle, 'BillConfigLib.load'].join('::'),
+                returnValue;
+            option = option || {};
+
+            vc2_util.LogPrefix = '[' + this.ConfigNameValue + '] ';
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// option [BILL CFG]: ', option);
+            if (ENABLE_LOG) vc2_util.log(logTitle, '**** LOADING CONFIG:  BC START ****');
+
+            try {
+                var configMap = vc2_constant.MAPPING[this.ConfigType],
+                    configData = {},
+                    recordData = {};
+
+                // load the current record
+                if (option.poId || option.poNum) {
+                    recordData = vcs_recordsLib.searchTransaction({
+                        name: option.poNum,
+                        id: option.poId,
+                        type: ns_record.Type.PURCHASE_ORDER,
+                        columns: [
+                            'entity',
+                            'internalid',
+                            'vendor.internalid',
+                            'vendor.entityid',
+                            'vendor.custentity_vc_bill_config'
+                        ]
+                    });
+                    option.recordData = recordData;
+                }
+                var searchOption = this.buildSearchOption(option);
+
+                var cachedValue = this.getCache(option);
+                if (!vc2_util.isEmpty(cachedValue)) {
+                    returnValue = cachedValue;
+                    return cachedValue;
+                }
+
+                //if (ENABLE_LOG) vc2_util.log(logTitle, '// searchOption: ', searchOption);
+                var searchObj = ns_search.create(searchOption);
+                if (!searchObj) return false;
+
+                searchObj.run().each(function (row) {
+                    for (var field in configMap) {
+                        var value = row.getValue({ name: configMap[field] });
+                        configData[field] = !vc2_util.isEmpty(value) ? value.value || value : null;
+                    }
+                    return true;
+                });
+
+                if (!vc2_util.isEmpty(configData)) this.setCache(configData);
+
+                returnValue = configData;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            } finally {
+                //if (ENABLE_LOG) vc2_util.log(logTitle, '**** LOADING CONFIG: END ****', [
+                //     returnValue,
+                //     this.CacheParams,
+                //     this.CacheKey
+                // ]);
+                vc2_util.LogPrefix = ''; // reset the log prefix
+            }
+            return returnValue;
         },
         setCache: function (cacheValue) {
             if (vc2_util.isEmpty(cacheValue)) return;
@@ -628,6 +794,8 @@ define(function (require) {
                 poNum = option.poNum || option.tranid || option.tranId,
                 poId = option.poId;
 
+            if (ENABLE_LOG) vc2_util.log(logTitle, '// option [SENDPO CFG]: ', option);
+
             var searchOption = ConfigLib.buildSearchOption({ configType: ListConfigType.SENDPO });
 
             // if the configId is specified, exit the script immediately
@@ -644,6 +812,7 @@ define(function (require) {
                 recordData = vcs_recordsLib.searchTransaction({
                     name: poNum,
                     id: poId,
+                    type: ns_record.Type.PURCHASE_ORDER,
                     overridePO: MainCFG.overridePONum,
                     columns: [
                         'entity',
@@ -681,8 +850,8 @@ define(function (require) {
             if (!this.CacheParams.length)
                 throw 'Please provide a vendor configuration or PO record';
 
-            vc2_util.log(logTitle, '// searchoption: ', searchOption);
-            vc2_util.log(logTitle, '// CacheParams: ', this.CacheParams);
+            //if (ENABLE_LOG) vc2_util.log(logTitle, '// searchoption: ', searchOption);
+            //if (ENABLE_LOG) vc2_util.log(logTitle, '// CacheParams: ', this.CacheParams);
 
             return searchOption;
         },
@@ -710,25 +879,26 @@ define(function (require) {
             var logTitle = [LogTitle, 'loadConfig'].join('::'),
                 returnValue;
             option = option || {};
+            var configType = option.configType || ListConfigType.MAIN;
 
-            var configType = option.configType || this.ConfigType.MAIN;
+            vc2_util.log(logTitle, 'option: ', option);
             try {
-                vc2_util.log(logTitle, '// option: ', option);
-
                 // load the config based on the type
                 switch (configType) {
                     case ListConfigType.MAIN:
-                        return MainConfigLib.search(option);
+                        return MainConfigLib.load(option);
                     case ListConfigType.VENDOR:
-                        return OrderConfigLib.search(option);
+                        return OrderConfigLib.load(option);
                     case ListConfigType.BILL:
-                        return BillConfigLib.search(option);
+                        return BillConfigLib.load(option);
                     case ListConfigType.SENDPO:
-                        return SendPOConfigLib.search(option);
+                        return SendPOConfigLib.load(option);
                     default:
                         throw 'Invalid config type';
                 }
-            } catch (error) {}
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
 
             return returnValue;
         },
@@ -774,14 +944,14 @@ define(function (require) {
                 returnValue;
 
             try {
-                return MainConfigLib.search(option);
+                return MainConfigLib.load(option);
             } catch (error) {}
         },
         orderVendorConfig: function (option) {
             var logTitle = [LogTitle, 'orderVendorConfig'].join(':'),
                 returnValue;
             try {
-                return OrderConfigLib.search(option);
+                return OrderConfigLib.load(option);
             } catch (error) {}
         },
         billVendorConfig: function (option) {
@@ -789,14 +959,14 @@ define(function (require) {
                 returnValue;
 
             try {
-                return BillConfigLib.search(option);
+                return BillConfigLib.load(option);
             } catch (error) {}
         },
         sendPOVendorConfig: function (option) {
             var logTitle = [LogTitle, 'sendPOVendorConfig'].join(':'),
                 returnValue;
             try {
-                return SendPOConfigLib.seach(option);
+                return SendPOConfigLib.load(option);
             } catch (error) {}
         },
         validateLicense: function (option) {
@@ -804,7 +974,7 @@ define(function (require) {
                 returnValue;
 
             var servResponse = LibLicense.validate({ doRetry: true, retryMax: 3 });
-            // vc2_util.log(logTitle, 'servResponse: ', servResponse);
+            //if (ENABLE_LOG) vc2_util.log(logTitle, 'servResponse: ', servResponse);
             returnValue = servResponse;
 
             return returnValue;

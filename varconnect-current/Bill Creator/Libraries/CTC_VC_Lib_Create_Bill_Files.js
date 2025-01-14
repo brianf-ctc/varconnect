@@ -164,6 +164,7 @@ define([
                         searchResults.forEach(function (result) {
                             var altItemName = null,
                                 mpnValue = null;
+                                
                             if (itemField) {
                                 altItemName = result.getValue({ name: itemField });
                                 altItemNames._sku = true;
@@ -203,6 +204,7 @@ define([
                 isItemOnlyMatchedWithVendorSKU = null,
                 isMPNMatchedWithName = null,
                 returnValue = option.target;
+
             if (option.orderConfig) {
                 skuColumn = option.orderConfig.itemColumnIdToMatch;
                 mpnColumn = option.orderConfig.itemMPNColumnIdToMatch;
@@ -219,6 +221,7 @@ define([
                     ? option.mainConfig.matchMPNWithPartNumber
                     : null;
             }
+
             if (source && source[returnValue.item]) {
                 if (source._sku) {
                     if (isItemOnlyMatchedWithVendorSKU) {
@@ -521,6 +524,7 @@ define([
             for (var i = 0, len = arrSKUs.length; i < len; i += 1) {
                 arrSKUs[i].vendorItemName =
                     arrSKUsVendorNames[i][vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY];
+
                 arrSKUs[i] = Helper.getAltPartNumValues({
                     source: altItemNames,
                     target: arrSKUs[i],

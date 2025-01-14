@@ -104,8 +104,9 @@ define([
                 BILLPROC.CFG.MainCFG = BILLPROC.CFG.MainCFG;
                 Current.BillCFG = BILLPROC.CFG.BillCFG;
                 Current.OrderCFG = BILLPROC.CFG.OrderCFG;
+                Current.ignoreVariance = BILLPROC.STATUS.IgnoreVariance;
 
-                /// CHECK FOR STATUS ///
+                /// CHECK FOR ERRORS  ///
                 if (
                     BILLPROC.STATUS.HasErrors &&
                     !(BILLPROC.STATUS.AllowVariance || BILLPROC.STATUS.IgnoreVariance)
@@ -119,29 +120,30 @@ define([
                     );
                 }
 
-                /// PROCESS THE BILL  =================
-                var BillData = BILLPROC.BILLFILE.DATA;
-                Current.ignoreVariance = BILLPROC.STATUS.IgnoreVariance;
-
-                vc2_util.log(logTitle, '/// BILL PROCESS STATUS', BILLPROC.STATUS);
-                vc2_util.log(logTitle, '/// PO DATA', BILLPROC.PO.DATA);
-
-                /// VARiANCE CHECK =======================
+                /// CHECK FOR VARIANCE  ///
                 if (
-                    BILLPROC.STATUS.HasVariance &&
-                    !(BILLPROC.STATUS.AllowVariance || BILLPROC.STATUS.IgnoreVariance)
+                    BILLPROC.HasVariance &&
+                    !(
+                        BILLPROC.STATUS.BILLFILE.AllowVariance ||
+                        BILLPROC.STATUS.BILLFILE.IgnoreVariance
+                    )
                 ) {
-                    vc2_util.log(logTitle, '-- Variance Detected: ', BILLPROC.VarianceList);
+                    var errorReport = vc_billprocess.reportError();
+                    var errorMsg = [];
+
+                    if (errorReport.errors) errorMsg.pushg(errorReport.errors.join(', '));
+                    if (errorReport.variances) errorMsg.pushg(errorReport.variances.join(', '));
+
+                    vc2_util.log(logTitle, '-- Error Detected: ', errorReport);
 
                     return util.extend(
                         util.extend(returnObj, {
-                            details: BILLPROC.VarianceList.join(', ')
+                            details: errorMsg.join('\n')
                         }),
                         BILL_CREATOR.Code.HAS_VARIANCE
                     );
                 }
-
-                /// STATUS CHECK ========================
+                // /// STATUS CHECK ========================
                 if (
                     !BILLPROC.STATUS.AllowToBill &&
                     !Current.billInAdvance &&
@@ -149,6 +151,10 @@ define([
                 ) {
                     return util.extend(returnObj, BILL_CREATOR.Code.NOT_BILLABLE);
                 }
+
+                /// PROCESS THE BILL  =================
+                vc2_util.log(logTitle, '/// BILL PROCESS STATUS', BILLPROC.STATUS);
+                vc2_util.log(logTitle, '/// PO DATA', BILLPROC.PO.DATA);
 
                 /// =====================================
 
@@ -225,9 +231,9 @@ define([
                     value: true
                 });
 
-                if (BILLPROC.STATUS.AllowVariance) {
-                    vc_billprocess.addBillLines();
-                }
+                // if (BILLPROC.STATUS.AllowToBill) {
+                //     vc_billprocess.addBillLines();
+                // }
 
                 vc2_util.log(logTitle, '**** SAVING Bill Record *** ');
                 var newRecordId = BILLPROC.BILL.REC.save({

@@ -28,7 +28,7 @@ define([], function () {
                 CUSTOMER_PO_NUMBER: 'custbody_ctc_vcsp_custpo',
                 VENDOR_PO_NUMBER: 'custbody_ctc_vcsp_transaction_num',
                 VENDOR_RECEIPT: 'custbody_ctc_vcsp_vendor_rcpt',
-                Item : {
+                Item: {
                     QUOTE_NUMBER: 'custcol_ctc_vcsp_quote_no',
                     MANUFACTURER: 'custcol_ctc_manufacturer',
                     DELL_SKU: 'custcol_ctc_vcsp_sku_dell',
@@ -36,7 +36,7 @@ define([], function () {
                 }
             },
             Location: {
-                SYNNEX_WAREHOUSE_CODE : 'custrecord_ctc_vcsp_synnex_warehouse'
+                SYNNEX_WAREHOUSE_CODE: 'custrecord_ctc_vcsp_synnex_warehouse'
             },
             VendorConfig: {
                 ID: 'internalid',
@@ -62,16 +62,16 @@ define([], function () {
                     ATTENTION: 'custrecord_ctc_vcsp_bill_attention',
                     ADDRESS_1: 'custrecord_ctc_vcsp_bill_addr1',
                     ADDRESS_2: 'custrecord_ctc_vcsp_bill_addr2',
-                    PHONENO: 'custrecord_ctc_vcsp_phoneno', 
+                    PHONENO: 'custrecord_ctc_vcsp_phoneno',
                     CITY: 'custrecord_ctc_vcsp_bill_city',
                     STATE: 'custrecord_ctc_vcsp_bill_state',
                     ZIP: 'custrecord_ctc_vcsp_bill_zip',
                     COUNTRY: 'custrecord_ctc_vcsp_bill_country',
                     EMAIL: 'custrecord_ctc_vcsp_bill_email'
-                }, 
+                },
                 PAYMENT: {
                     MEAN: 'custrecord_ctc_vcsp_payment_mean',
-                    OTHER: 'custrecord_ctc_vcsp_payment_mean_other', 
+                    OTHER: 'custrecord_ctc_vcsp_payment_mean_other',
                     TERM: 'custrecord_ctc_vcsp_payment_term'
                 }
             },
@@ -88,18 +88,18 @@ define([], function () {
                 TRANSACTION: 'custrecord_ctc_vcsp_log_transaction',
                 STATUS: 'custrecord_ctc_vcsp_log_status'
             },
-            VendorShipMethod : {
+            VendorShipMethod: {
                 VENDOR_CONFIG: 'custrecord_ctc_vcsp_shipmethod_vc',
                 SHIP_METHOD: 'custrecord_ctc_vcsp_shipmethod_item',
                 CODE: 'custrecord_ctc_vcsp_shipmethod_vcode'
-            },
+            }
         },
         Lists: {
             PO_EVENT: {
-                ON_CREATE: 1, 
-                ON_APPROVE: 2, 
+                ON_CREATE: 1,
+                ON_APPROVE: 2,
                 MANUAL: 3
-            }, 
+            },
             API_VENDOR: {
                 DELL: '1',
                 ARROW: '2',

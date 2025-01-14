@@ -48,6 +48,7 @@ define(function (require) {
         vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         vc_record = require('./CTC_VC_Lib_Record.js'),
         vc2_record = require('./CTC_VC2_Lib_Record.js'),
+        vcs_processLib = require('./Services/ctc_svclib_process-v1.js'),
         vcs_configLib = require('./Services/ctc_svclib_configlib.js');
 
     var LogTitle = 'ItemFFLIB',
@@ -71,7 +72,7 @@ define(function (require) {
 
     ItemFFLib.updateItemFulfillments = function (option) {
         var logTitle = [LogTitle, 'updateItemFulfillments'].join('::'),
-            responseData;
+            responseData = {};
         Current.Script = ns_runtime.getCurrentScript();
         vc2_util.log(logTitle, '############ ITEM FULFILLMENT CREATION: START ############');
 
@@ -123,7 +124,6 @@ define(function (require) {
             var arrOrderNums = [],
                 arrVendorOrderNums = [],
                 OrderLinesByNum = {},
-                responseData = [],
                 i,
                 ii,
                 iii;
@@ -134,6 +134,8 @@ define(function (require) {
 
             OrderLines.forEach(function (orderLine) {
                 try {
+                    if (orderLine.SKIPPED) throw orderLine.SKIPPED;
+
                     if (!orderLine.order_num || orderLine.order_num == 'NA')
                         throw ERROR_MSG.MISSING_ORDERNUM;
 
@@ -161,7 +163,7 @@ define(function (require) {
                         arrVendorOrderNums.push(vendorOrderNum);
                     }
                 } catch (order_error) {
-                    vc2_util.logError(logTitle, order_error);
+                    vc2_util.log(logTitle, 'SKIPPED: ', order_error);
                     orderLine.RESULT = vc2_util.extractError(order_error);
 
                     vc2_util.vcLog({
@@ -177,8 +179,8 @@ define(function (require) {
             });
 
             // vc2_util.log(logTitle, 'OrderLines', OrderLines);
-            vc2_util.log(logTitle, '// Unique Orders', arrVendorOrderNums);
-            vc2_util.log(logTitle, '// OrderLines By OrderNum', OrderLinesByNum);
+            vc2_util.log(logTitle, '// Unique Orders: ', arrVendorOrderNums);
+            vc2_util.log(logTitle, '// OrderLines By OrderNum: ', OrderLinesByNum);
 
             vc2_util.vcLog({
                 title: 'Fulfillment',
@@ -199,17 +201,28 @@ define(function (require) {
 
             for (var orderNum in OrderLinesByNum) {
                 var vendorOrderNum = Current.NumPrefix + orderNum,
-                    vendorOrderLines = OrderLinesByNum[orderNum];
+                    vendorOrderLines = OrderLinesByNum[orderNum],
+                    itemFF,
+                    itemFFNotes,
+                    itemFFDetails;
 
                 LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
+                if (!responseData[orderNum]) responseData[orderNum] = {};
+
                 try {
                     vc2_util.log(logTitle, '**** PROCESSING Order [' + vendorOrderNum + '] ****');
 
-                    if (vc2_util.inArray(vendorOrderNum, arrExistingIFS))
-                        throw ERROR_MSG.ORDER_EXISTS;
-                    // throw util.extend(ERROR_MSG.ORDER_EXISTS, { details: vendorOrderNum });
+                    // if (vc2_util.inArray(vendorOrderNum, arrExistingIFS))
+                    //     throw ERROR_MSG.ORDER_EXISTS;
+
+                    if (arrExistingIFS[vendorOrderNum]) {
+                        itemFF = arrExistingIFS[vendorOrderNum];
+                        throw util.extend(ERROR_MSG.ORDER_EXISTS, {
+                            ffId: arrExistingIFS[vendorOrderNum]
+                        });
+                    }
 
                     vc2_util.vcLog({
                         title: 'Fulfillment | Order Lines [' + vendorOrderNum + '] ',
@@ -760,24 +773,24 @@ define(function (require) {
                         /*** End Clemen - Package ***/
 
                         // try to save the record
-                        var itemffId;
                         try {
-                            itemffId = recItemFF.save({
+                            itemFF = recItemFF.save({
                                 enableSourcing: true,
                                 ignoreMandatoryFields: true
                             });
-                            responseData.push({ id: itemffId, orderNum: orderNum });
+
+                            responseData[orderNum] = { id: itemFF };
 
                             vc2_util.log(
                                 logTitle,
-                                '## Created Item FF: [itemfulfillment:' + itemffId + ']'
+                                '## Created Item FF: [itemfulfillment:' + itemFF + ']'
                             );
 
                             vc2_util.vcLog({
                                 title: 'Fulfillment | Successfully Created:',
                                 message:
                                     '##' +
-                                    ('Created Fulfillment (' + itemffId + ') \n') +
+                                    ('Created Fulfillment (' + itemFF + ') \n') +
                                     Helper.printerFriendlyLines({ recordLines: recordLines }),
                                 recordId: Current.PO_ID,
                                 isSuccess: true
@@ -807,11 +820,34 @@ define(function (require) {
                         recordId: Current.PO_ID
                     });
 
-                    continue;
+                    // record the PO Order Data Error
+
+                    util.extend(responseData[orderNum], {
+                        hasError: true,
+                        error: vc2_util.extractError(orderNum_error),
+                        details: JSON.stringify(orderNum_error)
+                    });
+
+                    itemFFNotes = vc2_util.extractError(orderNum_error);
+                    itemFFDetails = JSON.stringify(orderNum_error);
+                } finally {
+                    vc2_util.log(
+                        logTitle,
+                        '**** END PROCESSING Order [' + vendorOrderNum + '] ****',
+                        responseData[orderNum]
+                    );
+                    vcs_processLib.updateOrderNum({
+                        vendorNum: orderNum,
+                        poId: Current.PO_ID,
+                        orderNumValues: {
+                            ITEMFF_LINK: itemFF,
+                            NOTE: itemFFNotes,
+                            DETAILS: itemFFDetails
+                        }
+                    });
+                    // continue;
                 }
             }
-
-            return responseData;
         } catch (error) {
             vc2_util.logError(logTitle, error);
             vc2_util.vcLog({
@@ -821,10 +857,20 @@ define(function (require) {
                 recordId: Current.PO_ID
             });
 
-            throw error;
+            util.extend(responseData, {
+                hasError: true,
+                error: vc2_util.extractError(error),
+                details: JSON.stringify(error)
+            });
         } finally {
-            vc2_util.log(logTitle, '############ ITEM FULFILLMENT CREATION: END ############');
+            vc2_util.log(
+                logTitle,
+                '############ ITEM FULFILLMENT CREATION: END ############',
+                responseData
+            );
         }
+
+        return responseData;
     };
     ////////////////////////////////////
 
@@ -1453,15 +1499,7 @@ define(function (require) {
                 orderNumFilter.pop('OR');
                 searchOption.filters.push(orderNumFilter);
 
-                // log.audit(
-                //     logTitle,
-                //     vc_util.getUsage() +
-                //         LogPrefix +
-                //         '>> searchOption: ' +
-                //         JSON.stringify(searchOption)
-                // );
-
-                var arrResults = [];
+                var arrResults = {};
                 var searchResults = vc2_util.searchAllPaged({
                     searchObj: ns_search.create(searchOption)
                 });
@@ -1469,9 +1507,11 @@ define(function (require) {
                 searchResults.forEach(function (result) {
                     var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
 
-                    if (!vc2_util.inArray(orderNum, arrResults)) {
-                        arrResults.push(orderNum);
-                    }
+                    arrResults[orderNum] = result.id;
+
+                    // if (!vc2_util.inArray(, arrResults)) {
+                    //     arrResults.push(orderNum);
+                    // }
 
                     return true;
                 });

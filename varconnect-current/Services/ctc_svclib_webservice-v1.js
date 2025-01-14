@@ -15,9 +15,11 @@ define(function (require) {
     const LogTitle = 'SVC:WebSVC1',
         LOG_APP = 'WebSVC';
 
+    var ns_search = require('N/search'),
+        ns_record = require('N/record');
+
     var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('../CTC_VC2_Constants.js'),
-        vc_websvclib = require('../CTC_VC_Lib_WebService.js'),
         vcs_recordsLib = require('./ctc_svclib_records.js'),
         vcs_configLib = require('./ctc_svclib_configlib.js');
 
@@ -79,7 +81,8 @@ define(function (require) {
         validateShipped: function (lineData) {
             var logTitle = [LogTitle, 'Helper.isShipped'].join('::');
 
-            var isShipped = false;
+            var isShipped = false,
+                shippedReason = [];
             var lineShipped = { is_shipped: true };
 
             try {
@@ -91,18 +94,23 @@ define(function (require) {
                 var shippedDate = moment(lineData.ship_date).toDate();
 
                 if (!util.isDate(shippedDate)) throw 'Invalid or unrecognized shipped date format';
+                shippedReason.push('has_shippeddate');
 
                 if (vc2_util.isEmpty(lineData.ship_qty) || lineData.ship_qty == 0)
                     throw 'No shipped quantity declared';
+                shippedReason.push('has_shippedqty');
 
                 if (lineData.hasOwnProperty('unitprice')) {
                     if (vc2_util.isEmpty(lineData.unitprice) || lineData.unitprice == 0)
                         throw 'Skipped: Zero unit price';
+                    shippedReason.push('has_unitprice');
                 }
 
                 if (shippedDate > new Date()) throw 'Not yet shipped date';
+                shippedReason.push('shippeddate_past');
 
                 isShipped = true;
+                lineShipped.SHIPPED = shippedReason.join('|');
             } catch (error) {
                 // vc2_util.logError(logTitle, 'NOT SHIPPED: ' + error);
 
@@ -165,7 +173,7 @@ define(function (require) {
                 ],
                 INVALID_ACCESS_TOKEN: [new RegExp(/Invalid or missing authorization token/gi)]
             };
-            vc2_util.logError(logTitle, errorObj);
+            // vc2_util.logError(logTitle, errorObj);
 
             var matchedErrorCode = null,
                 message = vc2_util.extractError(errorObj),
@@ -184,14 +192,6 @@ define(function (require) {
                 if (matchedErrorCode) break;
             }
 
-            // vc2_util.log(logTitle, '// error msgs: ', [
-            //     returnError,
-            //     errorObj,
-            //     { msg: message, det: detail },
-            //     matchedErrorCode,
-            //     ERROR_MSG[matchedErrorCode]
-            // ]);
-
             util.extend(
                 returnError,
                 util.extend(
@@ -205,9 +205,33 @@ define(function (require) {
                 )
             );
 
-            vc2_util.log(logTitle, '// return error: ', returnError);
+            // vc2_util.log(logTitle, '// return error: ', returnError);
 
             return returnError;
+        },
+        collectOrderLines: function (option) {
+            var logTitle = [LogTitle, 'collectOrderLines'].join('::'),
+                returnValue;
+
+            var ordersList = option.Orders || [],
+                linesList = option.Lines || [];
+
+            // vc2_util.log(logTitle, '// total Orders/Lines: ', [
+            //     ordersList.length,
+            //     linesList.length
+            // ]);
+            ordersList.forEach(function (orderInfo) {
+                var arrList = vc2_util.findMatching({
+                    list: linesList,
+                    findAll: true,
+                    filter: {
+                        order_num: orderInfo.VendorOrderNum
+                    }
+                });
+
+                // vc2_util.log(logTitle, '// arrList: ', arrList);
+                orderInfo.Lines = arrList;
+            });
         }
     };
 
@@ -226,22 +250,20 @@ define(function (require) {
                 var ConfigRec = vcs_configLib.loadConfig({
                     poNum: poNum,
                     configId: vendoCfgId,
-                    configType: vcs_configLib.ConfigType.ORDER
+                    configType: vcs_configLib.ConfigType.ORDER,
+                    debugMode: true
                 });
-                vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
+                // vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
 
                 // get the Vendor Library
                 var vendorLib = Helper.getVendorLibrary(ConfigRec);
 
-                var response = option.showLines
-                    ? vendorLib.process({
-                          poNum: poNum,
-                          orderConfig: ConfigRec
-                      })
-                    : vendorLib.processRequest({
-                          poNum: poNum,
-                          orderConfig: ConfigRec
-                      });
+                var response = vendorLib.process({
+                    poNum: poNum,
+                    orderConfig: ConfigRec,
+                    debugMode: true,
+                    showLines: !!option.showLines
+                });
 
                 if (option.showLines && !vc2_util.isEmpty(response.Lines)) {
                     response.Lines.forEach(function (lineData, lineIdx) {
@@ -258,14 +280,19 @@ define(function (require) {
                     Helper.evaluateError(error) || {}
                 );
             } finally {
-                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####', returnValue);
+                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####');
             }
 
             return returnValue;
         },
         OrderStatus: function (option) {
             var logTitle = [LogTitle, 'orderStatus'].join(':'),
-                returnValue = {};
+                returnValue = {
+                    Orders: null,
+                    Lines: null,
+                    ConfigRec: null,
+                    Source: null
+                };
 
             vc2_util.log(logTitle, '###### WEBSERVICE: OrderStatus: ######', option);
 
@@ -274,13 +301,24 @@ define(function (require) {
                     poId = option.poId,
                     vendoCfgId = option.vendorConfigId;
 
+                // load the record
+                var recordData = vcs_recordsLib.searchTransaction({
+                    name: option.poNum,
+                    id: option.poId,
+                    type: ns_record.Type.PURCHASE_ORDER
+                });
+                if (!recordData) throw 'Unable to load record - ' + [option.poNum || option.poId];
+
                 // load the configuration
                 var ConfigRec = vcs_configLib.loadConfig({
                     poId: poId,
+                    poNum: poNum,
                     configId: vendoCfgId,
                     configType: vcs_configLib.ConfigType.ORDER
                 });
+                if (!ConfigRec) throw 'Unable to load configuration';
                 returnValue.prefix = ConfigRec.fulfillmentPrefix;
+                returnValue.ConfigRec = ConfigRec;
 
                 // get the Vendor Library
                 var vendorLib = Helper.getVendorLibrary(ConfigRec);
@@ -290,18 +328,15 @@ define(function (require) {
                     poId: poId,
                     orderConfig: ConfigRec
                 });
-                vc2_util.dumpLog(logTitle, outputResp, ' outputResp: ');
 
-                // check for
+                // validate shipped lines
                 (outputResp.Lines || []).forEach(function (lineData) {
                     Helper.validateShipped(lineData);
                     return true;
                 });
 
-                util.extend(returnValue, {
-                    itemArray: outputResp.Lines,
-                    orderInfo: outputResp.Orders
-                });
+                Helper.collectOrderLines(outputResp);
+                util.extend(returnValue, outputResp);
             } catch (error) {
                 vc2_util.logError(logTitle, error);
 
@@ -310,7 +345,7 @@ define(function (require) {
                     Helper.evaluateError(error) || {}
                 );
             } finally {
-                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####', returnValue);
+                vc2_util.log(logTitle, '##### WEBSERVICE | Return: #####');
             }
 
             return returnValue;
@@ -1082,3 +1117,18 @@ var itemObj = {
     vendorData: ''
 };
 */
+/** 
+ * USAGE: 
+ ////////////////
+
+ {
+  "moduleName": "webserviceLibV1",
+  "action": "OrderStatusDebug",
+  "parameters": {
+    "poNum": "124640",
+    "vendorConfigId": "505",
+    "showLines": true
+  }
+}
+
+ */

@@ -64,17 +64,26 @@ define([
 
             var updateValues = {};
             if (response.transactionNum) {
-                updateValues[constants.Fields.Transaction.VENDOR_PO_NUMBER] = response.transactionNum;
+                updateValues[constants.Fields.Transaction.VENDOR_PO_NUMBER] =
+                    response.transactionNum;
             }
             updateValues[constants.Fields.Transaction.VCSP_TIMESTAMP] = new Date();
             updateValues[constants.Fields.Transaction.IS_PO_SENT] = response.isError ? false : true;
-            updateValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify({
-                code: response.responseCode,
-                message: response.message
-            }, null, '\t');
+            updateValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
+                {
+                    code: response.responseCode,
+                    message: response.message
+                },
+                null,
+                '\t'
+            );
 
             if (response.isError) {
-                updateValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(response, null, '\t');
+                updateValues[constants.Fields.Transaction.VENDOR_RECEIPT] = JSON.stringify(
+                    response,
+                    null,
+                    '\t'
+                );
             }
 
             record.submitFields({

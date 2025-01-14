@@ -29,8 +29,18 @@ define([
     var LogTitle = 'WS:ScanSource',
         LogPrefix,
         CURRENT = { accessToken: null },
+        DATE_FIELDS = [
+            // 'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ],
         ERROR_MSG = vc2_constant.ERRORMSG,
         LogStatus = vc2_constant.LIST.VC_LOG_STATUS;
+
+    var DEFAULT_SUBSCRIPTION_KEY = '4c83c3da-f5e5-4901-954f-399ef8175603';
 
     var LibScansource = {
         SkippedStatus: ['CANCELLED', 'ON HOLD', 'QUOTATION/SALES'],
@@ -67,7 +77,8 @@ define([
                             scope: CURRENT.orderConfig.oauthScope
                         }),
                         headers: {
-                            'Ocp-Apim-Subscription-Key': CURRENT.orderConfig.subscriptionKey,
+                            'Ocp-Apim-Subscription-Key':
+                                CURRENT.orderConfig.subscriptionKey || DEFAULT_SUBSCRIPTION_KEY,
                             'Content-Type': 'application/x-www-form-urlencoded'
                         }
                     }
@@ -93,6 +104,7 @@ define([
                     'VC_SCANSOURCE_TOKEN',
                     CURRENT.orderConfig.apiKey,
                     CURRENT.orderConfig.subscriptionKey,
+                    CURRENT.orderConfig.subsidiary,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')
             });
@@ -124,7 +136,8 @@ define([
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             'Content-Type': 'application/json',
-                            'Ocp-Apim-Subscription-Key': CURRENT.orderConfig.subscriptionKey
+                            'Ocp-Apim-Subscription-Key':
+                                CURRENT.orderConfig.subscriptionKey || DEFAULT_SUBSCRIPTION_KEY
                         }
                     }
                 });
@@ -158,8 +171,8 @@ define([
                         headers: {
                             Authorization: 'Bearer ' + CURRENT.accessToken,
                             'Content-Type': 'application/json',
-                            'Ocp-Apim-Subscription-Key': CURRENT.orderConfig.subscriptionKey
-                            //  '4c83c3da-f5e5-4901-954f-399ef8175603' // add this to the config record
+                            'Ocp-Apim-Subscription-Key':
+                                CURRENT.orderConfig.subscriptionKey || DEFAULT_SUBSCRIPTION_KEY
                         }
                     }
                 });
@@ -183,6 +196,10 @@ define([
                 var arrResponse = this.processRequest(option);
                 if (!arrResponse) throw 'Empty response';
 
+                if (option.debugMode) {
+                    if (!option.showLines) return arrResponse;
+                }
+
                 var itemInfoList = [],
                     deliveryInfoList = [],
                     itemArray = [],
@@ -194,9 +211,10 @@ define([
                         OrderNum: orderDetail.PONumber || 'NA',
                         VendorOrderNum:
                             orderDetail.EndUserPO || orderDetail.SalesOrderNumber || 'NA',
-                        OrderDate: orderDetail.DateEntered || 'NA',
+                        OrderDate: vc2_util.parseFormatDate(orderDetail.DateEntered || 'NA'),
                         Total: orderDetail.Total || 'NA',
-                        InvoiceNo: 'NA'
+                        InvoiceNo: 'NA',
+                        Source: orderDetail
                     };
 
                     if (
@@ -213,7 +231,7 @@ define([
                         var itemObj = {
                             order_num: orderInfo.VendorOrderNum,
                             order_status: orderInfo.Status,
-                            order_date: orderInfo.OrderDate,
+                            order_date: orderInfo.OrderDate, // this is already parsed date
                             order_eta: 'NA',
                             order_delivery_eta: 'NA',
                             deliv_date: 'NA',
@@ -235,16 +253,21 @@ define([
                             tracking_num: 'NA',
                             serial_num: 'NA',
 
-                            is_shipped: false
+                            is_shipped: vc2_util.inArray(
+                                orderInfo.Status.toUpperCase(),
+                                LibScansource.ShippedStatus
+                            )
                         };
+
+                        if (!vc2_util.isEmpty(orderLine.SerialNumbers))
+                            itemObj.serial_num = orderLine.SerialNumbers.join(',');
+
                         (orderLine.ScheduleLines || []).forEach(function (scheduleLine) {
-                            itemObj.order_eta = vc2_util.parseFormatDate(
-                                scheduleLine.EstimatedShipDate
-                            );
+                            itemObj.order_eta = scheduleLine.EstimatedShipDate || 'NA';
                         });
 
                         vc2_util.log(logTitle, '...itemObj: ', itemObj);
-                        itemInfoList.push(itemObj);
+                        itemArray.push(itemObj);
                     });
                     vc2_util.log(logTitle, '// itemInfoList:', itemInfoList);
 
@@ -264,7 +287,7 @@ define([
 
                         (deliveryLine.LineItems || []).forEach(function (lineItem) {
                             var orderItem = {
-                                order_date: vc2_util.parseFormatDate(orderDetail.DateEntered),
+                                order_date: orderDetail.DateEntered || 'NA',
                                 order_num: orderDetail.SalesOrderNumber,
                                 line_num:
                                     Math.floor(
@@ -273,9 +296,7 @@ define([
                                     ) * 1,
                                 vendorSKU: lineItem.ItemNumber,
                                 ship_qty: parseInt(lineItem.QuantityShipped),
-                                ship_date: deliveryLine.ShippedDate
-                                    ? vc2_util.parseFormatDate(deliveryLine.ShippedDate)
-                                    : 'NA',
+                                ship_date: deliveryLine.ShippedDate || 'NA',
                                 carrier: shipment.carrier,
                                 tracking_num: shipment.tracking.join(', ')
                             };
@@ -297,32 +318,43 @@ define([
                         return true;
                     });
                 });
-
-                vc2_util.log(logTitle, '// Delivery Array:', deliveryInfoList);
-                vc2_util.log(logTitle, '// orderList:', orderList);
+                vc2_util.log(logTitle, '// Order List:', orderList);
+                vc2_util.log(logTitle, '// Item Entries:', itemArray);
+                vc2_util.log(logTitle, '// Delivery Info:', deliveryInfoList);
 
                 // merge both itemARray and deliveryArray, using the itemArray.vendorSKU as the key
-                itemInfoList.forEach(function (itemData) {
-                    var itemObj = util.extend({}, itemData);
+                (deliveryInfoList || []).forEach(function (deliveryItem) {
                     var matchedItems = vc2_util.findMatching({
-                        list: deliveryInfoList,
+                        list: itemArray,
                         findAll: true,
-                        filter: { vendorSKU: itemData.vendorSKU }
+                        filter: { vendorSKU: deliveryItem.vendorSKU }
                     });
 
-                    vc2_util.log(logTitle, '// matching sku: ', [itemData, matchedItems]);
+                    vc2_util.log(logTitle, '// matching sku: ', [deliveryItem, matchedItems]);
                     if (!matchedItems || !matchedItems.length) return true;
 
-                    matchedItems.forEach(function (itemMatch) {
-                        util.extend(itemObj, itemMatch);
+                    (matchedItems || []).forEach(function (itemMatch) {
+                        util.extend(itemMatch, deliveryItem);
                     });
+                });
 
-                    itemArray.push(itemObj);
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'YYYY-MM-DD'
+                        );
+                    });
                 });
 
                 util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
+                    Lines: itemArray,
+                    Source: arrResponse
                 });
 
                 // return arr

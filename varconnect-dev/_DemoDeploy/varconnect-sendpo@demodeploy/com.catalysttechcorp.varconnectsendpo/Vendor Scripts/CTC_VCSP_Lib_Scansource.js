@@ -143,7 +143,10 @@ define((require) => {
 
         if (poObj.additionalVendorDetails) {
             additionalVendorDetails = CTC_Util.safeParse(poObj.additionalVendorDetails);
-        } else if (vendorConfig.additionalPOFields) {
+        } else if (
+            vendorConfig.additionalPOFields &&
+            vendorConfig.includeAdditionalDetailsOnSubmit
+        ) {
             additionalVendorDetails = CTC_Util.getVendorAdditionalPOFieldDefaultValues({
                 fields: CTC_Util.safeParse(vendorConfig.additionalPOFields)
             });
@@ -217,6 +220,9 @@ define((require) => {
                 }
                 log.audit('generateBody', 'Order Request: ' + JSON.stringify(fieldContainer));
             }
+        }
+        if (vendorConfig.testRequest) {
+            objBody.Memo = 'TEST:' + (objBody.Memo || '');
         }
 
         let cleanUpJSON = function (option) {

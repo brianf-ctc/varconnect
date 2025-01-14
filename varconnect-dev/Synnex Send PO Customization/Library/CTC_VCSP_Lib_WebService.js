@@ -29,7 +29,7 @@ define([
             endpoint = recVendorConfig.endPoint;
 
         var requiredWebserviceInfo = {
-            endpoint : endpoint
+            endpoint: endpoint
         };
         switch (apiVendor) {
             case constants.Lists.API_VENDOR.SYNNEX:
@@ -121,11 +121,12 @@ define([
                     recVendorConfig: recVendorConfig
                 });
 
-                resp = new response(libVendor.process({
-                    recVendorConfig: recVendorConfig,
-                    recPO: recPO
-                }));
-                
+                resp = new response(
+                    libVendor.process({
+                        recVendorConfig: recVendorConfig,
+                        recPO: recPO
+                    })
+                );
             }
         } catch (e) {
             resp = new response({

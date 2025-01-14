@@ -30,7 +30,15 @@ define([
     var LogTitle = 'WS:Jenne',
         LogPrefix;
 
-    var CURRENT = {};
+    var CURRENT = {},
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ];
 
     var NodeType = {
         ELEMENT: ns_xml.NodeType.ELEMENT_NODE, //1
@@ -221,8 +229,7 @@ define([
                     recordId: CURRENT.recordId,
                     method: 'post',
                     query: {
-                        // url: option.orderConfig.endPoint,
-                              url: "https://webservice.jenne.com/JenneWebService.asmx",
+                        url: option.orderConfig.endPoint,
 
                         headers: {
                             SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
@@ -396,6 +403,10 @@ define([
                 if (!xmlDoc) throw 'Unable to parse XML response';
                 if (!jsonResp) throw 'Unable to parse XML to JSON';
 
+                if (option.debugMode) {
+                    if (!option.showLines) return xmlResponse;
+                }
+
                 var responseBody = jsonResp['soap:Envelope']
                     ? jsonResp['soap:Envelope']['soap:Body']
                     : null;
@@ -443,18 +454,14 @@ define([
                                 orderResult.OrderDate,
                                 'YYYY-MM-DD'
                             ),
-                            VendorOrderNum: orderResult.OrderNumber
+                            VendorOrderNum: orderResult.OrderNumber,
+                            Lines: [],
+                            Source: orderResult
                         },
                         itemObj = {
                             order_num: orderResult.OrderNumber,
-                            order_date: vc2_util.parseFormatDate(
-                                orderResult.OrderDate,
-                                'YYYY-MM-DD'
-                            ),
-                            ship_date: vc2_util.parseFormatDate(
-                                orderResult.DateShipped,
-                                'MM/DD/YYYY'
-                            ),
+                            order_date: orderResult.OrderDate || 'NA',
+                            ship_date: orderResult.DateShipped || 'NA',
                             carrier: 'NA',
                             line_num: 'NA',
                             item_num: 'NA',
@@ -477,7 +484,7 @@ define([
                         util.extend(itemObj, {
                             carrier: shipNode.ShipVia,
                             tracking: shipNode.TrackingNo,
-                            ship_date: vc2_util.parseFormatDate(shipNode.DateShipped, 'YYYY-MM-DD')
+                            ship_date: shipNode.DateShipped || 'NA'
                         });
 
                         var shipDetails = shipNode.ASNcartonDetails
@@ -495,15 +502,30 @@ define([
                                 serial_num: shipDetail.SerialNumber
                             });
                             itemArray.push(itemData);
+                            orderData.Lines.push(itemData);
                         });
                     });
 
                     orderList.push(orderData);
                 });
 
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'YYYY-MM-DD'
+                        );
+                    });
+                });
+
                 util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
+                    Lines: itemArray,
+                    Source: xmlResponse
                 });
             } catch (error) {
                 vc2_util.logError(logTitle, error);

@@ -99,7 +99,7 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
             returnValue = ns_search.lookupFields({
                 type: ns_search.Type.SALES_ORDER,
                 id: salesOrderId,
-                columns: 'shipcomplete'
+                columns: ['shipcomplete', 'otherrefnum']
             });
         }
         return returnValue || {};
@@ -319,7 +319,6 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
                     field: 'isclosed',
                     line: i
                 }),
-
                 expectedReceiptDate: _getSublistText({
                     transaction: record,
                     sublist: 'item',
@@ -469,12 +468,17 @@ define(['N/search', '../Library/CTC_VCSP_Constants'], function (ns_search, VCSP_
                         fieldId: vendorConfig.shipPhoneField
                     }) || this.shipPhone;
             }
+
+            if (vendorConfig.customerNo) {
+                this.vendorCustomerNo = vendorConfig.customerNo;
+            }
         };
 
         // set values from sales order
         if (this.createdFrom) {
             let salesOrderValues = _getSalesOrderValues(this.createdFrom);
             this.shipComplete = salesOrderValues.shipcomplete;
+            this.custPO = this.custPO || salesOrderValues.otherrefnum;
         }
     }
 

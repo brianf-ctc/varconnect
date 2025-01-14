@@ -87,21 +87,148 @@ define(function (require) {
             }
         };
 
+    var FIELD_MAPPING = {
+        PO_LINE_COLUMN: {
+            custcol_ctc_xml_dist_order_num: 'order_num', //text
+            custcol_ctc_xml_date_order_placed: 'order_date', //text
+            custcol_ctc_vc_order_placed_date: 'order_date', //date
+            custcol_ctc_vc_shipped_date: 'ship_date', //date
+            custcol_ctc_vc_eta_date: 'order_eta', //date
+            custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
+            custcol_ctc_xml_ship_date: 'ship_date', //text
+            custcol_ctc_xml_carrier: 'carrier', // text
+            custcol_ctc_xml_eta: 'order_eta', //textarea
+            custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
+            custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
+            custcol_ctc_xml_serial_num: 'serial_num', // textarea
+            custcol_ctc_vc_vendor_info: 'INFO',
+            custcol_ctc_vc_order_status: 'STATUS' // text
+        },
+        VENDOR_LINE_COL: [
+            'order_num',
+            'order_status',
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'ship_date',
+            'tracking_num',
+            'carrier',
+            'serial_num',
+            'STATUS'
+        ],
+        COLUMNS: [
+            'internalid',
+            'type',
+            'tranid',
+            'trandate',
+            'entity',
+            'postingperiod',
+            'custbody_ctc_vc_override_ponum',
+            'custbody_ctc_bypass_vc',
+            'amount',
+            'createdfrom',
+            'custbody_isdropshippo',
+            'custbody_ctc_po_link_type'
+        ]
+    };
+
     return {
+        // searchTransaction: function (option) {
+        //     var logTitle = [LogTitle, 'searchTransaction'].join('::'),
+        //         returnValue;
+
+        //     try {
+        //         if (!option) throw 'Missing required parameter: option';
+        //         option.filters = option.filters || [];
+        //         option.columns = option.columns || FIELD_MAPPING.COLUMNS;
+
+        //         var recordType = option.type || ns_record.Type.PURCHASE_ORDER;
+
+        //         var searchOption = {
+        //             type: recordType,
+        //             columns: option.columns,
+        //             filters: [['mainline', 'is', 'T']] // default to mainline
+        //         };
+        //         if (option.poId || option.id) {
+        //             searchOption.filters.push('AND', [
+        //                 'internalid',
+        //                 'anyof',
+        //                 option.poId || option.id
+        //             ]);
+        //         }
+
+        //         if (option.poNum) {
+        //             searchOption.filters.push('AND', ['tranid', 'is', option.poNum]);
+        //         } else if (option.overridePO) {
+        //             searchOption.filters.push('AND', [
+        //                 'custbody_ctc_vc_override_ponum',
+        //                 'is',
+        //                 option.overridePO
+        //             ]);
+        //         }
+
+        //         if (vc2_util.isOneWorld()) {
+        //             searchOption.columns.push('subsidiary');
+        //             searchOption.columns.push('subsidiary.country');
+        //         }
+        //         // Generate cache key using search filters
+        //         var cacheKey = [
+        //             vc2_constant.CACHE_KEY.PO_DATA,
+        //             JSON.stringify(searchOption.filters)
+        //         ].join('__');
+
+        //         if (option.noCache) {
+        //             vc2_util.log(logTitle, 'No-cache option is enabled, skipping cache retrieval');
+        //         } else {
+        //             // Retrieve cached data
+        //             var cachedData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
+        //             if (!vc2_util.isEmpty(cachedData)) return cachedData;
+        //         }
+
+        //         vc2_util.log(logTitle, '>> search option', searchOption);
+
+        //         var searchObj = ns_search.create(searchOption);
+        //         var results = [];
+
+        //         searchObj.run().each(function (result) {
+        //             var resultData = {};
+        //             option.columns.forEach(function (col) {
+        //                 var colName = col.name || col;
+        //                 resultData[colName] = result.getValue(col);
+        //                 var colText = result.getText(col);
+        //                 if (colText && colText != resultData[colName]) {
+        //                     resultData[colName + '_text'] = colText;
+        //                 }
+        //             });
+        //             results.push(resultData);
+        //             return true;
+        //         });
+        //         if (results.length > 0) {
+        //             vc2_util.setNSCache({ name: cacheKey, value: results, cacheTTL: CACHE_TTL });
+        //         }
+
+        //         returnValue = results;
+
+        //         vc2_util.log(logTitle, 'Search completed successfully', returnValue);
+        //     } catch (error) {
+        //         vc2_util.logError(logTitle, error);
+        //         returnValue = false;
+        //     }
+
+        //     return returnValue;
+        // },
+
         searchTransaction: function (option) {
             var logTitle = [LogTitle, 'searchTransaction'].join('::'),
                 returnValue;
 
             var poNum = option.name || option.tranid || option.poName || option.poNum,
-                poId = option.id || option.internalid,
+                poId = option.id || option.internalid || option.poId,
                 recordType = option.type || option.recordType || ns_record.Type.PURCHASE_ORDER,
                 searchFields = option.fields || option.columns,
-                searchFilters = option.filters,
-                mainConfig = option.mainConfig,
-                overridePO =
-                    mainConfig && mainConfig.overridePONum
-                        ? mainConfig.overridePONum
-                        : option.overridePO;
+                searchFilters = option.filters;
+
+            var paramFltrs = [];
 
             try {
                 if (!poNum && !poId) throw 'Missing parameter: PO Num/ PO Id';
@@ -126,7 +253,10 @@ define(function (require) {
                         ]
                     };
 
-                if (vc2_util.isOneWorld()) searchOption.columns.push('subsidiary');
+                if (vc2_util.isOneWorld()) {
+                    searchOption.columns.push('subsidiary');
+                    searchOption.columns.push('subsidiary.country');
+                }
 
                 // if the searchFields is not empty, concatenate it with searchOption.columns
                 if (!vc2_util.isEmpty(searchFields))
@@ -134,35 +264,35 @@ define(function (require) {
 
                 if (poId) {
                     searchOption.filters.push('AND', ['internalid', 'anyof', poId]);
+                    paramFltrs.push('id=' + poId);
                 } else if (poNum) {
-                    searchOption.filters.push('AND');
-                    if (overridePO) {
-                        searchOption.filters.push(['custbody_ctc_vc_override_ponum', 'is', poNum]);
-                    } else {
-                        searchOption.filters.push(['numbertext', 'is', poNum]);
-                    }
+                    searchOption.filters.push('AND', [
+                        ['numbertext', 'is', poNum],
+                        'OR',
+                        ['custbody_ctc_vc_override_ponum', 'is', poNum]
+                    ]);
+                    paramFltrs.push('tranid=' + poNum);
                 } else if (!vc2_util.isEmpty(searchFilters)) {
                     searchOption.filters.push('AND', searchFilters);
+                    paramFltrs.push('__AND=' + searchOption.filters.join('||'));
                 }
-
-                // vc2_util.log(logTitle, '>> search option', searchOption);
 
                 //// RETRIEVE CACHED DATA
                 var cacheKey = [
                     vc2_constant.CACHE_KEY.PO_DATA,
-                    JSON.stringify(searchOption.filters)
+                    paramFltrs.join('&'),
+                    searchOption.columns.join(':')
                 ].join('__');
 
                 // retrive the cache
                 var cachedData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
                 if (!vc2_util.isEmpty(cachedData)) return cachedData;
 
+                // vc2_util.log(logTitle, '>> search option', searchOption);
+
                 var searchObj = ns_search.create(searchOption);
                 if (!searchObj.runPaged().count)
-                    throw (
-                        'Unable to find the record : filters=' +
-                        JSON.stringify(searchOption.filters)
-                    );
+                    throw 'Unable to find the record : filters=' + paramFltrs.join('&');
 
                 searchObj.run().each(function (row) {
                     recordData.id = row.id;
@@ -173,12 +303,6 @@ define(function (require) {
                             colValue = row.getValue(searchOption.columns[i]),
                             colText = row.getText(searchOption.columns[i]);
 
-                        // vc2_util.log(logTitle, '>> values: ', {
-                        //     name: colName,
-                        //     value: colValue,
-                        //     text: colText
-                        // });
-
                         recordData[colName] = colValue;
 
                         if (colText && colText != colValue) recordData[colName + '_text'] = colText;
@@ -187,14 +311,250 @@ define(function (require) {
                 });
                 returnValue = recordData;
 
+                vc2_util.log(logTitle, '## RecordData: ', [recordData, cacheKey]);
+
                 // set the cachedData
                 vc2_util.setNSCache({ name: cacheKey, value: recordData, cacheTTL: CACHE_TTL });
                 vc2_util.saveCacheList({
                     listName: vc2_constant.CACHE_KEY.PO_DATA,
                     cacheKey: cacheKey
                 });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
 
-                vc2_util.log(logTitle, '## RecordData: ', recordData);
+            return returnValue;
+        },
+
+        updateRecord: function (option) {
+            var logTitle = [LogTitle, 'updateRecord'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.type) throw 'Missing required parameter: type';
+                if (!option.id) throw 'Missing required parameter: id';
+                if (!option.data) throw 'Missing required parameter: data';
+                var recordData = option.data;
+
+                if (option.record) {
+                    var recordObj = option.record;
+
+                    for (var key in recordData) {
+                        if (recordData.hasOwnProperty(key)) {
+                            recordObj.setValue({
+                                fieldId: key,
+                                value: recordData[key]
+                            });
+                        }
+                    }
+
+                    returnValue = recordObj.save();
+                } else {
+                    returnValue = ns_record.submitFields({
+                        type: option.type,
+                        id: option.id,
+                        values: recordData,
+                        options: {
+                            enableSourcing: false,
+                            ignoreMandatoryFields: true
+                        }
+                    });
+                }
+
+                vc2_util.log(logTitle, 'Record updated successfully', {
+                    type: option.type,
+                    id: option.id
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
+        updateLineValues: function (option) {},
+
+        extractValues: function (option) {
+            var logTitle = [LogTitle, 'extractValues'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.record) throw 'Missing required parameter: record';
+                if (!option.columns) throw 'Missing required parameter: columns';
+
+                var recordObj = option.record,
+                    columns = option.columns,
+                    recordData = {};
+
+                for (var i = 0, j = columns.length; i < j; i++) {
+                    var colName = columns[i],
+                        colValue = recordObj.getValue({ fieldId: colName }),
+                        colText = recordObj.getText({ fieldId: colName });
+
+                    recordData[colName] = colValue;
+
+                    if (colText && colText != colValue) recordData[colName + '_text'] = colText;
+                }
+
+                returnValue = recordData;
+
+                vc2_util.log(logTitle, 'Values extracted successfully', {
+                    columns: columns
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
+
+        extractLineValues: function (option) {
+            var logTitle = [LogTitle, 'extractLineValues'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.record) {
+                    if (!option.poId) throw 'Missing required parameter: poId';
+                    // if (!option.type) throw 'Missing required parameter: type';
+
+                    option.record = ns_record.load({
+                        type: option.type || ns_record.Type.PURCHASE_ORDER,
+                        id: option.poId
+                    });
+                }
+                var recordObj = option.record,
+                    columns = option.columns || [
+                        'item',
+                        'rate',
+                        'quantity',
+                        'amount',
+                        'quantityreceived',
+                        'quantitybilled',
+                        'taxrate',
+                        'taxrate1',
+                        'taxrate2'
+                    ],
+                    additionalColumns = option.additionalColumns || [],
+                    recordLines = [],
+                    filter = option.filter || {};
+
+                // if the addiotnal columns is not empty, concatenate it with columns
+                if (!vc2_util.isEmpty(additionalColumns))
+                    columns = columns.concat(additionalColumns);
+
+                var lineCount = recordObj.getLineCount({ sublistId: option.sublistId || 'item' });
+
+                for (var line = 0; line < lineCount; line++) {
+                    var lineData = {};
+
+                    for (var i = 0, j = columns.length; i < j; i++) {
+                        var colName = columns[i],
+                            colValue = recordObj.getSublistValue({
+                                sublistId: option.sublistId || 'item',
+                                fieldId: colName,
+                                line: line
+                            }),
+                            colText = recordObj.getSublistText({
+                                sublistId: option.sublistId || 'item',
+                                fieldId: colName,
+                                line: line
+                            });
+
+                        lineData[colName] = colValue;
+
+                        if (colText && colText != colValue) lineData[colName + '_text'] = colText;
+                    }
+
+                    var match = true;
+                    for (var key in filter) {
+                        if (filter.hasOwnProperty(key) && lineData[key] !== filter[key]) {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match) {
+                        recordLines.push(lineData);
+                    }
+                }
+
+                returnValue = recordLines;
+
+                vc2_util.log(logTitle, 'Values extracted successfully', {
+                    columns: columns
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                throw error;
+            }
+
+            return returnValue;
+        },
+
+        load: function (option) {
+            var logTitle = [LogTitle, 'load'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.type) throw 'Missing required parameter: type';
+                if (!option.id) throw 'Missing required parameter: id';
+
+                var recordType = option.type,
+                    recordId = option.id,
+                    isDynamic = option.isDynamic || false;
+
+                returnValue = ns_record.load({
+                    type: recordType,
+                    id: recordId,
+                    isDynamic: isDynamic
+                });
+
+                vc2_util.log(logTitle, 'Record loaded successfully', {
+                    type: recordType,
+                    id: recordId
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
+        transform: function (option) {
+            var logTitle = [LogTitle, 'transform'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.fromType) throw 'Missing required parameter: fromType';
+                if (!option.toType) throw 'Missing required parameter: toType';
+                if (!option.id) throw 'Missing required parameter: id';
+
+                var fromType = option.fromType,
+                    toType = option.toType,
+                    recordId = option.id,
+                    isDynamic = option.isDynamic || false,
+                    defaultValues = option.defaultValues || {};
+
+                returnValue = ns_record.transform({
+                    fromType: fromType,
+                    toType: toType,
+                    id: recordId,
+                    isDynamic: isDynamic,
+                    defaultValues: defaultValues
+                });
+
+                vc2_util.log(logTitle, 'Record transformed successfully', {
+                    fromType: fromType,
+                    toType: toType,
+                    id: recordId
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = false;

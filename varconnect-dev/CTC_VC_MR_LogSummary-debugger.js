@@ -873,8 +873,6 @@ require(['N/search', 'N/record', 'N/error', 'N/runtime', 'N/format'], function (
     return true;
 });
 
-
-
 // require(['N/search', 'N/record', 'N/error', 'N/runtime', 'N/format'], function (
 //     ns_search,
 //     ns_record,

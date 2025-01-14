@@ -35,6 +35,7 @@ define(function (require) {
         vc_record = require('./CTC_VC_Lib_Record.js'),
         vc2_util = require('./CTC_VC2_Lib_Utils.js'),
         vc2_record = require('./CTC_VC2_Lib_Record.js'),
+        vcs_processLib = require('./Services/ctc_svclib_process-v1.js'),
         vcs_configLib = require('./Services/ctc_svclib_configlib.js');
 
     var LogTitle = 'ItemRRLib',
@@ -61,7 +62,7 @@ define(function (require) {
     //***********************************************************************
     ItemRRLib.updateIR = function (option) {
         var logTitle = [LogTitle, 'updateItemReceipts'].join('::'),
-            responseData;
+            responseData = {};
         Current.Script = ns_runtime.getCurrentScript();
         vc2_util.log(logTitle, '############ ITEM RECEIPT CREATION: START ############');
         try {
@@ -89,6 +90,7 @@ define(function (require) {
                 option.orderConfig || vcs_configLib.orderVendorConfig({ poId: Current.PO_ID });
 
             Current.OrderLines = option.lineData;
+            Current.SO_REC = option.recSalesOrd;
             Current.PO_REC = option.recPurchOrd;
 
             vc2_util.log(logTitle, '// OrderLines: ', Current.OrderLines);
@@ -109,7 +111,6 @@ define(function (require) {
             var arrOrderNums = [],
                 arrVendorOrderNums = [],
                 OrderLinesByNum = {},
-                responseData = [],
                 i,
                 ii,
                 iii;
@@ -172,6 +173,12 @@ define(function (require) {
             var arrExistingIRS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
             vc2_util.log(logTitle, '// Existing IRs', arrExistingIRS);
 
+            Current.PO_DATA = vc2_record.extractValues({
+                record: Current.PO_REC,
+                fields: ['orderstatus', 'status', 'statusRef']
+            });
+            vc2_util.log(logTitle, '// PO Data', Current.PO_DATA);
+
             ///////////////////////////////////////////////////
             // Loop through each unique order num checking to see if it does not already exist as an item receipt
             var OrigLogPrefix = LogPrefix;
@@ -186,12 +193,40 @@ define(function (require) {
                 LogPrefix = OrigLogPrefix + ' [' + vendorOrderNum + '] ';
                 vc2_util.LogPrefix = LogPrefix;
 
+                if (!responseData[orderNum]) responseData[orderNum] = {};
+                var itemRcpt, itemRcptNotes, itemRcptDetails;
+
                 try {
                     vc2_util.log(logTitle, '**** PROCESSING Order [' + vendorOrderNum + '] ****');
 
                     // skip any existing orders
-                    if (vc2_util.inArray(vendorOrderNum, arrExistingIRS))
-                        throw ERROR_MSG.ORDER_EXISTS;
+                    // if (vc2_util.inArray(vendorOrderNum, arrExistingIRS))
+                    //     throw ERROR_MSG.ORDER_EXISTS;
+
+                    /// Check if the order already exists //////
+                    if (arrExistingIRS[vendorOrderNum]) {
+                        itemRcpt = arrExistingIRS[vendorOrderNum];
+                        throw util.extend(ERROR_MSG.ORDER_EXISTS, {
+                            ffId: arrExistingIRS[vendorOrderNum]
+                        });
+                    }
+                    ///////////////////////////////////////////////
+
+                    /// CHECK if the PO is closed or fully billed ////
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'closed',
+                            'fullybilled'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_CLOSED;
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'pendingbilling'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_FULLYFULFILLED;
+                    ///////////////////////////////////////////////
 
                     vc2_util.vcLog({
                         title: 'ItemReceipt | Order Lines [' + vendorOrderNum + '] ',
@@ -725,8 +760,6 @@ define(function (require) {
                     }
 
                     try {
-                        var objId;
-
                         if (recordIsChanged) {
                             vc2_util.log(logTitle, ' ///  updateIRData', updateIRData);
                             if (!vc2_util.isEmpty(updateIRData)) {
@@ -735,22 +768,21 @@ define(function (require) {
                                 }
                             }
 
-                            objId = record.save({
+                            itemRcpt = record.save({
                                 enableSourcing: true,
                                 ignoreMandatoryFields: true
                             });
-
-                            responseData.push({ id: objId, orderNum: orderNum });
+                            responseData[orderNum] = { id: itemRcpt };
                         } else {
-                            objId = record.id;
-                            responseData.push({ id: objId, orderNum: orderNum });
+                            itemRcpt = record.id;
+                            responseData[orderNum] = { id: itemRcpt };
                         }
 
                         vc2_util.vcLog({
                             title: 'Item Receipt | Successfully Created:',
                             message:
                                 '##' +
-                                ('Created Item Receipt (' + objId + ') \n') +
+                                ('Created Item Receipt (' + itemRcpt + ') \n') +
                                 Helper.printerFriendlyLines({ recordLines: recordLines }),
                             recordId: Current.PO_ID,
                             isSuccess: true
@@ -758,7 +790,7 @@ define(function (require) {
 
                         vc2_util.log(
                             logTitle,
-                            '## Created Item Receipt: [itemreceipt:' + objId + ']'
+                            '## Created Item Receipt: [itemreceipt:' + itemRcpt + ']'
                         );
                     } catch (itemrr_err) {
                         var errMsg = vc2_util.extractError(itemrr_err);
@@ -779,7 +811,30 @@ define(function (require) {
                         error: ordernum_error,
                         recordId: Current.PO_ID
                     });
-                    continue;
+
+                    util.extend(responseData[orderNum], {
+                        hasError: true,
+                        error: vc2_util.extractError(orderNum_error),
+                        details: JSON.stringify(orderNum_error)
+                    });
+
+                    itemRcptNotes = vc2_util.extractError(orderNum_error);
+                    itemRcptDetails = JSON.stringify(orderNum_error);
+                } finally {
+                    vc2_util.log(
+                        logTitle,
+                        '**** END PROCESSING Order [' + vendorOrderNum + '] ****',
+                        responseData[orderNum]
+                    );
+                    vcs_processLib.updateOrderNum({
+                        vendorNum: orderNum,
+                        poId: Current.PO_ID,
+                        orderNumValues: {
+                            ITEMFF_LINK: itemRcpt,
+                            NOTE: itemRcptNotes,
+                            DETAILS: itemRcptDetails
+                        }
+                    });
                 }
             }
             return responseData;
@@ -792,10 +847,16 @@ define(function (require) {
                 recordId: Current.PO_ID
             });
 
-            throw error;
+            util.extend(responseData, {
+                hasError: true,
+                error: vc2_util.extractError(error),
+                details: JSON.stringify(error)
+            });
         } finally {
             vc2_util.log(logTitle, '############ ITEM RECEIPT CREATION: END ############');
         }
+
+        return responseData;
     };
     ////////////////////////////////////
 
@@ -1363,7 +1424,7 @@ define(function (require) {
                 //         JSON.stringify(searchOption)
                 // );
 
-                var arrResults = [];
+                var arrResults = {};
                 var searchResults = vc2_util.searchAllPaged({
                     searchObj: ns_search.create(searchOption)
                 });
@@ -1371,9 +1432,11 @@ define(function (require) {
                 searchResults.forEach(function (result) {
                     var orderNum = result.getValue({ name: 'custbody_ctc_if_vendor_order_match' });
 
-                    if (!vc2_util.inArray(orderNum, arrResults)) {
-                        arrResults.push(orderNum);
-                    }
+                    arrResults[orderNum] = result.id;
+
+                    // if (!vc2_util.inArray(orderNum, arrResults)) {
+                    //     arrResults.push(orderNum);
+                    // }
 
                     return true;
                 });

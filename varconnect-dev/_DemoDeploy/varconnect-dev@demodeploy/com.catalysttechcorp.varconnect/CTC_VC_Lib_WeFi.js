@@ -60,7 +60,7 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
      */
     WEFI.process = function (option) {
         var logTitle = 'WeFi.process';
-        var returnValue = [];
+        var returnValue = {};
         option = option || {};
 
         try {
@@ -192,17 +192,28 @@ define(['N/error', './CTC_VC2_Lib_Utils.js'], function (error, v2_util) {
             log.debug(logTitle, 'arrWefiPOLines=' + arrWefiPOLines.length);
 
             // Return wefi po lines
-            returnValue = arrWefiPOLines;
-        } catch (e) {
-            var err = e.name + ': ' + e.message;
-            log.error(logTitle, err);
+            // returnValue = arrWefiPOLines;
 
-            v2_util.vcLog({
-                title: logTitle + ': Process Error',
-                error: err,
-                recordId: CURRENT.recordId
+            util.extend(returnValue, {
+                Orders: null,
+                Lines: arrWefiPOLines
             });
-            throw e;
+        } catch (e) {
+            v2_util.logError(logTitle, e);
+            util.extend(returnValue, {
+                HasError: true,
+                ErrorMsg: v2_util.extractError(e)
+            });
+
+            // var err = e.name + ': ' + e.message;
+            // log.error(logTitle, err);
+
+            // v2_util.vcLog({
+            //     title: logTitle + ': Process Error',
+            //     error: err,
+            //     recordId: CURRENT.recordId
+            // });
+            // throw e;
         }
 
         return returnValue;

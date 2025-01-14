@@ -46,6 +46,8 @@ define([
                 code: response.responseCode,
                 message: response.message
             });
+            newHeaderValues[VCSP_Global.Fields.Transaction.IS_AWAITING_RESPONSE] =
+                !!response.isAsync;
 
             if (response.isError) {
                 newHeaderValues[VCSP_Global.Fields.Transaction.VENDOR_RECEIPT] =
@@ -165,6 +167,7 @@ define([
             response = libWebService.process({ transaction: record });
             log.audit(logTitle, '>> send PO response: ' + JSON.stringify(response));
             _updateNativePO({ response: response, purchOrder: record });
+            libWebService.getOrderStatus();
         }
         return response;
     }

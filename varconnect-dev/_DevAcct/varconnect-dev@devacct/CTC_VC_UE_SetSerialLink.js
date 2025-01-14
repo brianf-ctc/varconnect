@@ -61,6 +61,9 @@ define([
                 var currentRecord = scriptContext.newRecord;
                 if (!currentRecord) return;
 
+                var isByPass = currentRecord.getValue({ fieldId: 'custbody_ctc_bypass_vc' });
+                if (isByPass) return;
+
                 vc2_util.LogPrefix = '[' + [currentRecord.type, currentRecord.id].join(':') + '] ';
 
                 vc2_util.log(logTitle, '*** START: ', [
@@ -136,7 +139,7 @@ define([
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw error;
+                // throw error;
             }
 
             return returnValue;
@@ -167,6 +170,9 @@ define([
 
                 var currentRecord = scriptContext.newRecord;
                 if (!currentRecord) return;
+
+                var isByPass = currentRecord.getValue({ fieldId: 'custbody_ctc_bypass_vc' });
+                if (isByPass) return;
 
                 var Current = {
                     transType: currentRecord.type,
@@ -216,7 +222,7 @@ define([
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 returnValue = false;
-                throw error;
+                // throw error;
             }
 
             return returnValue;

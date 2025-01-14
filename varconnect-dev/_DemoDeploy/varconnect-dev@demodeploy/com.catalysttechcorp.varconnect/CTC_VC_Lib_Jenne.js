@@ -30,7 +30,15 @@ define([
     var LogTitle = 'WS:Jenne',
         LogPrefix;
 
-    var CURRENT = {};
+    var CURRENT = {},
+        DATE_FIELDS = [
+            'order_date',
+            'order_eta',
+            'order_delivery_eta',
+            'deliv_date',
+            'prom_date',
+            'ship_date'
+        ];
 
     var NodeType = {
         ELEMENT: ns_xml.NodeType.ELEMENT_NODE, //1
@@ -222,6 +230,7 @@ define([
                     method: 'post',
                     query: {
                         url: option.orderConfig.endPoint,
+
                         headers: {
                             SOAPAction: 'http://WebService.jenne.com/AdvanceShipNoticeGet_v2',
                             'Content-Type': 'text/xml'
@@ -244,6 +253,7 @@ define([
                     }
                 });
                 vc2_util.handleXMLResponse(reqOrderStatus);
+                vc2_util.log(logTitle, 'response: ', reqOrderStatus);
 
                 if (reqOrderStatus.isError) throw reqOrderStatus.errorMsg;
                 var respOrderStatus = reqOrderStatus.RESPONSE.body;
@@ -252,6 +262,8 @@ define([
                 returnValue = respOrderStatus;
             } catch (error) {
                 throw error;
+            } finally {
+                vc2_util.log(logTitle, '... returnValue: ', returnValue);
             }
 
             return returnValue;
@@ -357,7 +369,7 @@ define([
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
 
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
@@ -369,22 +381,21 @@ define([
 
             return returnValue;
         },
-        processResponse: function (option) {
-            var logTitle = [LogTitle, 'processResponse'].join('::'),
-                returnValue = [];
+        process: function (option) {
+            var logTitle = [LogTitle, 'process'].join('::'),
+                returnValue = {};
             option = option || {};
 
             try {
                 CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
                 CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
                 CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
                 vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
 
                 if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
 
-                var xmlResponse = option.xmlResponse,
+                var xmlResponse = this.processRequest(option),
                     xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse }),
                     jsonResp = Helper.xml2json(xmlDoc) || 'no-value',
                     itemArray = [];
@@ -392,68 +403,130 @@ define([
                 if (!xmlDoc) throw 'Unable to parse XML response';
                 if (!jsonResp) throw 'Unable to parse XML to JSON';
 
-                vcLog.recordLog({
-                    header: 'Jenne RESULTS',
-                    body: JSON.stringify(jsonResp),
-                    transaction: CURRENT.recordId
-                });
-
-                CURRENT.results =
-                    jsonResp['soap:Envelope'][
-                        'soap:Body'
-                    ].AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result.AdvanceShipNotices;
-
-                if (!CURRENT.results) throw 'Missing API results';
-
-                vcLog.recordLog({
-                    header: 'Jenne ASN RESULTS',
-                    body: JSON.stringify(CURRENT.results),
-                    transaction: CURRENT.recordId
-                });
-
-                var itemArray = [];
-
-                // check for any errors
-                if (CURRENT.results.Error && CURRENT.results.Error.ErrorDescription) {
-                    throw CURRENT.results || 'Undetermined error on results';
+                if (option.debugMode) {
+                    if (!option.showLines) return xmlResponse;
                 }
 
-                var arrResultOrders = CURRENT.results.AdvanceShipNotice_v2;
-                if (!arrResultOrders) throw 'Missing order details';
+                var responseBody = jsonResp['soap:Envelope']
+                    ? jsonResp['soap:Envelope']['soap:Body']
+                    : null;
+                if (!responseBody) throw 'Response body is not found';
 
-                // if not array, force into an array
-                if (!util.isArray(arrResultOrders)) arrResultOrders = [arrResultOrders];
+                var responseError =
+                    responseBody.AdvanceShipNoticeGet_v2Response &&
+                    responseBody.AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result
+                        ? responseBody.AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result
+                              .Error
+                        : null;
 
-                vc2_util.log(logTitle, 'Total orders: ', arrResultOrders.length);
-
-                for (var i = 0, j = arrResultOrders.length; i < j; i++) {
-                    vc2_util.log(logTitle, '>> order: ', arrResultOrders[i]);
-                    var orderData = libJenneAPI.extractOrder(arrResultOrders[i], itemArray);
+                if (
+                    !vc2_util.isEmpty(responseError) &&
+                    responseError.ErrorNumber &&
+                    responseError.ErrorDescription
+                ) {
+                    throw responseError.ErrorDescription || 'Unexpected error detected.';
                 }
 
-                returnValue = itemArray;
-            } catch (error) {
-                throw error;
-            }
+                var responseResult =
+                    responseBody.AdvanceShipNoticeGet_v2Response &&
+                    responseBody.AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result
+                        ? responseBody.AdvanceShipNoticeGet_v2Response.AdvanceShipNoticeGet_v2Result
+                              .AdvanceShipNotices
+                        : null;
+                if (!responseResult) throw 'Advanced Ship Notices is not found';
 
-            return returnValue;
-        },
-        process: function (option) {
-            var logTitle = [LogTitle, 'process'].join('::'),
-                returnValue = [];
-            option = option || {};
+                var itemArray = [],
+                    orderList = [];
 
-            try {
-                CURRENT.recordId = option.poId || option.recordId || CURRENT.recordId;
-                CURRENT.recordNum = option.poNum || option.transactionNum || CURRENT.recordNum;
-                CURRENT.orderConfig = option.orderConfig || CURRENT.orderConfig;
-                LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
-                vc2_util.LogPrefix = '[purchaseorder:' + CURRENT.recordId + '] ';
+                var arrOrderResults = responseResult.AdvanceShipNotice_v2;
+                if (vc2_util.isEmpty(arrOrderResults)) throw 'Missing order results';
+                if (!util.isArray(arrOrderResults)) arrOrderResults = [arrOrderResults];
 
-                if (!CURRENT.orderConfig) throw 'Missing vendor configuration!';
+                vc2_util.log(logTitle, '.. arrOrderResults: ', arrOrderResults);
 
-                var xmlResponse = this.processRequest(option);
-                returnValue = this.processResponse({ xmlResponse: xmlResponse });
+                arrOrderResults.forEach(function (orderResult) {
+                    if (!orderResult) return;
+                    vc2_util.log(logTitle, '.. orderResult: ', orderResult);
+
+                    var orderData = {
+                            OrderNum: orderResult.PONumber,
+                            OrderDate: vc2_util.parseFormatDate(
+                                orderResult.OrderDate,
+                                'YYYY-MM-DD'
+                            ),
+                            VendorOrderNum: orderResult.OrderNumber,
+                            Lines: [],
+                            Source: orderResult
+                        },
+                        itemObj = {
+                            order_num: orderResult.OrderNumber,
+                            order_date: orderResult.OrderDate || 'NA',
+                            ship_date: orderResult.DateShipped || 'NA',
+                            carrier: 'NA',
+                            line_num: 'NA',
+                            item_num: 'NA',
+                            vendorSKU: 'NA',
+                            line_status: 'NA',
+                            order_status: 'NA',
+                            ship_qty: 'NA',
+                            serial_num: 'NA',
+                            tracking_num: 'NA'
+                        };
+
+                    var arrShipNode = orderResult.ASNcartons
+                        ? orderResult.ASNcartons.ASNcarton_v2
+                        : null;
+
+                    if (vc2_util.isEmpty(arrShipNode)) return;
+                    if (!util.isArray(arrShipNode)) arrShipNode = [arrShipNode];
+
+                    arrShipNode.forEach(function (shipNode) {
+                        util.extend(itemObj, {
+                            carrier: shipNode.ShipVia,
+                            tracking: shipNode.TrackingNo,
+                            ship_date: shipNode.DateShipped || 'NA'
+                        });
+
+                        var shipDetails = shipNode.ASNcartonDetails
+                            ? shipNode.ASNcartonDetails.ASNcartonDetail_v2
+                            : null;
+                        if (!shipDetails) return;
+                        if (!util.isArray(shipDetails)) shipDetails = [shipDetails];
+
+                        shipDetails.forEach(function (shipDetail) {
+                            var itemData = vc2_util.clone(itemObj);
+                            util.extend(itemData, {
+                                item_num: shipDetail.PartNumber,
+                                line_num: shipDetail.OrderLineNumber,
+                                ship_qty: shipDetail.QtyShipped,
+                                serial_num: shipDetail.SerialNumber
+                            });
+                            itemArray.push(itemData);
+                            orderData.Lines.push(itemData);
+                        });
+                    });
+
+                    orderList.push(orderData);
+                });
+
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
+
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'YYYY-MM-DD'
+                        );
+                    });
+                });
+
+                util.extend(returnValue, {
+                    Orders: orderList,
+                    Lines: itemArray,
+                    Source: xmlResponse
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

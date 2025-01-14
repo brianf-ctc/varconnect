@@ -23,7 +23,9 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
     var LogTitle = 'WS:Arrow',
         LogPrefix;
 
-    var CURRENT = {},
+    var CURRENT = {
+            TokenName: 'VC_ARROW_TOKEN'
+        },
         ERROR_MSG = vc2_constant.ERRORMSG,
         DATE_FIELDS = [
             'order_date',
@@ -89,9 +91,10 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
         },
         getTokenCache: function () {
             var tokenKey = [
-                'VC_ARROW_TOKEN',
+                CURRENT.TokenName,
                 CURRENT.orderConfig.apiKey,
                 CURRENT.orderConfig.apiSecret,
+                CURRENT.orderConfig.subsidiary,
                 vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
             ].join('|');
 
@@ -177,7 +180,9 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
             var respHeader = parsedResponse.ResponseHeader,
                 orderResponse = parsedResponse.OrderResponse;
 
-            if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
+            // if (!respHeader || !util.isArray(respHeader)) throw 'Missing or Invalid ResponseHeader';
+            if (!respHeader) throw 'Missing or Invalid ResponseHeader';
+            if (!util.isArray(respHeader)) respHeader = [respHeader];
             var hasErrors,
                 errorMsgs = [];
 
@@ -189,13 +194,15 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 }
             });
 
-            // check for query error
-            (orderResponse.OrderDetails || []).forEach(function (orderDetail) {
-                if (!orderDetail || !orderDetail.Status || orderDetail.Status !== 'SUCCESS') {
-                    hasErrors = true;
-                    errorMsgs.push(orderDetail.Message);
-                }
-            });
+            if (orderResponse && orderResponse.OrderDetails) {
+                // check for query error
+                (orderResponse.OrderDetails || []).forEach(function (orderDetail) {
+                    if (!orderDetail || !orderDetail.Status || orderDetail.Status !== 'SUCCESS') {
+                        hasErrors = true;
+                        errorMsgs.push(orderDetail.Message);
+                    }
+                });
+            }
             vc2_util.log('validateResponse', 'hasErrors: ', [hasErrors, errorMsgs]);
             if (hasErrors && errorMsgs.length) throw errorMsgs.join(', ');
             return true;
@@ -225,11 +232,17 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 returnValue = {};
             option = option || {};
 
+            vc2_util.log(logTitle, '>> option: ', option);
+
             try {
                 LibArrowAPI.initialize(option);
 
                 var response = this.processRequest();
                 if (!response) throw 'Unable to get response';
+
+                if (option.debugMode) {
+                    if (!option.showLines) return response;
+                }
 
                 var itemArray = [],
                     orderList = [];
@@ -269,6 +282,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                             Total: OrderDetail.OrderTotalAmount,
                             InvoiceNo: 'NA'
                         };
+
                         orderList.push(orderData);
                         /////////////
 
@@ -382,11 +396,24 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                         throw order_error;
                     }
                 });
+                // run through itemArray and check for DATE_FIELDS
+                vc2_util.log(logTitle, 'itemArray: ', itemArray);
+                itemArray.forEach(function (itemObj) {
+                    DATE_FIELDS.forEach(function (dateField) {
+                        if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
 
-                returnValue = {
+                        itemObj[dateField] = vc2_util.parseFormatDate(
+                            itemObj[dateField],
+                            'MM/DD/YYYY'
+                        );
+                    });
+                });
+
+                util.extend(returnValue, {
                     Orders: orderList,
-                    Lines: itemArray
-                };
+                    Lines: itemArray,
+                    Source: response
+                });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

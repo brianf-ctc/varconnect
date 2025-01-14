@@ -24,7 +24,7 @@ define([
         LogPrefix,
         CURRENT = {};
 
-    var ENABLE_V6 = false;
+    var ENABLE_V6 = true;
 
     var LibIngramAPI = {
         getTokenCache: function () {

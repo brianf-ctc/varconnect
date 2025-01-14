@@ -24,6 +24,7 @@ define([], function () {
             Transaction: {
                 DELL_SHIP_CODE: 'custbody_ctc_vcsp_dell_ship_code',
                 IS_PO_SENT: 'custbody_ctc_vcsp_is_po_sent',
+                IS_AWAITING_RESPONSE: 'custbody_ctc_vcsp_is_awaiting_response',
                 VCSP_TIMESTAMP: 'custbody_ctc_vcsp_timestamp',
                 CUSTOMER_PO_NUMBER: 'custbody_ctc_vcsp_custpo',
                 VENDOR_PO_NUMBER: 'custbody_ctc_vcsp_transaction_num',
@@ -48,6 +49,7 @@ define([], function () {
                 TEST_REQUEST: 'custrecord_ctc_vcsp_test',
                 IS_SPECIAL_ITEM_NAME: 'custrecord_vcsp_is_item_name_special',
                 IS_ASYNC: 'custrecord_vcsp_is_async',
+                RUN_ORDER_STATUS: 'custrecord_ctc_vcsp_run_order_status',
                 WEBSERVICE_ENDPOINT: 'custrecord_ctc_vcsp_endpoint',
                 ACCESS_ENDPOINT: 'custrecord_ctc_vcsp_access_endpoint',
                 OAUTH_SCOPE: 'custrecord_ctc_vcsp_access_scope',
@@ -179,7 +181,8 @@ define([], function () {
             Script: {
                 SEND_PO_SL: 'customscript_ctc_vcsp_sl_sendpo',
                 LICENSE_VALIDATOR_SL: 'customscript_ctc_vcsp_sl_licensevalidate',
-                VENDOR_DETAILS_SL: 'customscript_ctc_vcsp_sl_form_popup'
+                VENDOR_DETAILS_SL: 'customscript_ctc_vcsp_sl_form_popup',
+                ORDERSTATUS_MR: 'customscript_ctc_script_xml_v2'
             },
             Deployment: {
                 SEND_PO_SL: 'customdeploy_ctc_vcsp_sl_sendpo',
