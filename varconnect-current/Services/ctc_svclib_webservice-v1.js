@@ -1068,6 +1068,112 @@ define(function (require) {
             });
 
             return returnValue;
+        },
+
+        DandHItemFetch: function (option) {
+            var logTitle = [LogTitle, 'DandHItemFetch'].join(':'),
+                returnValue = {};
+
+            vc2_util.log(logTitle, '###### WEBSERVICE: DandHItem: ######', option);
+            try {
+                var poId = option.poId,
+                    vendorId = option.vendorId || option.vendor,
+                    itemId = option.itemId || option.item,
+                    itemList = option.itemList || option.items,
+                    vendoCfgId = option.vendorConfigId;
+
+                if (!itemId) throw 'Missing item identifier';
+                if (!poId) throw 'Missing PO ID';
+
+                // load the configuration
+                var ConfigRec = vcs_configLib.loadConfig({
+                    poId: poId,
+                    configId: vendoCfgId,
+                    configType: vcs_configLib.ConfigType.ORDER
+                });
+                if (!ConfigRec) throw 'Unable to load configuration';
+
+                // get details about the item from cache first
+                var cacheKey = ['DandHItem', itemId, vendorId].join('_');
+                var itemData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
+                if (!itemData) {
+                    itemData = vc2_util.flatLookup({
+                        type: 'item',
+                        id: itemId,
+                        columns: [
+                            'itemid',
+                            'name',
+                            'upccode',
+                            'type',
+                            'isserialitem',
+                            'mpn',
+                            'recordtype'
+                        ]
+                    });
+                    // set the cache
+                    if (itemData) vc2_util.setNSCache({ name: cacheKey, data: itemData });
+                }
+                vc2_util.log(logTitle, '>> itemData: ', itemData);
+                if (!itemData) throw 'Item not found';
+
+                var arrItemNames = vc2_util.uniqueArray([
+                    itemData.name,
+                    itemData.itemid,
+                    itemData.mpn,
+                    itemData.upccode
+                ]);
+
+                // get data for each itemName
+                var dnhItemDetails = null;
+                arrItemNames.forEach(function (itemName) {
+                    if (dnhItemDetails) return;
+
+                    dnhItemDetails =
+                        lib_dnh.processItemInquiry({
+                            poId: poId,
+                            orderConfig: ConfigRec,
+                            itemName: itemName,
+                            lookupType: 'MFR'
+                        }) ||
+                        lib_dnh.processItemInquiry({
+                            poId: poId,
+                            orderConfig: ConfigRec,
+                            itemName: itemName,
+                            lookupType: 'DH'
+                        });
+                });
+                if (!dnhItemDetails) throw 'Item not found in DandH';
+
+                var dnhItemValue;
+                ['name', 'itemid', 'mpn', 'upccode'].forEach(function (itemkey) {
+                    if (dnhItemValue) return;
+                    if (
+                        itemData[itemkey] &&
+                        itemData[itemkey].toUpperCase() == dnhItemDetails.partNum.toUpperCase()
+                    )
+                        dnhItemValue = dnhItemDetails.itemNum;
+                    else if (
+                        itemData[itemkey] &&
+                        itemData[itemkey].toUpperCase() == dnhItemDetails.itemNum.toUpperCase()
+                    )
+                        dnhItemValue = dnhItemDetails.partNum;
+                });
+
+                returnValue = {
+                    item: itemData,
+                    dnh: dnhItemDetails, 
+                    dnhValue: dnhItemValue
+                };
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+
+                util.extend(
+                    util.extend(returnValue, { hasError: true }),
+                    Helper.evaluateError(error) || {}
+                );
+            }
+
+            return returnValue;
         }
     };
 });

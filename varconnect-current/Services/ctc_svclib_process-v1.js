@@ -1000,7 +1000,6 @@ define([
 
             return returnValue;
         },
-        findMatchingVendorLine: function (option) {},
         findMatchingOrderLine: function (option) {
             var logTitle = [LogTitle, 'findMatchingOrderLine'].join(':'),
                 ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
