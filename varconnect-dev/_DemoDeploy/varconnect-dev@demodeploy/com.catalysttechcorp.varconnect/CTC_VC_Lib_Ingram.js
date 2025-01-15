@@ -252,8 +252,8 @@ define([
                 try {
                     if (!orderResult.orderStatus) throw 'MISSING OrderStatus';
 
-                    if (vc2_util.inArray(orderResult.orderStatus, LibIngramAPI.SkippedStatus))
-                        throw 'SKIPPED OrderStatus - ' + orderResult.orderStatus;
+                    // if (vc2_util.inArray(orderResult.orderStatus, LibIngramAPI.SkippedStatus))
+                    //     throw 'SKIPPED OrderStatus - ' + orderResult.orderStatus;
 
                     if (vc2_util.isEmpty(orderResult.subOrders)) throw 'MISSING subOrders';
 
@@ -562,8 +562,8 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;
-                // } finally {
-                //     vc2_util.log(logTitle, '// Return', returnValue);
+            } finally {
+                vc2_util.log(logTitle, '// Return', returnValue);
             }
 
             return returnValue;
@@ -592,12 +592,13 @@ define([
 
                 if (CURRENT.isV61) {
                     // only one call needed for order details
-                    orderSearchResults.forEach(function (orderResult) {
+                    arrValidOrders.forEach(function (orderResult) {
                         if (CURRENT.hasV61Errors) return;
 
                         var orderDetails = LibIngramAPI.orderDetails({
-                            orderNum: orderResult.ingramOrderNumber
+                            orderNum: orderResult.VendorOrderNum
                         });
+
                         if (
                             // check for orderDetails
                             (function () {
@@ -628,11 +629,51 @@ define([
                             return;
                         }
 
-                        RESPONSE.OrderDetails[orderResult.ingramOrderNumber] = orderDetails;
+                        RESPONSE.OrderDetails[orderResult.VendorOrderNum] = orderDetails;
                     });
+
+                    // orderSearchResults.forEach(function (orderResult) {
+                    //     // check if there were errors in the orderSearch
+                    //     if (CURRENT.hasV61Errors) return;
+
+                    //     var orderDetails = LibIngramAPI.orderDetails({
+                    //         orderNum: orderResult.ingramOrderNumber
+                    //     });
+                    //     if (
+                    //         // check for orderDetails
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails)) {
+                    //                 errorV61 = 'Missing order details';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })() ||
+                    //         // check for existence of lines
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails.lines)) {
+                    //                 errorV61 = 'Missing order detail lines';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })() ||
+                    //         // check for subOrderNumber
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails.lines[0].subOrderNumber)) {
+                    //                 errorV61 = 'Missing subOrderNumber';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })()
+                    //     ) {
+                    //         CURRENT.hasV61Errors = true;
+                    //         return;
+                    //     }
+
+                    //     RESPONSE.OrderDetails[orderResult.ingramOrderNumber] = orderDetails;
+                    // });
                 }
 
-                if (CURRENT.isV61 || CURRENT.hasV61Errors) {
+                if (CURRENT.isV61 && CURRENT.hasV61Errors) {
                     if (CURRENT.hasV61Errors && errorV61)
                         vc2_util.log(logTitle, '***** [V6.1] Error: ', errorV61);
 

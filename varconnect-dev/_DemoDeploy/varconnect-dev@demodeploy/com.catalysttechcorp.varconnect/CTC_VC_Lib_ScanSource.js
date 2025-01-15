@@ -252,7 +252,10 @@ define([
                             tracking_num: 'NA',
                             serial_num: 'NA',
 
-                            is_shipped: false
+                            is_shipped: vc2_util.inArray(
+                                orderInfo.Status.toUpperCase(),
+                                LibScansource.ShippedStatus
+                            )
                         };
 
                         if (!vc2_util.isEmpty(orderLine.SerialNumbers))

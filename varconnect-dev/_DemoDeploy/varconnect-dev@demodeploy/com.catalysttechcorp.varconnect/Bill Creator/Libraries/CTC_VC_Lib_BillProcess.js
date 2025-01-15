@@ -1058,7 +1058,7 @@ define([
                                 ),
                                 vc2_util.extractValues({
                                     source: billfileLine,
-                                    params: ['BILLRATE', 'PRICE', 'TRACKING']
+                                    params: ['BILLRATE', 'PRICE', 'TRACKING', 'SERIAL']
                                 })
                             );
                         }
@@ -1071,7 +1071,15 @@ define([
                             record: Current.BILL.REC,
                             sublistId: 'item',
                             line: line,
-                            columns: ['line', 'item', 'quantity', 'rate']
+                            columns: [
+                                'line',
+                                'item',
+                                'quantity',
+                                'rate',
+                                'binitem',
+                                'inventorydetailreq',
+                                'isserial'
+                            ]
                         }),
                         vendorLineValues = Current.BILL.LINES[line];
 
@@ -1396,12 +1404,25 @@ define([
                     taxVARLine &&
                     taxVARLine.enabled &&
                     taxVARLine.applied == 'T' &&
-                    taxVARLine.amount > 0
+                    taxVARLine.amount > 0 &&
+                    !Current.CFG.BillCFG.ignoreTaxVar
                 ) {
-                    var taxVarianceAmt = taxVARLine.amount - Current.TOTAL.BILL_TAX;
+                    var taxVarianceAmt =
+                        vc2_util.roundOff(taxVARLine.amount) -
+                        vc2_util.roundOff(Current.TOTAL.BILL_TAX);
+
+                    vc2_util.log(logTitle, '>> Tax Variance: ', [
+                        taxVarianceAmt,
+                        [taxVARLine.amount, Current.TOTAL.BILL_TAX],
+                        vc2_util.roundOff(taxVarianceAmt),
+                        [
+                            vc2_util.roundOff(taxVARLine.amount),
+                            vc2_util.roundOff(Current.TOTAL.BILL_TAX)
+                        ]
+                    ]);
+
                     if (Math.abs(taxVarianceAmt)) {
                         // add the tax line
-
                         var lineNo = vc2_record.addLine({
                             record: Current.BILL.REC,
                             sublistId: 'item',
