@@ -215,6 +215,7 @@ define([
                 key: [
                     CURRENT.TokenName,
                     CURRENT.orderConfig.apiKey,
+                    CURRENT.orderConfig.subsidiary,
                     CURRENT.orderConfig.customerNo,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')

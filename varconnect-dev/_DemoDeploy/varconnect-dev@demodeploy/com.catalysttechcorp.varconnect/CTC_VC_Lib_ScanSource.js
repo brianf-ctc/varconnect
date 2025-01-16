@@ -104,6 +104,7 @@ define([
                     'VC_SCANSOURCE_TOKEN',
                     CURRENT.orderConfig.apiKey,
                     CURRENT.orderConfig.subscriptionKey,
+                    CURRENT.orderConfig.subsidiary,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')
             });

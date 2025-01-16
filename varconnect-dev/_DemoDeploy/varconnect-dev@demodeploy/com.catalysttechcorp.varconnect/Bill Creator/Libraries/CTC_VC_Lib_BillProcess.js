@@ -275,7 +275,10 @@ define([
                             (Current.STATUS.BILLFILE.AllowToReceive &&
                                 Current.STATUS.PO.IsReceivable)
                         ) {
-                            if (Current.STATUS.BILLFILE.AllowVariance) {
+                            if (
+                                Current.STATUS.BILLFILE.AllowVariance ||
+                                Current.STATUS.BILLFILE.IgnoreVariance
+                            ) {
                                 Current.STATUS.AllowToBill = true;
                                 Current.STATUS.ALLOWED_TO_BILL.push('ALLOW_VARIANCE');
                             } else {
