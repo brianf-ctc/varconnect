@@ -163,7 +163,8 @@ define(function (require) {
                 ENABLE_FULFILLLMENT: 'custrecord_vc_bc_enable_fulfillment',
                 SCOPE: 'custrecord_vc_bc_scope',
                 SUBSCRIPTION_KEY: 'custrecord_vc_bc_subs_key',
-                TOKEN_URL: 'custrecord_vc_bc_token_url'
+                TOKEN_URL: 'custrecord_vc_bc_token_url',
+                IGNORE_TAXVAR: 'custrecord_vc_bc_ignore_taxvar'
             }
         },
         BILLFILE: {
@@ -410,7 +411,8 @@ define(function (require) {
             subsidiary: BillCFG.FIELD.SUBSIDIARY,
             scope: BillCFG.FIELD.SCOPE,
             subscription_key: BillCFG.FIELD.SUBSCRIPTION_KEY,
-            token_url: BillCFG.FIELD.TOKEN_URL
+            token_url: BillCFG.FIELD.TOKEN_URL,
+            ignoreTaxVar: BillCFG.FIELD.IGNORE_TAXVAR
         },
         VENDOR_CONFIG: {
             id: VendorCFG.FIELD.ID,
@@ -945,7 +947,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '20241111.0447'
+        '202501010.2127'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

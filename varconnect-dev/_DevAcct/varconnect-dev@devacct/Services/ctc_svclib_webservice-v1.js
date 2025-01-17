@@ -250,7 +250,8 @@ define(function (require) {
                 var ConfigRec = vcs_configLib.loadConfig({
                     poNum: poNum,
                     configId: vendoCfgId,
-                    configType: vcs_configLib.ConfigType.ORDER
+                    configType: vcs_configLib.ConfigType.ORDER,
+                    debugMode: true
                 });
                 // vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
 
@@ -1116,3 +1117,18 @@ var itemObj = {
     vendorData: ''
 };
 */
+/** 
+ * USAGE: 
+ ////////////////
+
+ {
+  "moduleName": "webserviceLibV1",
+  "action": "OrderStatusDebug",
+  "parameters": {
+    "poNum": "124640",
+    "vendorConfigId": "505",
+    "showLines": true
+  }
+}
+
+ */

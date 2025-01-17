@@ -12,16 +12,11 @@
  * @NModuleScope Public
  * @NScriptType ClientScript
  */
-define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js'], function (
-    ns_search,
-    ns_https,
-    ns_ui,
-    vc2_util
-) {
+define(['N/https', 'N/url', 'N/currentRecord'], function (ns_https, ns_url, ns_currentRecord) {
     var LogTitle = 'VCSERV_TESTER',
         LogPrefix = '';
 
-    const RL_SERVICES = {
+    var RL_SERVICES = {
         scriptId: 'customscript_ctc_vc_rl_services',
         deploymentId: 'customdeploy_ctc_rl_services'
     };
@@ -29,24 +24,62 @@ define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js']
     function processJson(jsonText) {
         var logTitle = LogTitle + 'processJson';
 
-        var requestOption = vc2_util.extend(RL_SERVICES, {
+        var restletUrl = ns_url.resolveScript({
+            scriptId: RL_SERVICES.scriptId,
+            deploymentId: RL_SERVICES.deploymentId
+        });
+
+        var requestOption = {
+            url: restletUrl,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: jsonText
+        };
+
+        var currRecord = ns_currentRecord.get();
+        currRecord.setValue({
+            fieldId: 'custpage_result',
+            value: 'Please wait while processing the request...'
         });
 
-        vc2_util.log(logTitle, '>> request-option: ', requestOption);
-        var response = ns_https.requestRestlet(requestOption);
-        return response.body;
+        console.log('>> request-option: ', JSON.stringify(requestOption));
+
+        ns_https.post
+            .promise(requestOption)
+            .then(function (response) {
+                var jsonResponse = JSON.parse(response.body);
+                console.log('>> response', jsonResponse);
+
+                currRecord.setValue({
+                    fieldId: 'custpage_result',
+                    value: JSON.stringify(jsonResponse, null, 4)
+                });
+
+                return true;
+            })
+            .catch(function (error) {
+                console.error('>> error', error);
+                currRecord.setValue({
+                    fieldId: 'custpage_result',
+                    value: JSON.stringify(error, null, 4)
+                });
+
+                return false;
+            });
     }
 
     return {
+        pageInit: function (context) {
+            return;
+        },
         sendServicesRequest: function (context) {
-            var currRecord = context.currentRecord;
+            var currRecord = ns_currentRecord.get();
             var jsonInput = currRecord.getValue({ fieldId: 'custpage_json_input' });
-            console.log('jsonInput', jsonInput);
+            console.log('>> sendServicesRequest', currRecord, jsonInput);
             var result = processJson(jsonInput);
             currRecord.setValue({ fieldId: 'custpage_result', value: result });
+
+            return true;
         }
     };
 });

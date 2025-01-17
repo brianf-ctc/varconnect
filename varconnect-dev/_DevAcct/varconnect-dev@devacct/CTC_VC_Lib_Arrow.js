@@ -94,6 +94,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js'], function (vc2_util,
                 CURRENT.TokenName,
                 CURRENT.orderConfig.apiKey,
                 CURRENT.orderConfig.apiSecret,
+                CURRENT.orderConfig.subsidiary,
                 vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
             ].join('|');
 

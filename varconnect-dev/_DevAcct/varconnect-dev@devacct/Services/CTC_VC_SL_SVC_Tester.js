@@ -29,13 +29,15 @@ define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js']
     var Helper = {
         processJson: function (jsonText) {
             var logTitle = LogTitle + 'processJson';
+            var cookieValue =
+                'NS_VER=2024.2; JSESSIONID=Vc5W5-lwZHLrX6xuGLeX-L3NRQCgJgHvMMgL63QF2uJbmMScPHYw-a-QxWEscpQt3XV95Dr-9Udf7ieL4-0YfN9yKZBFW6VEI1g0HnVW9X3Hn8ecRtLyb4Op8WCgFizp!-1603644508;';
 
             var requestOption = vc2_util.extend(RL_SERVICES, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Set-Cookie':
-                        'NS_VER=2024.2; JSESSIONID=Vc5W5-lwZHLrX6xuGLeX-L3NRQCgJgHvMMgL63QF2uJbmMScPHYw-a-QxWEscpQt3XV95Dr-9Udf7ieL4-0YfN9yKZBFW6VEI1g0HnVW9X3Hn8ecRtLyb4Op8WCgFizp!-1603644508;'
+                    Cookie: cookieValue, // Set the cookie value
+                    'Set-Cookie': cookieValue // Set the cookie value
                 },
                 body: jsonText
             });
@@ -55,7 +57,7 @@ define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js']
     return {
         onRequest: function (context) {
             var form = ns_ui.createForm({ title: 'JSON Input Form' });
-            // form.clientScriptModulePath = './CTC_VC_CS_SVC_Tester.js';
+            form.clientScriptModulePath = './CTC_VC_CS_SVC_Tester.js';
 
             // Move jsonField to its own field group
             // form.addFieldGroup({ id: 'input_group', label: 'JSON Input', isSingleColumn: true });
@@ -75,9 +77,9 @@ define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js']
                 label: 'Result'
                 // container: 'result_group'
             });
-            resultField.updateDisplayType({
-                displayType: ns_ui.FieldDisplayType.DISABLED
-            });
+            // resultField.updateDisplayType({
+            //     displayType: ns_ui.FieldDisplayType.DISABLED
+            // });
             resultField.updateDisplaySize({ height: 40, width: 150 });
 
             // resultField.updateDisplayType({
@@ -85,15 +87,21 @@ define(['N/search', 'N/https', 'N/ui/serverWidget', './../CTC_VC2_Lib_Utils.js']
             // });
 
             // Add client script reference
-            form.addSubmitButton({
-                label: 'Submit'
+            form.addButton({
+                id: 'custpage_btn_sendrequest',
+                label: 'Send Request',
+                functionName: 'sendServicesRequest'
             });
-            if (context.request.method === 'POST') {
-                var jsonInput = context.request.parameters.custpage_json_input;
-                var result = Helper.processJson(jsonInput); // Assume processJson is a function that processes the JSON input
-                resultField.defaultValue = result;
-                jsonField.defaultValue = jsonInput;
-            }
+
+            // form.addSubmitButton({
+            //     label: 'Submit'
+            // });
+            // if (context.request.method === 'POST') {
+            //     var jsonInput = context.request.parameters.custpage_json_input;
+            //     var result = Helper.processJson(jsonInput); // Assume processJson is a function that processes the JSON input
+            //     resultField.defaultValue = result;
+            //     jsonField.defaultValue = jsonInput;
+            // }
 
             context.response.writePage(form);
         }
