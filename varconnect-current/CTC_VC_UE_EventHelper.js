@@ -801,63 +801,63 @@ define(function (require) {
 
                 return true;
             }
-        },
+            // },
 
-        // --- ADD THE VC ACTION BUTTONS --- //
-        {
-            onBeforeSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'onBeforeSubmit'].join('::');
-                if (
-                    !vc2_util.inArray(Current.eventType, [
-                        // scriptContext.UserEventType.CREATE,
-                        scriptContext.UserEventType.EDIT,
-                        scriptContext.UserEventType.XEDIT
-                    ])
-                )
-                    return;
+            // // --- ADD THE VC ACTION BUTTONS --- //
+            // {
+            //     onBeforeSubmit: function (scriptContext, Current) {
+            //         var logTitle = [LogTitle, 'onBeforeSubmit'].join('::');
+            //         if (
+            //             !vc2_util.inArray(Current.eventType, [
+            //                 // scriptContext.UserEventType.CREATE,
+            //                 scriptContext.UserEventType.EDIT,
+            //                 scriptContext.UserEventType.XEDIT
+            //             ])
+            //         )
+            //             return;
 
-                var currentRecord = scriptContext.newRecord;
+            //         var currentRecord = scriptContext.newRecord;
 
-                MainCFG = vcs_configLib.mainConfig();
-                if (!MainCFG) return;
+            //         MainCFG = vcs_configLib.mainConfig();
+            //         if (!MainCFG) return;
 
-                // load the ORderConfig
-                OrderCFG = vcs_configLib.loadConfig({
-                    poId: Current.recordId,
-                    configType: vcs_configLib.ConfigType.ORDER
-                });
+            //         // load the ORderConfig
+            //         OrderCFG = vcs_configLib.loadConfig({
+            //             poId: Current.recordId,
+            //             configType: vcs_configLib.ConfigType.ORDER
+            //         });
 
-                if (OrderCFG && OrderCFG.id) {
-                    currentRecord.setValue({
-                        fieldId: 'custbody_ctc_vc_orderstatus_cfg',
-                        value: OrderCFG.id
-                    });
-                }
+            //         if (OrderCFG && OrderCFG.id) {
+            //             currentRecord.setValue({
+            //                 fieldId: 'custbody_ctc_vc_orderstatus_cfg',
+            //                 value: OrderCFG.id
+            //             });
+            //         }
 
-                // load the BillConfig
-                BillCFG = vcs_configLib.loadConfig({
-                    poId: Current.recordId,
-                    configType: vcs_configLib.ConfigType.BILL
-                });
-                if (BillCFG && BillCFG.id) {
-                    currentRecord.setValue({
-                        fieldId: 'custbody_ctc_vc_billcreate_cfg',
-                        value: BillCFG.id
-                    });
-                }
+            //         // load the BillConfig
+            //         BillCFG = vcs_configLib.loadConfig({
+            //             poId: Current.recordId,
+            //             configType: vcs_configLib.ConfigType.BILL
+            //         });
+            //         if (BillCFG && BillCFG.id) {
+            //             currentRecord.setValue({
+            //                 fieldId: 'custbody_ctc_vc_billcreate_cfg',
+            //                 value: BillCFG.id
+            //             });
+            //         }
 
-                // load the send PO config
-                SendPOCFG = vcs_configLib.loadConfig({
-                    poId: Current.recordId,
-                    configType: vcs_configLib.ConfigType.SENDPO
-                });
-                if (SendPOCFG && SendPOCFG.id) {
-                    currentRecord.setValue({
-                        fieldId: 'custbody_ctc_vc_sendpo_cfg',
-                        value: SendPOCFG.id
-                    });
-                }
-            }
+            //         // load the send PO config
+            //         SendPOCFG = vcs_configLib.loadConfig({
+            //             poId: Current.recordId,
+            //             configType: vcs_configLib.ConfigType.SENDPO
+            //         });
+            //         if (SendPOCFG && SendPOCFG.id) {
+            //             currentRecord.setValue({
+            //                 fieldId: 'custbody_ctc_vc_sendpo_cfg',
+            //                 value: SendPOCFG.id
+            //             });
+            //         }
+            //     }
         }
     ];
 

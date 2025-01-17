@@ -1,0 +1,38 @@
+'<a href="/app/common/search/searchresults.nl?searchid=customsearch_ctc_vcreports_updatedpos&Transaction_LASTMODIFIEDDATEmodi=WITHIN&Transaction_LASTMODIFIEDDATE=CUSTOM&Transaction_LASTMODIFIEDDATEfrom='||TRUNC({DATECREATED}, 'MONTH') ||'&Transaction_LASTMODIFIEDDATEto='||LAST_DAY({DATECREATED}) ||'" target="_blank" class="dottedlink">' || TO_CHAR({lastmodifieddate}, 'Mon YYYY')  || '</a>'
+
+
+
+NVL(REGEXP_REPLACE(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?[,}]'), 7), '[},]'), '0') || ' | ' ||
+NVL(REGEXP_REPLACE(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"shipping":.*?[,}]'), 12), '[},]'), '0') || ' | ' ||
+NVL(REGEXP_REPLACE(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"other":.*?[,}]'), 9), '[},]'), '0') 
+
+
+
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?\D'), 7),',')),'B99999.99') ||' |'||  
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"shipping":.*?\D'), 12),'}')),'B99999.99') ||' |'||  
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"other":.*?\D'), 9),',')),'B99999.99')
+
+
+TO_CHAR(NVL(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?\D'), 7),',')),'0'),'99999.99')
+
+
+
+RTRIM(SUBSTR(
+    REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?[\.\D]')
+    
+    
+    , 7),',') || '| ' ||
+RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"shipping":.*?\D'), 12),',') || '| ' ||
+RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"other":.*?\D'), 9),',') 
+
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?\D'), 7),',')),'B99999.99')
+
+
+TO_CHAR(NVL(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?\D'), 7),',')),'0'),'99999.99') ||' |'||  
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"shipping":.*?\D'), 12),'}')),'99999.99') ||' |'||  
+TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"other":.*?\D'), 9),',')),'99999.99')
+
+
+NVL(TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"tax":.*?\D'), 7),',')),'B99999.99'),'0') ||' |'||  
+NVL(TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"shipping":.*?\D'), 12),'}')),'B99999.99'),'0') ||' |'||  
+NVL(TO_CHAR(TO_NUMBER(RTRIM(SUBSTR(REGEXP_SUBSTR({custrecord_ctc_vc_bill_json}, '"other":.*?\D'), 9),',')),'B99999.99'),'0')
