@@ -1269,6 +1269,7 @@ define([
                     is_active: chargeLine.enabled ? 'T' : 'F',
                     applied: chargeLine.applied,
                     type: chargeLine.name,
+                    description: chargeLine.description,
                     itemname: Helper.getItemName(chargeLine.item),
                     nsitem: chargeLine.item,
                     autoprocess:

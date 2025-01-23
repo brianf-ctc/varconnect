@@ -2,7 +2,7 @@
  *@NApiVersion 2.x
  */
 /**
- * Copyright (c) 2023
+ * Copyright (c) 2025
  * Catalyst Tech Corp
  * All Rights Reserved.
  *

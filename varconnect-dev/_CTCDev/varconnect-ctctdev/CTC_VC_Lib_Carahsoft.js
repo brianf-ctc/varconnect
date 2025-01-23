@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -75,6 +75,7 @@ define(['./CTC_VC2_Lib_Utils.js', './CTC_VC2_Constants.js', 'N/search'], functio
                 CURRENT.TokenName,
                 CURRENT.orderConfig.customerNo,
                 CURRENT.orderConfig.apiKey,
+                CURRENT.orderConfig.subsidiary,
                 vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
             ].join('|');
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -16,9 +16,9 @@ var hlFolder = 'SuiteScripts/VAR Connect/highlight';
 define([
     'N/search',
     'N/currentRecord'
-    // '../CTC_VC_Lib_VendorConfig.js',
-    // '../CTC_VC_Lib_WebService.js',
-    // '../CTC_VC2_Constants.js',
+    // './../CTC_VC_Lib_VendorConfig.js',
+    // './../CTC_VC_Lib_WebService.js',
+    // './../CTC_VC2_Constants.js',
     // hlFolder + '/highlight.js',
     // hlFolder + '/languages/xml.min.js',
     // hlFolder + '/languages/json.min.js'

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -104,6 +104,7 @@ define([
                     'VC_SCANSOURCE_TOKEN',
                     CURRENT.orderConfig.apiKey,
                     CURRENT.orderConfig.subscriptionKey,
+                    CURRENT.orderConfig.subsidiary,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')
             });
@@ -252,7 +253,10 @@ define([
                             tracking_num: 'NA',
                             serial_num: 'NA',
 
-                            is_shipped: false
+                            is_shipped: vc2_util.inArray(
+                                orderInfo.Status.toUpperCase(),
+                                LibScansource.ShippedStatus
+                            )
                         };
 
                         if (!vc2_util.isEmpty(orderLine.SerialNumbers))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -79,10 +79,12 @@ define([
                 SHIPPING: 0,
                 CHARGES: 0,
                 BILLFILE_TOTAL: 0,
+                BILLFILE_LINES: 0,
                 POLINE_TAX: 0,
-                POLINE_TOTAL: 0,
+                POLINES: 0,
                 BILL_TAX: 0,
                 BILL_TOTAL: 0,
+                BILL_LINES: 0,
                 VARIANCE: 0
             },
             Errors: {},
@@ -162,6 +164,24 @@ define([
                 this.processBillFileLines(option);
                 this.processBillLines(option);
                 this.processCharges(option);
+
+                if (Current.CFG.MainCFG.allowAdjustLine) {
+                    var adjustAmount = Current.TOTAL.BILLFILE_LINES - Current.TOTAL.BILL_LINES;
+                    adjustAmount = vc2_util.roundOff(adjustAmount);
+
+                    if (Math.abs(adjustAmount)) {
+                        Current.TOTAL.VARIANCE += adjustAmount;
+                        Helper.setError({ varcode: 'BILLTOTAL', details: adjustAmount });
+                    }
+
+                    // Add the adjustment line
+                    this.addChargeLine({
+                        amount: adjustAmount,
+                        varianceAmount: adjustAmount,
+                        description: 'VC | Adjustment'
+                    });
+                }
+
                 this.addVarianceLines(option);
 
                 ////////////////////////////////
@@ -189,33 +209,17 @@ define([
                         Current.STATUS.BILLFILE.AllowToReceive = true;
                 }
 
+                // check if we need to add the adjustment line
+
                 // Check if the bill file is in active edit mode
                 if (Current.STATUS.BILLFILE.IsActiveEdit) {
-                    // Check if the bill total does not match the bill file total
-                    if (
-                        Current.TOTAL.BILL_TOTAL &&
-                        Current.TOTAL.BILL_TOTAL != Current.TOTAL.BILLFILE_TOTAL
-                    ) {
-                        // Calculate the adjustment amount
-                        var adjustAmount =
-                            Current.TOTAL.BILLFILE_TOTAL -
-                            (Current.TOTAL.BILL_TOTAL + Current.TOTAL.VARIANCE);
-                        adjustAmount = vc2_util.roundOff(adjustAmount);
-
-                        // If adjustments are allowed, add the adjustment amount to the variance
-                        if (Current.CFG.MainCFG.allowAdjustLine) {
-                            if (Math.abs(adjustAmount)) {
-                                Current.TOTAL.VARIANCE += adjustAmount;
-                                Helper.setError({ varcode: 'BILLTOTAL', details: adjustAmount });
-                            }
-
-                            // Add the adjustment line
-                            this.addChargeLine({
-                                amount: adjustAmount,
-                                description: 'VC | Adjustment'
-                            });
-                        }
-                    }
+                    // // Check if the bill total does not match the bill file total
+                    // if (
+                    //     Current.TOTAL.BILL_TOTAL &&
+                    //     Current.TOTAL.BILL_TOTAL != Current.TOTAL.BILLFILE_TOTAL
+                    // ) {
+                    //     // If adjustments are allowed, add the adjustment amount to the variance
+                    // }
 
                     // add the Bill Lines
 
@@ -271,7 +275,10 @@ define([
                             (Current.STATUS.BILLFILE.AllowToReceive &&
                                 Current.STATUS.PO.IsReceivable)
                         ) {
-                            if (Current.STATUS.BILLFILE.AllowVariance) {
+                            if (
+                                Current.STATUS.BILLFILE.AllowVariance ||
+                                Current.STATUS.BILLFILE.IgnoreVariance
+                            ) {
                                 Current.STATUS.AllowToBill = true;
                                 Current.STATUS.ALLOWED_TO_BILL.push('ALLOW_VARIANCE');
                             } else {
@@ -423,10 +430,12 @@ define([
                 Current.BILLFILE.LINES = BILLFILE_LINES;
 
                 // Prep the charges
+                var totalCharges = 0;
                 ['shipping', 'other', 'tax'].forEach(function (chargeType) {
                     Current.CHARGES[chargeType] = vc2_util.parseFloat(
                         Current.BILLFILE.JSON.charges[chargeType]
                     );
+                    totalCharges += Current.CHARGES[chargeType];
 
                     return true;
                 });
@@ -458,6 +467,7 @@ define([
             });
 
             Current.TOTAL.BILLFILE_TOTAL = Current.BILLFILE.JSON ? Current.BILLFILE.JSON.total : 0;
+            Current.TOTAL.BILLFILE_LINES = Current.TOTAL.BILLFILE_TOTAL - totalCharges;
             /////////// EVAL /////////////
 
             return returnValue;
@@ -495,6 +505,7 @@ define([
                         fields: [
                             'internalid',
                             'tranid',
+                            'createdfrom',
                             'entity',
                             'total',
                             'taxtotal',
@@ -744,7 +755,7 @@ define([
         },
         loadBill: function (option) {
             var logTitle = [LogTitle, 'loadBill'].join('::'),
-                returnValue = null;
+                returnValue = Current;
             option = option || {};
 
             try {
@@ -792,13 +803,16 @@ define([
                         orderConfig: Current.CFG.OrderCFG,
                         mainConfig: Current.CFG.MainCFG
                     }) || [];
+                var lineTotal = 0;
                 Current.BILL.LINES.forEach(function (billLine) {
                     billLine.itemId = billLine.item;
                     billLine.TOTALTAX = Helper.calculateLineTax(billLine);
+                    lineTotal += billLine.amount;
                 });
 
                 Current.TOTAL.BILL_TAX = Current.BILL.DATA.TOTALTAX;
                 Current.TOTAL.BILL_TOTAL = Current.BILL.DATA.total;
+                Current.TOTAL.BILL_LINES = lineTotal;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 Helper.setError({ code: error });
@@ -925,7 +939,7 @@ define([
                         // We can only bill, qty we only received, that is unbilled
                         orderLine.BILLABLE = orderLine.QTYRCVD - orderLine.QTYBILLED;
 
-                        Current.TOTAL.POLINE_TOTAL += orderLine.amount;
+                        Current.TOTAL.POLINES += orderLine.amount;
                         Current.TOTAL.POLINE_TAX += orderLine.TaxAmount;
 
                         // check if the item is a shipping line
@@ -1048,7 +1062,7 @@ define([
                                 ),
                                 vc2_util.extractValues({
                                     source: billfileLine,
-                                    params: ['BILLRATE', 'PRICE', 'TRACKING']
+                                    params: ['BILLRATE', 'PRICE', 'TRACKING', 'SERIAL']
                                 })
                             );
                         }
@@ -1061,7 +1075,15 @@ define([
                             record: Current.BILL.REC,
                             sublistId: 'item',
                             line: line,
-                            columns: ['line', 'item', 'quantity', 'rate']
+                            columns: [
+                                'line',
+                                'item',
+                                'quantity',
+                                'rate',
+                                'binitem',
+                                'inventorydetailreq',
+                                'isserial'
+                            ]
                         }),
                         vendorLineValues = Current.BILL.LINES[line];
 
@@ -1137,15 +1159,16 @@ define([
                     switch (type) {
                         case ChargeType.TAX:
                             // calculate the tax diff
-                            var taxVarianceAmt = vc2_util.roundOff(
-                                chargeAmount - Current.TOTAL.BILL_TAX
-                            );
+                            var taxVarianceAmt = 0;
+
+                            if (ChargesCFG[type].enabled) {
+                                taxVarianceAmt = chargeAmount - Current.TOTAL.BILL_TAX;
+                            } else {
+                                chargeLine.applied = 'F';
+                            }
+
                             chargeLine.calcAmount = Current.TOTAL.BILL_TAX;
                             chargeLine.varianceAmount = taxVarianceAmt;
-
-                            chargeLine.applied = ChargesCFG[type].enabled
-                                ? chargeLine.applied
-                                : 'F';
 
                             if (Math.abs(taxVarianceAmt) && chargeLine.applied == 'T') {
                                 Current.TOTAL.VARIANCE += taxVarianceAmt;
@@ -1154,14 +1177,16 @@ define([
 
                             break;
                         case ChargeType.SHIP:
-                            var shipVarianceAmt = chargeAmount - Current.TOTAL.SHIPPING;
+                            var shipVarianceAmt = 0;
+
+                            if (ChargesCFG[type].enabled) {
+                                shipVarianceAmt = chargeAmount - Current.TOTAL.SHIPPING;
+                            } else {
+                                chargeLine.applied = 'F';
+                            }
 
                             chargeLine.calcAmount = Current.TOTAL.SHIPPING;
                             chargeLine.varianceAmount = shipVarianceAmt;
-
-                            chargeLine.applied = ChargesCFG[type].enabled
-                                ? chargeLine.applied
-                                : 'F';
 
                             if (Math.abs(shipVarianceAmt) && chargeLine.applied == 'T') {
                                 Current.TOTAL.VARIANCE += shipVarianceAmt;
@@ -1171,7 +1196,13 @@ define([
                             break;
                         case ChargeType.OTHER:
                         case ChargeType.MISC:
-                            var otherVarianceAmt = chargeAmount - Current.TOTAL.CHARGES;
+                            var otherVarianceAmt = 0;
+
+                            if (ChargesCFG[type].enabled) {
+                                otherVarianceAmt = chargeAmount - Current.TOTAL.CHARGES;
+                            } else {
+                                chargeLine.applied = 'F';
+                            }
 
                             chargeLine.calcAmount = Current.TOTAL.CHARGES;
                             chargeLine.varianceAmount = otherVarianceAmt;
@@ -1200,11 +1231,12 @@ define([
             return returnValue;
         },
         addChargeLine: function (option) {
-            var logTitle = [LogTitle, 'processCharges'].join('::'),
+            var logTitle = [LogTitle, 'addChargeLine'].join('::'),
                 returnValue = null;
             try {
                 var chargeType = option.chargeType || option.type || ChargeType.OTHER,
                     chargeName = option.chargeName || option.name,
+                    varianceAmount = option.varianceAmount,
                     chargeAmount = option.chargeAmount || option.amount || option.rate,
                     chargeDescription = option.description;
 
@@ -1213,6 +1245,7 @@ define([
 
                 util.extend(chargeLine, {
                     name: chargeName || chargeLine.name,
+                    varianceAmount: varianceAmount,
                     description: chargeDescription || chargeLine.description,
                     rate: chargeAmount,
                     amount: chargeAmount,
@@ -1286,6 +1319,10 @@ define([
                 if (vc2_util.isEmpty(Current.BILL.REC)) throw 'Missing vendor bill record';
                 if (vc2_util.isEmpty(varLines)) throw 'Missing vendor bill charges';
 
+                if (Current.STATUS.HasVariance && Current.STATUS.BILLFILE.IgnoreVariance) return;
+
+                var salesOrderData = Helper.getSalesOrderDetails({ id: Current.PO.ID });
+
                 (varLines || []).forEach(function (varianceLine) {
                     if (!vc2_util.isTrue(varianceLine.enabled)) return;
                     if (!vc2_util.isTrue(varianceLine.applied)) return;
@@ -1297,6 +1334,8 @@ define([
                         return;
                     }
 
+                    if (!varianceLine.varianceAmount) return;
+
                     try {
                         var addLineOption = {
                             item: varianceLine.item,
@@ -1304,6 +1343,11 @@ define([
                             rate: varianceLine.varianceAmount,
                             description: varianceLine.description
                         };
+                        if (salesOrderData && salesOrderData.entity) {
+                            addLineOption.customer =
+                                salesOrderData.entity.value || salesOrderData.entity;
+                        }
+
                         if (!vc2_util.isEmpty(Current.PO.DATA.TaxCode))
                             addLineOption.taxcode = Current.PO.DATA.TaxCode;
 
@@ -1373,12 +1417,25 @@ define([
                     taxVARLine &&
                     taxVARLine.enabled &&
                     taxVARLine.applied == 'T' &&
-                    taxVARLine.amount > 0
+                    taxVARLine.amount > 0 &&
+                    !Current.CFG.BillCFG.ignoreTaxVar
                 ) {
-                    var taxVarianceAmt = taxVARLine.amount - Current.TOTAL.BILL_TAX;
+                    var taxVarianceAmt =
+                        vc2_util.roundOff(taxVARLine.amount) -
+                        vc2_util.roundOff(Current.TOTAL.BILL_TAX);
+
+                    vc2_util.log(logTitle, '>> Tax Variance: ', [
+                        taxVarianceAmt,
+                        [taxVARLine.amount, Current.TOTAL.BILL_TAX],
+                        vc2_util.roundOff(taxVarianceAmt),
+                        [
+                            vc2_util.roundOff(taxVARLine.amount),
+                            vc2_util.roundOff(Current.TOTAL.BILL_TAX)
+                        ]
+                    ]);
+
                     if (Math.abs(taxVarianceAmt)) {
                         // add the tax line
-
                         var lineNo = vc2_record.addLine({
                             record: Current.BILL.REC,
                             sublistId: 'item',
@@ -1611,6 +1668,34 @@ define([
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return taxAmount ? taxAmount : 0;
+        },
+
+        getSalesOrderDetails: function (option) {
+            var logTitle = [LogTitle, 'getSalesOrderDetails'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var poId = option.poId || Current.PO.ID,
+                    createdFromId =
+                        option.createdFromId || option.soId || Current.PO.DATA.createdfrom;
+
+                /// do a lookup on the sales order
+                var salesOrderData = vc2_util.flatLookup({
+                    type: 'transaction',
+                    id: createdFromId,
+                    columns: ['entity', 'tranid', 'total']
+                });
+
+                vc2_util.log(logTitle, '>> SO Details: ', salesOrderData);
+                returnValue = salesOrderData;
+
+                // seach for the sales order details
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+
+            return returnValue;
         }
     };
 

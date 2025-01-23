@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -19,7 +19,6 @@ define([
     'N/record',
     './CTC_VC2_Lib_Utils',
     './CTC_VC2_Constants.js',
-    './CTC_VC2_Lib_Record',
     './CTC_VC_Lib_Fulfillment',
     './CTC_VC_Lib_ItemReceipt',
     './CTC_VC_Lib_Record.js',
@@ -33,7 +32,6 @@ define([
     ns_record,
     vc2_util,
     vc2_constant,
-    vc2_record,
     vc_itemfflib,
     vc_itemrcpt,
     vc_nslib,
@@ -399,7 +397,6 @@ define([
             vc2_util.log(logTitle, '... SO_DATA: ', SO_DATA);
 
             var fulfillmentResponse = {};
-
             if (Current.isDropPO) {
                 fulfillmentResponse = Helper.processItemFulfillment({
                     orderLines: Current.OrderData.Lines,
@@ -413,6 +410,9 @@ define([
                     soRec: SO_REC
                 });
             }
+            vc2_util.log(logTitle, '## fulfillmentResponse: ', fulfillmentResponse);
+
+            // update the order status
 
             vc2_util.log(logTitle, '..settings:  ', {
                 isDropPO: Current.isDropPO,
@@ -617,6 +617,19 @@ define([
                 // look for the SALES ORDER
                 if (!option.soRec) throw ERROR_MSG.MISSING_SALESORDER;
 
+                // // check if the PO is fulfillable
+                var poValues = vc2_record.extractValues({
+                    record: option.poRec,
+                    fields: ['orderstatus', 'status', 'statusRef']
+                });
+                vc2_util.log(logTitle, '... poValues: ', poValues);
+
+                // if (vc2_util.inArray(poValues.statusRef.toLowerCase(), ['closed', 'fullybilled']))
+                //     throw ERROR_MSG.PO_CLOSED;
+
+                // if (vc2_util.inArray(poValues.statusRef.toLowerCase(), ['pendingbilling']))
+                //     throw ERROR_MSG.PO_FULLYFULFILLED;
+
                 fulfillmentData = vc_itemfflib.updateItemFulfillments({
                     mainConfig: Current.MainCFG,
                     orderConfig: Current.OrderCFG,
@@ -626,15 +639,24 @@ define([
                     recSalesOrd: option.soRec,
                     recPurchOrd: option.poRec
                 });
+
                 vc2_util.log(logTitle, '// fulfillmentData:', fulfillmentData);
                 returnValue = fulfillmentData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
-
                 vc2_util.vcLog({
                     title: 'Fulfillment Creation | Error',
                     error: error,
                     recordId: Current.poId
+                });
+                returnValue = error;
+
+                // Update the Order Status Records
+                Helper.updateOrderNumNotes({
+                    poRec: option.poRec,
+                    poId: Current.poId,
+                    orderLines: option.lineData || option.orderLines,
+                    notes: error.message
                 });
             }
 
@@ -654,6 +676,19 @@ define([
                 if (!Current.allowItemRcpt) throw ERROR_MSG.ITEMRECEIPT_NOT_ENABLED;
                 if (!option.soRec) throw ERROR_MSG.MISSING_SALESORDER;
 
+                // // check if the PO is fulfillable
+                // var poValues = vc2_record.extractValues({
+                //     record: option.poRec,
+                //     fields: ['orderstatus', 'status', 'statusRef']
+                // });
+                // vc2_util.log(logTitle, '... poValues: ', poValues);
+
+                // if (vc2_util.inArray(poValues.statusRef.toLowerCase(), ['closed', 'fullybilled']))
+                //     throw ERROR_MSG.PO_CLOSED;
+
+                // if (vc2_util.inArray(poValues.statusRef.toLowerCase(), ['pendingbilling']))
+                //     throw ERROR_MSG.PO_FULLYFULFILLED;
+
                 receiptData = vc_itemrcpt.updateIR({
                     mainConfig: Current.MainCFG,
                     orderConfig: Current.OrderCFG,
@@ -672,6 +707,57 @@ define([
                     error: error,
                     transaction: Current.poId
                 });
+
+                // Update the Order Status Records
+                Helper.updateOrderNumNotes({
+                    poRec: option.poRec,
+                    poId: Current.poId,
+                    orderLines: option.lineData || option.orderLines,
+                    notes: error.message
+                });
+
+                returnValue = error;
+            }
+
+            return returnValue;
+        },
+        updateOrderNumNotes: function (option) {
+            var logTitle = [LogTitle, 'updateOrderStatus'].join('::'),
+                returnValue;
+
+            try {
+                var poRec = option.poRec,
+                    poId = option.poId,
+                    orderLines = option.orderLines,
+                    orderNumNotes = option.notes;
+
+                // either poRec or poId is required
+                if (!poRec && !poId) throw 'Missing PO Record or PO ID';
+                // orderLines and orderNumNotes are required
+                if (!orderLines || !orderNumNotes) throw 'Missing Order Lines or Order Notes';
+
+                // group the order lines by order number
+                var orderNumLines = {};
+                orderLines.forEach(function (line) {
+                    if (!orderNumLines[line.order_num]) orderNumLines[line.order_num] = [];
+                    orderNumLines[line.order_num].push(line);
+                    return true;
+                });
+
+                // loop thru the order numbers
+                for (var orderNum in orderNumLines) {
+                    vcs_processLib.updateOrderNum({
+                        vendorNum: orderNum,
+                        poId: poId || poRec.id,
+                        orderNumValues: {
+                            NOTE: orderNumNotes,
+                            DETAILS: ' '
+                        }
+                    });
+                }
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = error;
             }
 
             return returnValue;

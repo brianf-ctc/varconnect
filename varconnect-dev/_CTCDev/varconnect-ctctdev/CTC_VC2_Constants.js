@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -70,7 +70,8 @@ define(function (require) {
                 MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_cust_item_match_strict',
                 CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_col_id',
                 CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_fld_id',
-                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax'
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax',
+                AUTOFULFILL_ZEROAMT_LINES: 'custrecord_ctc_vc_autoff_zeroamt_lines'
             }
         },
         VENDOR_CONFIG: {
@@ -163,7 +164,8 @@ define(function (require) {
                 ENABLE_FULFILLLMENT: 'custrecord_vc_bc_enable_fulfillment',
                 SCOPE: 'custrecord_vc_bc_scope',
                 SUBSCRIPTION_KEY: 'custrecord_vc_bc_subs_key',
-                TOKEN_URL: 'custrecord_vc_bc_token_url'
+                TOKEN_URL: 'custrecord_vc_bc_token_url',
+                IGNORE_TAXVAR: 'custrecord_vc_bc_ignore_taxvar'
             }
         },
         BILLFILE: {
@@ -391,7 +393,8 @@ define(function (require) {
             matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
             itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
             itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
-            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
+            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME,
+            autofulfillZeroAmtLines: MainCFG.FIELD.AUTOFULFILL_ZEROAMT_LINES
         },
         BILLCREATE_CONFIG: {
             id: BillCFG.FIELD.ID,
@@ -410,7 +413,8 @@ define(function (require) {
             subsidiary: BillCFG.FIELD.SUBSIDIARY,
             scope: BillCFG.FIELD.SCOPE,
             subscription_key: BillCFG.FIELD.SUBSCRIPTION_KEY,
-            token_url: BillCFG.FIELD.TOKEN_URL
+            token_url: BillCFG.FIELD.TOKEN_URL,
+            ignoreTaxVar: BillCFG.FIELD.IGNORE_TAXVAR
         },
         VENDOR_CONFIG: {
             id: VendorCFG.FIELD.ID,
@@ -667,7 +671,7 @@ define(function (require) {
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.INFO
         },
         UNABLE_TO_FULFILL: {
-            message: 'Unable to fulfill the following items',
+            message: 'Unable to fulfill all items',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.ERROR
         },
         NO_SHIP_QTY: {
@@ -680,6 +684,15 @@ define(function (require) {
         },
         NO_ORDERS_TO_FULFILL: {
             message: 'No orders to fulfill.',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+
+        PO_FULLYFULFILLED: {
+            message: 'PO is fully fulfilled',
+            logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
+        },
+        PO_CLOSED: {
+            message: 'PO is closed',
             logStatus: VC2_CONSTANT.LIST.VC_LOG_STATUS.WARN
         },
 
@@ -936,7 +949,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '20241111.0447'
+        '202501017.1006'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

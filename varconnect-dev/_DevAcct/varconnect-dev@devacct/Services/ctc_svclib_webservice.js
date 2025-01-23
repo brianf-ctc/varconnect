@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  sCatalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of

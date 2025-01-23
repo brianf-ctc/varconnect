@@ -275,7 +275,10 @@ define([
                             (Current.STATUS.BILLFILE.AllowToReceive &&
                                 Current.STATUS.PO.IsReceivable)
                         ) {
-                            if (Current.STATUS.BILLFILE.AllowVariance) {
+                            if (
+                                Current.STATUS.BILLFILE.AllowVariance ||
+                                Current.STATUS.BILLFILE.IgnoreVariance
+                            ) {
                                 Current.STATUS.AllowToBill = true;
                                 Current.STATUS.ALLOWED_TO_BILL.push('ALLOW_VARIANCE');
                             } else {
@@ -502,6 +505,7 @@ define([
                         fields: [
                             'internalid',
                             'tranid',
+                            'createdfrom',
                             'entity',
                             'total',
                             'taxtotal',
@@ -1058,7 +1062,7 @@ define([
                                 ),
                                 vc2_util.extractValues({
                                     source: billfileLine,
-                                    params: ['BILLRATE', 'PRICE', 'TRACKING']
+                                    params: ['BILLRATE', 'PRICE', 'TRACKING', 'SERIAL']
                                 })
                             );
                         }
@@ -1071,7 +1075,15 @@ define([
                             record: Current.BILL.REC,
                             sublistId: 'item',
                             line: line,
-                            columns: ['line', 'item', 'quantity', 'rate']
+                            columns: [
+                                'line',
+                                'item',
+                                'quantity',
+                                'rate',
+                                'binitem',
+                                'inventorydetailreq',
+                                'isserial'
+                            ]
                         }),
                         vendorLineValues = Current.BILL.LINES[line];
 
@@ -1307,6 +1319,10 @@ define([
                 if (vc2_util.isEmpty(Current.BILL.REC)) throw 'Missing vendor bill record';
                 if (vc2_util.isEmpty(varLines)) throw 'Missing vendor bill charges';
 
+                if (Current.STATUS.HasVariance && Current.STATUS.BILLFILE.IgnoreVariance) return;
+
+                var salesOrderData = Helper.getSalesOrderDetails({ id: Current.PO.ID });
+
                 (varLines || []).forEach(function (varianceLine) {
                     if (!vc2_util.isTrue(varianceLine.enabled)) return;
                     if (!vc2_util.isTrue(varianceLine.applied)) return;
@@ -1327,6 +1343,11 @@ define([
                             rate: varianceLine.varianceAmount,
                             description: varianceLine.description
                         };
+                        if (salesOrderData && salesOrderData.entity) {
+                            addLineOption.customer =
+                                salesOrderData.entity.value || salesOrderData.entity;
+                        }
+
                         if (!vc2_util.isEmpty(Current.PO.DATA.TaxCode))
                             addLineOption.taxcode = Current.PO.DATA.TaxCode;
 
@@ -1396,12 +1417,25 @@ define([
                     taxVARLine &&
                     taxVARLine.enabled &&
                     taxVARLine.applied == 'T' &&
-                    taxVARLine.amount > 0
+                    taxVARLine.amount > 0 &&
+                    !Current.CFG.BillCFG.ignoreTaxVar
                 ) {
-                    var taxVarianceAmt = taxVARLine.amount - Current.TOTAL.BILL_TAX;
+                    var taxVarianceAmt =
+                        vc2_util.roundOff(taxVARLine.amount) -
+                        vc2_util.roundOff(Current.TOTAL.BILL_TAX);
+
+                    vc2_util.log(logTitle, '>> Tax Variance: ', [
+                        taxVarianceAmt,
+                        [taxVARLine.amount, Current.TOTAL.BILL_TAX],
+                        vc2_util.roundOff(taxVarianceAmt),
+                        [
+                            vc2_util.roundOff(taxVARLine.amount),
+                            vc2_util.roundOff(Current.TOTAL.BILL_TAX)
+                        ]
+                    ]);
+
                     if (Math.abs(taxVarianceAmt)) {
                         // add the tax line
-
                         var lineNo = vc2_record.addLine({
                             record: Current.BILL.REC,
                             sublistId: 'item',
@@ -1634,6 +1668,34 @@ define([
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return taxAmount ? taxAmount : 0;
+        },
+
+        getSalesOrderDetails: function (option) {
+            var logTitle = [LogTitle, 'getSalesOrderDetails'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var poId = option.poId || Current.PO.ID,
+                    createdFromId =
+                        option.createdFromId || option.soId || Current.PO.DATA.createdfrom;
+
+                /// do a lookup on the sales order
+                var salesOrderData = vc2_util.flatLookup({
+                    type: 'transaction',
+                    id: createdFromId,
+                    columns: ['entity', 'tranid', 'total']
+                });
+
+                vc2_util.log(logTitle, '>> SO Details: ', salesOrderData);
+                returnValue = salesOrderData;
+
+                // seach for the sales order details
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+
+            return returnValue;
         }
     };
 

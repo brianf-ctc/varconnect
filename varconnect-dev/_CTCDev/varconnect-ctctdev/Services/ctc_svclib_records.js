@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  sCatalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -132,92 +132,13 @@ define(function (require) {
         ]
     };
 
-    return {
-        // searchTransaction: function (option) {
-        //     var logTitle = [LogTitle, 'searchTransaction'].join('::'),
-        //         returnValue;
+    var Helper = {
+        sanitizeString: function (str) {
+            return str ? str.replace(/[^a-zA-Z0-9]/g, '') : str;
+        }
+    };
 
-        //     try {
-        //         if (!option) throw 'Missing required parameter: option';
-        //         option.filters = option.filters || [];
-        //         option.columns = option.columns || FIELD_MAPPING.COLUMNS;
-
-        //         var recordType = option.type || ns_record.Type.PURCHASE_ORDER;
-
-        //         var searchOption = {
-        //             type: recordType,
-        //             columns: option.columns,
-        //             filters: [['mainline', 'is', 'T']] // default to mainline
-        //         };
-        //         if (option.poId || option.id) {
-        //             searchOption.filters.push('AND', [
-        //                 'internalid',
-        //                 'anyof',
-        //                 option.poId || option.id
-        //             ]);
-        //         }
-
-        //         if (option.poNum) {
-        //             searchOption.filters.push('AND', ['tranid', 'is', option.poNum]);
-        //         } else if (option.overridePO) {
-        //             searchOption.filters.push('AND', [
-        //                 'custbody_ctc_vc_override_ponum',
-        //                 'is',
-        //                 option.overridePO
-        //             ]);
-        //         }
-
-        //         if (vc2_util.isOneWorld()) {
-        //             searchOption.columns.push('subsidiary');
-        //             searchOption.columns.push('subsidiary.country');
-        //         }
-        //         // Generate cache key using search filters
-        //         var cacheKey = [
-        //             vc2_constant.CACHE_KEY.PO_DATA,
-        //             JSON.stringify(searchOption.filters)
-        //         ].join('__');
-
-        //         if (option.noCache) {
-        //             vc2_util.log(logTitle, 'No-cache option is enabled, skipping cache retrieval');
-        //         } else {
-        //             // Retrieve cached data
-        //             var cachedData = vc2_util.getNSCache({ name: cacheKey, isJSON: true });
-        //             if (!vc2_util.isEmpty(cachedData)) return cachedData;
-        //         }
-
-        //         vc2_util.log(logTitle, '>> search option', searchOption);
-
-        //         var searchObj = ns_search.create(searchOption);
-        //         var results = [];
-
-        //         searchObj.run().each(function (result) {
-        //             var resultData = {};
-        //             option.columns.forEach(function (col) {
-        //                 var colName = col.name || col;
-        //                 resultData[colName] = result.getValue(col);
-        //                 var colText = result.getText(col);
-        //                 if (colText && colText != resultData[colName]) {
-        //                     resultData[colName + '_text'] = colText;
-        //                 }
-        //             });
-        //             results.push(resultData);
-        //             return true;
-        //         });
-        //         if (results.length > 0) {
-        //             vc2_util.setNSCache({ name: cacheKey, value: results, cacheTTL: CACHE_TTL });
-        //         }
-
-        //         returnValue = results;
-
-        //         vc2_util.log(logTitle, 'Search completed successfully', returnValue);
-        //     } catch (error) {
-        //         vc2_util.logError(logTitle, error);
-        //         returnValue = false;
-        //     }
-
-        //     return returnValue;
-        // },
-
+    var RecordsLib = {
         searchTransaction: function (option) {
             var logTitle = [LogTitle, 'searchTransaction'].join('::'),
                 returnValue;
@@ -326,7 +247,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         updateRecord: function (option) {
             var logTitle = [LogTitle, 'updateRecord'].join('::'),
                 returnValue;
@@ -375,7 +295,6 @@ define(function (require) {
             return returnValue;
         },
         updateLineValues: function (option) {},
-
         extractValues: function (option) {
             var logTitle = [LogTitle, 'extractValues'].join('::'),
                 returnValue;
@@ -411,7 +330,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         extractLineValues: function (option) {
             var logTitle = [LogTitle, 'extractLineValues'].join('::'),
                 returnValue;
@@ -437,7 +355,10 @@ define(function (require) {
                         'quantitybilled',
                         'taxrate',
                         'taxrate1',
-                        'taxrate2'
+                        'taxrate2',
+                        'poline',
+                        'orderline',
+                        'lineuniquekey'
                     ],
                     additionalColumns = option.additionalColumns || [],
                     recordLines = [],
@@ -450,7 +371,9 @@ define(function (require) {
                 var lineCount = recordObj.getLineCount({ sublistId: option.sublistId || 'item' });
 
                 for (var line = 0; line < lineCount; line++) {
-                    var lineData = {};
+                    var lineData = {
+                        line: line
+                    };
 
                     for (var i = 0, j = columns.length; i < j; i++) {
                         var colName = columns[i],
@@ -495,7 +418,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         load: function (option) {
             var logTitle = [LogTitle, 'load'].join('::'),
                 returnValue;
@@ -563,4 +485,6 @@ define(function (require) {
             return returnValue;
         }
     };
+
+    return RecordsLib;
 });

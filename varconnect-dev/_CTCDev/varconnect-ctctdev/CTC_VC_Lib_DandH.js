@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -110,6 +110,52 @@ define([
                 if (!respOrderStatus) throw 'Unable to fetch server response';
 
                 returnValue = respOrderStatus;
+            } catch (error) {
+                throw error;
+            }
+
+            return returnValue;
+        },
+
+        getItemInquiry: function (option) {
+            var logTitle = [LogTitle, 'getItemInquiry'].join('::'),
+                returnValue = [];
+            option = option || {};
+
+            try {
+                var reqItemQuery = vc2_util.sendRequest({
+                    header: [LogTitle, 'ItemInquirey-DH'].join(' : '),
+                    method: 'post',
+                    isXML: true,
+                    query: {
+                        url: CURRENT.orderConfig.endPoint,
+                        headers: {
+                            'Content-Type': 'text/xml; charset=utf-8',
+                            'Content-Length': 'length'
+                        },
+                        body:
+                            '<XMLFORMPOST>' +
+                            '<REQUEST>itemInquiry</REQUEST>' +
+                            '<LOGIN>' +
+                            ('<USERID>' + CURRENT.orderConfig.user + '</USERID>') +
+                            ('<PASSWORD>' + CURRENT.orderConfig.password + '</PASSWORD>') +
+                            '</LOGIN>' +
+                            ('<PARTNUM>' + option.itemName + '</PARTNUM>') +
+                            ('<LOOKUPTYPE>' + option.lookupType + '</LOOKUPTYPE>') +
+                            '</XMLFORMPOST>'
+                    }
+                });
+
+                vc2_util.log(logTitle, 'reqItemQuery: ', reqItemQuery);
+                if (reqItemQuery.isError) throw reqItemQuery.errorMsg;
+
+                vc2_util.handleXMLResponse(reqItemQuery);
+
+                if (reqItemQuery.isError) throw reqItemQuery.errorMsg;
+                var respItemQuery = reqItemQuery.RESPONSE.body;
+                if (!respItemQuery) throw 'Unable to fetch server response';
+
+                returnValue = respItemQuery;
             } catch (error) {
                 throw error;
             }
@@ -370,6 +416,37 @@ define([
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;
+            }
+
+            return returnValue;
+        },
+        processItemInquiry: function (option) {
+            var logTitle = [LogTitle, 'processItem'].join('::'),
+                returnValue = {};
+            option = option || {};
+
+            try {
+                LibDnH.initialize(option);
+
+                // first the do the MFR inquiry, then the DH item inquiry
+                var xmlResponse = LibDnH.getItemInquiry(option);
+                if (!xmlResponse) throw 'No response from D&H';
+
+                var xmlDoc = ns_xml.Parser.fromString({ text: xmlResponse });
+                if (!xmlDoc) throw 'Unable to parse XML';
+
+                var itemNode = ns_xml.XPath.select({ node: xmlDoc, xpath: '//ITEM' });
+                if (!itemNode || itemNode.length < 1) throw 'No item details found';
+
+                var itemObj = {
+                    partNum: Helper.getNodeValue(itemNode[0], 'PARTNUM') || 'NA',
+                    itemNum: Helper.getNodeValue(itemNode[0], 'VENDORITEMNO') || 'NA'
+                };
+
+                returnValue = itemObj;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
             }
 
             return returnValue;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -261,6 +261,20 @@ define([
             'STATUS'
         ],
         columnType: {
+            RESET: [
+                'custcol_ctc_xml_dist_order_num',
+                'custcol_ctc_xml_carrier',
+                'custcol_ctc_xml_tracking_num',
+                'custcol_ctc_xml_inb_tracking_num',
+                'custcol_ctc_xml_serial_num',
+                'custcol_ctc_vc_order_status'
+
+                // 'custcol_ctc_xml_date_order_placed',
+                // 'custcol_ctc_xml_ship_date',
+                // 'custcol_ctc_xml_eta',
+                // 'custcol_ctc_vc_xml_prom_deliv_date',
+            ],
+
             DATE: [
                 'custcol_ctc_vc_order_placed_date',
                 'custcol_ctc_vc_eta_date',
@@ -343,9 +357,9 @@ define([
                     'amount',
                     vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
                     vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
                     vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
-                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY
+                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO
                 ];
 
             if (itemAltNameColId) poColumns.push(itemAltNameColId);
@@ -477,6 +491,11 @@ define([
                             //     if (currLineVal) updateLineValues[currLineCol] = newValue;
                             //     continue;
                             // }
+
+                            if (vc2_util.inArray(currLineCol, MAPPING.columnType.RESET)) {
+                                currLineVal = null;
+                                currLineText = null;
+                            }
 
                             /// LIST TYPE //////////////
                             if (vc2_util.inArray(currLineCol, MAPPING.columnType.LIST)) {

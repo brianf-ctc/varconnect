@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -107,6 +107,7 @@ define(function (require) {
                 '// OrderLines: ',
                 Current.OrderLines.length > 4 ? Current.OrderLines.length : Current.OrderLines
             );
+            // vc2_util.log(logTitle, '// recPO ? ', Current.PO_REC);
 
             //////////////////////
             if (!Current.MainCFG) throw ERROR_MSG.MISSING_CONFIG;
@@ -157,7 +158,6 @@ define(function (require) {
                     if (!OrderLinesByNum[orderNum]) OrderLinesByNum[orderNum] = [];
 
                     OrderLinesByNum[orderNum].push(orderLine);
-
                     if (!vc2_util.inArray(orderNum, arrOrderNums)) {
                         arrOrderNums.push(orderNum);
                         arrVendorOrderNums.push(vendorOrderNum);
@@ -195,6 +195,12 @@ define(function (require) {
             var arrExistingIFS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
             vc2_util.log(logTitle, '... existing IFs ', arrExistingIFS);
 
+            Current.PO_DATA = vc2_record.extractValues({
+                record: Current.PO_REC,
+                fields: ['orderstatus', 'status', 'statusRef']
+            });
+            vc2_util.log(logTitle, '// PO Data', Current.PO_DATA);
+
             ///////////////////////////////////////////////////
             // Loop through each unique order num checking to see if it does not already exist as an item fulfillment
             var OrigLogPrefix = LogPrefix;
@@ -217,12 +223,30 @@ define(function (require) {
                     // if (vc2_util.inArray(vendorOrderNum, arrExistingIFS))
                     //     throw ERROR_MSG.ORDER_EXISTS;
 
+                    /// CHECK for existing IFS //////
                     if (arrExistingIFS[vendorOrderNum]) {
                         itemFF = arrExistingIFS[vendorOrderNum];
                         throw util.extend(ERROR_MSG.ORDER_EXISTS, {
                             ffId: arrExistingIFS[vendorOrderNum]
                         });
                     }
+                    /////////////////////////////////
+
+                    // CHECK if the PO is closed or fully billed
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'closed',
+                            'fullybilled'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_CLOSED;
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'pendingbilling'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_FULLYFULFILLED;
+                    /////////////////////////////////
 
                     vc2_util.vcLog({
                         title: 'Fulfillment | Order Lines [' + vendorOrderNum + '] ',
@@ -268,7 +292,7 @@ define(function (require) {
                             '/// Start Transform Record ...',
                             defaultInventoryLocation
                         );
-                        var recItemFF;
+                        var recItemFF, transform_error;
                         try {
                             recItemFF = vc2_record.transform({
                                 fromType: ns_record.Type.SALES_ORDER,
@@ -279,6 +303,7 @@ define(function (require) {
                             });
                         } catch (transformErr) {
                             vc2_util.logError(logTitle, transformErr);
+                            transform_error = transformErr;
                             recItemFF = null;
                         }
                         if (!recItemFF) {
@@ -289,7 +314,9 @@ define(function (require) {
                                 }
                                 continue;
                             } else {
-                                throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR);
+                                throw vc2_util.extend(ERROR_MSG.TRANSFORM_ERROR, {
+                                    details: vc2_util.extractError(transform_error)
+                                });
                             }
                         }
 
@@ -347,6 +374,8 @@ define(function (require) {
                                 'poline',
                                 'binitem',
                                 'inventorydetailreq',
+                                'inventorydetailavail',
+                                'inventorydetailset',
                                 'isserial',
                                 'createdpo',
                                 'location',
@@ -566,6 +595,8 @@ define(function (require) {
                                         'itemreceive',
                                         'binitem',
                                         'inventorydetailreq',
+                                        'inventorydetailavail',
+                                        'inventorydetailset',
                                         'isserial',
                                         'location'
                                     ]
@@ -666,9 +697,13 @@ define(function (require) {
                                 // //// SERIALS DETECTION ////////////////
                                 var arrSerials = allSerialNums ? allSerialNums.split(/\n/) : [];
                                 vc2_util.log(logTitle, '... serials: ', arrSerials);
+                                vc2_util.log(logTitle, '... lineFFData: ', lineFFData);
 
                                 if (
-                                    lineFFData.isserial === 'T' &&
+                                    // lineFFData.isserial === 'T' &&
+                                    (lineFFData.isserial === 'T' ||
+                                        lineFFData.inventorydetailreq === 'T' ||
+                                        lineFFData.inventorydetailavail === 'T') &&
                                     arrSerials.length &&
                                     Helper.validateSerials({ serials: arrSerials })
                                 ) {
@@ -779,6 +814,7 @@ define(function (require) {
                                 ignoreMandatoryFields: true
                             });
 
+                            itemFFNotes = 'Successfully Created';
                             responseData[orderNum] = { id: itemFF };
 
                             vc2_util.log(

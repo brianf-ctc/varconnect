@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -162,12 +162,12 @@ define([
                 if (respOrderDetails.isError)
                     if (!respOrderDetails.PARSED_RESPONSE) throw respOrderDetails.errorMsg;
 
-                vc2_util.log(logTitle, '>> response: ', respOrderDetails);
+                // vc2_util.log(logTitle, '>> response: ', respOrderDetails);
 
                 vc2_util.handleJSONResponse(respOrderDetails);
                 if (!respOrderDetails.PARSED_RESPONSE) throw 'Unable to fetch server response';
 
-                vc2_util.log(logTitle, '>> parsed response: ', respOrderDetails.PARSED_RESPONSE);
+                // vc2_util.log(logTitle, '>> parsed response: ', respOrderDetails.PARSED_RESPONSE);
 
                 returnValue = respOrderDetails.PARSED_RESPONSE;
             } catch (error) {
@@ -204,6 +204,8 @@ define([
                 LibIngramAPI.EndPointV61 = endPoint.replace('/v6/', '/v6.1/');
             }
 
+            CURRENT.hasV61Errors = false;
+
             vc2_util.LogPrefix = '[purchaseorder:' + (CURRENT.recordId || CURRENT.recordNum) + '] ';
 
             return returnValue;
@@ -213,6 +215,7 @@ define([
                 key: [
                     CURRENT.TokenName,
                     CURRENT.orderConfig.apiKey,
+                    CURRENT.orderConfig.subsidiary,
                     CURRENT.orderConfig.customerNo,
                     vc2_constant.IS_DEBUG_MODE ? new Date().getTime() : null
                 ].join('|')
@@ -250,14 +253,14 @@ define([
                 try {
                     if (!orderResult.orderStatus) throw 'MISSING OrderStatus';
 
-                    if (vc2_util.inArray(orderResult.orderStatus, LibIngramAPI.SkippedStatus))
-                        throw 'SKIPPED OrderStatus - ' + orderResult.orderStatus;
+                    // if (vc2_util.inArray(orderResult.orderStatus, LibIngramAPI.SkippedStatus))
+                    //     throw 'SKIPPED OrderStatus - ' + orderResult.orderStatus;
 
                     if (vc2_util.isEmpty(orderResult.subOrders)) throw 'MISSING subOrders';
 
                     orderResult.subOrders.forEach(function (subOrderData) {
                         var subOrderNumber = subOrderData.subOrderNumber;
-                        vc2_util.log(logTitle, '... added valid order: ', subOrderNumber);
+                        // vc2_util.log(logTitle, '... added valid order: ', subOrderNumber);
 
                         arrValidOrders.push(
                             vc2_util.extend(vc2_util.clone(orderData), {
@@ -281,6 +284,7 @@ define([
 
             return arrValidOrders;
         },
+
         extractShipmentDetails: function (shipmentDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractShipmentDetails'].join('::');
 
@@ -299,6 +303,7 @@ define([
                     quantity: shipData.quantity + parseFloat(shipmentDetail.quantity),
                     order_date: shipmentDetail.invoiceDate,
                     ship_date: shipmentDetail.shippedDate,
+
                     estdeliv_date: shipmentDetail.estimatedDeliveryDate,
                     order_eta_ship: shipmentDetail.estimatedDeliveryDate,
                     order_eta: shipmentDetail.estimatedShipDate
@@ -339,14 +344,14 @@ define([
             shipData.serialNos = vc2_util.uniqueArray(shipData.serialNos);
             shipData.trackingNos = vc2_util.uniqueArray(shipData.trackingNos);
 
-            vc2_util.log(logTitle, '// shipment details: ', shipData);
+            // vc2_util.log(logTitle, '// shipment details: ', shipData);
 
             return shipData;
         },
         extractTrackingNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractTrackingNos'].join('::');
 
-            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var trackingNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -357,14 +362,14 @@ define([
                 }
             }
 
-            vc2_util.log(logTitle, '//// trackingNos: ', trackingNos);
+            // vc2_util.log(logTitle, '//// trackingNos: ', trackingNos);
 
             return trackingNos;
         },
         extractSerialNos: function (trackingDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractSerialNos'].join('::');
 
-            vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
+            // vc2_util.log(logTitle, '.... trackingDetails: ', trackingDetails);
             var serialNos = [];
 
             for (var i = 0, j = trackingDetails.length; i < j; i++) {
@@ -380,7 +385,7 @@ define([
                     });
                 }
             }
-            vc2_util.log(logTitle, '//// serialNos: ', serialNos);
+            // vc2_util.log(logTitle, '//// serialNos: ', serialNos);
 
             return serialNos;
         },
@@ -404,14 +409,14 @@ define([
                 if (delivery) util.extend(estimatedDates, { deliveryDate: delivery.deliveryDate });
             }
 
-            vc2_util.log(logTitle, '... estimated dates: ', estimatedDates);
+            // vc2_util.log(logTitle, '... estimated dates: ', estimatedDates);
 
             return estimatedDates;
         },
         extractLineData: function (ingramLine, orderDetails) {
             var logTitle = [LogTitle, 'LibOrderStatus::extractLineData'].join('::');
 
-            vc2_util.log(logTitle, '** Ingram Line: ', ingramLine);
+            // vc2_util.log(logTitle, '** Ingram Line: ', ingramLine);
 
             var lineData = {
                 order_num: ingramLine.subOrderNumber || 'NA',
@@ -436,7 +441,6 @@ define([
                 order_data: 'NA'
             };
             lineData.line_no = vc2_util.parseFloat(lineData.line_num);
-            vc2_util.log(logTitle, '** Ingram Line(2) : ', lineData);
 
             var shipment = LibOrderStatus.extractShipmentDetails(ingramLine.shipmentDetails);
             util.extend(lineData, {
@@ -502,9 +506,16 @@ define([
                 }
                 vc2_util.log(logTitle, '*** Total Orders: ', OUTPUT.OrdersList);
 
+                var logPrefix = '';
+
                 // run through the orders and extract the line data
                 for (var orderNum in RESPONSE.OrderDetails) {
                     var orderDetails = RESPONSE.OrderDetails[orderNum];
+
+                    logPrefix = '[' + orderNum + '] ';
+
+                    vc2_util.log(logTitle, logPrefix + ' ... Order Details: ', orderDetails);
+
                     if (vc2_util.isEmpty(orderDetails)) continue;
 
                     var orderLines = [];
@@ -513,7 +524,7 @@ define([
                             var ingramLine = orderDetails.lines[i];
 
                             var lineData = LibOrderStatus.extractLineData(ingramLine, orderDetails);
-                            vc2_util.log(logTitle, '..... ', lineData);
+                            vc2_util.log(logTitle, logPrefix + ' ..... ', lineData);
 
                             util.extend(lineData, {
                                 // order_num: orderNum || 'NA',
@@ -534,7 +545,9 @@ define([
                 }
 
                 // run through itemArray and check for DATE_FIELDS
-                vc2_util.log(logTitle, 'itemArray: ', OUTPUT.Items);
+                // vc2_util.dumpLog(logTitle, OUTPUT.Items, '-- Items : ');
+                vc2_util.log(logTitle, '... Items: ', [OUTPUT.Items.length, OUTPUT.Items]);
+
                 OUTPUT.Items.forEach(function (itemObj) {
                     DATE_FIELDS.forEach(function (dateField) {
                         if (!itemObj[dateField] || itemObj[dateField] == 'NA') return;
@@ -547,48 +560,6 @@ define([
                     Lines: OUTPUT.Items,
                     Source: RESPONSE
                 });
-
-                // // process the orders
-                // for (var orderNum in arrIngramOrders.ORDERS) {
-                //     vc2_util.log(logTitle, '** ORDER NUM[' + orderNum + ']');
-
-                //     var orderInfo = arrIngramOrders.ORDERS[orderNum].info,
-                //         orderDetails = arrIngramOrders.ORDERS[orderNum].details;
-
-                //     // add the source data
-                //     var orderData = vc2_util.findMatching({
-                //         list: arrIngramOrders.LIST,
-                //         filter: { VendorOrderNum: orderNum }
-                //     });
-                //     vc2_util.log(logTitle, '... matched orderData: ', orderData);
-                //     orderData.Source = orderDetails;
-
-                //     if (!orderDetails.lines) continue;
-
-                //     for (var i = 0, j = orderDetails.lines.length; i < j; i++) {
-                //         var ingramLine = orderDetails.lines[i];
-
-                //         var lineData = LibOrderStatus.extractLineData(ingramLine, orderDetails);
-
-                //         vc2_util.log(logTitle, '..... ', lineData);
-
-                //         util.extend(lineData, {
-                //             order_num: orderNum || 'NA',
-                //             is_shipped: vc2_util.inArray(
-                //                 lineData.order_status.toUpperCase(),
-                //                 LibIngramAPI.ValidShippedStatus
-                //             )
-                //         });
-
-                //         orderLines.push(lineData);
-                //     }
-                // }
-
-                // util.extend(returnValue, {
-                //     Orders: IngramOrders.LIST,
-                //     Lines: orderLines,
-                //     Source: arrIngramOrders
-                // });
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;
@@ -614,60 +585,113 @@ define([
 
                 // get the valid orders
                 var arrValidOrders = LibOrderStatus.extractValidOrders(orderSearchResults);
+                // vc2_util.log(logTitle, '... Valid Orders: ', arrValidOrders);
+
                 OUTPUT.OrdersList = arrValidOrders;
                 OUTPUT.Items = [];
+                var errorV61 = '';
 
                 if (CURRENT.isV61) {
                     // only one call needed for order details
-                    orderSearchResults.forEach(function (orderResult) {
-                        var orderDetails = LibIngramAPI.orderDetails({
-                            orderNum: orderResult.ingramOrderNumber
-                        });
-                        if (vc2_util.isEmpty(orderDetails)) return;
-                        RESPONSE.OrderDetails[orderResult.ingramOrderNumber] = orderDetails;
-                    });
-                } else {
-                    // loop thru the validOrdersList
                     arrValidOrders.forEach(function (orderResult) {
+                        if (CURRENT.hasV61Errors) return;
+
                         var orderDetails = LibIngramAPI.orderDetails({
                             orderNum: orderResult.VendorOrderNum
                         });
+
+                        if (
+                            // check for orderDetails
+                            (function () {
+                                if (vc2_util.isEmpty(orderDetails)) {
+                                    errorV61 = 'Missing order details';
+                                    return true;
+                                }
+                                return false;
+                            })() ||
+                            // check for existence of lines
+                            (function () {
+                                if (vc2_util.isEmpty(orderDetails.lines)) {
+                                    errorV61 = 'Missing order detail lines';
+                                    return true;
+                                }
+                                return false;
+                            })() ||
+                            // check for subOrderNumber
+                            (function () {
+                                if (vc2_util.isEmpty(orderDetails.lines[0].subOrderNumber)) {
+                                    errorV61 = 'Missing subOrderNumber';
+                                    return true;
+                                }
+                                return false;
+                            })()
+                        ) {
+                            CURRENT.hasV61Errors = true;
+                            return;
+                        }
+
+                        RESPONSE.OrderDetails[orderResult.VendorOrderNum] = orderDetails;
+                    });
+
+                    // orderSearchResults.forEach(function (orderResult) {
+                    //     // check if there were errors in the orderSearch
+                    //     if (CURRENT.hasV61Errors) return;
+
+                    //     var orderDetails = LibIngramAPI.orderDetails({
+                    //         orderNum: orderResult.ingramOrderNumber
+                    //     });
+                    //     if (
+                    //         // check for orderDetails
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails)) {
+                    //                 errorV61 = 'Missing order details';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })() ||
+                    //         // check for existence of lines
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails.lines)) {
+                    //                 errorV61 = 'Missing order detail lines';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })() ||
+                    //         // check for subOrderNumber
+                    //         (function () {
+                    //             if (vc2_util.isEmpty(orderDetails.lines[0].subOrderNumber)) {
+                    //                 errorV61 = 'Missing subOrderNumber';
+                    //                 return true;
+                    //             }
+                    //             return false;
+                    //         })()
+                    //     ) {
+                    //         CURRENT.hasV61Errors = true;
+                    //         return;
+                    //     }
+
+                    //     RESPONSE.OrderDetails[orderResult.ingramOrderNumber] = orderDetails;
+                    // });
+                }
+
+                if (CURRENT.isV61 && CURRENT.hasV61Errors) {
+                    if (CURRENT.hasV61Errors && errorV61)
+                        vc2_util.log(logTitle, '***** [V6.1] Error: ', errorV61);
+
+                    // loop thru the validOrdersList
+                    arrValidOrders.forEach(function (orderResult) {
+                        // vc2_util.log(logTitle, '... validOrder: ', orderResult);
+
+                        var orderDetails = LibIngramAPI.orderDetails({
+                            orderNum: orderResult.VendorOrderNum,
+                            endpointUrl: LibIngramAPI.EndPointV6
+                        });
                         if (vc2_util.isEmpty(orderDetails)) return;
-                        RESPONSE.OrderDetails[orderResult.ingramOrderNumber] = orderDetails;
+                        RESPONSE.OrderDetails[orderResult.VendorOrderNum] = orderDetails;
                     });
                 }
 
                 returnValue = OUTPUT;
-
-                // IngramOrders.RESULT = orderSearchResults;
-
-                // vc2_util.log(logTitle, '// order results:  ', orderSearchResults);
-
-                // if (vc2_util.isEmpty(orderSearchResults)) throw ERROR_MSG.ORDER_NOT_FOUND;
-                // vc2_util.log(logTitle, '## Total Orders: ', orderSearchResults.length);
-
-                // if (CURRENT.orderConfig.endPoint.match(/\/v6.1\//gi)) {
-                //     IngramOrders.RESULT.forEach(function (orderResult) {
-                //         var orderDetails = LibIngramAPI.orderDetails({
-                //             orderNum: orderResult.ingramOrderNumber
-                //         });
-                //     });
-                // } else {
-                // }
-
-                // // detect if v6.1 is available
-
-                // // Extract valid orders
-                // LibOrderStatus.extractValidOrders(orderSearchResults);
-
-                // // get all the order details
-                // for (var orderNum in IngramOrders.ORDERS) {
-                //     var orderDetails = LibIngramAPI.orderDetails({ orderNum: orderNum });
-                //     // // extract line data
-                //     IngramOrders.ORDERS[orderNum].details = orderDetails;
-                // }
-
-                // return IngramOrders;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 throw error;

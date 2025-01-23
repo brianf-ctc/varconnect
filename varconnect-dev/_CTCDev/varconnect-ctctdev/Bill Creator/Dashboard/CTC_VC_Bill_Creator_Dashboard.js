@@ -121,16 +121,19 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
         data.variance_cnt = s7.runPaged().count;
 
-        var s8 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        // var s8 = ns_search.create({
+        //     type: 'customrecord_ctc_vc_bills',
+        //     filters: [
+        //         ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1'],
+        //         'AND',
+        //         ['isinactive', 'is', 'F']
+        //     ],
+        //     columns: ['internalid']
+        // });
+        var s8 = ns_search.load({
+            id: 'customsearch_vc_bc_non_processed_bcd_pen',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.pending_cnt = s8.runPaged().count;
 
         var s9 = ns_search.create({

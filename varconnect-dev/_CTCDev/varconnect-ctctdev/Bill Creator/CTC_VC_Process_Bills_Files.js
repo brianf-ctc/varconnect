@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -228,9 +228,11 @@ define([
 
                     // load the config
                     var BillCFG = vcs_configLib.billVendorConfig({ poId: CurrentData.PO_ID });
+                    vc2_util.log(logTitle, '>> BillCFG', BillCFG);
+                    if (!BillCFG || vc2_util.isEmpty(BillCFG)) throw 'No Bill Config found';
 
-                    vc2_util.dumpLog(logTitle, BillFileData, '// BillFileData: ');
-                    vc2_util.dumpLog(logTitle, BILLPROC, '// BILLPROC: ');
+                    // vc2_util.dumpLog(logTitle, BillFileData, '// BillFileData: ');
+                    // vc2_util.dumpLog(logTitle, BILLPROC, '// BILLPROC: ');
 
                     /// Send to Log
                     // add it to the VC Logs

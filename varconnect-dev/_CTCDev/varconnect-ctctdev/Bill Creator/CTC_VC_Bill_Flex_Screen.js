@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -1269,6 +1269,7 @@ define([
                     is_active: chargeLine.enabled ? 'T' : 'F',
                     applied: chargeLine.applied,
                     type: chargeLine.name,
+                    description: chargeLine.description,
                     itemname: Helper.getItemName(chargeLine.item),
                     nsitem: chargeLine.item,
                     autoprocess:
@@ -1337,10 +1338,11 @@ define([
             });
             FORM_DEF.initialize();
 
-            vc2_util.log(logTitle, '// FField: ', FField);
-            vc2_util.log(logTitle, '// FSublist: ', FSublist);
             var FField = FORM_DEF.FIELDS,
                 FSublist = FORM_DEF.SUBLIST;
+            vc2_util.log(logTitle, '// FField: ', FField);
+            vc2_util.log(logTitle, '// FSublist: ', FSublist);
+
             var paramValues = {
                     billFileId: requestObj.parameters[FField.BILLFILE_ID.id],
                     poLink: requestObj.parameters[FField.PO_LINK.id],

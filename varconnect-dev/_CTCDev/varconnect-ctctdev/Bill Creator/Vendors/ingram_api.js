@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -24,7 +24,7 @@ define([
         LogPrefix,
         CURRENT = {};
 
-    var ENABLE_V6 = false;
+    var ENABLE_V6 = true;
 
     var LibIngramAPI = {
         getTokenCache: function () {
@@ -437,6 +437,9 @@ define([
 
                         if (!orderMiscCharges[subOrderNum]) orderMiscCharges[subOrderNum] = [];
 
+                        // skip taxes charges
+                        if (miscCharge.chargeDescription.match(/tax/gi)) continue;
+
                         orderMiscCharges[subOrderNum].push({
                             description: miscCharge.chargeDescription,
                             amount: vc2_util.parseFloat(miscCharge.chargeAmount)
@@ -747,6 +750,8 @@ define([
                     var miscCharges = orderMiscCharges[invoiceNum] || [];
                     for (var ii = 0, jj = miscCharges.length; ii < jj; ii++) {
                         var miscCharge = miscCharges[ii];
+
+                        vc2_util.log(logTitle, '... miscCharge: ', miscCharge);
 
                         if (miscCharge.description && miscCharge.description.match(/freight/gi)) {
                             invoiceData.charges.shipping += miscCharge.amount;

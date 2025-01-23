@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -566,7 +566,6 @@ define(function (require) {
 
             return arrResults;
         },
-
         tryThese: function (arrTasks) {
             if (!arrTasks) return false;
 
@@ -1532,6 +1531,14 @@ define(function (require) {
             }
 
             return returnValue;
+        },
+        sliceArrayIntoChunks: function (array, chunkSize) {
+            var chunks = [];
+            for (var i = 0; i < array.length; i += chunkSize) {
+                var chunk = array.slice(i, i + chunkSize);
+                chunks.push(chunk);
+            }
+            return chunks;
         }
     });
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -90,6 +90,7 @@ define(function (require) {
                 option.orderConfig || vcs_configLib.orderVendorConfig({ poId: Current.PO_ID });
 
             Current.OrderLines = option.lineData;
+            Current.SO_REC = option.recSalesOrd;
             Current.PO_REC = option.recPurchOrd;
 
             vc2_util.log(logTitle, '// OrderLines: ', Current.OrderLines);
@@ -172,6 +173,12 @@ define(function (require) {
             var arrExistingIRS = Helper.findExistingOrders({ orderNums: arrVendorOrderNums });
             vc2_util.log(logTitle, '// Existing IRs', arrExistingIRS);
 
+            Current.PO_DATA = vc2_record.extractValues({
+                record: Current.PO_REC,
+                fields: ['orderstatus', 'status', 'statusRef']
+            });
+            vc2_util.log(logTitle, '// PO Data', Current.PO_DATA);
+
             ///////////////////////////////////////////////////
             // Loop through each unique order num checking to see if it does not already exist as an item receipt
             var OrigLogPrefix = LogPrefix;
@@ -196,12 +203,30 @@ define(function (require) {
                     // if (vc2_util.inArray(vendorOrderNum, arrExistingIRS))
                     //     throw ERROR_MSG.ORDER_EXISTS;
 
-                    if (arrExistingIFS[vendorOrderNum]) {
+                    /// Check if the order already exists //////
+                    if (arrExistingIRS[vendorOrderNum]) {
                         itemRcpt = arrExistingIRS[vendorOrderNum];
                         throw util.extend(ERROR_MSG.ORDER_EXISTS, {
                             ffId: arrExistingIRS[vendorOrderNum]
                         });
                     }
+                    ///////////////////////////////////////////////
+
+                    /// CHECK if the PO is closed or fully billed ////
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'closed',
+                            'fullybilled'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_CLOSED;
+                    if (
+                        vc2_util.inArray(Current.PO_DATA.statusRef.toLowerCase(), [
+                            'pendingbilling'
+                        ])
+                    )
+                        throw ERROR_MSG.PO_FULLYFULFILLED;
+                    ///////////////////////////////////////////////
 
                     vc2_util.vcLog({
                         title: 'ItemReceipt | Order Lines [' + vendorOrderNum + '] ',
