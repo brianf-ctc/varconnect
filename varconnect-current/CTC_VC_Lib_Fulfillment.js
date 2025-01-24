@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -374,7 +374,10 @@ define(function (require) {
                                 'poline',
                                 'binitem',
                                 'inventorydetailreq',
+                                'inventorydetailavail',
+                                'inventorydetailset',
                                 'isserial',
+                            
                                 'createdpo',
                                 'location',
                                 vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,
@@ -593,6 +596,8 @@ define(function (require) {
                                         'itemreceive',
                                         'binitem',
                                         'inventorydetailreq',
+                                        'inventorydetailavail',
+                                        'inventorydetailset',
                                         'isserial',
                                         'location'
                                     ]
@@ -698,7 +703,8 @@ define(function (require) {
                                 if (
                                     // lineFFData.isserial === 'T' &&
                                     (lineFFData.isserial === 'T' ||
-                                        lineFFData.inventorydetailreq === 'T') &&
+                                        lineFFData.inventorydetailreq === 'T' ||
+                                        lineFFData.inventorydetailavail === 'T') &&
                                     arrSerials.length &&
                                     Helper.validateSerials({ serials: arrSerials })
                                 ) {
