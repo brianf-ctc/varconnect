@@ -2,56 +2,19 @@
     "folders": [
         {
             "name": "current",
-            "path": "varconnect-current"
+            "path": "current"
         },
         {
-            "path": "varconnect-dev"
+            "name": "dev",
+            "path": "dev"
+        }, 
+        {
+            "name": "bundles",
+            "path": "bundles"
         }
     ],
     "settings": {
         "gotoSymbolStack.currentStackPosition": 5,
-        "gotoSymbolStack.maxStackPosition": 5,
-        "gotoSymbolStack.filePositionInfo": [
-            {
-                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
-                "viewColumn": 1,
-                "textPosition": {
-                    "line": 335,
-                    "character": 53
-                }
-            },
-            {
-                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
-                "viewColumn": 1,
-                "textPosition": {
-                    "line": 335,
-                    "character": 53
-                }
-            },
-            {
-                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-bundle/Bundle 317849-7.0329/CTC_VC_UE_EventHelper.js",
-                "viewColumn": 1,
-                "textPosition": {
-                    "line": 335,
-                    "character": 53
-                }
-            },
-            {
-                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-current/CTC_VC_Lib_DandH.js",
-                "viewColumn": 2,
-                "textPosition": {
-                    "line": 340,
-                    "character": 63
-                }
-            },
-            {
-                "textFile": "/Users/brianff/MyFiles/DevFiles/nscatalyst/varconnect/varconnect-current/Services/ctc_svclib_records.js",
-                "viewColumn": 2,
-                "textPosition": {
-                    "line": 633,
-                    "character": 50
-                }
-            }
-        ]
+        "gotoSymbolStack.maxStackPosition": 5
     }
 }
