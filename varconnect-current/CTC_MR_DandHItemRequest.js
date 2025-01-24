@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -30,10 +30,10 @@ define([
     'N/runtime',
     'N/https',
     'N/xml',
-    './../CTC_VC2_Lib_Utils.js',
-    './../CTC_VC2_Constants.js',
-    './../Services/ctc_svclib_configlib.js',
-    './../Services/ctc_svclib_webservice-v1.js'
+    'CTC_VC2_Lib_Utils.js',
+    'CTC_VC2_Constants.js',
+    'Services/ctc_svclib_configlib.js',
+    'Services/ctc_svclib_webservice-v1.js'
 ], function (
     ns_search,
     ns_record,
