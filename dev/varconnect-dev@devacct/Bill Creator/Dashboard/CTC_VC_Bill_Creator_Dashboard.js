@@ -19,7 +19,7 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
     vc2_util
 ) {
     var dashboardVersion = '-whit', // v20230709
-        dashboardHtmlFilename = [ 'dashboard', dashboardVersion, '.html' ].join(''); // dashboard-whit.html
+        dashboardHtmlFilename = ['dashboard', dashboardVersion, '.html'].join(''); // dashboard-whit.html
     function onRequest(context) {
         var logTitle = 'BillCreator Dashboard';
         var data = {};
@@ -131,8 +131,8 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
         //     columns: ['internalid']
         // });
         var s8 = ns_search.load({
-            id:"customsearch_vc_bc_non_processed_bcd_pen",
-            type:"customrecord_ctc_vc_bills"
+            id: 'customsearch_vc_bc_non_processed_bcd_pen',
+            type: 'customrecord_ctc_vc_bills'
         });
         data.pending_cnt = s8.runPaged().count;
 
@@ -150,11 +150,9 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
         var s10 = ns_search.create({
             type: 'customrecordtype',
-            filters: [
-                ['scriptid', 'is', 'customrecord_vc_bill_vendor_config' ]
-            ]
+            filters: [['scriptid', 'is', 'customrecord_vc_bill_vendor_config']]
         });
-        s10.run(0, 1).each(function(result) {
+        s10.run(0, 1).each(function (result) {
             data.vendconfig_rectype_id = result.id;
             return false;
         });
@@ -189,7 +187,9 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
             newFileObj.save();
         }
 
-        var html = ns_file.load({ id: [ 'SuiteScripts/', dashboardHtmlFilename ].join('') }).getContents();
+        var html = ns_file
+            .load({ id: ['SuiteScripts/', dashboardHtmlFilename].join('') })
+            .getContents();
         context.response.write(Mustache.render(html, data));
     }
 

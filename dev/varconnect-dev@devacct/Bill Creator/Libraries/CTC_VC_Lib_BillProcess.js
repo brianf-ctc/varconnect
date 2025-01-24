@@ -1341,12 +1341,13 @@ define([
                             item: varianceLine.item,
                             quantity: 1,
                             rate: varianceLine.varianceAmount,
-                            description: varianceLine.description,
+                            description: varianceLine.description
                         };
-                        if ( salesOrderData && salesOrderData.entity) {
-                            addLineOption.customer = salesOrderData.entity.value || salesOrderData.entity;
+                        if (salesOrderData && salesOrderData.entity) {
+                            addLineOption.customer =
+                                salesOrderData.entity.value || salesOrderData.entity;
                         }
-                        
+
                         if (!vc2_util.isEmpty(Current.PO.DATA.TaxCode))
                             addLineOption.taxcode = Current.PO.DATA.TaxCode;
 

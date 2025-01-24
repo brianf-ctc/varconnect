@@ -337,7 +337,6 @@ define(['N/xml', './CTC_VC2_Constants.js', './CTC_VC2_Lib_Utils.js'], function (
 
                     var itemObj = LibSynnexAPI.processItem({ node: itemNode });
 
-
                     // check if there's a duplicate item already
                     var dupLine = vc2_util.findMatching({
                         list: itemArray,

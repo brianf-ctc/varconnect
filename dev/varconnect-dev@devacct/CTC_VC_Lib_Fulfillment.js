@@ -377,7 +377,7 @@ define(function (require) {
                                 'inventorydetailavail',
                                 'inventorydetailset',
                                 'isserial',
-                            
+
                                 'createdpo',
                                 'location',
                                 vc2_constant.GLOBAL.ITEM_FUL_ID_LOOKUP_COL,

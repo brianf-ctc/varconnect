@@ -27,7 +27,6 @@ define(function (require) {
     var vc2_util = require('../../CTC_VC2_Lib_Utils'),
         vc2_constant = require('../../CTC_VC2_Constants');
 
-
     var Helper = {
         getNodeValue: function (node, xpath) {
             var logTitle = [LogTitle, 'getNodeValue'].join('::'),

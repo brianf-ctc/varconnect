@@ -245,12 +245,11 @@ define([
                             'binitem',
                             'inventorydetailreq',
                             'isserial',
-                            'location', 
+                            'location',
                             'custcol_ctc_xml_serial_num'
                         ]
                     });
                     vc2_util.log(logTitle, '... Line Data: ', lineData);
-
                 }
 
                 // if (BILLPROC.STATUS.AllowToBill) {

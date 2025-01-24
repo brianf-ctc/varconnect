@@ -44,25 +44,28 @@ define(['N/https', 'N/url', 'N/currentRecord'], function (ns_https, ns_url, ns_c
 
         console.log('>> request-option: ', JSON.stringify(requestOption));
 
-        ns_https.post.promise(requestOption).then(function (response) {
-            var jsonResponse = JSON.parse(response.body);
-            console.log('>> response', jsonResponse);
+        ns_https.post
+            .promise(requestOption)
+            .then(function (response) {
+                var jsonResponse = JSON.parse(response.body);
+                console.log('>> response', jsonResponse);
 
-            currRecord.setValue({
-                fieldId: 'custpage_result',
-                value: JSON.stringify(jsonResponse, null, 4)
+                currRecord.setValue({
+                    fieldId: 'custpage_result',
+                    value: JSON.stringify(jsonResponse, null, 4)
+                });
+
+                return true;
+            })
+            .catch(function (error) {
+                console.error('>> error', error);
+                currRecord.setValue({
+                    fieldId: 'custpage_result',
+                    value: JSON.stringify(error, null, 4)
+                });
+
+                return false;
             });
-
-            return true;
-        }).catch(function (error) {
-            console.error('>> error', error);
-            currRecord.setValue({
-                fieldId: 'custpage_result',
-                value: JSON.stringify(error, null, 4)
-            });
-
-            return false;
-        });
     }
 
     return {

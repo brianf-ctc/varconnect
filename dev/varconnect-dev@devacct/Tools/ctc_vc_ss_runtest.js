@@ -6,10 +6,7 @@ define(function (require) {
     var LogTitle = 'VC:UnitTesting';
 
     var vc2_util = require('../CTC_VC2_Lib_Utils.js');
-    var UnitTesting = [
-        require('./test_configlib.js'),
-        require('./test_orderstatus.js')
-    ];
+    var UnitTesting = [require('./test_configlib.js'), require('./test_orderstatus.js')];
 
     return {
         execute: function (context) {

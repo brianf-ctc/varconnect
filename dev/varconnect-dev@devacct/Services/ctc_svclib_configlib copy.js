@@ -251,7 +251,7 @@ define(function (require) {
 
             return returnValue;
         },
-        send:  function (option) {},
+        send: function (option) {},
         getCache: function (option) {
             var cacheKey = this.cacheKey || this.generateCacheKey(option);
             return vc2_util.getNSCache({ name: cacheKey, isJSON: true });
