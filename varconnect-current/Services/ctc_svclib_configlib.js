@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  sCatalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -19,7 +19,7 @@ define(function (require) {
         vc2_constant = require('../CTC_VC2_Constants'),
         vcs_recordsLib = require('./ctc_svclib_records.js');
 
-    var ENABLE_LOG = false;
+    var ENABLE_LOG = true;
 
     var ns_search = require('N/search'),
         ns_record = require('N/record'),
@@ -225,7 +225,8 @@ define(function (require) {
 
                 // check for the cache
                 var cachedValue = this.getCache(option);
-                if (!vc2_util.isEmpty(cachedValue)) {
+
+                if (!vc2_util.isEmpty(cachedValue) && !option.nocache) {
                     returnValue = cachedValue;
                     return cachedValue;
                 }

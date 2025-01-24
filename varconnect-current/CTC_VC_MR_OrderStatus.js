@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -13,33 +13,21 @@
  * @NScriptType MapReduceScript
  */
 
-define([
-    'N/search',
-    'N/runtime',
-    'N/record',
-    './CTC_VC2_Lib_Utils',
-    './CTC_VC2_Constants.js',
-    './CTC_VC_Lib_Fulfillment',
-    './CTC_VC_Lib_ItemReceipt',
-    './CTC_VC_Lib_Record.js',
-    './CTC_VC2_Lib_Record',
-    './Services/ctc_svclib_configlib.js',
-    './Services/ctc_svclib_process-v1.js',
-    './Services/ctc_svclib_webservice-v1'
-], function (
-    ns_search,
-    ns_runtime,
-    ns_record,
-    vc2_util,
-    vc2_constant,
-    vc_itemfflib,
-    vc_itemrcpt,
-    vc_nslib,
-    vc2_record,
-    vcs_configLib,
-    vcs_processLib,
-    vcs_websvcLib
-) {
+define(function (require) {
+    var ns_search = require('N/search'),
+        ns_runtime = require('N/runtime'),
+        ns_record = require('N/record');
+
+    var vc2_util = require('./CTC_VC2_Lib_Utils'),
+        vc2_constant = require('./CTC_VC2_Constants.js'),
+        vc_itemfflib = require('./CTC_VC_Lib_Fulfillment'),
+        vc_itemrcpt = require('./CTC_VC_Lib_ItemReceipt'),
+        vc_nslib = require('./CTC_VC_Lib_Record.js'),
+        vc2_record = require('./CTC_VC2_Lib_Record'),
+        vcs_configLib = require('./Services/ctc_svclib_configlib.js'),
+        vcs_processLib = require('./Services/ctc_svclib_process-v1.js'),
+        vcs_websvcLib = require('./Services/ctc_svclib_webservice-v1');
+
     var LogTitle = 'MR_OrderStatus',
         VCLOG_APPNAME = 'VAR Connect | OrderStatus';
     var LogPrefix = '';
