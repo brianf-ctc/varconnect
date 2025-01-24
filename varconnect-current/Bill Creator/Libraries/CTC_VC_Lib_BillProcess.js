@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -505,6 +505,7 @@ define([
                         fields: [
                             'internalid',
                             'tranid',
+                            'createdfrom',
                             'entity',
                             'total',
                             'taxtotal',
@@ -1318,6 +1319,10 @@ define([
                 if (vc2_util.isEmpty(Current.BILL.REC)) throw 'Missing vendor bill record';
                 if (vc2_util.isEmpty(varLines)) throw 'Missing vendor bill charges';
 
+                if (Current.STATUS.HasVariance && Current.STATUS.BILLFILE.IgnoreVariance) return;
+
+                var salesOrderData = Helper.getSalesOrderDetails({ id: Current.PO.ID });
+
                 (varLines || []).forEach(function (varianceLine) {
                     if (!vc2_util.isTrue(varianceLine.enabled)) return;
                     if (!vc2_util.isTrue(varianceLine.applied)) return;
@@ -1336,8 +1341,12 @@ define([
                             item: varianceLine.item,
                             quantity: 1,
                             rate: varianceLine.varianceAmount,
-                            description: varianceLine.description
+                            description: varianceLine.description,
                         };
+                        if ( salesOrderData && salesOrderData.entity) {
+                            addLineOption.customer = salesOrderData.entity.value || salesOrderData.entity;
+                        }
+                        
                         if (!vc2_util.isEmpty(Current.PO.DATA.TaxCode))
                             addLineOption.taxcode = Current.PO.DATA.TaxCode;
 
@@ -1658,6 +1667,34 @@ define([
             taxAmount += taxRate2 ? (taxRate2 / 100) * amount : 0;
 
             return taxAmount ? taxAmount : 0;
+        },
+
+        getSalesOrderDetails: function (option) {
+            var logTitle = [LogTitle, 'getSalesOrderDetails'].join('::'),
+                returnValue;
+            option = option || {};
+
+            try {
+                var poId = option.poId || Current.PO.ID,
+                    createdFromId =
+                        option.createdFromId || option.soId || Current.PO.DATA.createdfrom;
+
+                /// do a lookup on the sales order
+                var salesOrderData = vc2_util.flatLookup({
+                    type: 'transaction',
+                    id: createdFromId,
+                    columns: ['entity', 'tranid', 'total']
+                });
+
+                vc2_util.log(logTitle, '>> SO Details: ', salesOrderData);
+                returnValue = salesOrderData;
+
+                // seach for the sales order details
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+            }
+
+            return returnValue;
         }
     };
 
