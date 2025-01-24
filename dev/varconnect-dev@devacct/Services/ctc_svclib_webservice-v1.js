@@ -244,15 +244,18 @@ define(function (require) {
 
             try {
                 var poNum = option.poNum || option.tranid,
+                    vendorConfig = option.vendorConfig || option.orderConfig,
                     vendoCfgId = option.vendorConfigId;
 
                 // load the configuration
-                var ConfigRec = vcs_configLib.loadConfig({
-                    poNum: poNum,
-                    configId: vendoCfgId,
-                    configType: vcs_configLib.ConfigType.ORDER,
-                    debugMode: true
-                });
+                var ConfigRec =
+                    vendorConfig ||
+                    vcs_configLib.loadConfig({
+                        poNum: poNum,
+                        configId: vendoCfgId,
+                        configType: vcs_configLib.ConfigType.ORDER,
+                        debugMode: true
+                    });
                 // vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
 
                 // get the Vendor Library

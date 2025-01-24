@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -164,7 +164,7 @@ define([
                         searchResults.forEach(function (result) {
                             var altItemName = null,
                                 mpnValue = null;
-
+                                
                             if (itemField) {
                                 altItemName = result.getValue({ name: itemField });
                                 altItemNames._sku = true;

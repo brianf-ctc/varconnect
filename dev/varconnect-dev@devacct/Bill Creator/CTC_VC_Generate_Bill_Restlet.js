@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -230,6 +230,28 @@ define([
                     fieldId: 'custbody_ctc_vc_createdby_vc',
                     value: true
                 });
+
+                // run through each bill lines
+                var lineItemCount = BILLPROC.BILL.REC.getLineCount({ sublistId: 'item' });
+                for (var line = 0; line < lineItemCount; line++) {
+                    BILLPROC.BILL.REC.selectLine({ sublistId: 'item', line: line });
+
+                    var lineData = vc2_recordlib.extractLineValues({
+                        record: BILLPROC.BILL.REC,
+                        line: line,
+                        columns: [
+                            'item',
+                            'quantity',
+                            'binitem',
+                            'inventorydetailreq',
+                            'isserial',
+                            'location', 
+                            'custcol_ctc_xml_serial_num'
+                        ]
+                    });
+                    vc2_util.log(logTitle, '... Line Data: ', lineData);
+
+                }
 
                 // if (BILLPROC.STATUS.AllowToBill) {
                 //     vc_billprocess.addBillLines();

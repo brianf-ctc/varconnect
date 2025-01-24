@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -949,7 +949,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '202501017.1006'
+        '202501022.1619'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

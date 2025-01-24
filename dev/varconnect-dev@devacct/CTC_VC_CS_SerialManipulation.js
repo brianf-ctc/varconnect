@@ -164,8 +164,7 @@ define([], function () {
                     fieldId: 'quantity'
                 });
 
-                if (qty != serialArray.length)
-                    alert('Item quantity and number of serials do not match');
+                if (qty != serialArray.length) alert('Item quantity and number of serials do not match');
             }
         }
 

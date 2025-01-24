@@ -12,11 +12,6 @@
  * @NModuleScope Public
  * @description Helper file for Arrow Get PO Status
  */
-/**
- * Project Number:
- * Script Name: CTC_VC_Lib_Arrow
- * Author: john.ramonel
- */
 define(function (require) {
     var vc2_util = require('../../CTC_VC2_Lib_Utils'),
         vc2_constant = require('../../CTC_VC2_Constants');

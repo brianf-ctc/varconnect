@@ -21,7 +21,7 @@ define(function (require) {
     var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('../CTC_VC2_Constants.js');
 
-    var vcs_configLib = require('./ctc_svclib_config'),
+    var vcs_configLib = require('./ctc_svclib_configlib'),
         vcs_recordLib = require('./ctc_svclib_records');
 
     var LibItemMatching = {
