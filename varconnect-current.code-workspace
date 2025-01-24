@@ -7,10 +7,10 @@
         {
             "name": "dev",
             "path": "dev"
-        }, 
+        },
         {
-            "name": "bundles",
-            "path": "bundles"
+            "name": "builds",
+            "path": "builds"
         }
     ],
     "settings": {
