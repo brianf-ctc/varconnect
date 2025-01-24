@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -24,8 +24,6 @@ define(function (require) {
 
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_constant = require('./CTC_VC2_Constants'),
-        vc_record = require('./CTC_VC_Lib_Record'),
-        vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig'),
         EventRouter = require('./CTC_VC2_Lib_EventRouter'),
         vcs_configLib = require('./Services/ctc_svclib_configlib');
 
