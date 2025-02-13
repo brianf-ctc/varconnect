@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025  sCatalyst Tech Corp
+ * Copyright (c) 2025  Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -14,122 +14,25 @@
 define(function (require) {
     var LogTitle = 'SVC:Records';
 
-    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
-        vc2_constant = require('../CTC_VC2_Constants.js');
+    var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('./../CTC_VC2_Constants.js');
+
+    var vclib_error = require('./lib/ctc_lib_errors.js');
 
     var ns_search = require('N/search'),
         ns_record = require('N/record');
 
     var CACHE_TTL = 300; // store the data for 1mins
 
-    var CURRENT = {},
-        ERROR_MSG = vc2_constant.ERRORMSG,
-        MAPPING = {
-            lineColumn: {
-                custcol_ctc_xml_dist_order_num: 'order_num', //text
-                custcol_ctc_xml_date_order_placed: 'order_date', //text
-                custcol_ctc_vc_order_placed_date: 'order_date', //date
-                custcol_ctc_vc_shipped_date: 'ship_date', //date
-                custcol_ctc_vc_eta_date: 'order_eta', //date
-                custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
-                custcol_ctc_xml_ship_date: 'ship_date', //text
-                custcol_ctc_xml_carrier: 'carrier', // text
-                custcol_ctc_xml_eta: 'order_eta', //textarea
-                custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
-                custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
-                custcol_ctc_xml_serial_num: 'serial_num', // textarea
-                // custcol_ctc_vc_xml_prom_deliv_date: 'promised_date',
-                // custcol_ctc_vc_prom_deliv_date: 'promised_date',
-                custcol_ctc_vc_vendor_info: 'INFO',
-                custcol_ctc_vc_order_status: 'STATUS' // text
-            },
-            colVendorInfo: 'custcol_ctc_vc_vendor_info',
-            vendorColumns: [
-                'order_num',
-                'order_status',
-                'order_date',
-                'order_eta',
-                'order_delivery_eta',
-                'ship_date',
-                'tracking_num',
-                'carrier',
-                'serial_num',
-                // 'promised_date',
-                'STATUS'
-            ],
-            columnType: {
-                DATE: [
-                    'custcol_ctc_vc_order_placed_date',
-                    'custcol_ctc_vc_eta_date',
-                    'custcol_ctc_vc_delivery_eta_date',
-                    'custcol_ctc_vc_prom_deliv_date',
-                    'custcol_ctc_vc_shipped_date'
-                ],
-                // entry: ['custcol_ctc_xml_carrier', 'custcol_ctc_vc_order_status'],
-                // stack: ['custcol_ctc_xml_eta'],
-                BIGLIST: [
-                    'custcol_ctc_xml_tracking_num',
-                    'custcol_ctc_xml_inb_tracking_num',
-                    'custcol_ctc_xml_eta',
-                    'custcol_ctc_xml_serial_num',
-                    'custcol_ctc_vc_xml_prom_deliv_date'
-                    // 'custcol_ctc_vc_order_status'
-                ],
-                ORDERSTATUS: ['custcol_ctc_vc_order_status'],
-                LIST: [
-                    'custcol_ctc_xml_dist_order_num',
-                    'custcol_ctc_xml_date_order_placed',
-                    'custcol_ctc_xml_ship_date',
-                    'custcol_ctc_xml_carrier'
-                    // 'custcol_ctc_xml_tracking_num',
-                    // 'custcol_ctc_xml_inb_tracking_num'
-                ]
-            }
-        };
-
-    var FIELD_MAPPING = {
-        PO_LINE_COLUMN: {
-            custcol_ctc_xml_dist_order_num: 'order_num', //text
-            custcol_ctc_xml_date_order_placed: 'order_date', //text
-            custcol_ctc_vc_order_placed_date: 'order_date', //date
-            custcol_ctc_vc_shipped_date: 'ship_date', //date
-            custcol_ctc_vc_eta_date: 'order_eta', //date
-            custcol_ctc_vc_delivery_eta_date: 'order_delivery_eta', //date
-            custcol_ctc_xml_ship_date: 'ship_date', //text
-            custcol_ctc_xml_carrier: 'carrier', // text
-            custcol_ctc_xml_eta: 'order_eta', //textarea
-            custcol_ctc_xml_tracking_num: 'tracking_num', // textarea
-            custcol_ctc_xml_inb_tracking_num: 'tracking_num', // textarea
-            custcol_ctc_xml_serial_num: 'serial_num', // textarea
-            custcol_ctc_vc_vendor_info: 'INFO',
-            custcol_ctc_vc_order_status: 'STATUS' // text
+    var ERROR_MSG = {
+        RECORD_NOT_FOUND: {
+            code: 'RECORD_NOT_FOUND',
+            message: 'Record not found'
         },
-        VENDOR_LINE_COL: [
-            'order_num',
-            'order_status',
-            'order_date',
-            'order_eta',
-            'order_delivery_eta',
-            'ship_date',
-            'tracking_num',
-            'carrier',
-            'serial_num',
-            'STATUS'
-        ],
-        COLUMNS: [
-            'internalid',
-            'type',
-            'tranid',
-            'trandate',
-            'entity',
-            'postingperiod',
-            'custbody_ctc_vc_override_ponum',
-            'custbody_ctc_bypass_vc',
-            'amount',
-            'createdfrom',
-            'custbody_isdropshippo',
-            'custbody_ctc_po_link_type'
-        ]
+        RECORD_SEARCH_EMPTY: {
+            code: 'RECORD_SEARCH_EMPTY',
+            message: 'Unable to find the record'
+        }
     };
 
     var Helper = {
@@ -143,18 +46,36 @@ define(function (require) {
             var logTitle = [LogTitle, 'searchTransaction'].join('::'),
                 returnValue;
 
+            var paramFltrs = [];
+
+            try {
+                var recordData = {},
+                    results = this.searchTransactions(option);
+
+                if (vc2_util.isEmpty(results)) throw 'RECORD_NOT_FOUND';
+
+                returnValue = results.shift();
+            } catch (error) {
+                vclib_error.logWarn(logTitle, error, ERROR_MSG);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
+        searchTransactions: function (option) {
+            var logTitle = [LogTitle, 'searchTransaction'].join('::'),
+                returnValue;
+
             var poNum = option.name || option.tranid || option.poName || option.poNum,
                 poId = option.id || option.internalid || option.poId,
-                recordType = option.type || option.recordType || ns_record.Type.PURCHASE_ORDER,
+                recordType = option.type || option.recordType || 'transaction',
                 searchFields = option.fields || option.columns,
                 searchFilters = option.filters;
 
             var paramFltrs = [];
 
             try {
-                if (!poNum && !poId) throw 'Missing parameter: PO Num/ PO Id';
-
-                var recordData = {},
+                var recordsList = [],
                     searchOption = {
                         type: recordType,
                         filters: [['mainline', 'is', 'T']],
@@ -213,10 +134,14 @@ define(function (require) {
 
                 var searchObj = ns_search.create(searchOption);
                 if (!searchObj.runPaged().count)
-                    throw 'Unable to find the record : filters=' + paramFltrs.join('&');
+                    throw {
+                        code: 'RECORD_SEARCH_EMPTY',
+                        message: 'Unable to find the record',
+                        detail: paramFltrs.join('&')
+                    };
 
                 searchObj.run().each(function (row) {
-                    recordData.id = row.id;
+                    var recordData = { id: row.id };
 
                     // update the PO_Data with the column values
                     for (var i = 0, j = searchOption.columns.length; i < j; i++) {
@@ -226,22 +151,25 @@ define(function (require) {
 
                         recordData[colName] = colValue;
 
-                        if (colText && colText != colValue) recordData[colName + '_text'] = colText;
+                        if (colText && colText != colValue)
+                            recordsList[colName + '_text'] = colText;
                     }
+
+                    recordsList.push(recordData);
                     return true; // return false to break the loop when a record is found.
                 });
-                returnValue = recordData;
+                returnValue = recordsList;
 
-                vc2_util.log(logTitle, '## RecordData: ', [recordData, cacheKey]);
+                // vc2_util.log(logTitle, '## RecordData: ', [recordsList, cacheKey]);
 
                 // set the cachedData
-                vc2_util.setNSCache({ name: cacheKey, value: recordData, cacheTTL: CACHE_TTL });
+                vc2_util.setNSCache({ name: cacheKey, value: recordsList, cacheTTL: CACHE_TTL });
                 vc2_util.saveCacheList({
                     listName: vc2_constant.CACHE_KEY.PO_DATA,
                     cacheKey: cacheKey
                 });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
+                vclib_error.logWarn(logTitle, error, ERROR_MSG);
                 returnValue = false;
             }
 
@@ -252,10 +180,10 @@ define(function (require) {
                 returnValue;
 
             try {
-                if (!option) throw 'Missing required parameter: option';
-                if (!option.type) throw 'Missing required parameter: type';
-                if (!option.id) throw 'Missing required parameter: id';
-                if (!option.data) throw 'Missing required parameter: data';
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
+                if (!option.type) throw { code: 'MISSING_PARAMETER', detail: 'type' };
+                if (!option.id) throw { code: 'MISSING_PARAMETER', detail: 'id' };
+                if (!option.data) throw { code: 'MISSING_PARAMETER', detail: 'data' };
                 var recordData = option.data;
 
                 if (option.record) {
@@ -288,43 +216,101 @@ define(function (require) {
                     id: option.id
                 });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
+                vclib_error.logError(logTitle, error, ERROR_MSG);
+                throw vclib_error.extractError(error);
             }
 
             return returnValue;
         },
-        updateLineValues: function (option) {},
+        updateLineValues: function (option) {
+            var logTitle = [LogTitle, 'updateLineValues'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
+
+                var recordObj = option.record,
+                    line = option.line,
+                    isDynamic = option.isDynamic || false,
+                    sublistId = option.sublistId || 'item',
+                    lineValues = option.data || option.lineValues || option.values,
+                    noCommit = option.noCommit || false;
+
+                if (vc2_util.isEmpty(recordObj)) throw 'Missing required parameter: record';
+                if (vc2_util.isEmpty(lineValues)) throw 'Missing required parameter: lineValues';
+                if (vc2_util.isEmpty(line)) throw 'Missing required parameter: line';
+
+                if (isDynamic) recordObj.selectLine({ sublistId: sublistId, line: line });
+
+                for (var fld in lineValues) {
+                    var colValue = lineValues[fld];
+                    if (vc2_util.isEmpty(colValue)) continue;
+
+                    if (isDynamic) {
+                        recordObj.setCurrentSublistValue({
+                            sublistId: sublistId || 'item',
+                            fieldId: fld,
+                            line: line,
+                            value: colValue
+                        });
+                    } else {
+                        recordObj.setSublistValue({
+                            sublistId: sublistId || 'item',
+                            fieldId: fld,
+                            line: line,
+                            value: colValue
+                        });
+                    }
+                }
+
+                if (isDynamic && !noCommit) recordObj.commitLine({ sublistId: sublistId });
+            } catch (error) {
+                throw vclib_error.extractError(logTitle, error, ERROR_MSG);
+            }
+
+            return returnValue;
+        },
         extractValues: function (option) {
             var logTitle = [LogTitle, 'extractValues'].join('::'),
                 returnValue;
 
             try {
-                if (!option) throw 'Missing required parameter: option';
-                if (!option.record) throw 'Missing required parameter: record';
-                if (!option.columns) throw 'Missing required parameter: columns';
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
+                if (!option.record) throw { code: 'MISSING_PARAMETER', detail: 'record' };
+                if (!option.columns) throw { code: 'MISSING_PARAMETER', detail: 'columns' };
 
                 var recordObj = option.record,
                     columns = option.columns,
                     recordData = {};
 
-                for (var i = 0, j = columns.length; i < j; i++) {
-                    var colName = columns[i],
-                        colValue = recordObj.getValue({ fieldId: colName }),
-                        colText = recordObj.getText({ fieldId: colName });
+                if (util.isArray(option.columns)) {
+                    for (var i = 0, j = columns.length; i < j; i++) {
+                        var colName = columns[i],
+                            colValue = recordObj.getValue({ fieldId: colName }),
+                            colText = recordObj.getText({ fieldId: colName });
 
-                    recordData[colName] = colValue;
+                        recordData[colName] = colValue;
 
-                    if (colText && colText != colValue) recordData[colName + '_text'] = colText;
+                        if (colText && colText != colValue) recordData[colName + '_text'] = colText;
+                    }
+                } else if (util.isObject(option.columns)) {
+                    for (var fld in columns) {
+                        var colName = columns[fld],
+                            colValue = recordObj.getValue({ fieldId: colName }),
+                            colText = recordObj.getText({ fieldId: colName });
+
+                        recordData[fld] = colValue;
+                        if (colText && colText != colValue) recordData[fld + '_text'] = colText;
+                    }
                 }
 
                 returnValue = recordData;
 
-                vc2_util.log(logTitle, 'Values extracted successfully', {
-                    columns: columns
-                });
+                // vc2_util.log(logTitle, 'Values extracted successfully', {
+                //     columns: columns
+                // });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
+                vclib_error.logWarn(logTitle, error, ERROR_MSG);
                 returnValue = false;
             }
 
@@ -335,9 +321,10 @@ define(function (require) {
                 returnValue;
 
             try {
-                if (!option) throw 'Missing required parameter: option';
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
                 if (!option.record) {
-                    if (!option.poId) throw 'Missing required parameter: poId';
+                    if (!option.poId) throw { code: 'MISSING_PARAMETER', detail: 'poId or record' };
+
                     // if (!option.type) throw 'Missing required parameter: type';
 
                     option.record = ns_record.load({
@@ -348,11 +335,14 @@ define(function (require) {
                 var recordObj = option.record,
                     columns = option.columns || [
                         'item',
+                        'itemname',
                         'rate',
-                        'quantity',
                         'amount',
+                        'quantity',
+                        'location',
                         'quantityreceived',
                         'quantitybilled',
+                        'quantityfulfilled',
                         'taxrate',
                         'taxrate1',
                         'taxrate2',
@@ -364,16 +354,23 @@ define(function (require) {
                     recordLines = [],
                     filter = option.filter || {};
 
+                /// add default columns
+                columns.push('lineuniquekey', 'poline', 'orderline', 'line');
+
                 // if the addiotnal columns is not empty, concatenate it with columns
                 if (!vc2_util.isEmpty(additionalColumns))
                     columns = columns.concat(additionalColumns);
 
-                var lineCount = recordObj.getLineCount({ sublistId: option.sublistId || 'item' });
+                columns = vc2_util.uniqueArray(columns);
+                var lineCount = recordObj.getLineCount({ sublistId: option.sublistId || 'item' }),
+                    lineNo = option.lineNo || option.line;
 
                 for (var line = 0; line < lineCount; line++) {
                     var lineData = {
                         line: line
                     };
+
+                    if (!vc2_util.isEmpty(lineNo) && lineNo != line) continue;
 
                     for (var i = 0, j = columns.length; i < j; i++) {
                         var colName = columns[i],
@@ -406,14 +403,14 @@ define(function (require) {
                     }
                 }
 
-                returnValue = recordLines;
+                returnValue = vc2_util.isEmpty(lineNo) ? recordLines : recordLines.shift();
 
-                vc2_util.log(logTitle, 'Values extracted successfully', {
-                    columns: columns
-                });
+                // vc2_util.log(logTitle, 'Values extracted successfully', {
+                //     columns: columns
+                // });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                throw error;
+                vclib_error.logWarn(logTitle, error, ERROR_MSG);
+                returnValue = false;
             }
 
             return returnValue;
@@ -423,9 +420,9 @@ define(function (require) {
                 returnValue;
 
             try {
-                if (!option) throw 'Missing required parameter: option';
-                if (!option.type) throw 'Missing required parameter: type';
-                if (!option.id) throw 'Missing required parameter: id';
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
+                if (!option.type) throw { code: 'MISSING_PARAMETER', detail: 'type' };
+                if (!option.id) throw { code: 'MISSING_PARAMETER', detail: 'id' };
 
                 var recordType = option.type,
                     recordId = option.id,
@@ -437,13 +434,13 @@ define(function (require) {
                     isDynamic: isDynamic
                 });
 
-                vc2_util.log(logTitle, 'Record loaded successfully', {
-                    type: recordType,
-                    id: recordId
-                });
+                // vc2_util.log(logTitle, 'Record loaded successfully', {
+                //     type: recordType,
+                //     id: recordId
+                // });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
+                vclib_error.logError(logTitle, error, ERROR_MSG);
+                throw vclib_error.extractError(error);
             }
 
             return returnValue;
@@ -453,33 +450,23 @@ define(function (require) {
                 returnValue;
 
             try {
-                if (!option) throw 'Missing required parameter: option';
-                if (!option.fromType) throw 'Missing required parameter: fromType';
-                if (!option.toType) throw 'Missing required parameter: toType';
-                if (!option.id) throw 'Missing required parameter: id';
+                if (!option) throw { code: 'MISSING_PARAMETER', detail: 'option' };
+                if (!option.fromType) throw { code: 'MISSING_PARAMETER', detail: 'fromType' };
+                if (!option.fromId) throw { code: 'MISSING_PARAMETER', detail: 'fromId' };
+                if (!option.toType) throw { code: 'MISSING_PARAMETER', detail: 'toType' };
 
-                var fromType = option.fromType,
-                    toType = option.toType,
-                    recordId = option.id,
-                    isDynamic = option.isDynamic || false,
-                    defaultValues = option.defaultValues || {};
+                // vc2_util.log(logTitle, '// TRANSFORM: ', option);
 
-                returnValue = ns_record.transform({
-                    fromType: fromType,
-                    toType: toType,
-                    id: recordId,
-                    isDynamic: isDynamic,
-                    defaultValues: defaultValues
-                });
+                returnValue = ns_record.transform(option);
 
                 vc2_util.log(logTitle, 'Record transformed successfully', {
-                    fromType: fromType,
-                    toType: toType,
-                    id: recordId
+                    fromType: option.fromType,
+                    toType: option.toType,
+                    id: option.fromId || option.id
                 });
             } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
+                vclib_error.logError(logTitle, error, ERROR_MSG);
+                throw vclib_error.extractError(error);
             }
 
             return returnValue;

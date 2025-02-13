@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025  sCatalyst Tech Corp
+ * Copyright (c) 2025  Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -1177,7 +1177,7 @@ define(function (require) {
 
             return returnValue;
         },
-
+        SendPO: function (option) {},
         GetBills: function (option) {}
     };
 });
