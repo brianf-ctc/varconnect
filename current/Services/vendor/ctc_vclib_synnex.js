@@ -411,6 +411,10 @@ define(function (require) {
                 throw error;
             }
             return returnValue;
+        },
+        sendOrder: function (option) {
+        }, 
+        retrieveBill: function (option) {
         }
     };
 });
