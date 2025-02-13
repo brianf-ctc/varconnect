@@ -139,7 +139,7 @@ define(function (require) {
                     sublistId = option.sublistId || 'item',
                     groupId = option.groupId,
                     line = option.line,
-                    columns = option.columns;
+                    columns = option.columns || option.fields;
 
                 if (!record || !columns) return false;
                 if (line == null || line < 0) return false;
