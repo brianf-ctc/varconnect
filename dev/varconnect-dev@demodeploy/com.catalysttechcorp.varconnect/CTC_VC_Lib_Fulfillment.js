@@ -374,6 +374,8 @@ define(function (require) {
                                 'poline',
                                 'binitem',
                                 'inventorydetailreq',
+                                'inventorydetailavail',
+                                'inventorydetailset',
                                 'isserial',
                                 'createdpo',
                                 'location',
@@ -593,6 +595,8 @@ define(function (require) {
                                         'itemreceive',
                                         'binitem',
                                         'inventorydetailreq',
+                                        'inventorydetailavail',
+                                        'inventorydetailset',
                                         'isserial',
                                         'location'
                                     ]
@@ -693,9 +697,13 @@ define(function (require) {
                                 // //// SERIALS DETECTION ////////////////
                                 var arrSerials = allSerialNums ? allSerialNums.split(/\n/) : [];
                                 vc2_util.log(logTitle, '... serials: ', arrSerials);
+                                vc2_util.log(logTitle, '... lineFFData: ', lineFFData);
 
                                 if (
-                                    lineFFData.isserial === 'T' &&
+                                    // lineFFData.isserial === 'T' &&
+                                    (lineFFData.isserial === 'T' ||
+                                        lineFFData.inventorydetailreq === 'T' ||
+                                        lineFFData.inventorydetailavail === 'T') &&
                                     arrSerials.length &&
                                     Helper.validateSerials({ serials: arrSerials })
                                 ) {

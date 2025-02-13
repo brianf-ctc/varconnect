@@ -70,7 +70,8 @@ define(function (require) {
                 MATCH_CUSTOM_ITEM_TO_NAME: 'custrecord_ctc_vc_cust_item_match_strict',
                 CUSTOM_MPN_COL_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_col_id',
                 CUSTOM_MPN_FLD_TO_MATCH: 'custrecord_ctc_vc_cust_mpn_match_fld_id',
-                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax'
+                MATCH_CUSTOM_MPN_TO_NAME: 'custrecord_ctc_vc_cust_mpn_match_is_lax',
+                AUTOFULFILL_ZEROAMT_LINES: 'custrecord_ctc_vc_autoff_zeroamt_lines'
             }
         },
         VENDOR_CONFIG: {
@@ -392,7 +393,8 @@ define(function (require) {
             matchItemToPartNumber: MainCFG.FIELD.MATCH_CUSTOM_ITEM_TO_NAME,
             itemMPNColumnIdToMatch: MainCFG.FIELD.CUSTOM_MPN_COL_TO_MATCH,
             itemMPNFieldIdToMatch: MainCFG.FIELD.CUSTOM_MPN_FLD_TO_MATCH,
-            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME
+            matchMPNWithPartNumber: MainCFG.FIELD.MATCH_CUSTOM_MPN_TO_NAME,
+            autofulfillZeroAmtLines: MainCFG.FIELD.AUTOFULFILL_ZEROAMT_LINES
         },
         BILLCREATE_CONFIG: {
             id: BillCFG.FIELD.ID,
@@ -947,7 +949,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '202501010.1230'
+        '202501017.1006'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

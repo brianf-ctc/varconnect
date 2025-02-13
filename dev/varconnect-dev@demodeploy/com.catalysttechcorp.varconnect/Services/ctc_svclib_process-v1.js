@@ -1000,7 +1000,6 @@ define([
 
             return returnValue;
         },
-        findMatchingVendorLine: function (option) {},
         findMatchingOrderLine: function (option) {
             var logTitle = [LogTitle, 'findMatchingOrderLine'].join(':'),
                 ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
@@ -1034,3 +1033,16 @@ define([
 
     return LibProcess;
 });
+/**
+ * USAGE:
+ * 
+{
+  "moduleName": "processV1",
+  "action": "OrderStatusDebug",
+  "parameters": {
+    "poNum": "124640",
+    "vendorConfigId": "505",
+    "showLines": true
+  }
+}
+ */

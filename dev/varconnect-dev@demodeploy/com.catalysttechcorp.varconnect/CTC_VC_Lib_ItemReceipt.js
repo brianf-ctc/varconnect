@@ -906,14 +906,13 @@ define(function (require) {
         parseDate: function (option) {
             // use only with date strings retrieved from NetSuite date fields
             var dateTimeString = option.dateString,
-                dateFormat = Current.DateFormat || option.dateFormat,
+                dateFormat = dateFormat || option.dateFormat,
                 date;
             if (!dateFormat) {
                 var generalPref = ns_config.load({
                     type: ns_config.Type.COMPANY_PREFERENCES
                 });
                 dateFormat = generalPref.getValue({ fieldId: 'DATEFORMAT' });
-                Current.DateFormat = dateFormat;
             }
             if (dateTimeString && dateTimeString.length > 0 && dateTimeString != 'NA') {
                 try {

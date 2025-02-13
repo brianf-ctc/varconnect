@@ -19,7 +19,7 @@ define(function (require) {
         vc2_constant = require('../CTC_VC2_Constants'),
         vcs_recordsLib = require('./ctc_svclib_records.js');
 
-    var ENABLE_LOG = false;
+    var ENABLE_LOG = true;
 
     var ns_search = require('N/search'),
         ns_record = require('N/record'),

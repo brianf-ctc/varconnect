@@ -1,0 +1,33 @@
+
+
+SEND PO > RENDERER
+
+> TEMPLATE > Generate Body
+
+> PO Obj -> 
+   > Generate Ship Contact (address)
+      > shipto
+         > address
+         > contact person
+         > email/phone
+      > billing
+      > custom_shipto_field
+        > address
+        > customfield_contact
+        > customfield_phone
+
+
+<SHIPTO>
+  <ADDRESS>{$shipto.address1}</address>
+<ADDRESS>{$shipto.address2}</address>
+<ADDRESSEE>{$shipt.addressee}</addressee
+</SHIPTO>
+
+
+<SHIPTO>
+  <ADDRESS>{$record.custbody_contact.address1}</address>
+<ADDRESS>{$shipto.address2}</address>
+<ADDRESSEE>{$record.custbody_contact_person}</addressee
+</SHIPTO>
+
+

@@ -57,18 +57,21 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
         data.alert_error = s2.runPaged().count;
 
-        var s3 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'noneof', '5'],
-                'AND',
-                ['custrecord_ctc_vc_bill_linked_po', 'anyof', '@NONE@'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        // var s3 = ns_search.create({
+        //     type: 'customrecord_ctc_vc_bills',
+        //     filters: [
+        //         ['custrecord_ctc_vc_bill_proc_status', 'noneof', '5'],
+        //         'AND',
+        //         ['custrecord_ctc_vc_bill_linked_po', 'anyof', '@NONE@'],
+        //         'AND',
+        //         ['isinactive', 'is', 'F']
+        //     ],
+        //     columns: ['internalid']
+        // });
+        var s3 = ns_search.load({
+            id: 'customsearch_vc_bc_missing_po_link',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.no_po_cnt = s3.runPaged().count;
 
         var s4 = ns_search.create({
