@@ -12,15 +12,17 @@
  * @NModuleScope Public
  */
 
-define([
-    'N/search',
-    'N/format',
-    './../../CTC_VC2_Constants',
-    './../../CTC_VC2_Lib_Utils',
-    './../../CTC_VC2_Lib_Record',
-    './../../Services/ctc_svclib_configlib'
-], function (ns_search, ns_format, vc2_constant, vc2_util, vc2_record, vcs_configLib) {
-    // define(function (require) {
+define(function (require) {
+    var ns_search = require('N/search'),
+        ns_format = require('N/format');
+
+    var vc2_constant = require('./../../CTC_VC2_Constants'),
+        vc2_util = require('./../../CTC_VC2_Lib_Utils'),
+        vc2_record = require('./../../CTC_VC2_Lib_Record');
+
+    var vcs_configLib = require('./../../Services/ctc_svclib_configlib'),
+        vcs_itemmatchLib = require('./../../Services/ctc_svclib_itemmatch');
+
     var LogTitle = 'VC_BillProcess';
 
     var Current = {
@@ -107,7 +109,7 @@ define([
             ADJ: 'adjustment'
         };
 
-    var VC_BillProcess = {
+    var BillProcessLib = {
         Flex: Current,
         resetValues: function () {
             util.extend(Current, {
@@ -564,7 +566,10 @@ define([
                         'taxcode',
                         'taxrate',
                         'taxrate1',
-                        'taxrate2'
+                        'taxrate2',
+                        'poline',
+                        'orderline',
+                        'lineuniquekey'
                     ],
                     orderConfig: Current.CFG.OrderCFG,
                     mainConfig: Current.CFG.MainCFG
@@ -628,7 +633,7 @@ define([
                                 });
                             }
 
-                            VC_BillProcess.loadBill({ recBill: Current.BILL.REC });
+                            BillProcessLib.loadBill({ recBill: Current.BILL.REC });
                         } catch (billcreate_error) {
                             vc2_util.logError(logTitle, billcreate_error);
                             Helper.setError({ code: billcreate_error });
@@ -646,7 +651,7 @@ define([
                                 id: Current.BILLFILE.DATA.BILL_LINK
                             });
 
-                            VC_BillProcess.loadBill({ recBill: Current.BILL.REC });
+                            BillProcessLib.loadBill({ recBill: Current.BILL.REC });
                         } catch (bilload_error) {
                             vc2_util.logError(logTitle, bilload_error);
                             Helper._setError({ code: vc2_util.extractError(bilload_error) });
@@ -819,6 +824,200 @@ define([
             }
         },
         processBillFileLines: function (option) {
+            var logTitle = [LogTitle, 'processBillFileLines'].join('::'),
+                returnValue = Current.BILLFILE.LINES;
+
+            try {
+                if (!Current.PO.LINES) this.loadPOData(option);
+                if (!Current.BILLFILE.LINES) throw 'MISSING_BILL_LINES';
+
+                // PREPARE THE LINES FOR MATCHING
+                Current.BILLFILE.LINES.forEach(function (vendorLine, idx) {
+                    vendorLine.ITEMNAME = vendorLine.ITEMNO;
+                    vendorLine.SERIALS = vendorLine.SERIAL;
+                    vendorLine.APPLIEDRATE = vendorLine.BILLRATE || vendorLine.PRICE;
+                });
+
+                Current.PO.LINES.forEach(function (orderLine) {
+                    orderLine.AVAILQTY = orderLine.quantity;
+                });
+                /// === MATCH THE LINES === ///
+                vcs_itemmatchLib.matchOrderLines({
+                    orderRecord: Current.PO.REC,
+                    poId: Current.PO.ID,
+                    vendorLines: Current.BILLFILE.LINES,
+                    orderLines: Current.PO.LINES
+                });
+                /////////////////////////////
+
+                Current.STATUS.BILLFILE.ItemsAllMatched = true;
+
+                Current.BILLFILE.LINES.forEach(function (vendorLine, idx) {
+                    util.extend(vendorLine, {
+                        OrderLine: {},
+                        VarianceAmt: 0,
+                        ReadyToBill: false,
+
+                        Errors: {},
+                        Variances: {},
+                        ErrorList: [],
+                        VarianceList: [],
+
+                        CalcAmount: 0,
+                        TotalTax: 0,
+                        TotalAmount: 0
+                    });
+
+                    try {
+                        // there are no matched items for this
+                        if (!vendorLine.MATCHING || vc2_util.isEmpty(vendorLine.MATCHING)) {
+                            Current.STATUS.BILLFILE.ItemsAllMatched = false;
+                            throw 'UNMATCHED_ITEMS';
+                        }
+
+                        // Loop thru each matching order line,
+                        // try to detect if the bill qty will have enough room
+                        var orderLine = {};
+                        vendorLine.MATCHING.forEach(function (matchedLine) {
+                            if (vc2_util.isEmpty(orderLine)) util.extend(orderLine, matchedLine);
+                            else {
+                                // try to accumulate the quantities
+                                orderLine.quantity =
+                                    (orderLine.quantity || 0) + matchedLine.quantity;
+
+                                orderLine.quantityreceived =
+                                    (orderLine.quantityreceived || 0) +
+                                    matchedLine.quantityreceived;
+
+                                orderLine.quantitybilled =
+                                    (orderLine.quantitybilled || 0) + matchedLine.quantitybilled;
+                            }
+
+                            orderLine.QTYRCVD =
+                                (orderLine.QTYRCVD || 0) + matchedLine.quantityreceived;
+
+                            orderLine.QTYBILLED =
+                                (orderLine.QTYBILLED || 0) + matchedLine.quantitybilled;
+                        });
+                        orderLine.TaxAmount = Helper.calculateLineTax(orderLine);
+                        vendorLine.OrderLine = orderLine;
+
+                        // VARIANCE CHECK: Pricing
+                        if (vendorLine.rate != orderLine.rate) {
+                            var diffRate = vendorLine.rate - orderLine.rate,
+                                diffAmount = diffRate * vendorLine.QUANTITY;
+
+                            // add the Price Variance
+                            if (Math.abs(diffAmount)) {
+                                // set thee
+                                vendorLine.VarianceAmt += diffAmount;
+                                Current.TOTAL.VARIANCE += diffAmount;
+
+                                Helper.setError({
+                                    varcode: 'PRICE',
+                                    details: diffAmount,
+                                    vendorLine: vendorLine
+                                });
+                                Helper.setError({
+                                    varcode: 'PRICE',
+                                    details: diffAmount
+                                });
+                            }
+                        }
+
+                        // We can only receive, qty that is not recived/fulfld yet
+                        orderLine.RECEIVABLE = orderLine.quantity - orderLine.QTYRCVD;
+                        // We can only bill, qty we only received, that is unbilled
+                        orderLine.BILLABLE = orderLine.QTYRCVD - orderLine.QTYBILLED;
+
+                        Current.TOTAL.POLINES += orderLine.amount;
+                        Current.TOTAL.POLINE_TAX += orderLine.TaxAmount;
+
+                        // check if the item is a shipping line
+                        if (
+                            (vendorLine.ITEMNO && vendorLine.ITEMNO.match(/shipping|freight/gi)) ||
+                            (vendorLine.OrderLine &&
+                                vendorLine.OrderLine.item_text &&
+                                vendorLine.OrderLine.item_text.match(/shipping|freight/gi))
+                        ) {
+                            vendorLine.SHIPPING_LINE = true;
+                        }
+
+                        vc2_util.log(logTitle, '## vendorLine -- ', [vendorLine]);
+                        if (!vendorLine.SHIPPING_LINE) {
+                            // no receivable, and no billable (#6)
+                            if (orderLine.RECEIVABLE <= 0 && orderLine.BILLABLE <= 0)
+                                throw 'ITEM_FULLY_BILLED';
+
+                            // not enough billable qty
+                            if (orderLine.BILLABLE < vendorLine.quantity) {
+                                // check if we're allowed to receive it
+                                var allowedtoReceive =
+                                    Current.PO.DATA.isReceivable && // if the PO is actually receivable
+                                    Current.CFG.BillCFG.enableFulfillment && // Fulfillment is allowed on the config
+                                    Current.BILLFILE.DATA.IS_RCVBLE; // if the billfile is receiveable
+
+                                if (allowedtoReceive) {
+                                    // allwed to receive, but on enough receivableqty
+                                    if (orderLine.RECEIVABLE < vendorLine.quantity)
+                                        throw 'INSUFFICIENT_RECEIVABLES';
+                                } else {
+                                    // we can't receive, just check if its just insufficient bill or item is already billed
+                                    throw orderLine.BILLABLE > 0
+                                        ? 'INSUFFICIENT_BILLABLE'
+                                        : 'ITEM_NOT_BILLABLE';
+                                }
+                            }
+                        }
+                    } catch (line_error) {
+                        var errorCode = vc2_util.extractError(line_error);
+                        vc2_util.logError(logTitle, line_error);
+
+                        // set in line error
+                        Helper.setError({
+                            code: errorCode,
+                            details: vendorLine.itemName,
+                            vendorLine: vendorLine
+                        });
+
+                        // set the global error
+                        Helper.setError({
+                            code: errorCode,
+                            details: vendorLine.itemName
+                        });
+                    } finally {
+                        // criteria that this is line is ready for billing
+                        if (
+                            vc2_util.isEmpty(vendorLine.ErrorList) &&
+                            vc2_util.isEmpty(vendorLine.VarianceList) &&
+                            orderLine.BILLABLE &&
+                            orderLine.BILLABLE >= vendorLine.quantity
+                        )
+                            vendorLine.ReadyToBill = true;
+
+                        vc2_util.log(logTitle, '## Bill Line [' + (idx + 1) + '] ', vendorLine);
+                    }
+                });
+
+                // Match the Order lines
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                Helper.setError({ code: error });
+            }
+
+            /////////// EVAL /////////////
+            if (vc2_util.isEmpty(Current.PO.REC)) return;
+
+            var readyToBill = true;
+            Current.BILLFILE.LINES.forEach(function (vendorLine) {
+                if (!vendorLine.ReadyToBill) readyToBill = false;
+            });
+            Current.STATUS.ReadyToBill = readyToBill;
+            /////////// EVAL /////////////
+
+            return returnValue;
+        },
+        processBillFileLines_2: function (option) {
             var logTitle = [LogTitle, 'processBillFileLines'].join('::'),
                 returnValue = Current.BILLFILE.LINES;
 
@@ -1341,12 +1540,13 @@ define([
                             item: varianceLine.item,
                             quantity: 1,
                             rate: varianceLine.varianceAmount,
-                            description: varianceLine.description,
+                            description: varianceLine.description
                         };
-                        if ( salesOrderData && salesOrderData.entity) {
-                            addLineOption.customer = salesOrderData.entity.value || salesOrderData.entity;
+                        if (salesOrderData && salesOrderData.entity) {
+                            addLineOption.customer =
+                                salesOrderData.entity.value || salesOrderData.entity;
                         }
-                        
+
                         if (!vc2_util.isEmpty(Current.PO.DATA.TaxCode))
                             addLineOption.taxcode = Current.PO.DATA.TaxCode;
 
@@ -1576,7 +1776,7 @@ define([
                     ]
                 })
             );
-            vc2_util.log(logTitle, '>> Errors: ', VC_BillProcess.reportError());
+            vc2_util.log(logTitle, '>> Errors: ', BillProcessLib.reportError());
             vc2_util.log(logTitle, '###### DATA DUMP:end ######');
         },
         setError: function (option) {
@@ -1668,7 +1868,6 @@ define([
 
             return taxAmount ? taxAmount : 0;
         },
-
         getSalesOrderDetails: function (option) {
             var logTitle = [LogTitle, 'getSalesOrderDetails'].join('::'),
                 returnValue;
@@ -1698,5 +1897,5 @@ define([
         }
     };
 
-    return VC_BillProcess;
+    return BillProcessLib;
 });
