@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -55,11 +55,7 @@ function _validateLicenseParams(options) {
                 PRODUCT_CODE
         );
         result = 'invalid';
-    } else if (
-        licenseAccountId &&
-        accountId &&
-        licenseAccountId.toLowerCase() != accountId.toLowerCase()
-    ) {
+    } else if (licenseAccountId && accountId && licenseAccountId.toLowerCase() != accountId.toLowerCase()) {
         nlapiLogExecution(
             'ERROR',
             'Invalid License Key - TERMINATING SCRIPT',

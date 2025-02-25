@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -164,8 +164,7 @@ define([], function () {
                     fieldId: 'quantity'
                 });
 
-                if (qty != serialArray.length)
-                    alert('Item quantity and number of serials do not match');
+                if (qty != serialArray.length) alert('Item quantity and number of serials do not match');
             }
         }
 

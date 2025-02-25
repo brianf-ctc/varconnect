@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -141,7 +141,7 @@ define(function (require) {
                 cacheObj.put({ key: cacheKey, value: cacheValue, ttl: cacheTTL });
                 vc2_util.log('## NS CACHE (STORED) ##', '// ', [cacheKey, cacheTTL]);
             } catch (error) {
-                vc2_util.logError('setNSCache', error);
+                vc2_util.logWarn('setNSCache', error);
             }
         },
         removeCache: function (option) {
@@ -1260,8 +1260,12 @@ define(function (require) {
 
             return true;
         },
+        logWarn: function (logTitle, warnMsg) {
+            vc2_util.log(logTitle, { type: 'audit', msg: '[WARNING] : ' }, warnMsg);
+            return;
+        },
         logError: function (logTitle, errorMsg) {
-            vc2_util.log(logTitle, { type: 'error', msg: '!! ERROR: ' }, errorMsg);
+            vc2_util.log(logTitle, { type: 'error', msg: '[ERROR] :  ' }, errorMsg);
             return;
         },
         logDebug: function (logTitle, msg, msgVar) {
@@ -1463,13 +1467,24 @@ define(function (require) {
             return returnValue;
         },
         arrayKeys: function (option) {
-            var logTitle = [LogTitle, 'getKeyValues'].join('::'),
+            var logTitle = [LogTitle, 'arrayKeys'].join('::'),
                 returnValue = [];
 
             if (vc2_util.isEmpty(option)) return false;
 
             for (var fld in option) {
                 if (!vc2_util.inArray(fld, returnValue)) returnValue.push(fld);
+            }
+
+            return returnValue;
+        },
+        arrayValues: function (option) {
+            var logTitle = [LogTitle, 'arrayValues'].join('::'),
+                returnValue = [];
+            if (vc2_util.isEmpty(option)) return false;
+
+            for (var fld in option) {
+                if (!vc2_util.inArray(option[fld], returnValue)) returnValue.push(option[fld]);
             }
 
             return returnValue;

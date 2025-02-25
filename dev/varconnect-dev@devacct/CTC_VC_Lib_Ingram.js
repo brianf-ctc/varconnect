@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -58,7 +58,7 @@ define([
     };
 
     var LibIngramAPI = {
-        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED', 'E-DELIVERED'],
+        ValidShippedStatus: ['SHIPPED', 'INVOICED', 'DELIVERED', 'E-DELIVERED', 'PARTIALLY DELIVERED'],
         SkippedStatus: ['CANCELED', 'CANCELLED'],
         generateToken: function () {
             var logTitle = [LogTitle, 'LibIngramAPI::generateToken'].join('::'),

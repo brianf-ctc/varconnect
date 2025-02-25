@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -11,15 +11,17 @@
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
-define([
-    'N/search',
-    'N/record',
-    './ctc_svclib_records',
-    '../CTC_VC2_Lib_Utils.js',
-    '../CTC_VC2_Constants.js'
-], function (ns_search, ns_record, vcs_recordLib, vc2_util, vc2_constant) {
+define(function (require) {
     var LogTitle = 'SVC:VCProcess',
         LOG_APP = 'VCProcess';
+
+    var ns_search = require('N/search'),
+        ns_record = require('N/record');
+    var vc2_util = require('../CTC_VC2_Lib_Utils.js'),
+        vc2_constant = require('../CTC_VC2_Constants.js');
+
+    var vcs_configLib = require('./ctc_svclib_configlib'),
+        vcs_recordLib = require('./ctc_svclib_records');
 
     var ERROR_MSG = vc2_constant.ERRORMSG,
         LOG_STATUS = vc2_constant.LIST.VC_LOG_STATUS;
@@ -935,93 +937,6 @@ define([
                 // vc2_util.log(logTitle, '>> submitRecOption: ', submitRecOption);
 
                 returnValue = ns_record.submitFields(submitRecOption);
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
-            }
-
-            return returnValue;
-        }
-    });
-
-    /// ITEM MATCHING   ///
-    util.extend(LibProcess, {
-        /**
-         * Attempts to match the vendor items with the order items
-         *
-         * @param {*} option
-         *  poId: Purchase Order ID
-         *  poNum: Purchase Order Number
-         *  poRec: Purchase Order Record (optional)
-         *  vendorLines: Array of Vendor Items
-         *      item_num: Vendor Item Number
-         *      line_num: Vendor Line Number
-         *      qty: Vendor Shipped Quantity
-         *      rate: Vendor Rate
-         *  vendorConfig: Vendor Configuration Record
-         *
-         * @returns
-         */
-        matchVendorItems: function (option) {
-            var logTitle = [LogTitle, 'matchVendorItems'].join(':'),
-                returnValue;
-
-            try {
-                vc2_util.log(logTitle, '#### MATCH VENDOR ITEMS: START ####', option);
-
-                var poId = option.poId,
-                    vendorNum = option.vendorNum,
-                    vendorItems = option.vendorItems,
-                    orderItems = option.orderItems;
-
-                if (!vendorItems || !orderItems) throw 'No Vendor or Order Items to match.';
-
-                var matchedItems = [];
-                orderItems.forEach(function (orderItem) {
-                    var matchedItem = vc2_util.findMatching({
-                        list: vendorItems,
-                        filter: { item_num: orderItem.item_num }
-                    });
-                    if (matchedItem) {
-                        matchedItems.push(matchedItem);
-                        LibProcess.matchVendorLine({
-                            poId: poId,
-                            vendorLine: matchedItem,
-                            orderLine: orderItem
-                        });
-                    }
-                });
-
-                returnValue = matchedItems;
-            } catch (error) {
-                vc2_util.logError(logTitle, error);
-                returnValue = false;
-            }
-
-            return returnValue;
-        },
-        findMatchingOrderLine: function (option) {
-            var logTitle = [LogTitle, 'findMatchingOrderLine'].join(':'),
-                ORDLINE_REC = vc2_constant.RECORD.ORDER_LINE,
-                ORDLINE_FLD = ORDLINE_REC.FIELD,
-                returnValue;
-
-            try {
-                vc2_util.log(logTitle, '#### FIND MATCHING ORDER LINE: START ####', option);
-
-                var poId = option.poId,
-                    poNum = option.poNum,
-                    poRec = option.poRec,
-                    vendorLine = option.vendorLine;
-
-                if (!poRec) {
-                    poRec = vcs_recordLib.searchTransaction({
-                        poNum: poNum,
-                        poId: poId
-                    });
-                }
-
-                returnValue = orderLineData;
             } catch (error) {
                 vc2_util.logError(logTitle, error);
                 returnValue = false;

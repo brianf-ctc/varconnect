@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -13,30 +13,25 @@
  * @NModuleScope Public
  * @NScriptType Restlet
  */
-define([
-    'N/record',
-    'N/search',
-    'N/format',
-    './Libraries/CTC_VC_Lib_BillProcess',
+define(function (require) {
+    var ns_record = require('N/record'),
+        ns_search = require('N/search'),
+        ns_format = require('N/format');
 
-    './../CTC_VC2_Constants',
-    './../CTC_VC2_Lib_Utils',
-    './../CTC_VC2_Lib_Record',
-    './../CTC_VC_Lib_Record.js',
-    './../Services/ctc_svclib_configlib',
-    './Libraries/moment'
-], function (
-    ns_record,
-    ns_search,
-    ns_format,
-    vc_billprocess,
-    vc2_constant,
-    vc2_util,
-    vc2_recordlib,
-    vc_nslib,
-    vcs_configLib,
-    moment
-) {
+    var vc2_constant = require('./../CTC_VC2_Constants'),
+        vc2_util = require('./../CTC_VC2_Lib_Utils'),
+        vc2_recordlib = require('./../CTC_VC2_Lib_Record'),
+        vc_nslib = require('./../CTC_VC_Lib_Record.js');
+
+    var moment = require('./Libraries/moment');
+    var vcs_configLib = require('./../Services/ctc_svclib_configlib.js'),
+        vcs_txnLib = require('./../Services/ctc_svclib_transaction.js'),
+        vcs_recordLib = require('./../Services/ctc_svclib_records.js'),
+        vcs_billCreateLib = require('./../Services/ctc_svclib_billcreate.js'),
+        vcs_processLib = require('./../Services/ctc_svclib_process-v1.js');
+
+    var vc_billprocess = require('./Libraries/CTC_VC_Lib_BillProcess');
+
     var LogTitle = 'VC|Generate IF/IR',
         VCLOG_APPNAME = 'VAR Connect | Process Bill (IF)',
         Current = {},
@@ -63,7 +58,7 @@ define([
     ];
 
     var RESTLET = {
-        post: function (context) {
+        post_old: function (context) {
             var logTitle = [LogTitle, 'POST'].join('::'),
                 returnObj = {};
 
@@ -537,6 +532,239 @@ define([
                 vc2_util.vcLog({
                     title: 'BillCreator | Fulfillment',
                     content: 'Created Item Fulfillment [itemfulfillment:' + newRecordId + ']',
+                    recordId: Current.poId
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+
+                util.extend(returnObj, {
+                    msg: vc2_util.extractError(error),
+                    logstatus: LOG_STATUS.RECORD_ERROR,
+                    isError: true
+                });
+
+                vc2_util.vcLog({
+                    title: 'BillCreator | Fulfillment Error',
+                    error: error,
+                    details: returnObj.details,
+                    status: returnObj.logstatus,
+                    recordId: Current.poId
+                });
+            } finally {
+                vc2_util.log(logTitle, '## EXIT SCRIPT ## ', returnObj);
+            }
+
+            return returnObj;
+        },
+        post: function (context) {
+            var logTitle = [LogTitle, 'POST'].join('::'),
+                returnObj = {};
+
+            vc2_constant.LOG_APPLICATION = VCLOG_APPNAME;
+
+            try {
+                vc2_util.log(logTitle, '**** START SCRIPT **** ', context);
+
+                util.extend(Current, {
+                    poId: context.PO_LINK,
+                    billFileId: context.ID,
+                    isRecievable: context.IS_RCVBLE,
+                    billPayload: vc2_util.safeParse(context.JSON)
+                });
+                vc2_util.LogPrefix = '[purchaseorder:' + Current.poId + '] ';
+                vc2_util.log(logTitle, '// Current Data: ', Current);
+                if (!Current.poId) throw 'Purchase Order Required';
+
+                // load the bill file
+                if (!Current.billFileId) throw 'Bill File ID is required';
+                var BillFileRec = vcs_billCreateLib.loadBillFile({
+                    billFileId: Current.billFileId
+                });
+
+                vc2_util.vcLog({
+                    title: 'BillCreator | Fulfillment - Bill File Payload',
+                    content: JSON.stringify(Current.billPayload),
+                    recordId: Current.poId
+                });
+
+                if (!Current.isRecievable)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+
+                Current.PO_REC = vcs_recordLib.load({
+                    type: 'purchaseorder',
+                    id: Current.poId,
+                    isDynamic: true
+                });
+
+                Current.PO_DATA = vcs_recordLib.extractValues({
+                    record: Current.PO_REC,
+                    columns: [
+                        'tranid',
+                        'entity',
+                        'dropshipso',
+                        'status',
+                        'statusRef',
+                        'createdfrom',
+                        'subsidiary',
+                        'custbody_ctc_po_link_type',
+                        'custbody_isdropshippo'
+                    ]
+                });
+
+                vc2_util.log(logTitle, '// PO Data: ', Current.PO_DATA);
+
+                if (Current.PO_DATA.createdfrom) {
+                    Current.SO_DATA = vc2_util.flatLookup({
+                        type: ns_search.Type.SALES_ORDER,
+                        id: Current.PO_DATA.createdfrom,
+                        columns: ['entity', 'tranid']
+                    });
+                    vc2_util.log(logTitle, '// SO Data: ', Current.SO_DATA);
+                }
+
+                var isDropPO =
+                    Current.PO_DATA.dropshipso ||
+                    Current.PO_DATA.custbody_ctc_po_link_type == 'Dropship' ||
+                    Current.PO_DATA.custbody_isdropshippo;
+
+                vc2_util.log(logTitle, '// PO_DATA: ', Current.PO_DATA);
+
+                if (!isDropPO) throw 'Not a Drop Ship Order';
+
+                var MainCFG = vcs_configLib.mainConfig(),
+                    BillCFG = vcs_configLib.billVendorConfig({ poId: Current.poId }),
+                    OrderCFG = vcs_configLib.orderVendorConfig({ poId: Current.poId });
+
+                if (!BillCFG.enableFulfillment)
+                    throw 'This Vendor is not enabled for Auto Receipts/Fulfillments';
+
+                // search for the bill file
+                var searchResults = vcs_recordLib.searchTransactions({
+                    filters: [
+                        ['externalid', 'is', 'ifir_' + BillFileRec.BILL_NUM],
+                        'AND',
+                        ['type', 'anyof', 'ItemShip', 'ItemRcpt']
+                    ]
+                });
+                if (searchResults.length > 0) {
+                    util.extend(returnObj, {
+                        msg: 'Fulfillment/Receipt Already Exists',
+                        id: searchResults[0].id
+                    });
+                    return returnObj;
+                }
+
+                var validateFulfillment = vcs_txnLib.validateForFulfillment({
+                    poRec: Current.PO_REC,
+                    poId: Current.poId,
+                    vendorLines: (function () {
+                        /// prepare the lines for fulfillment
+                        BillFileRec.LINES.forEach(function (payloadLine) {
+                            util.extend(payloadLine, {
+                                ORDER_NUM: '',
+                                ORDER_STATUS: '',
+                                ORDER_DATE: '',
+                                ORDER_ETA: '',
+                                ORDER_DELIV: '',
+                                SHIP_METHOD: BillFileRec.JSON.carrier,
+                                SHIP_DATE: BillFileRec.JSON.shipDate,
+                                CARRIER: BillFileRec.JSON.carrier,
+                                TRACKING_NUMS: payloadLine.TRACKING,
+                                SERIAL_NUMS: payloadLine.SERIAL,
+                                ITEM_TEXT: payloadLine.ITEMNO,
+                                APPLIEDRATE: payloadLine.BILLRATE || payloadLine.PRICE
+                            });
+
+                            return true;
+                        });
+
+                        return BillFileRec.LINES;
+                    })(),
+                    mainConfig: MainCFG,
+                    vendorConfig: OrderCFG,
+                    billConfig: BillCFG
+                });
+
+                if (validateFulfillment.hasError) {
+                    util.extend(returnObj, {
+                        msg: validateFulfillment.errorMessage
+                    });
+                    return returnObj;
+                }
+
+                var itemFFData = vcs_txnLib.createFulfillment({
+                    poRec: Current.PO_REC,
+                    poId: Current.poId,
+                    mainConfig: MainCFG,
+                    vendorConfig: OrderCFG,
+                    billConfig: BillCFG,
+                    headerValues: {
+                        externalid: 'ifir_' + BillFileRec.BILL_NUM,
+                        tranid: BillFileRec.BILL_NUM,
+                        // shipstatus: 'C', // 'Shipped'
+                        trandate: (function () {
+                            var shipDate =
+                                BillFileRec.JSON.shipDate && BillFileRec.JSON.shipDate != 'NA'
+                                    ? BillFileRec.JSON.shipDate
+                                    : BillFileRec.JSON.date;
+
+                            return ns_format.parse({
+                                value: moment(shipDate).toDate(),
+                                type: ns_format.Type.DATE
+                            });
+                        })(),
+                        custbody_ctc_vc_createdby_vc: true
+                    },
+                    vendorLines: (function () {
+                        /// prepare the lines for fulfillment
+                        BillFileRec.LINES.forEach(function (payloadLine) {
+                            util.extend(payloadLine, {
+                                ORDER_NUM: '',
+                                ORDER_STATUS: '',
+                                ORDER_DATE: '',
+                                ORDER_ETA: '',
+                                ORDER_DELIV: '',
+                                SHIP_METHOD: BillFileRec.JSON.carrier,
+                                SHIP_DATE: BillFileRec.JSON.shipDate,
+                                CARRIER: BillFileRec.JSON.carrier,
+                                TRACKING_NUMS: payloadLine.TRACKING,
+                                SERIAL_NUMS: payloadLine.SERIAL,
+                                ITEM_TEXT: payloadLine.ITEMNO,
+                                APPLIEDRATE: payloadLine.BILLRATE || payloadLine.PRICE
+                            });
+
+                            return true;
+                        });
+
+                        return BillFileRec.LINES;
+                    })(),
+                    onValidateError: function () {}
+                });
+                if (itemFFData.hasError) throw itemFFData.errorMessage;
+
+                if (!vc2_util.isEmpty(itemFFData.Serials)) {
+                    itemFFData.Serials.forEach(function (serialData) {
+                        vcs_processLib.processSerials(serialData);
+                    });
+                }
+
+                util.extend(returnObj, {
+                    id: itemFFData.id,
+                    itemff: itemFFData.id,
+                    msg: 'Created Item Fulfillment [itemfulfillment:' + itemFFData.id + ']',
+                    serialData: {
+                        poId: Current.poId,
+                        soId: Current.PO_DATA.createdfrom,
+                        custId: Current.SO_DATA.entity.value,
+                        type: 'if',
+                        trxId: itemFFData.id,
+                        lines: itemFFData.Serials
+                    }
+                });
+
+                vc2_util.vcLog({
+                    title: 'BillCreator | Fulfillment',
+                    content: 'Created Item Fulfillment [itemfulfillment:' + itemFFData.id + ']',
                     recordId: Current.poId
                 });
             } catch (error) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -24,16 +24,16 @@ define(function (require) {
         vcs_configLib = require('./ctc_svclib_configlib.js');
 
     // vendor libraries
-    var lib_synnex = require('../CTC_VC_Lib_Synnex'),
-        lib_techdata = require('../CTC_VC_Lib_TechData'),
-        lib_dnh = require('../CTC_VC_Lib_DandH.js'),
-        lib_ingram = require('../CTC_VC_Lib_Ingram'),
-        lib_dell = require('../CTC_VC_Lib_Dell'),
-        lib_arrow = require('../CTC_VC_Lib_Arrow'),
-        lib_jenne = require('../CTC_VC_Lib_Jenne'),
-        lib_scansource = require('../CTC_VC_Lib_ScanSource'),
-        lib_wefi = require('../CTC_VC_Lib_WeFi.js'),
-        lib_carahsoft = require('../CTC_VC_Lib_Carahsoft.js');
+    var lib_synnex = require('./vendor/ctc_vclib_synnex.js'),
+        lib_techdata = require('./vendor/ctc_vclib_techdata.js'),
+        lib_dnh = require('./vendor/ctc_vclib_dandh.js'),
+        lib_ingram = require('./vendor/ctc_vclib_ingram.js'),
+        lib_dell = require('./vendor/ctc_vclib_dell.js'),
+        lib_arrow = require('./vendor/ctc_vclib_arrow.js'),
+        lib_jenne = require('./vendor/ctc_vclib_jenne.js'),
+        lib_scansource = require('./vendor/ctc_vclib_scansource.js'),
+        lib_wefi = require('./vendor/ctc_vclib_wefi.js'),
+        lib_carahsoft = require('./vendor/ctc_vclib_carahsoft.js');
 
     var moment = require('./lib/moment');
 
@@ -244,15 +244,18 @@ define(function (require) {
 
             try {
                 var poNum = option.poNum || option.tranid,
+                    vendorConfig = option.vendorConfig || option.orderConfig,
                     vendoCfgId = option.vendorConfigId;
 
                 // load the configuration
-                var ConfigRec = vcs_configLib.loadConfig({
-                    poNum: poNum,
-                    configId: vendoCfgId,
-                    configType: vcs_configLib.ConfigType.ORDER,
-                    debugMode: true
-                });
+                var ConfigRec =
+                    vendorConfig ||
+                    vcs_configLib.loadConfig({
+                        poNum: poNum,
+                        configId: vendoCfgId,
+                        configType: vcs_configLib.ConfigType.ORDER,
+                        debugMode: true
+                    });
                 // vc2_util.log(logTitle, '>> ConfigRec: ', ConfigRec);
 
                 // get the Vendor Library
@@ -1069,7 +1072,6 @@ define(function (require) {
 
             return returnValue;
         },
-
         DandHItemFetch: function (option) {
             var logTitle = [LogTitle, 'DandHItemFetch'].join(':'),
                 returnValue = {};
@@ -1174,7 +1176,9 @@ define(function (require) {
             }
 
             return returnValue;
-        }
+        },
+        SendPO: function (option) {},
+        GetBills: function (option) {}
     };
 });
 /**

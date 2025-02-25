@@ -164,7 +164,7 @@ define([
                         searchResults.forEach(function (result) {
                             var altItemName = null,
                                 mpnValue = null;
-
+                                
                             if (itemField) {
                                 altItemName = result.getValue({ name: itemField });
                                 altItemNames._sku = true;

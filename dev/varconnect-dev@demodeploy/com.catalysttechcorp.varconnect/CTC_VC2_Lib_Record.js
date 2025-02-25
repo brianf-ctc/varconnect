@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -139,7 +139,7 @@ define(function (require) {
                     sublistId = option.sublistId || 'item',
                     groupId = option.groupId,
                     line = option.line,
-                    columns = option.columns;
+                    columns = option.columns || option.fields;
 
                 if (!record || !columns) return false;
                 if (line == null || line < 0) return false;

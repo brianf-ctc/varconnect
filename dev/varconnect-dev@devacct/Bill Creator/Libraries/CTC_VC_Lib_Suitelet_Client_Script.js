@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -236,23 +236,17 @@ define(['N/ui/dialog', 'N/ui/message', 'N/currentRecord'], function (
             });
 
             if (!isActive) {
-                [
-                    'applied',
-                    'nsitem',
-                    'itemname',
-                    'description',
-                    'amount',
-                    'amounttax',
-                    'amountvar'
-                ].forEach(function (fld) {
-                    try {
-                        currRecord.getSublistField({
-                            sublistId: sublistCharges,
-                            fieldId: fld,
-                            line: line
-                        }).isDisabled = true;
-                    } catch (e) {}
-                });
+                ['applied', 'nsitem', 'itemname', 'description', 'amount', 'amounttax','amountvar'].forEach(
+                    function (fld) {
+                        try {
+                            currRecord.getSublistField({
+                                sublistId: sublistCharges,
+                                fieldId: fld,
+                                line: line
+                            }).isDisabled = true;
+                        } catch (e) {}
+                    }
+                );
             }
         }
 

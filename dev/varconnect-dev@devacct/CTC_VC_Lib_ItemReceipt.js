@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -804,11 +804,11 @@ define(function (require) {
                         vc2_util.vcLog({ error: itemrr_err, title: 'Create Item Receipt Error' });
                         throw errMsg;
                     }
-                } catch (ordernum_error) {
-                    vc2_util.logError(logTitle, ordernum_error);
+                } catch (orderNum_error) {
+                    vc2_util.logError(logTitle, orderNum_error);
                     vc2_util.vcLog({
                         title: 'Item Receipt Error [' + vendorOrderNum + ']',
-                        error: ordernum_error,
+                        error: orderNum_error,
                         recordId: Current.PO_ID
                     });
 

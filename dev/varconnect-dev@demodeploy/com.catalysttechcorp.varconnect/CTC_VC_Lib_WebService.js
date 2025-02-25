@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -19,7 +19,6 @@ define([
     './CTC_VC_Lib_Ingram',
     './CTC_VC_Lib_Dell',
     './CTC_VC_Lib_Arrow',
-    './CTC_VC_Lib_Ingram_v1',
     './CTC_VC_Lib_Jenne',
     './CTC_VC_Lib_ScanSource',
     './CTC_VC_Lib_WeFi.js',

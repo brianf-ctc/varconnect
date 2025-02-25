@@ -19,9 +19,7 @@ define(function (require) {
             ];
 
             spyOn(EndPoint, 'load').and.returnValue({
-                getLineCount: function () {
-                    return 2;
-                },
+                getLineCount: function () { return 2; },
                 getSublistValue: function (options) {
                     if (options.line === 0) return options.fieldId === 'item' ? 'item1' : 10;
                     if (options.line === 1) return options.fieldId === 'item' ? 'item2' : 5;

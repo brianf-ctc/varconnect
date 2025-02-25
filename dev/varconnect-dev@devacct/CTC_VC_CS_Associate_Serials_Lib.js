@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -13,12 +13,7 @@
  * @NScriptType ClientScript
  */
 
-define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (
-    search,
-    https,
-    record,
-    dialog
-) {
+define(['N/search', 'N/https', 'N/record', 'N/ui/dialog'], function (search, https, record, dialog) {
     // Searches NS for first customer occurrence of provided email
     // If found return customer information, if not return null
     // Note if multiple occurrences are found, only the first result is returned

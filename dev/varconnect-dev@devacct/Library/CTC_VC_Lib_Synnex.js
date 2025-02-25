@@ -7,7 +7,7 @@
  * disclose such Confidential Information and shall use it only in
  * accordance with the terms of the license agreement you entered into
  * with Catalyst Tech.
- *
+ * 
  * @NApiVersion 2.x
  * @NModuleScope Public
  */
@@ -186,7 +186,7 @@ define(['N/xml', './../CTC_VC2_Constants.js', './../CTC_VC2_Lib_Utils.js', './mo
                     ),
                     tracking_num: 'NA',
                     serial_num: 'NA',
-                    is_shipped: false
+                    is_shipped: false,
                 };
                 vc2_util.log(logTitle, '/// itemObj: ', itemObj);
 

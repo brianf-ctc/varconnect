@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -61,10 +61,7 @@ define([
                 columns: columns
             };
             var logDateSearch = ns_search.create(searchOptions);
-            log.debug(
-                logTitle,
-                'Search date for latest log entries. ' + JSON.stringify(searchOptions)
-            );
+            log.debug(logTitle, 'Search date for latest log entries. ' + JSON.stringify(searchOptions));
             var maxLogDateResults = logDateSearch.run().getRange(0, 1);
             if (maxLogDateResults && maxLogDateResults.length) {
                 try {
@@ -250,11 +247,7 @@ define([
                 EventRouter[ContextData.recordType][eventName] &&
                 typeof EventRouter[ContextData.recordType][eventName] === 'function'
             ) {
-                returnValue = EventRouter[ContextData.recordType][eventName].call(
-                    EventRouter,
-                    ContextData,
-                    context
-                );
+                returnValue = EventRouter[ContextData.recordType][eventName].call(EventRouter, ContextData, context);
             }
 
             return returnValue;
@@ -264,13 +257,7 @@ define([
 
     var UserEvent = {
         beforeLoad: function (context) {
-            LogTitle = [
-                LogTitle,
-                'beforeLoad',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'beforeLoad', context.type, context.newRecord.type, context.newRecord.id].join('::');
             var logTitle = LogTitle,
                 returnValue = null;
             EventActionsHelper.initialize(context);
@@ -286,13 +273,9 @@ define([
             return returnValue;
         },
         beforeSubmit: function (context) {
-            LogTitle = [
-                LogTitle,
-                'beforeSubmit',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'beforeSubmit', context.type, context.newRecord.type, context.newRecord.id].join(
+                '::'
+            );
             var logTitle = LogTitle,
                 returnValue = null;
             EventActionsHelper.initialize(context);
@@ -307,13 +290,7 @@ define([
             return returnValue;
         },
         afterSubmit: function (context) {
-            LogTitle = [
-                LogTitle,
-                'afterSubmit',
-                context.type,
-                context.newRecord.type,
-                context.newRecord.id
-            ].join('::');
+            LogTitle = [LogTitle, 'afterSubmit', context.type, context.newRecord.type, context.newRecord.id].join('::');
             var logTitle = LogTitle,
                 returnValue = null;
 

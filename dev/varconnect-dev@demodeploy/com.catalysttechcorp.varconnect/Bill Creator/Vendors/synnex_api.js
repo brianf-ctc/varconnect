@@ -1,8 +1,9 @@
 /**
- *@NApiVersion 2.x
+ * @NApiVersion 2.x
+ * @NModuleScope Public
  */
 /**
- * Copyright (c) 2023
+ * Copyright (c) 2025
  * Catalyst Tech Corp
  * All Rights Reserved.
  *

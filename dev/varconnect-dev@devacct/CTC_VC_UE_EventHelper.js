@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -24,6 +24,8 @@ define(function (require) {
 
     var vc2_util = require('./CTC_VC2_Lib_Utils'),
         vc2_constant = require('./CTC_VC2_Constants'),
+        vc_record = require('./CTC_VC_Lib_Record'),
+        vc_vendorcfg = require('./CTC_VC_Lib_VendorConfig'),
         EventRouter = require('./CTC_VC2_Lib_EventRouter'),
         vcs_configLib = require('./Services/ctc_svclib_configlib');
 
@@ -576,7 +578,7 @@ define(function (require) {
         // --- UPDATE THE VENDOR LINE INFO ---  //
         {
             onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'UpdateVendorLine'].join('::');
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
                 if (
@@ -644,16 +646,15 @@ define(function (require) {
                 return true;
             },
             onAfterSubmit: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'DeleteCacheList'].join('::');
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
-                // Check if the event type is either VIEW or EDIT
-                // if (
-                //     !vc2_util.inArray(Current.eventType, [
-                //         scriptContext.UserEventType.VIEW,
-                //         scriptContext.UserEventType.EDIT
-                //     ])
-                // )
-                //     return;
+                if (
+                    !vc2_util.inArray(Current.eventType, [
+                        scriptContext.UserEventType.VIEW,
+                        scriptContext.UserEventType.EDIT
+                    ])
+                )
+                    return;
 
                 // delete the PO cache
                 vc2_util.deleteCacheList({ listName: vc2_constant.CACHE_KEY.PO_DATA });
@@ -662,7 +663,7 @@ define(function (require) {
         // --- ADD THE VC ACTION BUTTONS --- //
         {
             onBeforeLoad: function (scriptContext, Current) {
-                var logTitle = [LogTitle, 'AddPOButtons'].join('::');
+                var logTitle = [LogTitle, 'onBeforeLoad'].join('::');
 
                 if (Current.execType !== ns_runtime.ContextType.USER_INTERFACE) return;
                 if (
@@ -799,63 +800,6 @@ define(function (require) {
 
                 return true;
             }
-            // },
-
-            // // --- ADD THE VC ACTION BUTTONS --- //
-            // {
-            //     onBeforeSubmit: function (scriptContext, Current) {
-            //         var logTitle = [LogTitle, 'onBeforeSubmit'].join('::');
-            //         if (
-            //             !vc2_util.inArray(Current.eventType, [
-            //                 // scriptContext.UserEventType.CREATE,
-            //                 scriptContext.UserEventType.EDIT,
-            //                 scriptContext.UserEventType.XEDIT
-            //             ])
-            //         )
-            //             return;
-
-            //         var currentRecord = scriptContext.newRecord;
-
-            //         MainCFG = vcs_configLib.mainConfig();
-            //         if (!MainCFG) return;
-
-            //         // load the ORderConfig
-            //         OrderCFG = vcs_configLib.loadConfig({
-            //             poId: Current.recordId,
-            //             configType: vcs_configLib.ConfigType.ORDER
-            //         });
-
-            //         if (OrderCFG && OrderCFG.id) {
-            //             currentRecord.setValue({
-            //                 fieldId: 'custbody_ctc_vc_orderstatus_cfg',
-            //                 value: OrderCFG.id
-            //             });
-            //         }
-
-            //         // load the BillConfig
-            //         BillCFG = vcs_configLib.loadConfig({
-            //             poId: Current.recordId,
-            //             configType: vcs_configLib.ConfigType.BILL
-            //         });
-            //         if (BillCFG && BillCFG.id) {
-            //             currentRecord.setValue({
-            //                 fieldId: 'custbody_ctc_vc_billcreate_cfg',
-            //                 value: BillCFG.id
-            //             });
-            //         }
-
-            //         // load the send PO config
-            //         SendPOCFG = vcs_configLib.loadConfig({
-            //             poId: Current.recordId,
-            //             configType: vcs_configLib.ConfigType.SENDPO
-            //         });
-            //         if (SendPOCFG && SendPOCFG.id) {
-            //             currentRecord.setValue({
-            //                 fieldId: 'custbody_ctc_vc_sendpo_cfg',
-            //                 value: SendPOCFG.id
-            //             });
-            //         }
-            //     }
         }
     ];
 
@@ -1183,6 +1127,7 @@ define(function (require) {
                     'custrecord_ctc_vc_ordernum_sourcedata',
                     'custrecord_ctc_vc_ordernum_vendorlines'
                 ]);
+
             } catch (error) {
                 log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
                 return;

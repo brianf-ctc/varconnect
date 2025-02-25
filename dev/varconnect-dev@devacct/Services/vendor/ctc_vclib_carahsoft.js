@@ -16,9 +16,10 @@
 
 define(function (require) {
     var LogTitle = 'WS:CarasoftAPI';
-
+    
     var vc2_util = require('../../CTC_VC2_Lib_Utils'),
         vc2_constant = require('../../CTC_VC2_Constants');
+
 
     var CURRENT = {
             TokenName: 'VC_CARAHSOFT_TOKEN'

@@ -516,6 +516,94 @@ define(function (require) {
         }
     };
 
+    VC2_CONSTANT.VENDOR_LINE_DEF = {
+        VENDORLINE_COLS: [
+            'ITEM_TEXT',
+            'ORDER_NUM',
+            'ORDER_STATUS',
+            'ORDER_DATE',
+            'ORDER_ETA',
+            'ORDER_DELIV',
+            'SHIP_DATE',
+            'SHIP_METHOD',
+            'CARRIER',
+            'TRACKING_NUMS',
+            'SERIAL_NUMS',
+            'APPLIEDRATE',
+            'APPLIEDQTY',
+            'ORDER_ETA_LIST'
+        ],
+        ORDERLINE_COLS: [
+            'custcol_ctc_xml_dist_order_num',
+            'custcol_ctc_xml_date_order_placed',
+            'custcol_ctc_vc_order_placed_date',
+
+            'custcol_ctc_vc_shipped_date',
+            'custcol_ctc_vc_eta_date',
+            'custcol_ctc_vc_prom_deliv_date',
+            'custcol_ctc_vc_xml_prom_deliv_date',
+
+            'custcol_ctc_vc_delivery_eta_date',
+            'custcol_ctc_xml_ship_date',
+            'custcol_ctc_xml_carrier',
+            'custcol_ctc_xml_eta',
+            'custcol_ctc_xml_tracking_num',
+            'custcol_ctc_xml_inb_tracking_num',
+            'custcol_ctc_xml_serial_num',
+            'custcol_ctc_vc_vendor_info',
+            'custcol_ctc_vc_order_status',
+            'custcol_ctc_xml_ship_method'
+        ],
+        FIELD_DEF: {
+            DATE: [
+                'custcol_ctc_vc_eta_date',
+                'custcol_ctc_vc_order_placed_date',
+                'custcol_ctc_vc_shipped_date',
+                'custcol_ctc_vc_prom_deliv_date',
+                'custcol_ctc_vc_delivery_eta_date'
+            ],
+            TEXT: [
+                'custcol_ctc_xml_carrier',
+                'custcol_ctc_xml_ship_method',
+                'custcol_ctc_xml_dist_order_num',
+                'custcol_ctc_xml_date_order_placed',
+                'custcol_ctc_xml_ship_date'
+            ],
+            TEXT_LIST: [
+                'custcol_ctc_xml_eta',
+                'custcol_ctc_xml_serial_num',
+                'custcol_ctc_xml_tracking_num',
+                'custcol_ctc_xml_inb_tracking_num'
+            ],
+            TEXTAREA: [
+                'custcol_ctc_vc_vendor_info',
+                'custcol_ctc_serial_number_scan',
+                'custcol_ctc_serial_number_update',
+                'custcol_ctc_vc_order_status'
+            ]
+        },
+        MAPPING: {
+            custcol_ctc_xml_dist_order_num: 'ORDER_NUM',
+            custcol_ctc_xml_date_order_placed: 'ORDER_DATE',
+            custcol_ctc_vc_order_placed_date: 'ORDER_DATE',
+            custcol_ctc_vc_shipped_date: 'SHIP_DATE',
+            custcol_ctc_vc_eta_date: 'ORDER_ETA',
+            custcol_ctc_vc_prom_deliv_date: 'ORDER_DELIV',
+            custcol_ctc_vc_xml_prom_deliv_date: 'ORDER_DELIV',
+            custcol_ctc_vc_delivery_eta_date: 'ORDER_DELIV',
+            custcol_ctc_xml_ship_date: 'SHIP_DATE',
+            custcol_ctc_xml_carrier: 'CARRIER',
+            custcol_ctc_xml_eta: 'ORDER_ETA',
+            custcol_ctc_xml_tracking_num: 'TRACKING_NUMS',
+            custcol_ctc_xml_inb_tracking_num: 'TRACKING_NUMS',
+            custcol_ctc_xml_serial_num: 'SERIAL_NUMS',
+            custcol_ctc_vc_vendor_info: 'INFO',
+            custcol_ctc_vc_order_status: 'STATUS',
+            custcol_ctc_xml_ship_method: 'SHIP_METHOD',
+            custcol_ctc_vc_vendor_info: 'ORDER_INFO'
+        }
+    };
+
     VC2_CONSTANT.LIST = {
         XML_VENDOR: {
             TECH_DATA: '1',
@@ -949,7 +1037,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '202501022.1619'
+        '20250214.0922'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {

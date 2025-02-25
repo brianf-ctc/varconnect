@@ -24,6 +24,9 @@ define(function (require) {
     var vcs_configLib = require('./ctc_svclib_configlib'),
         vcs_recordLib = require('./ctc_svclib_records');
 
+    var Current = {},
+        ErrorMsg = {};
+
     var LibItemMatching = {
         matchOrderLines: function (option) {
             var logTitle = [LogTitle, 'matchOrderLines'].join('::'),
@@ -32,39 +35,122 @@ define(function (require) {
             option = option || {};
 
             try {
-                if (!option.poId) throw 'Missing required parameter: poId';
-                if (!option.vendorLines) throw 'Missing required parameter: vendorLines';
-
                 var vendorLines = option.vendorLines,
                     poId = option.poId,
+                    poLines = option.poLines,
+                    poRec = option.poRec,
+                    orderId = option.orderId,
+                    orderLines = option.orderLines || [],
+                    orderType = option.orderType || ns_record.Type.PURCHASE_ORDER,
+                    orderRecord = option.orderRecord || option.orderRec || option.record,
                     MainCFG = option.mainConfig || vcs_configLib.mainConfig() || {},
-                    VendorCFG =
-                        option.vendorConfig || vcs_configLib.vendorConfig({ poId: poId }) || {};
+                    VendorCFG = option.vendorConfig;
 
-                var poRecord = vcs_recordLib.load({
-                    type: ns_record.Type.PURCHASE_ORDER,
-                    id: poId
+                // PO record is a required parameter, since we need this to source out the PO lines
+                if (!poRec) {
+                    if (!poId) throw 'Missing required parameter: poId';
+                    poRec = vcs_recordLib.load({ type: ns_record.Type.PURCHASE_ORDER, id: poId });
+                    if (!poRec) throw 'Unable to load PO record';
+                } else poId = poRec.id;
+
+                // if a separet related order record is provided, load it
+                // it can be a Sales Order, Fulfillment/Receipt or Invoice
+                if (orderId && orderId != poId && orderType) {
+                    orderRecord = vcs_recordLib.load({ type: orderType, id: orderId });
+                } else if (orderRecord) {
+                    orderId = orderRecord.id;
+                    orderType = orderRecord.type;
+                }
+
+                // Load the Vendor Config, if not provided
+                if (!VendorCFG) VendorCFG = vcs_configLib.vendorConfig({ poId: poId });
+
+                // prep the required line fields
+                var orderLineFields = [
+                    vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
+                    vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
+                    vc2_constant.FIELD.TRANSACTION.DH_MPN,
+                    vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
+                    vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
+                    VendorCFG.itemColumnIdToMatch || MainCFG.itemColumnIdToMatch || 'item',
+                    VendorCFG.itemMPNColumnIdToMatch || MainCFG.itemMPNColumnIdToMatch || 'item'
+                ];
+
+                // The plan is use the poLines as anchor to match the vendorLines
+                // then use the orderLines for matched lines
+                var altPOLines;
+                if (vc2_util.isEmpty(poLines))
+                    poLines = vcs_recordLib.extractLineValues({
+                        record: poRec,
+                        additionalColumns: orderLineFields
+                    });
+                else
+                    altPOLines = vcs_recordLib.extractLineValues({
+                        record: poRec,
+                        additionalColumns: orderLineFields
+                    });
+
+                if (vc2_util.isEmpty(orderLines) && orderRecord && orderId && orderId != poId)
+                    orderLines = vcs_recordLib.extractLineValues({
+                        record: orderRecord,
+                        additionalColumns: orderLineFields
+                    });
+
+                //// START: MATCHING ORDER LINES ///////////////////////////////
+                vc2_util.log(logTitle, '##### Match Order Lines #####', {
+                    po: poId,
+                    order: [orderId, orderType],
+                    vendorLines: vendorLines
                 });
-                var poLines = vcs_recordLib.extractLineValues({
-                    record: poRecord,
-                    additionalColumns: [
-                        vc2_constant.GLOBAL.ITEM_ID_LOOKUP_COL,
-                        vc2_constant.GLOBAL.VENDOR_SKU_LOOKUP_COL,
-                        vc2_constant.FIELD.TRANSACTION.DH_MPN,
-                        vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO,
-                        vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY,
-                        VendorCFG.itemColumnIdToMatch || MainCFG.itemColumnIdToMatch || 'item',
-                        VendorCFG.itemMPNColumnIdToMatch || MainCFG.itemMPNColumnIdToMatch || 'item'
-                    ]
-                });
 
-                if (!poRecord) throw 'Unable to load the PO record';
-                vc2_util.log(logTitle, '## PO Lines: ', poLines);
+                if (!vc2_util.isEmpty(altPOLines)) {
+                    // link it to the poLines using the lineuniquekey
 
-                // prep the poLines and vendorLines
+                    poLines.forEach(function (poLine) {
+                        var matchedLine = altPOLines.filter(function (altPOLine) {
+                            return altPOLine.lineuniquekey == poLine.lineuniquekey;
+                        });
+                        if (matchedLine.length) util.extend(poLine, matchedLine[0]);
+
+                        return true;
+                    });
+                }
+
+                // if there are order lines, merge it with the poLines
+                if (!vc2_util.isEmpty(orderLines)) {
+                    poLines.forEach(function (poLine) {
+                        var matchedLine = orderLines.filter(function (orderLine) {
+                            var returnValue;
+                            // if from SO, match the item and quantity and rate
+
+                            if (orderType == ns_record.Type.SALES_ORDER) {
+                                returnValue =
+                                    orderLine.item == poLine.item &&
+                                    orderLine.quantity == poLine.quantity &&
+                                    orderLine.rate == poLine.rate;
+                            } else if (
+                                orderType == ns_record.Type.ITEM_FULFILLMENT ||
+                                orderType == ns_record.Type.ITEM_RECEIPT
+                            ) {
+                                returnValue = orderLine.poline == poLine.line;
+                            }
+
+                            return returnValue;
+                        });
+                        if (matchedLine.length) poLine.ORDERLINE = matchedLine[0];
+                    });
+                }
+
+                // prep the orderLines and vendorLines
                 // order it by quantity descending
                 poLines.forEach(function (poLine) {
-                    poLine.AVAILQTY = poLine.quantity - poLine.quantityreceived;
+                    poLine.AVAILQTY =
+                        poLine.AVAILQTY || !vc2_util.isEmpty(poLine.quantityreceived)
+                            ? poLine.quantity - poLine.quantityreceived
+                            : !vc2_util.isEmpty(poLine.quantityfulfilled)
+                            ? poLine.quantity - poLine.quantityfulfilled
+                            : poLine.quantity;
+
                     poLine.APPLIEDQTY = 0;
                     if (!poLine.APPLIEDRATE) poLine.APPLIEDRATE = poLine.rate || poLine.unitprice;
                     poLine.UseQuantity = function (qty) {
@@ -73,7 +159,7 @@ define(function (require) {
                         return { APPLIEDQTY: qty };
                     };
                 });
-                //sort the poLines by AVAILQTY descending
+                //sort the orderLines by AVAILQTY descending
                 poLines.sort(function (a, b) {
                     return b.AVAILQTY - a.AVAILQTY;
                 });
@@ -121,13 +207,11 @@ define(function (require) {
                     return b.AVAILQTY - a.AVAILQTY;
                 });
 
-                var arrItemAltNames, arrItemMappings;
-
                 /// =====================================
                 /// LOOP thru each vendorLines
                 vendorLines.forEach(function (vendorLine) {
                     // first step, is to look for matching items
-                    // availabe in the poLines
+                    // availabe in the orderLines
                     var MatchedLines = {
                         byItem: poLines.filter(function (poLine) {
                             return LibItemMatching.isItemMatched({
@@ -146,7 +230,7 @@ define(function (require) {
                                 poLine: poLine,
                                 vendorLine: vendorLine,
                                 listAltNames: LibItemMatching.fetchItemAltNames({
-                                    poLines: poLines,
+                                    orderLines: orderLines,
                                     mainConfig: MainCFG,
                                     vendorConfig: VendorCFG
                                 }),
@@ -163,7 +247,7 @@ define(function (require) {
                                 poLine: poLine,
                                 vendorLine: vendorLine,
                                 listMappedItems: LibItemMatching.fetchItemMapping({
-                                    poLines: poLines
+                                    orderLines: orderLines
                                 })
                             });
                         });
@@ -172,7 +256,7 @@ define(function (require) {
                     // if there's still no match, skip the vendorLine
                     if (!MatchedLines.byItem.length) return;
 
-                    // filter the polines that would fit the vendorLine AVAILQTY
+                    // filter the orderLines that would fit the vendorLine AVAILQTY
                     util.extend(MatchedLines, {
                         byRateQty: MatchedLines.byItem.filter(function (poLine) {
                             return (
@@ -210,10 +294,10 @@ define(function (require) {
                             poLine.AVAILQTY > vendorLine.AVAILQTY
                                 ? vendorLine.AVAILQTY
                                 : poLine.AVAILQTY;
-                        var matchedLine = poLine, // get the first item
+                        var poLine = poLine, // get the first item
                             appliedLine = vendorLine.UseQuantity(qty);
 
-                        vendorLine.MATCHING.push(vc2_util.extend(matchedLine, appliedLine));
+                        vendorLine.MATCHING.push(vc2_util.extend(poLine, appliedLine));
                         poLine.UseQuantity(appliedLine.APPLIEDQTY);
                     });
 
@@ -270,6 +354,161 @@ define(function (require) {
 
             return returnValue;
         },
+        isItemMatched: function (option) {
+            var logTitle = [LogTitle, 'isItemMatched'].join('::'),
+                returnValue;
+
+            try {
+                if (!option) throw 'Missing required parameter: option';
+                if (!option.poLine) throw 'Missing required parameter: poLine';
+                if (!option.vendorLine) throw 'Missing required parameter: vendorLine';
+
+                var poLine = option.poLine,
+                    vendorLine = option.vendorLine,
+                    MainCFG = option.mainConfig || {},
+                    VendorCFG = option.vendorConfig || {};
+
+                var VendorList = vc2_constant.LIST.XML_VENDOR,
+                    GlobalVar = vc2_constant.GLOBAL;
+
+                var settings = {
+                    isDandH:
+                        option.isDandH || VendorCFG
+                            ? VendorCFG.xmlVendor == VendorList.DandH
+                            : null,
+                    ingramHashSpace:
+                        option.ingramHashSpace || MainCFG ? MainCFG.ingramHashSpace : null,
+                    isIngram:
+                        option.ingramHashSpace || VendorCFG
+                            ? vc2_util.inArray(VendorCFG.xmlVendor, [
+                                  VendorList.INGRAM_MICRO_V_ONE,
+                                  VendorList.INGRAM_MICRO
+                              ])
+                            : null,
+                    isDell:
+                        option.isDell || VendorCFG ? VendorCFG.xmlVendor == VendorList.DELL : null
+                };
+
+                // normalize the item value
+                var poItem = {
+                    name: poLine.item_text || poLine.itemText || poLine.itemName,
+                    skuValue:
+                        poLine[GlobalVar.ITEM_ID_LOOKUP_COL] ||
+                        poLine[GlobalVar.VENDOR_SKU_LOOKUP_COL],
+                    altItem: poLine[VendorCFG.itemColumnIdToMatch || MainCFG.itemColumnIdToMatch],
+                    altMPN: poLine[
+                        VendorCFG.itemMPNColumnIdToMatch || MainCFG.itemMPNColumnIdToMatch
+                    ],
+                    sitemName: poLine.sitemname,
+                    dnhValue: option.dnhValue || poLine[vc2_constant.FIELD.TRANSACTION.DH_MPN],
+                    dellQuoteNo:
+                        option.dellQuoteNo || poLine[vc2_constant.FIELD.TRANSACTION.DELL_QUOTE_NO]
+                };
+
+                // try these matching conditions
+                returnValue = false;
+                var matchingCondition = {
+                    ITEM: function () {
+                        return (
+                            (vendorLine.ITEMNAME &&
+                                vc2_util.inArray(vendorLine.ITEMNAME, [
+                                    poItem.name,
+                                    poItem.skuValue
+                                ])) ||
+                            (vendorLine.MPNNAME &&
+                                vc2_util.inArray(vendorLine.MPNNAME, [
+                                    poItem.name,
+                                    poItem.skuValue
+                                ])) ||
+                            // vendorSKU matches with item name or skuValue or altItem or altMPN
+                            (vendorLine.SKUNAME &&
+                                vc2_util.inArray(vendorLine.SKUNAME, [
+                                    poItem.name,
+                                    poItem.skuValue
+                                ]))
+                        );
+                    },
+                    ALTITEM_COL: function () {
+                        var isMatched = false;
+
+                        // Check if MainCFG itemColumnIdToMatch is defined and poLine has the corresponding value
+                        if (MainCFG.itemColumnIdToMatch && poLine[MainCFG.itemColumnIdToMatch]) {
+                            isMatched = MainCFG.matchItemToPartNumber
+                                ? // If matchItemToPartNumber is true, match only with ITEMNAME and SKUNAME
+                                  vc2_util.inArray(poLine[MainCFG.itemColumnIdToMatch], [
+                                      vendorLine.ITEMNAME,
+                                      vendorLine.SKUNAME
+                                  ])
+                                : // Otherwise, match with ITEMNAME, SKUNAME, and MPNNAME
+                                  vc2_util.inArray(poLine[MainCFG.itemColumnIdToMatch], [
+                                      vendorLine.ITEMNAME,
+                                      vendorLine.SKUNAME,
+                                      vendorLine.MPNNAME
+                                  ]);
+                        }
+                        // Check if VendorCFG itemColumnIdToMatch is defined and poLine has the corresponding value
+                        else if (
+                            VendorCFG.itemColumnIdToMatch &&
+                            poLine[VendorCFG.itemColumnIdToMatch]
+                        ) {
+                            isMatched = VendorCFG.matchItemToPartNumber
+                                ? // If matchItemToPartNumber is true, match only with ITEMNAME and SKUNAME
+                                  vc2_util.inArray(poLine[VendorCFG.itemColumnIdToMatch], [
+                                      vendorLine.ITEMNAME,
+                                      vendorLine.SKUNAME
+                                  ])
+                                : // Otherwise, match with ITEMNAME, SKUNAME, and MPNNAME
+                                  vc2_util.inArray(poLine[VendorCFG.itemColumnIdToMatch], [
+                                      vendorLine.ITEMNAME,
+                                      vendorLine.SKUNAME,
+                                      vendorLine.MPNNAME
+                                  ]);
+                        }
+
+                        return isMatched;
+                    },
+                    DNH_ITEM: function () {
+                        return (
+                            settings.isDandH &&
+                            poItem.dnhValue &&
+                            vc2_util.inArray(poItem.dnhValue, [
+                                vendorLine.ITEMNAME,
+                                vendorLine.SKUNAME,
+                                vendorLine.MPNNAME
+                            ])
+                        );
+                    },
+                    DELL_ITEM: function () {
+                        return (
+                            settings.isDell &&
+                            poItem.dellQuoteNo &&
+                            vc2_util.inArray(poItem.dellQuoteNo, [
+                                vendorLine.ITEMNAME,
+                                vendorLine.SKUNAME,
+                                vendorLine.MPNNAME
+                            ])
+                        );
+                    }
+                };
+
+                //loop thru the matching condition
+                for (var key in matchingCondition) {
+                    var result = matchingCondition[key].call();
+                    if (result) {
+                        vendorLine.MATCHED_BY = key;
+                        returnValue = key;
+                        break;
+                    }
+                }
+
+                vc2_util.log(logTitle, '*** Item matched: ', returnValue);
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
         isItemAltMatched: function (option) {
             // try to match the item alt names
             var logTitle = [LogTitle, 'isItemAltMatched'].join('::'),
@@ -288,26 +527,19 @@ define(function (require) {
 
                 if (!listAltNames || !listAltNames[poLine.item]) throw 'No Alt Names found';
 
-                var altItemNames = listAltNames[poLine.item],
-                    arrAltNames = [];
-
-                for (var key in altItemNames) {
-                    if (altItemNames.hasOwnProperty(key)) {
-                        arrAltNames.push(altItemNames[key]);
-                    }
-                }
+                var altItemNames = listAltNames[poLine.item];
 
                 /// try to match the items
                 var isMatched = false;
 
                 if (MainCFG.itemFieldIdToMatch && listAltNames[poLine.item]) {
                     isMatched = MainCFG.matchMPNWithPartNumber
-                        ? vc2_util.inArray(poLine[MainCFG.itemFieldIdToMatch], [
+                        ? vc2_util.inArray(altItemNames[MainCFG.itemFieldIdToMatch], [
                               vendorLine.ITEMNAME,
                               vendorLine.SKUNAME,
                               vendorLine.MPNNAME
                           ])
-                        : vc2_util.inArray(poLine[MainCFG.itemFieldIdToMatch], [
+                        : vc2_util.inArray(altItemNames[MainCFG.itemFieldIdToMatch], [
                               vendorLine.ITEMNAME,
                               vendorLine.SKUNAME
                           ]);
@@ -315,12 +547,12 @@ define(function (require) {
                 // Check if VendorCFG itemFieldIdToMatch is defined and poLine has the corresponding value
                 if (!isMatched && VendorCFG.itemFieldIdToMatch && listAltNames[poLine.item]) {
                     isMatched = VendorCFG.matchMPNWithPartNumber
-                        ? vc2_util.inArray(poLine[VendorCFG.itemFieldIdToMatch], [
+                        ? vc2_util.inArray(altItemNames[VendorCFG.itemFieldIdToMatch], [
                               vendorLine.ITEMNAME,
                               vendorLine.SKUNAME,
                               vendorLine.MPNNAME
                           ])
-                        : vc2_util.inArray(poLine[VendorCFG.itemFieldIdToMatch], [
+                        : vc2_util.inArray(altItemNames[VendorCFG.itemFieldIdToMatch], [
                               vendorLine.ITEMNAME,
                               vendorLine.SKUNAME
                           ]);
@@ -381,21 +613,21 @@ define(function (require) {
 
             try {
                 if (!option) throw 'Missing required parameter: option';
-                if (!option.itemIds && !option.poLines)
-                    throw 'Missing required parameter: itemIds or poLines';
+                if (!option.itemIds && !option.orderLines)
+                    throw 'Missing required parameter: itemIds or orderLines';
 
                 var ItemMapREC = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
 
                 var itemIds =
                     option.itemIds ||
-                    option.poLines.map(function (line) {
+                    option.orderLines.map(function (line) {
                         return line.item;
                     });
 
                 if (vc2_util.isEmpty(itemIds)) throw 'No itemIds found';
 
                 var currentMappedItems =
-                    CURRENT.MAPPED_ITEMS ||
+                    Current.MAPPED_ITEMS ||
                     vc2_util.getNSCache({
                         name: 'MAPPED_ITEMS',
                         isJSON: true
@@ -435,7 +667,7 @@ define(function (require) {
                     name: 'MAPPED_ITEMS',
                     value: currentMappedItems
                 });
-                CURRENT.MAPPED_ITEMS = currentMappedItems;
+                Current.MAPPED_ITEMS = currentMappedItems;
 
                 returnValue = currentMappedItems;
                 vc2_util.log(logTitle, '*** Mapped Item Names:', {
@@ -453,15 +685,15 @@ define(function (require) {
                 returnValue;
             try {
                 if (!option) throw 'Missing required parameter: option';
-                if (!option.itemIds && !option.poLines)
-                    throw 'Missing required parameter: itemIds or poLines';
+                if (!option.itemIds && !option.orderLines)
+                    throw 'Missing required parameter: itemIds or orderLines';
 
                 var MainCFG = option.mainConfig || {},
                     VendorCFG = option.vendorConfig || {};
 
                 var itemIds =
                     option.itemIds ||
-                    option.poLines.map(function (line) {
+                    option.orderLines.map(function (line) {
                         return line.item;
                     });
 
@@ -469,7 +701,7 @@ define(function (require) {
 
                 // Check All the Missing Items from CACHE
                 var currentAltNames =
-                    CURRENT.ALTNAMES ||
+                    Current.ALTNAMES ||
                     vc2_util.getNSCache({
                         name: 'ALT_ITEM_NAMES',
                         isJSON: true

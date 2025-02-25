@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2023 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -27,13 +27,10 @@ define(function (require) {
             lib: require('./ctc_svclib_webservice-v1.js')
         },
         recordsLib: {
-            lib: require('./ctc_svclib_records.js')
+            lib: require('./ctc_svclib_records')
         },
         configLib: {
             lib: require('./ctc_svclib_configlib.js')
-        },
-        itemmatching: {
-            lib: require('./ctc_svclib_itemmatch.js')
         },
         billcreateLib: {
             lib: require('./ctc_svclib_billcreate')

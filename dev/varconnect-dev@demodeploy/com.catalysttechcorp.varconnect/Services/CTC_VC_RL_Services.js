@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Catalyst Tech Corp
+ * Copyright (c) 2025 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -20,21 +20,14 @@ define(function (require) {
         vc2_constant = require('./../CTC_VC2_Constants.js');
 
     var SERVICES_MAP = {
-        processV1: {
-            lib: require('./ctc_svclib_process-v1.js')
-        },
-        webserviceLibV1: {
-            lib: require('./ctc_svclib_webservice-v1.js')
-        },
-        recordsLib: {
-            lib: require('./ctc_svclib_records')
-        },
-        configLib: {
-            lib: require('./ctc_svclib_configlib.js')
-        },
-        billcreateLib: {
-            lib: require('./ctc_svclib_billcreate')
-        }
+        billcreateLib: { lib: require('./ctc_svclib_billcreate') },
+        configLib: { lib: require('./ctc_svclib_configlib.js') },
+        itemmatching: { lib: require('./ctc_svclib_itemmatch.js') },
+        orderstatusLib: { lib: require('./ctc_svclib_orderstatus.js') },
+        processV1: { lib: require('./ctc_svclib_process-v1.js') },
+        recordsLib: { lib: require('./ctc_svclib_records.js') },
+        txnLib: { lib: require('./ctc_svclib_transaction.js') },
+        webserviceLibV1: { lib: require('./ctc_svclib_webservice-v1.js') }
     };
 
     var Helper = {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024  sCatalyst Tech Corp
+ * Copyright (c) 2025  Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -17,6 +17,9 @@ define(function (require) {
 
     var vc2_util = require('./../CTC_VC2_Lib_Utils.js'),
         vc2_constant = require('./../CTC_VC2_Constants.js'),
+        vclib_error = require('./lib/ctc_lib_errors.js');
+
+    var vcs_recordLib = require('./ctc_svclib_records.js'),
         vcs_configLib = require('./ctc_svclib_configlib.js');
 
     var ns_search = require('N/search'),
@@ -27,306 +30,299 @@ define(function (require) {
 
     const BILLFILE = vc2_constant.RECORD.BILLFILE;
 
-    var MainCFG,
-        OrderVendorCFG,
-        Helper = {
-            searchPO: function (option) {
-                var logTitle = [LogTitle, 'searchPO'].join('::'),
-                    returnValue;
+    var Helper = {
+        searchPO: function (option) {
+            var logTitle = [LogTitle, 'searchPO'].join('::'),
+                returnValue;
 
-                MainCFG = vcs_configLib.mainConfig();
+            MainCFG = vcs_configLib.mainConfig();
 
-                var poId = option.poId || option.po,
-                    poNum = option.poNum || option.ponum;
+            var poId = option.poId || option.po,
+                poNum = option.poNum || option.ponum;
 
-                if (!poId && !poNum) throw 'Missing PO Identifier';
+            if (!poId && !poNum) throw 'Missing PO Identifier';
 
-                var searchObj = ns_search.create({
-                    type: 'purchaseorder',
-                    filters: [
-                        poId
-                            ? ['internalid', 'anyof', poId]
-                            : MainCFG.overridePONum
-                            ? [
-                                  ['numbertext', 'is', poNum],
-                                  'OR',
-                                  ['custbody_ctc_vc_override_ponum', 'is', poNum]
-                              ]
-                            : ['numbertext', 'is', poNum],
-                        'AND',
-                        ['mainline', 'is', 'T'],
-                        'AND',
-                        ['type', 'anyof', 'PurchOrd']
-                    ],
-                    columns: [
-                        'trandate',
-                        'postingperiod',
-                        'type',
-                        MainCFG.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
-                        'tranid',
-                        'entity',
-                        'amount',
-                        'internalid'
-                    ]
-                });
+            var searchObj = ns_search.create({
+                type: 'purchaseorder',
+                filters: [
+                    poId
+                        ? ['internalid', 'anyof', poId]
+                        : MainCFG.overridePONum
+                        ? [
+                              ['numbertext', 'is', poNum],
+                              'OR',
+                              ['custbody_ctc_vc_override_ponum', 'is', poNum]
+                          ]
+                        : ['numbertext', 'is', poNum],
+                    'AND',
+                    ['mainline', 'is', 'T'],
+                    'AND',
+                    ['type', 'anyof', 'PurchOrd']
+                ],
+                columns: [
+                    'trandate',
+                    'postingperiod',
+                    'type',
+                    MainCFG.overridePONum ? 'custbody_ctc_vc_override_ponum' : 'tranid',
+                    'tranid',
+                    'entity',
+                    'amount',
+                    'internalid'
+                ]
+            });
 
-                var poData = false;
-                if (searchObj.runPaged().count) {
-                    var searchResult = searchObj.run().getRange({ start: 0, end: 1 }).shift();
+            var poData = false;
+            if (searchObj.runPaged().count) {
+                var searchResult = searchObj.run().getRange({ start: 0, end: 1 }).shift();
 
-                    poData = {
-                        id: searchResult.getValue({ name: 'internalid' }),
-                        entityId: searchResult.getValue({ name: 'entity' }),
-                        tranId: searchResult.getValue({ name: 'tranid' }),
-                        date: searchResult.getValue({ name: 'trandate' })
-                    };
-                    OrderVendorCFG = vcs_configLib.orderVendorConfig({ poId: poData.id });
-                }
-                returnValue = poData;
-
-                return returnValue;
-            },
-            createGroupColumn: function (option) {
-                var returnValue = null;
-                if (util.isObject(option)) {
-                    util.extend(option, {
-                        summary: 'GROUP'
-                    });
-                    returnValue = ns_search.createColumn(option);
-                } else {
-                    returnValue = ns_search.createColumn({
-                        name: option,
-                        summary: 'GROUP'
-                    });
-                }
-                return returnValue;
-            },
-            collectItemsFromPO: function (option) {
-                var logTitle = [LogTitle, 'collectItemsFromPO'],
-                    poColumns = [
-                        ns_search.createColumn({
-                            name: 'item',
-                            summary: 'GROUP'
-                        })
-                    ],
-                    returnValue = [];
-
-                if (!option.poId) return false;
-                var itemAltSKUColId = null,
-                    itemAltMPNColId = null;
-                if (OrderVendorCFG) {
-                    itemAltSKUColId = OrderVendorCFG.itemColumnIdToMatch;
-                    itemAltMPNColId = OrderVendorCFG.itemMPNColumnIdToMatch;
-                }
-                if (MainCFG) {
-                    if (!itemAltSKUColId) {
-                        itemAltSKUColId = MainCFG.itemColumnIdToMatch;
-                    }
-                    if (!itemAltMPNColId) {
-                        itemAltMPNColId = MainCFG.itemMPNColumnIdToMatch;
-                    }
-                }
-                if (itemAltSKUColId) {
-                    itemAltSKUColId =
-                        vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] ||
-                        itemAltSKUColId;
-                    poColumns.push(Helper.createGroupColumn(itemAltSKUColId));
-                }
-                if (itemAltMPNColId) {
-                    itemAltMPNColId =
-                        vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] ||
-                        itemAltMPNColId;
-                    poColumns.push(poColumns.push(Helper.createGroupColumn(itemAltMPNColId)));
-                }
-                var itemSearch = ns_search.create({
-                    type: 'transaction',
-                    filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
-                    columns: poColumns
-                });
-
-                var arrSKUs = [],
-                    arrPOItems = [];
-                itemSearch.run().each(function (result) {
-                    var skuData = {
-                        text: result.getText({
-                            name: 'item',
-                            summary: 'GROUP'
-                        }),
-                        itemNum: result.getText({
-                            name: 'item',
-                            summary: 'GROUP'
-                        }),
-                        value: result.getValue({
-                            name: 'item',
-                            summary: 'GROUP'
-                        }),
-                        item: result.getValue({
-                            name: 'item',
-                            summary: 'GROUP'
-                        })
-                    };
-                    arrSKUs.push(skuData);
-
-                    if (!vc2_util.inArray(skuData.value, arrPOItems))
-                        arrPOItems.push(skuData.value);
-
-                    return true;
-                });
-
-                // extract the vendor item names
-                var arrSKUVendorNames = Helper.extractVendorItemNames(arrPOItems);
-
-                if (arrSKUVendorNames && !vc2_util.isEmpty(arrSKUVendorNames)) {
-                    var skuMapKey = vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY;
-                    arrSKUs.forEach(function (skuData) {
-                        if (
-                            arrSKUVendorNames[skuData.value] &&
-                            !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])
-                        ) {
-                            skuData[skuMapKey] = arrSKUVendorNames[skuData.value];
-                        }
-
-                        return true;
-                    });
-                }
-
-                returnValue = arrSKUs;
-                return returnValue;
-            },
-            extractVendorItemNames: function (option) {
-                var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
-                    returnValue,
-                    arrItemList = option.lines || option;
-
-                try {
-                    var GlobalVar = vc2_constant.GLOBAL,
-                        ItemMapRecordVar = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
-
-                    if (!arrItemList || !arrItemList.length) throw 'Missing line item list';
-
-                    var uniqueItemIds = vc2_util.uniqueArray(arrItemList);
-                    if (!uniqueItemIds.length) throw 'Missing line item lists';
-
-                    vc2_util.log(
-                        logTitle,
-                        'Lookup items for assigned vendor names... ',
-                        uniqueItemIds
-                    );
-
-                    /// SEARCH for Mapped Vendor Items
-                    var searchResults = vc2_util.searchAllPaged({
-                        type: ItemMapRecordVar.ID,
-                        filterExpression: [
-                            [ItemMapRecordVar.FIELD.ITEM, 'anyof', uniqueItemIds],
-                            'and',
-                            ['isinactive', 'is', 'F']
-                        ],
-                        columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
-                    });
-                    if (!searchResults || !searchResults.length)
-                        throw 'No vendor item mapped for items';
-
-                    var vendorItemMap = {};
-                    searchResults.forEach(function (result) {
-                        var vendorItemName = result.getValue({ name: ItemMapRecordVar.FIELD.NAME }),
-                            item = result.getValue({ name: ItemMapRecordVar.FIELD.ITEM });
-
-                        if (!vendorItemMap[item]) vendorItemMap[item] = [];
-                        vendorItemMap[item].push(vendorItemName);
-                        return true;
-                    });
-
-                    returnValue = vendorItemMap;
-                } catch (error) {
-                    log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
-                    returnValue = false;
-
-                    // throw ns_error.create({
-                    //     name: 'Unable to extract vendor item names',
-                    //     message: vc2_util.extractError(error)
-                    // });
-                }
-                return returnValue;
-            },
-            loadVendorConfig: function (option) {
-                var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
-                    returnValue;
-                var entityId = option.entity;
-                var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
-
-                try {
-                    var searchOption = {
-                        type: 'vendor',
-                        filters: [['internalid', 'anyof', entityId]],
-                        columns: []
-                    };
-
-                    for (var field in BILLCREATE_CFG.FIELD) {
-                        searchOption.columns.push(
-                            ns_search.createColumn({
-                                name: BILLCREATE_CFG.FIELD[field],
-                                join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                            })
-                        );
-                    }
-
-                    var searchObj = ns_search.create(searchOption);
-                    if (!searchObj.runPaged().count) throw 'No config available';
-
-                    returnValue = {};
-                    searchObj.run().each(function (row) {
-                        for (var field in BILLCREATE_CFG.FIELD) {
-                            returnValue[field] = row.getValue({
-                                name: BILLCREATE_CFG.FIELD[field],
-                                join: vc2_constant.FIELD.ENTITY.BILLCONFIG
-                            });
-                        }
-                        return true;
-                    });
-                } catch (error) {
-                    vc2_util.logError(logTitle, error);
-                    returnValue = false;
-                }
-
-                return returnValue;
-            },
-            loadBillFileData: function (option) {
-                var logTitle = [LogTitle, 'Helper.loadBillFileData'].join('::'),
-                    returnValue;
-
-                var billFileId = option.billFileId || option.billId;
-
-                if (!billFileId) throw 'Missing Bill File ID';
-
-                var searchOption = {
-                    type: BILLFILE.ID,
-                    filters: [['internalid', 'anyof', billFileId]],
-                    columns: (function (bFields) {
-                        var cols = [];
-                        for (var fld in bFields) cols.push(bFields[fld]);
-                        return cols;
-                    })(BILLFILE.FIELD)
+                poData = {
+                    id: searchResult.getValue({ name: 'internalid' }),
+                    entityId: searchResult.getValue({ name: 'entity' }),
+                    tranId: searchResult.getValue({ name: 'tranid' }),
+                    date: searchResult.getValue({ name: 'trandate' })
                 };
-                var billFileSearch = ns_search.create(searchOption),
-                    billFileValues = {};
+                OrderVendorCFG = vcs_configLib.orderVendorConfig({ poId: poData.id });
+            }
+            returnValue = poData;
 
-                if (!billFileSearch) throw 'BillFile record not found - ' + billFileId;
+            return returnValue;
+        },
+        createGroupColumn: function (option) {
+            var returnValue = null;
+            if (util.isObject(option)) {
+                util.extend(option, {
+                    summary: 'GROUP'
+                });
+                returnValue = ns_search.createColumn(option);
+            } else {
+                returnValue = ns_search.createColumn({
+                    name: option,
+                    summary: 'GROUP'
+                });
+            }
+            return returnValue;
+        },
+        collectItemsFromPO: function (option) {
+            var logTitle = [LogTitle, 'collectItemsFromPO'],
+                poColumns = [
+                    ns_search.createColumn({
+                        name: 'item',
+                        summary: 'GROUP'
+                    })
+                ],
+                returnValue = [];
 
-                billFileSearch.run().each(function (row) {
-                    for (var fld in BILLFILE.FIELD) {
-                        var fldname = BILLFILE.FIELD[fld];
-                        var value = row.getValue({ name: fldname }),
-                            text = row.getText({ name: fldname });
+            if (!option.poId) return false;
+            var itemAltSKUColId = null,
+                itemAltMPNColId = null;
+            if (OrderVendorCFG) {
+                itemAltSKUColId = OrderVendorCFG.itemColumnIdToMatch;
+                itemAltMPNColId = OrderVendorCFG.itemMPNColumnIdToMatch;
+            }
+            if (MainCFG) {
+                if (!itemAltSKUColId) {
+                    itemAltSKUColId = MainCFG.itemColumnIdToMatch;
+                }
+                if (!itemAltMPNColId) {
+                    itemAltMPNColId = MainCFG.itemMPNColumnIdToMatch;
+                }
+            }
+            if (itemAltSKUColId) {
+                itemAltSKUColId =
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltSKUColId] ||
+                    itemAltSKUColId;
+                poColumns.push(Helper.createGroupColumn(itemAltSKUColId));
+            }
+            if (itemAltMPNColId) {
+                itemAltMPNColId =
+                    vc2_constant.FIELD_TO_SEARCH_COLUMN_MAP.TRANSACTION[itemAltMPNColId] ||
+                    itemAltMPNColId;
+                poColumns.push(poColumns.push(Helper.createGroupColumn(itemAltMPNColId)));
+            }
+            var itemSearch = ns_search.create({
+                type: 'transaction',
+                filters: [['internalid', 'anyof', option.poId], 'AND', ['mainline', 'is', 'F']],
+                columns: poColumns
+            });
 
-                        billFileValues[fld] =
-                            value && text && value !== text ? { text: text, value: value } : value;
+            var arrSKUs = [],
+                arrPOItems = [];
+            itemSearch.run().each(function (result) {
+                var skuData = {
+                    text: result.getText({
+                        name: 'item',
+                        summary: 'GROUP'
+                    }),
+                    itemNum: result.getText({
+                        name: 'item',
+                        summary: 'GROUP'
+                    }),
+                    value: result.getValue({
+                        name: 'item',
+                        summary: 'GROUP'
+                    }),
+                    item: result.getValue({
+                        name: 'item',
+                        summary: 'GROUP'
+                    })
+                };
+                arrSKUs.push(skuData);
+
+                if (!vc2_util.inArray(skuData.value, arrPOItems)) arrPOItems.push(skuData.value);
+
+                return true;
+            });
+
+            // extract the vendor item names
+            var arrSKUVendorNames = Helper.extractVendorItemNames(arrPOItems);
+
+            if (arrSKUVendorNames && !vc2_util.isEmpty(arrSKUVendorNames)) {
+                var skuMapKey = vc2_constant.GLOBAL.INCLUDE_ITEM_MAPPING_LOOKUP_KEY;
+                arrSKUs.forEach(function (skuData) {
+                    if (
+                        arrSKUVendorNames[skuData.value] &&
+                        !vc2_util.isEmpty(arrSKUVendorNames[skuData.value])
+                    ) {
+                        skuData[skuMapKey] = arrSKUVendorNames[skuData.value];
                     }
+
+                    return true;
+                });
+            }
+
+            returnValue = arrSKUs;
+            return returnValue;
+        },
+        extractVendorItemNames: function (option) {
+            var logTitle = [LogTitle, 'extractVendorItemNames'].join('::'),
+                returnValue,
+                arrItemList = option.lines || option;
+
+            try {
+                var GlobalVar = vc2_constant.GLOBAL,
+                    ItemMapRecordVar = vc2_constant.RECORD.VENDOR_ITEM_MAPPING;
+
+                if (!arrItemList || !arrItemList.length) throw 'Missing line item list';
+
+                var uniqueItemIds = vc2_util.uniqueArray(arrItemList);
+                if (!uniqueItemIds.length) throw 'Missing line item lists';
+
+                vc2_util.log(logTitle, 'Lookup items for assigned vendor names... ', uniqueItemIds);
+
+                /// SEARCH for Mapped Vendor Items
+                var searchResults = vc2_util.searchAllPaged({
+                    type: ItemMapRecordVar.ID,
+                    filterExpression: [
+                        [ItemMapRecordVar.FIELD.ITEM, 'anyof', uniqueItemIds],
+                        'and',
+                        ['isinactive', 'is', 'F']
+                    ],
+                    columns: [ItemMapRecordVar.FIELD.NAME, ItemMapRecordVar.FIELD.ITEM]
+                });
+                if (!searchResults || !searchResults.length)
+                    throw 'No vendor item mapped for items';
+
+                var vendorItemMap = {};
+                searchResults.forEach(function (result) {
+                    var vendorItemName = result.getValue({ name: ItemMapRecordVar.FIELD.NAME }),
+                        item = result.getValue({ name: ItemMapRecordVar.FIELD.ITEM });
+
+                    if (!vendorItemMap[item]) vendorItemMap[item] = [];
+                    vendorItemMap[item].push(vendorItemName);
                     return true;
                 });
 
-                return billFileValues;
+                returnValue = vendorItemMap;
+            } catch (error) {
+                log.error(logTitle, '## ERROR ## ' + JSON.stringify(error));
+                returnValue = false;
+
+                // throw ns_error.create({
+                //     name: 'Unable to extract vendor item names',
+                //     message: vc2_util.extractError(error)
+                // });
             }
-        };
+            return returnValue;
+        },
+        loadVendorConfig: function (option) {
+            var logTitle = [LogTitle, 'loadVendorConfig'].join('::'),
+                returnValue;
+            var entityId = option.entity;
+            var BILLCREATE_CFG = vc2_constant.RECORD.BILLCREATE_CONFIG;
+
+            try {
+                var searchOption = {
+                    type: 'vendor',
+                    filters: [['internalid', 'anyof', entityId]],
+                    columns: []
+                };
+
+                for (var field in BILLCREATE_CFG.FIELD) {
+                    searchOption.columns.push(
+                        ns_search.createColumn({
+                            name: BILLCREATE_CFG.FIELD[field],
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
+                        })
+                    );
+                }
+
+                var searchObj = ns_search.create(searchOption);
+                if (!searchObj.runPaged().count) throw 'No config available';
+
+                returnValue = {};
+                searchObj.run().each(function (row) {
+                    for (var field in BILLCREATE_CFG.FIELD) {
+                        returnValue[field] = row.getValue({
+                            name: BILLCREATE_CFG.FIELD[field],
+                            join: vc2_constant.FIELD.ENTITY.BILLCONFIG
+                        });
+                    }
+                    return true;
+                });
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
+
+            return returnValue;
+        },
+        loadBillFileData: function (option) {
+            var logTitle = [LogTitle, 'Helper.loadBillFileData'].join('::'),
+                returnValue;
+
+            var billFileId = option.billFileId || option.billId;
+
+            if (!billFileId) throw 'Missing Bill File ID';
+
+            var searchOption = {
+                type: BILLFILE.ID,
+                filters: [['internalid', 'anyof', billFileId]],
+                columns: (function (bFields) {
+                    var cols = [];
+                    for (var fld in bFields) cols.push(bFields[fld]);
+                    return cols;
+                })(BILLFILE.FIELD)
+            };
+            var billFileSearch = ns_search.create(searchOption),
+                billFileValues = {};
+
+            if (!billFileSearch) throw 'BillFile record not found - ' + billFileId;
+
+            billFileSearch.run().each(function (row) {
+                for (var fld in BILLFILE.FIELD) {
+                    var fldname = BILLFILE.FIELD[fld];
+                    var value = row.getValue({ name: fldname }),
+                        text = row.getText({ name: fldname });
+
+                    billFileValues[fld] =
+                        value && text && value !== text ? { text: text, value: value } : value;
+                }
+                return true;
+            });
+
+            return billFileValues;
+        }
+    };
 
     return {
         addProcessLog: function (option) {
@@ -474,6 +470,77 @@ define(function (require) {
                 });
             }
 
+            return returnValue;
+        },
+        loadBillFile: function (option) {
+            var logTitle = [LogTitle, 'loadBillFile'].join('::'),
+                returnValue;
+
+            try {
+                var billFileRec = option.billFileRec || option.recBillFile,
+                    billFileId = option.billFileId;
+
+                var billFileData = {};
+
+                if (!billFileRec) {
+                    if (!billFileId) throw 'Missing Bill File ID';
+                    billFileRec = vcs_recordLib.load({
+                        type: vc2_constant.RECORD.BILLFILE.ID,
+                        id: billFileId
+                    });
+                    if (!billFileRec) throw 'Unable to load Bill File Record';
+                }
+                billFileData = vcs_recordLib.extractValues({
+                    record: billFileRec,
+                    columns: vc2_constant.RECORD.BILLFILE.FIELD
+                });
+
+                billFileData.JSON = vc2_util.safeParse(billFileData.JSON);
+                billFileData.LINES = [];
+
+                billFileData.JSON.lines.forEach(function (jsonLine, idx) {
+                    ['BILLRATE', 'RATE', 'PRICE'].forEach(function (field) {
+                        if (jsonLine.hasOwnProperty(field))
+                            jsonLine[field] = vc2_util.forceFloat(jsonLine[field]);
+                        return true;
+                    });
+                    jsonLine.QUANTITY = vc2_util.forceInt(jsonLine.QUANTITY);
+                    jsonLine.LINEIDX = idx;
+
+                    util.extend(jsonLine, {
+                        quantity: jsonLine.QUANTITY,
+                        itemId: (jsonLine.NSITEM || '').toString(),
+                        rate: jsonLine.BILLRATE || jsonLine.PRICE,
+
+                        item: (jsonLine.NSITEM || '').toString(),
+                        itemName: jsonLine.ITEMNO,
+                        description: jsonLine.DESCRIPTION,
+                        quantity: jsonLine.QUANTITY
+                    });
+
+                    // skip the line, if there are no ITEMNO, and there is no price
+                    if (!jsonLine.ITEMNO && !jsonLine.PRICE) return;
+                    if (!jsonLine.quantity) return;
+
+                    billFileData.LINES.push(jsonLine);
+
+                    return true;
+                });
+
+                /// add the charges
+                billFileData.CHARGES = {};
+                ['shipping', 'other', 'tax'].forEach(function (chargeType) {
+                    billFileData.CHARGES[chargeType] = vc2_util.parseFloat(
+                        billFileData.JSON.charges[chargeType]
+                    );
+                    return true;
+                });
+
+                returnValue = billFileData;
+            } catch (error) {
+                vc2_util.logError(logTitle, error);
+                returnValue = false;
+            }
             return returnValue;
         }
     };

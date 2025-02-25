@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -263,12 +263,7 @@ define(function (require) {
                                 lines: LinesToFulfill.map(function (data) {
                                     return vc2_util.extractValues({
                                         source: data,
-                                        fields: [
-                                            'order_num',
-                                            'ship_qty',
-                                            'order_eta',
-                                            'order_delivery_eta'
-                                        ]
+                                        fields: ['order_num', 'ship_qty', 'order_eta', 'order_delivery_eta']
                                     });
                                 })
                             }

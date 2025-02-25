@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025  sCatalyst Tech Corp
+ * Copyright (c) 2024  sCatalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -225,8 +225,7 @@ define(function (require) {
 
                 // check for the cache
                 var cachedValue = this.getCache(option);
-
-                if (!vc2_util.isEmpty(cachedValue) && !option.nocache) {
+                if (!vc2_util.isEmpty(cachedValue)) {
                     returnValue = cachedValue;
                     return cachedValue;
                 }

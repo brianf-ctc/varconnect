@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -126,7 +126,7 @@ define(['N/runtime', 'N/record', 'N/search'], function (ns_runtime, record, sear
                 });
                 newRec.save({
                     enableSourcing: true,
-                    ignoreMandatoryFields: true
+                    ignoreMandatoryFields: true                
                 });
                 var isDropShip = search.lookupFields({
                     type: newRecord.type,

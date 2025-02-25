@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Catalyst Tech Corp
+ * Copyright (c) 2022 Catalyst Tech Corp
  * All Rights Reserved.
  *
  * This software is the confidential and proprietary information of
@@ -53,7 +53,7 @@ define(['N/record', 'N/format', './CTC_VC2_Constants.js'], function (
             fieldId: logFields.HEADER,
             value: header ? (header.length > 300 ? header.substr(0, 300) : header) : ''
         });
-
+        
         recLog.setValue({
             fieldId: logFields.BODY,
             value: body || ''
