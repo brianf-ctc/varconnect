@@ -682,7 +682,9 @@ define(function (require) {
                     orderConfig: Current.OrderCFG,
                     poId: Current.poId,
                     lineData: option.lineData || option.orderLines,
-                    vendor: Current.vendor
+                    vendor: Current.vendor,
+                    recSalesOrd: option.soRec,
+                    recPurchOrd: option.poRec
                 });
                 returnValue = receiptData;
 

@@ -542,6 +542,8 @@ define(function (require) {
                     isFullyBilled: vc2_util.inArray(Current.PO.DATA.statusRef, ['fullyBilled'])
                 });
 
+                vc2_util.log(logTitle, '>> PO Data: ', Current.PO.DATA);
+
                 // SET THE STATUS ///
                 util.extend(Current.STATUS.PO, {
                     IsFullyBilled: Current.PO.DATA.isFullyBilled,
@@ -823,7 +825,7 @@ define(function (require) {
                 Helper.setError({ code: error });
             }
         },
-        processBillFileLines: function (option) {
+        processBillFileLines_new: function (option) {
             var logTitle = [LogTitle, 'processBillFileLines'].join('::'),
                 returnValue = Current.BILLFILE.LINES;
 
@@ -833,20 +835,25 @@ define(function (require) {
 
                 // PREPARE THE LINES FOR MATCHING
                 Current.BILLFILE.LINES.forEach(function (vendorLine, idx) {
-                    vendorLine.ITEMNAME = vendorLine.ITEMNO;
+                    vendorLine.ITEM_TEXT = vendorLine.ITEMNO;
                     vendorLine.SERIALS = vendorLine.SERIAL;
                     vendorLine.APPLIEDRATE = vendorLine.BILLRATE || vendorLine.PRICE;
                 });
 
                 Current.PO.LINES.forEach(function (orderLine) {
-                    orderLine.AVAILQTY = orderLine.quantity;
+                    // available quantity is the quantity that is not yet billed, or not yet received
+
+                    orderLine.AVAILQTY = orderLine.quantity; // - orderLine.quantitybilled - orderLine.quantityreceived;
+                    orderLine.APPLIEDRATE = orderLine.rate;
+                    orderLine.ITEM_TEXT = orderLine.item_text;
+                    // orderLine.AVAILQTY = orderLine.quantity;
                 });
                 /// === MATCH THE LINES === ///
                 vcs_itemmatchLib.matchOrderLines({
                     orderRecord: Current.PO.REC,
                     poId: Current.PO.ID,
                     vendorLines: Current.BILLFILE.LINES,
-                    orderLines: Current.PO.LINES
+                    poLines: Current.PO.LINES
                 });
                 /////////////////////////////
 
@@ -1017,7 +1024,7 @@ define(function (require) {
 
             return returnValue;
         },
-        processBillFileLines_2: function (option) {
+        processBillFileLines: function (option) {
             var logTitle = [LogTitle, 'processBillFileLines'].join('::'),
                 returnValue = Current.BILLFILE.LINES;
 

@@ -5,6 +5,7 @@ define(function (require) {
         lib_testdata = require('./testdata.js');
 
     var ns_record = require('N/record'),
+        ns_runtime = require('N/runtime'),
         ns_format = require('N/format');
 
     var moment = require('./../lib/moment.js');
@@ -23,8 +24,12 @@ define(function (require) {
 
     var TESTING = [
         function () {
+            vc2_util.log(LogTitle, '*** START Unit Testing: [' + ns_runtime.accountId + ']');
+
+            var arrTestData = lib_testdata[ns_runtime.accountId];
+
             // get the data from the testdata.js
-            lib_testdata.BILLFILES.forEach(function (billFile) {
+            arrTestData.BILLFILES.forEach(function (billFile) {
                 try {
                     var testName = [LogTitle, 'createFulfillment:' + billFile.billFileId].join('|');
 
@@ -113,7 +118,7 @@ define(function (require) {
                                     CARRIER: billFileRec.JSON.carrier,
                                     TRACKING_NUMS: payloadLine.TRACKING,
                                     SERIAL_NUMS: payloadLine.SERIAL,
-                                    ITEMNAME: payloadLine.ITEMNO,
+                                    ITEM_TEXT: payloadLine.ITEMNO,
                                     APPLIEDRATE: payloadLine.BILLRATE || payloadLine.PRICE
                                 });
 
@@ -196,7 +201,7 @@ define(function (require) {
 
                                         return (
                                             ffLine.item == billLine.NSITEM &&
-                                            ffLine.itemname == billLine.ITEMNAME &&
+                                            ffLine.itemname == billLine.ITEM_TEXT &&
                                             ffLine.quantity == billLine.APPLIEDQTY
                                         );
                                     });

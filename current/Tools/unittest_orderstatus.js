@@ -299,7 +299,7 @@ define(function (require) {
 
             // normalize the vendor lines
             vendorLines.forEach(function (line) {
-                line.ITEMNAME = line.item_num;
+                line.ITEM_TEXT = line.item_num;
                 line.ITEMALT = line.item_sku || line.vendorSKU;
                 line.QUANTITY = line.ship_qty;
                 line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];

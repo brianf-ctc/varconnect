@@ -31,20 +31,13 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
 
         //var s;
 
-        var s1 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_due_date', 'onorbefore', 'weeksfromnow1'],
-                'AND',
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '6', '7'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        var s1 = ns_search.load({
+            id: 'customsearch_vc_bc_not_proc_due_soon',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.alert_due = s1.runPaged().count;
 
+        //To Be Processed - Errors
         var s2 = ns_search.create({
             type: 'customrecord_ctc_vc_bills',
             filters: [
@@ -54,95 +47,52 @@ define(['N/search', 'N/file', '../Libraries/mustache', '../../CTC_VC2_Lib_Utils'
             ],
             columns: ['internalid']
         });
-
         data.alert_error = s2.runPaged().count;
 
-        var s3 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'noneof', '5'],
-                'AND',
-                ['custrecord_ctc_vc_bill_linked_po', 'anyof', '@NONE@'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        var s3 = ns_search.load({
+            id: 'customsearch_vc_bc_missing_po_link',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.no_po_cnt = s3.runPaged().count;
 
-        var s4 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '6'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        var s4 = ns_search.load({
+            id: 'customsearch_vc_bc_non_processed_bc_hold',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.on_hold_cnt = s4.runPaged().count;
 
-        var s5 = ns_search.create({
-            type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_linked_po.status', 'anyof', 'PurchOrd:B'],
-                'AND',
-                ['custrecord_ctc_vc_bill_linked_po.mainline', 'is', 'T'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+        var s5 = ns_search.load({
+            id: 'customsearch_vc_bc_pending_receipt_tr',
+            type: 'customrecord_ctc_vc_bills'
         });
-
         data.pend_rcpt_cnt = s5.runPaged().count;
 
-        var s6 = ns_search.create({
+        //To Be Processed - ALL
+        var s6 = ns_search.load({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1', '2', '4', '7'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+            id: 'customsearch_vc_bc_non_processed_bc_all'
         });
-
         data.to_be_proc_cnt = s6.runPaged().count;
 
-        var s7 = ns_search.create({
+        //To Be Processed - Variance
+        var s7 = ns_search.load({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '7'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+            id: 'customsearch_vc_bc_non_processed_bcd_var'
         });
-
         data.variance_cnt = s7.runPaged().count;
 
-        var s8 = ns_search.create({
+        //To Be Processed - Pending
+        var s8 = ns_search.load({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '1'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+            id: 'customsearch_vc_bc_non_processed_bcd_pen'
         });
-
         data.pending_cnt = s8.runPaged().count;
 
-        var s9 = ns_search.create({
+        //To Be Processed - Reprocess
+        var s9 = ns_search.load({
             type: 'customrecord_ctc_vc_bills',
-            filters: [
-                ['custrecord_ctc_vc_bill_proc_status', 'anyof', '4'],
-                'AND',
-                ['isinactive', 'is', 'F']
-            ],
-            columns: ['internalid']
+            id: 'customsearch_vc_bc_non_processed_bcd_rep'
         });
-
         data.reprocess_cnt = s9.runPaged().count;
 
         var s10 = ns_search.create({

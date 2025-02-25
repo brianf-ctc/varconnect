@@ -646,7 +646,51 @@ define(function (require) {
                         ['type', 'anyof', 'ItemShip', 'ItemRcpt']
                     ]
                 });
-                if (searchResults.length > 0) throw 'Fulfillment already exists';
+                if (searchResults.length > 0) {
+                    util.extend(returnObj, {
+                        msg: 'Fulfillment/Receipt Already Exists',
+                        id: searchResults[0].id
+                    });
+                    return returnObj;
+                }
+
+                var validateFulfillment = vcs_txnLib.validateForFulfillment({
+                    poRec: Current.PO_REC,
+                    poId: Current.poId,
+                    vendorLines: (function () {
+                        /// prepare the lines for fulfillment
+                        BillFileRec.LINES.forEach(function (payloadLine) {
+                            util.extend(payloadLine, {
+                                ORDER_NUM: '',
+                                ORDER_STATUS: '',
+                                ORDER_DATE: '',
+                                ORDER_ETA: '',
+                                ORDER_DELIV: '',
+                                SHIP_METHOD: BillFileRec.JSON.carrier,
+                                SHIP_DATE: BillFileRec.JSON.shipDate,
+                                CARRIER: BillFileRec.JSON.carrier,
+                                TRACKING_NUMS: payloadLine.TRACKING,
+                                SERIAL_NUMS: payloadLine.SERIAL,
+                                ITEM_TEXT: payloadLine.ITEMNO,
+                                APPLIEDRATE: payloadLine.BILLRATE || payloadLine.PRICE
+                            });
+
+                            return true;
+                        });
+
+                        return BillFileRec.LINES;
+                    })(),
+                    mainConfig: MainCFG,
+                    vendorConfig: OrderCFG,
+                    billConfig: BillCFG
+                });
+
+                if (validateFulfillment.hasError) {
+                    util.extend(returnObj, {
+                        msg: validateFulfillment.errorMessage
+                    });
+                    return returnObj;
+                }
 
                 var itemFFData = vcs_txnLib.createFulfillment({
                     poRec: Current.PO_REC,
@@ -685,7 +729,7 @@ define(function (require) {
                                 CARRIER: BillFileRec.JSON.carrier,
                                 TRACKING_NUMS: payloadLine.TRACKING,
                                 SERIAL_NUMS: payloadLine.SERIAL,
-                                ITEMNAME: payloadLine.ITEMNO,
+                                ITEM_TEXT: payloadLine.ITEMNO,
                                 APPLIEDRATE: payloadLine.BILLRATE || payloadLine.PRICE
                             });
 
@@ -693,7 +737,8 @@ define(function (require) {
                         });
 
                         return BillFileRec.LINES;
-                    })()
+                    })(),
+                    onValidateError: function () {}
                 });
                 if (itemFFData.hasError) throw itemFFData.errorMessage;
 

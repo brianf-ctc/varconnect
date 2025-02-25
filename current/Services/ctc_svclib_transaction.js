@@ -420,10 +420,53 @@ define(function (require) {
 
                 var record = option.record,
                     lineNo = option.line || option.lineNo,
-                    soRec = option.soRec,
+                    lineData = option.lineData,
                     serialNumbers = option.serials || option.serialNumbers || [];
 
-                // validate the serial numbers
+                // lineNo, records and serialNUmbes are required
+                if (!record) throw { code: 'MISSING_PARAMETER', details: 'record' };
+                if (vc2_util.isEmpty(serialNumbers))
+                    throw { code: 'MISSING_PARAMETER', details: 'serialNumbers' };
+
+                if (!lineData) {
+                    lineData = vcs_recordLib.extractLineValues({
+                        record: record,
+                        line: lineNo,
+                        additionalColumns: ORDERLINE_COLS.concat([
+                            'orderline',
+                            'itemname',
+                            'lineuniquekey',
+                            'location',
+                            'inventorydetailreq',
+                            'inventorydetailavail',
+                            'inventorydetailset',
+                            'poline',
+                            'binitem',
+                            'isserial'
+                        ])
+                    });
+                }
+
+                if (
+                    !lineData.isserial &&
+                    !lineData.inventorydetailavail &&
+                    !lineData.inventorydetailreq
+                ) {
+                    throw {
+                        message: 'Line does not require serial numbers',
+                        detail: vc2_util.extractValues({
+                            source: lineData,
+                            fields: [
+                                'itemname',
+                                'item',
+                                'inventorydetailreq',
+                                'inventorydetailavail',
+                                'inventorydetailset'
+                            ]
+                        })
+                    };
+                }
+                /// VALIDATE THE SERIAL NUMBERS //
                 serialNumbers = util.isArray(serialNumbers)
                     ? serialNumbers
                     : serialNumbers.split(/,|\s/);
@@ -431,7 +474,6 @@ define(function (require) {
                 if (vc2_util.isEmpty(serialNumbers))
                     throw { code: 'MISSING_PARAMETER', details: 'serialNumbers' };
 
-                // VALIDATE THE SERIAL NUMBERS //
                 var validSerials = [];
                 serialNumbers.forEach(function (serial) {
                     if (!vc2_util.isEmpty(serial) && serial != 'NA') validSerials.push(serial);
@@ -441,13 +483,27 @@ define(function (require) {
                     throw { code: 'VALIDATION_ERROR', details: 'No valid serial numbers found' };
 
                 // ADD THE SERIAL NUMBERS TO THE LINE //
-                if (option.doCommit) record.selectLine({ sublistId: 'item', line: lineNo });
-
-                // get the current location
-                var location = record.getCurrentSublistValue({
+                record.selectLine({ sublistId: 'item', line: lineNo });
+                var invDetailSubrec = record.getCurrentSublistSubrecord({
                     sublistId: 'item',
-                    fieldId: 'location'
+                    fieldId: 'inventorydetail'
                 });
+
+                validSerials.forEach(function (serial) {
+                    invDetailSubrec.selectNewLine({ sublistId: 'inventoryassignment' });
+                    invDetailSubrec.setCurrentSublistValue({
+                        sublistId: 'inventoryassignment',
+                        fieldId: 'receiptinventorynumber',
+                        value: serial
+                    });
+                    invDetailSubrec.commitLine({ sublistId: 'inventoryassignment' });
+                });
+                record.commitLine({ sublistId: 'item' });
+
+                vc2_util.log(
+                    logTitle,
+                    'Serial numbers added successfully: ' + validSerials.join(', ')
+                );
 
                 returnValue = true;
             } catch (error) {
@@ -590,25 +646,32 @@ define(function (require) {
                     poRec: poRec
                 });
 
-                var errorLines = {};
+                var errorLines = {},
+                    hasFulfillable = false;
                 vendorLines.forEach(function (vendorLine) {
                     try {
                         if (!vendorLine.HAS_MATCH) throw 'MATCH_NOT_FOUND'; // no matching line found
                         if (vc2_util.isEmpty(vendorLine.MATCHING)) throw 'LINE_NOT_FULFILLABLE';
                         if (vendorLine.QUANTITY > vendorLine.APPLIEDQTY) throw 'INSUFFICIENT_QTY';
+
+                        hasFulfillable = true; // there are itmes that can be fulfilled
                     } catch (line_error) {
                         var errorMsg = vclib_error.extractError(line_error, ERROR_MSG);
                         if (!errorLines[errorMsg]) errorLines[errorMsg] = [];
-                        errorLines[errorMsg].push(vendorLine.ITEMNAME);
+                        errorLines[errorMsg].push(vendorLine.ITEM_TEXT);
                     }
                     return true;
                 });
 
+                returnValue.hasFulfillable = hasFulfillable;
                 returnValue.success = true;
                 returnValue.hasError = false;
 
+                if (!hasFulfillable) throw 'No fulfillable lines found'; // ensuring fulfillable lines exist
+
                 if (!vc2_util.isEmpty(errorLines)) {
                     returnValue.hasError = true;
+                    returnValue.success = true;
                     returnValue.errorMessage = Object.keys(errorLines).map(function (code) {
                         return vclib_error.extractError({
                             code: code,
@@ -862,7 +925,13 @@ define(function (require) {
                                 'orderline',
                                 'itemname',
                                 'lineuniquekey',
-                                'location'
+                                'location',
+                                'inventorydetailreq',
+                                'inventorydetailavail',
+                                'inventorydetailset',
+                                'poline',
+                                'binitem',
+                                'isserial'
                             ])
                         });
 
@@ -1005,14 +1074,15 @@ define(function (require) {
                         ]);
 
                         /// ADD SERIAL NUMBERS /////////////////////////
-                        // Helper.addInventoryDetails({
-                        //     record: itemffRec,
-                        //     line: line,
-                        //     soRec: soRec,
-                        //     doCommit: true
-                        // });
-
-                        // set Ship Group
+                        if (!vc2_util.isEmpty(LineSerials)) {
+                            Helper.addInventoryDetails({
+                                record: itemffRec,
+                                line: line,
+                                lineData: LineData.ItemFF,
+                                serials: LineSerials,
+                                doCommit: true
+                            });
+                        }
                     } catch (line_err) {
                         vclib_error.logError(logTitle, line_err, ERROR_MSG);
                     }

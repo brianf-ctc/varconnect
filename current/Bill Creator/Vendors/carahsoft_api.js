@@ -17,17 +17,21 @@ define(function (require) {
     var vc2_util = require('../../CTC_VC2_Lib_Utils');
     var LogTitle = 'WS:CarashsoftAPI',
         EntryPoint = {},
-        TransId = '';
+        TransId = '',
+        ORDER_ID = '';
 
     EntryPoint.getInvoice = function (recordId, config) {
         TransId = recordId;
+
+        //get the item details from order and merge with the invoice data
+        var responseBodyorder = getOrderDetails(config);
+        getOrderID(responseBodyorder);
 
         //get invoice details and normalize the data
         var responseBody = getInvoiceDetails(recordId, config);
         var arrInvoiceData = formatInvoiceJson(responseBody);
 
-        //get the item details from order and merge with the invoice data
-        var responseBodyorder = getOrderDetails(config);
+        //normalize the data
         var arrData = formatOrderJson(responseBodyorder, arrInvoiceData);
 
         return arrData;
@@ -42,7 +46,7 @@ define(function (require) {
             'X-Account': config.partner_id
         };
         // var invoiceListUrl = config.url+'/Invoice/DocNumber='+invDocNum+',Order_ID='+config.poNum;
-        var invoiceListUrl = config.url + '/Invoice?$filter=Order_ID eq ' + config.poNum;
+        var invoiceListUrl = config.url + '/Invoice?$filter=Order_ID eq ' + ORDER_ID;
         var objResponse = vc2_util.sendRequest({
             header: logTitle,
             recordId: TransId,
@@ -78,8 +82,12 @@ define(function (require) {
         };
 
         // var orderListUrl = config.url+'/Order({key})';
+        // var orderListUrl = config.url+'/Order/'+config.poNum+'?$expand=Details($expand=LineItems)';
         var orderListUrl =
-            config.url + '/Order/' + config.poNum + '?$expand=Details($expand=LineItems)';
+            config.url +
+            "/Order/?$filter=CustomerPO eq '" +
+            config.poNum +
+            "'&$expand=Details($expand=LineItems)";
 
         var objResponse = vc2_util.sendRequest({
             header: logTitle,
@@ -275,6 +283,27 @@ define(function (require) {
             ordObj: objInvoiceData.ordObj,
             xmlStr: JSON.stringify(objOrder)
         });
+    }
+
+    function getOrderID(responseBody) {
+        if (!responseBody) {
+            return;
+        }
+
+        if (!vc2_util.isEmpty(responseBody.Queryable)) {
+            responseBody = responseBody.Queryable;
+        } else if (!vc2_util.isEmpty(responseBody.value)) {
+            responseBody = responseBody.value;
+        }
+
+        if (Array.isArray(responseBody)) {
+            for (var i = 0; i < responseBody.length; i++) {
+                ORDER_ID = responseBody[i].Order_ID;
+            }
+        } else {
+            ORDER_ID = responseBody.Order_ID;
+        }
+        log.debug('getOrderID | ORDER_ID', ORDER_ID);
     }
 
     function getToken(config) {

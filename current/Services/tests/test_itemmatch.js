@@ -29,8 +29,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -79,8 +79,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -131,8 +131,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -182,8 +182,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -234,8 +234,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -290,8 +290,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -344,8 +344,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -396,8 +396,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -451,8 +451,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -502,8 +502,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -556,8 +556,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -612,8 +612,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -661,8 +661,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -713,8 +713,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -768,8 +768,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -819,8 +819,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -873,8 +873,8 @@ define(function (require) {
                     vendorLines = testData[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -929,8 +929,8 @@ define(function (require) {
                     vendorLines = lib_testdata.VENDOR_LINES.ITEM_MATCH[testType];
 
                 vendorLines.forEach(function (line) {
-                    line.ITEMNAME = line.item_num;
-                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                    line.ITEM_TEXT = line.item_num;
+                    line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                     line.QUANTITY = line.ship_qty;
                     line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                     line.APPLIEDRATE = line.line_price;
@@ -977,8 +977,8 @@ define(function (require) {
         //             vendorLines = testData[testType];
 
         //         vendorLines.forEach(function (line) {
-        //             line.ITEMNAME = line.item_num;
-        //             line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+        //             line.ITEM_TEXT = line.item_num;
+        //             line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
         //             line.QUANTITY = line.ship_qty;
         //             line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
         //             line.APPLIEDRATE = line.line_price;
@@ -1043,8 +1043,8 @@ define(function (require) {
         //             vendorLines = testData[testType];
 
         //         vendorLines.forEach(function (line) {
-        //             line.ITEMNAME = line.item_num;
-        //             line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+        //             line.ITEM_TEXT = line.item_num;
+        //             line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
         //             line.QUANTITY = line.ship_qty;
         //             line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
         //             line.APPLIEDRATE = line.line_price;
@@ -1108,8 +1108,8 @@ define(function (require) {
                         vendorLines = testData[testType];
 
                     vendorLines.forEach(function (line) {
-                        line.ITEMNAME = line.item_num;
-                        line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEMNAME;
+                        line.ITEM_TEXT = line.item_num;
+                        line.ITEMALT = line.item_sku || line.vendorSKU || line.ITEM_TEXT;
                         line.QUANTITY = line.ship_qty;
                         line.SERIALS = line.serial_num ? line.serial_num.split(',') : [];
                         line.APPLIEDRATE = line.line_price;

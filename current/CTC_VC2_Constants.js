@@ -518,7 +518,7 @@ define(function (require) {
 
     VC2_CONSTANT.VENDOR_LINE_DEF = {
         VENDORLINE_COLS: [
-            'ITEMNAME',
+            'ITEM_TEXT',
             'ORDER_NUM',
             'ORDER_STATUS',
             'ORDER_DATE',
@@ -1037,7 +1037,7 @@ define(function (require) {
     VC2_CONSTANT.CACHE_NAME = [
         'VC_CACHE_KEY',
         VC2_CONSTANT.IS_DEBUG_MODE ? new Date().getTime() : null,
-        '20250213.1909'
+        '20250214.0922'
     ].join('_');
 
     VC2_CONSTANT.CACHE_KEY = {
